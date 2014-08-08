@@ -678,3 +678,4 @@ ADVANCED_PROBLEM_TYPES = [
         'boilerplate_name': None,
     }
 ]
+from lektorium import *

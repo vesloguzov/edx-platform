@@ -1673,3 +1673,5 @@ OPENID_DOMAIN_PREFIX = 'openid:'
 ### Analytics data api settings
 ANALYTICS_DATA_URL = ""
 ANALYTICS_DATA_TOKEN = ""
+
+from .lektorium import *
