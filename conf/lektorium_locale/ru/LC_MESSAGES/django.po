@@ -176,7 +176,7 @@ msgid ""
 "please contact us at {link_start}{support_email}{link_end}"
 msgstr ""
 "Ваша учетная запись заблокирована. Если Вы думаете, что произошла ошибка, "
-"пожалуйста свяжитесь с нами по адресу {link_start}{support_email}{link_end}"
+"пожалуйста, свяжитесь с нами по адресу {link_start}{support_email}{link_end}"
 
 #: common/djangoapps/student/middleware.py
 msgid "Disabled Account"
@@ -1107,7 +1107,7 @@ msgstr ""
 #: common/lib/xmodule/xmodule/capa_base.py
 msgid "If this error persists, please contact the course staff."
 msgstr ""
-"Если это сообщение об ошибке продолжает появляться, пожалуйста свяжитесь с "
+"Если это сообщение об ошибке продолжает появляться, пожалуйста, свяжитесь с "
 "сотрудниками курса."
 
 #. Translators: 'closed' means the problem's due date has passed. You may no
@@ -4626,7 +4626,7 @@ msgid ""
 msgstr ""
 "Мы всегда заинтересованы в обратной связи для улучшения наших курсов. Если "
 "вы слушатель курcа и у вас есть какие-либо вопросы, пожелания, предложения "
-"или любые другие проблемы, относящиеся к конкретному курсу, пожалуйста "
+"или любые другие проблемы, относящиеся к конкретному курсу, пожалуйста, "
 "напишите об этом на форуме этого курса."
 
 #: lms/templates/contact.html
@@ -7554,7 +7554,7 @@ msgid ""
 msgstr ""
 "Ваше переподтверждение для {course_name} не удалось, и вы больше не имеете "
 "права на Сертификат подтверждения. Если вы думаете, что это ошибка, "
-"пожалуйста свяжитесь с нами по почте {email}."
+"пожалуйста, свяжитесь с нами по почте {email}."
 
 #: lms/templates/dashboard/_dashboard_prompt_midcourse_reverify.html
 msgid "Dismiss"
@@ -8052,7 +8052,7 @@ msgid ""
 "please copy and paste this address into your web browser's address bar:"
 msgstr ""
 "Спасибо за регистрацию на {platform_name}! Чтобы активировать свою учетную "
-"запись, пожалуйста скопируйте следующий адрес в адресную строку своего "
+"запись, пожалуйста, скопируйте следующий адрес в адресную строку своего "
 "браузера:"
 
 #: lms/templates/emails/activation_email.txt
@@ -8138,7 +8138,7 @@ msgid ""
 msgstr ""
 "Это подтверждение смены электронного адреса, связанного с Вашей учетной "
 "записью на {platform_name}, с {old_email} на {new_email}. Если Вы не делали "
-"такого запроса, пожалуйста свяжитесь с нами по адресу"
+"такого запроса, пожалуйста, свяжитесь с нами по адресу"
 
 #: lms/templates/emails/confirm_email_change.txt
 msgid ""
@@ -8148,7 +8148,7 @@ msgid ""
 msgstr ""
 "Это подтверждение смены электронного адреса, связанного с Вашей учетной "
 "записью на {platform_name}, с {old_email} на {new_email}. Если Вы не делали "
-"такого запроса, пожалуйста свяжитесь с нами незамедлительно.  Контактную "
+"такого запроса, пожалуйста, свяжитесь с нами незамедлительно.  Контактную "
 "информацию Вы найдёте здесь:"
 
 #: lms/templates/emails/confirm_email_change.txt
@@ -8167,7 +8167,7 @@ msgid ""
 msgstr ""
 "Мы получили запрос на смену электронного адреса, связанного с Вашей учётной "
 "записью на {platform_name} с {old_email} на {new_email}. Если всё верно, "
-"пожалуйста пройдите по этой ссылке, чтобы подтвердить свой новый электронный"
+"пожалуйста, пройдите по этой ссылке, чтобы подтвердить свой новый электронный"
 " адрес:"
 
 #: lms/templates/emails/email_change_subject.txt
@@ -8320,7 +8320,7 @@ msgid ""
 msgstr ""
 "К сожалению, сотрудники нашего курса не удовлетворили Ваш запрос на смену "
 "имени с {old_name} на {new_name}.  Если Вам потребуется дополнительная "
-"помощь, пожалуйста свяжитесь с командой тех. поддержки по адресу:"
+"помощь, пожалуйста, свяжитесь с командой тех. поддержки по адресу:"
 
 #: lms/templates/emails/reject_name_change.txt
 msgid ""
@@ -8330,7 +8330,7 @@ msgid ""
 msgstr ""
 "К сожалению, сотрудники нашего курса не удовлетворили Ваш запрос на смену "
 "имени с {old_name} на {new_name}.  Если Вам потребуется дополнительная "
-"помощь, пожалуйста свяжитесь с сотрудниками курса по адресу ta@edx.org."
+"помощь, пожалуйста, свяжитесь с сотрудниками курса по адресу ta@edx.org."
 
 #: lms/templates/emails/remove_beta_tester_email_message.txt
 msgid ""
@@ -8752,10 +8752,9 @@ msgstr "section_display_name"
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
-msgid ""
-"Enter email addresses and/or usernames separated by new lines or commas."
+msgid "Enter email addresses separated by new lines or commas."
 msgstr ""
-"Введите электронные адреса и/или имена пользователей, разделив их запятыми "
+"Введите электронные адреса, разделив их запятыми "
 "или поместив их по одному на строку."
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
@@ -8763,7 +8762,7 @@ msgid ""
 "You will not get notification for emails that bounce, so please double-check"
 " spelling."
 msgstr ""
-"Вы не получите уведомлений о письмах, которые не дошли, поэтому, пожалуйста "
+"Вы не получите уведомлений о письмах, которые не дошли, поэтому, пожалуйста, "
 "дважды проверьте написание."
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
@@ -8823,8 +8822,8 @@ msgid "Unenroll"
 msgstr "Убрать из списка"
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
-msgid "Batch Beta Tester Addition"
-msgstr "Дополнение группы бета-тестеров"
+msgid "Batch Beta Testers"
+msgstr "Группа бета-тестеров"
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 msgid ""
@@ -9862,7 +9861,7 @@ msgid ""
 " please email us at {email}."
 msgstr ""
 "Пожалуйста, подождите несколько секунд, а затем перезагрузите страницу. Если"
-" проблема не исправлена, пожалуйста свяжитесь с нами по адресу {email}."
+" проблема не исправлена, пожалуйста, свяжитесь с нами по адресу {email}."
 
 #: lms/templates/static_templates/server-overloaded.html
 msgid "Currently the {platform_name} servers are overloaded"
@@ -13272,7 +13271,7 @@ msgid ""
 "copy and paste this address into your web browser's address bar:"
 msgstr ""
 "Спасибо за регистрацию в системе edx Studio! Чтобы активировать вашу учётную"
-" запись, пожалуйста скопируйте следующий адрес в адресную строку вашего "
+" запись, пожалуйста, скопируйте следующий адрес в адресную строку вашего "
 "браузера:"
 
 #: cms/templates/emails/activation_email.txt
@@ -13313,7 +13312,7 @@ msgid ""
 "you believe this was in error, please contact: "
 msgstr ""
 "Вам было отказано в предоставлении прав на создание курсов в edX Studio. "
-"Если вы считаете, что произошла какая-то ошибка, пожалуйста свяжитесь с:"
+"Если вы считаете, что произошла какая-то ошибка, пожалуйста, свяжитесь с:"
 
 #: cms/templates/emails/course_creator_granted.txt
 msgid ""
@@ -13329,7 +13328,7 @@ msgid ""
 "this was in error, please contact: "
 msgstr ""
 "Вы были лишены прав на создание курсов в edX Studio. Если вы считаете, что "
-"произошла какая-то ошибка, пожалуйста свяжитесь с:"
+"произошла какая-то ошибка, пожалуйста, свяжитесь с:"
 
 #: cms/templates/emails/course_creator_subject.txt
 msgid "Your course creator status for edX Studio"

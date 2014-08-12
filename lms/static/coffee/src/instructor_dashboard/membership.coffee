@@ -178,7 +178,7 @@ class AuthListWidget extends MemberListWidget
 class BetaTesterBulkAddition
   constructor: (@$container) ->
     # gather elements
-    @$identifier_input       = @$container.find("textarea[name='student-ids-for-beta']")
+    @$identifier_input       = @$container.find("textarea[name='student-emails-for-beta']")
     @$btn_beta_testers       = @$container.find("input[name='beta-testers']")
     @$checkbox_autoenroll    = @$container.find("input[name='auto-enroll']")
     @$checkbox_emailstudents = @$container.find("input[name='email-students-beta']")
@@ -269,7 +269,7 @@ class BetaTesterBulkAddition
 class BatchEnrollment
   constructor: (@$container) ->
     # gather elements
-    @$identifier_input       = @$container.find("textarea[name='student-ids']")
+    @$identifier_input       = @$container.find("textarea[name='student-emails']")
     @$enrollment_button      = @$container.find(".enrollment-button")
     @$checkbox_autoenroll    = @$container.find("input[name='auto-enroll']")
     @$checkbox_emailstudents = @$container.find("input[name='email-students']")
