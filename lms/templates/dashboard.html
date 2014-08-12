@@ -35,7 +35,8 @@
     $("#failed-verification-button-dismiss").click(function(event) {
       $.ajax({
         url: "${reverse('verify_student_toggle_failed_banner_off')}",
-        type: "post"
+        type: "post",
+        data: {'user_id': ${user.id},}
         })
       $("#failed-verification-banner").addClass('is-hidden');
       })
@@ -209,8 +210,9 @@
     <section class="user-info">
       <ul>
         <li class="info--username">
-          <span class="title">${_("Full Name")} (<a href="#apply_name_change" rel="leanModal" class="edit-name">${_("edit")}</a>)</span> <span class="data">${ user.profile.name | h }</span>
+          <span class="title">${_("Name for certificate")} (<a href="#apply_name_change" rel="leanModal" class="edit-name">${_("edit")}</a>)</span> <span class="data">${ user.profile.name | h }</span>
         </li>
+        <%doc>
         <li class="info--email">
           <span class="title">${_("Email")}
             % if external_auth_map is None or 'shib' not in external_auth_map.external_domain:
@@ -218,6 +220,7 @@
             % endif
           </span> <span class="data">${ user.email | h }</span>
         </li>
+        </%doc>
 
         %if len(language_options) > 1:
         <%include file='dashboard/_dashboard_info_language.html' />
@@ -270,6 +273,7 @@
         </li>
         % endif
 
+        <%doc>
         % if external_auth_map is None or 'shib' not in external_auth_map.external_domain:
         <li class="controls--account">
           <span class="title"><a href="#password_reset_complete" rel="leanModal" id="pwd_reset_button">${_("Reset Password")}</a></span>
@@ -279,6 +283,7 @@
           </form>
         </li>
         % endif
+        </%doc>
 
         <%include file='dashboard/_dashboard_status_verification.html' />
 
@@ -469,12 +474,12 @@
       <form id="change_name_form">
         <div id="change_name_error" class="modal-form-error"> </div>
         ## Translators: note that {platform} {cert_name_short} will look something like: "edX certificate". Please do not change the order of these placeholders.
-        <p>${_("To uphold the credibility of your {platform} {cert_name_short}, all name changes will be logged and recorded.").format(platform=settings.PLATFORM_NAME, cert_name_short=cert_name_short)}</p>
+        <p>${_("To uphold the credibility of your certificate, all name changes will be logged and recorded.")}</p>
         <br/>
         <fieldset>
           <div class="input-group">
             ## Translators: note that {platform} {cert_name_short} will look something like: "edX certificate". Please do not change the order of these placeholders.
-            <label>${_("Enter your desired full name, as it will appear on your {platform} {cert_name_short}:").format(platform=settings.PLATFORM_NAME, cert_name_short=cert_name_short)}</label>
+            <label>${_("Enter your desired full name, as it will appear on your certificate:")}</label>
             <input id="new_name_field" value="" type="text" />
             <label>${_("Reason for name change:")}</label>
             <textarea id="name_rationale_field" value=""></textarea>

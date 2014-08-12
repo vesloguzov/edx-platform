@@ -14191,3 +14191,15 @@ msgid ""
 "A new revision was created: Merge between Revision #%(r1)d and Revision "
 "#%(r2)d"
 msgstr "Новая версия была создана: слияние версий #%(r1)d и #%(r2)d"
+
+#: lms/templates/dashboard.html
+msgid "Name for certificate"
+msgstr "Имя на сертификате"
+
+#: lms/templates/dashboard.html
+msgid "To uphold the credibility of your certificate, all name changes will be logged and recorded."
+msgstr "Для поддержания достоверности все факты смены имени будут зарегистрированы и сохранены."
+
+#: lms/templates/dashboard.html
+msgid "Enter your desired full name, as it will appear on your certificate:"
+msgstr "Введите своё полное имя, которое будет указано на Вашем сертификате:"
