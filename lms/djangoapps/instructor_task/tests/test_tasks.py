@@ -443,12 +443,20 @@ class TestDeleteStateInstructorTask(TestInstructorTasks):
 
 class TestCalculateGradesCSVInstructorTask(TestInstructorTasks):
     """Tests instructor task that generates csv grade report."""
+    # state/problem does not influence grading, runs with no state/problem successfully
+    # TODO: check why starting with undefined course returnes Http404 instead of ItemNotFoundError
 
-    def _create_unicode_students_with_state(self, *args, **kwargs):
-        students = super(TestCalculateGradesCSVInstructorTask, self)._create_students_with_state(*args, **kwargs)
-        for student in students:
-            student.username = 'тестовый' + student.username
-            student.save()
+    def test_calculate_grades_missing_current_task(self):
+        self._test_missing_current_task(calculate_grades_csv)
+
+    def test_calculate_grades_with_failure(self):
+        self._test_run_with_failure(calculate_grades_csv, 'We expected this to fail')
+
+    def test_calculate_grades_with_long_error_msg(self):
+        self._test_run_with_long_error_msg(calculate_grades_csv)
+
+    def test_calculate_grades_with_short_error_msg(self):
+        self._test_run_with_short_error_msg(calculate_grades_csv)
 
     def test_generate_report_with_unicode_names(self):
         input_state = json.dumps({'done': True})
@@ -473,3 +481,10 @@ class TestCalculateGradesCSVInstructorTask(TestInstructorTasks):
         # self.assertEquals(output.get('succeeded'), num_students + 1)
         # self.assertEquals(output.get('total'), num_students + 1)
         # self.assertEquals(output.get('action_name'), 'graded')
+
+    def _create_unicode_students_with_state(self, *args, **kwargs):
+        students = super(TestCalculateGradesCSVInstructorTask, self)._create_students_with_state(*args, **kwargs)
+        for student in students:
+            student.username = 'тестовый' + student.username
+            student.save()
+
