@@ -522,8 +522,7 @@ def push_grades_to_s3(_xmodule_instance_args, _entry_id, course_id, _task_input,
             # We were able to successfully grade this student for this course.
             num_succeeded += 1
             if not header:
-                # Encode the header row in utf-8 encoding in case there are unicode characters
-                header = [section['label'].encode('utf-8') for section in gradeset[u'section_breakdown']]
+                header = [section['label'] for section in gradeset[u'section_breakdown']]
                 rows.append(["id", "email", "username", "grade"] + header)
 
             percents = {
@@ -539,17 +538,11 @@ def push_grades_to_s3(_xmodule_instance_args, _entry_id, course_id, _task_input,
             # possible for a student to have a 0.0 show up in their row but
             # still have 100% for the course.
             row_percents = [percents.get(label, 0.0) for label in header]
-            rows.append(
-                [student.id,
-                 student.email.encode('utf-8'),
-                 student.username.encode('utf-8'),
-                 gradeset['percent']
-                ]
-                + row_percents)
+            rows.append([student.id, student.email, student.username, gradeset['percent']] + row_percents)
         else:
             # An empty gradeset means we failed to grade a student.
             num_failed += 1
-            err_rows.append([student.id, student.username.encode('utf-8'), err_msg.encode('utf-8')])
+            err_rows.append([student.id, student.username, err_msg])
 
     # By this point, we've got the rows we're going to stuff into our CSV files.
     curr_step = "Uploading CSVs"
