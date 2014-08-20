@@ -15,7 +15,7 @@ ASSUMPTIONS: modules have unique IDs, even across different module_types
 from cStringIO import StringIO
 from gzip import GzipFile
 from uuid import uuid4
-import csv
+import unicodecsv as csv
 import json
 import hashlib
 import os.path
