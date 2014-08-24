@@ -35,7 +35,8 @@ starts follow.
 
 **Review First Week Content**
 
-* Verify that all units are present and published. See :ref:`Units`.
+* Verify that all units are present and published. See :ref:`Developing Course
+  Units`.
 * Check all assignments for completeness and verify their due dates. See
   :ref:`Working with Problem Components`.
 * Verify that videos, transcripts, and download links are in place and
@@ -92,7 +93,7 @@ participants directly from the Instructor Dashboard. Messages can use HTML
 styling, and can include links to videos, social media pages for the course,
 and other material. All course contributors who are assigned the course staff
 or instructor role can use this feature to communicate with course
-participants before, during, and after the course run.
+participants before, during, and after the course run. For templates that you can use when preparing your own messages, see :ref:`Example Messages to Students`.
 
 .. note:: The bulk email feature is currently in limited release, and is enabled for new courses only. A gradual rollout of this feature is planned for 2014.
 
@@ -146,12 +147,13 @@ To send an email message to course participants:
 
 #. Enter the text for the message. Message text is required. 
    
-   Messages can use HTML styling, including text formatting and links. The email
-   message editor offers the same formatting options as the HTML component
-   editor in Studio. See :ref:`Working with HTML Components`.
+   Messages can use HTML styling, including text formatting and links. The
+   email message editor offers the same formatting options as the HTML
+   component editor in Studio. See :ref:`Working with HTML Components`.
 
-#. Click **Send Email**. You can perform other tasks on the Instructor Dashboard
-   or navigate to other pages while you wait for your message to be sent.
+#. Click **Send Email**. You can perform other tasks on the Instructor
+   Dashboard or navigate to other pages while you wait for your message to be
+   sent.
 
 After you send a message, a bulk email task is queued for processing.
 Multiple courses use the same queue to complete these tasks, so it can take
@@ -165,9 +167,9 @@ course participants to no more than one per week.
 Message Workflow States
 ======================================================
 
-When you click **Send Email** for a message, the server begins to process a bulk
-email task. The server assigns a series of different workflow states to the
-task.
+When you click **Send Email** for a message, the server begins to process a
+bulk email task. The server assigns a series of different workflow states to
+the task.
   
 .. image:: ../Images/Bulk_email_states.png
        :alt: Flowchart of the possible states of a bulk email task 
@@ -183,9 +185,9 @@ The workflow states for a bulk email task are:
   be in this state even if some or all of its emailing subtasks failed.
 * Failure: An error occurred and task processing did not complete successfully.
 
-While the bulk email task is in progress, you can find out how far it has gotten
-in the workflow by checking the **Pending Instructor Tasks** section on the
-**Email** page.
+While the bulk email task is in progress, you can find out how far it has
+gotten in the workflow by checking the **Pending Instructor Tasks** section on
+the **Email** page.
 
 .. image:: ../Images/Bulk_email_pending.png
        :alt: Information about an email message, including who submitted it and when, in tabular format
@@ -193,24 +195,58 @@ in the workflow by checking the **Pending Instructor Tasks** section on the
 When the bulk email task is complete, you can find its final state by checking
 the Email Task History report. See :ref:`Email Task History Report`.
 
+.. _Review Sent Messages:
+
+********************************
+Review Sent Messages
+********************************
+
+You can review a list of all of the messages that have been sent for the
+course. For any listed message, you can review the subject, date and time sent,
+selected recipients, and the message text.
+
+#. View the live version of your course.
+
+#. Click **Instructor** then click **Email**. 
+
+#. In the **Email Task History** section of the page, click **Sent Email
+   History**. The list of sent messages displays.
+
+   .. image:: ../Images/Bulk_email_list.png
+    :alt: A tabular list of sent messages, with columns for subject, time sent, and number sent
+
+4. To review additional information for a message, click its subject. The
+   message opens in a dialog box.
+ 
+   .. image:: ../Images/Bulk_email_sent.png
+    :alt: A dialog box with the subject, time sent, sent to, and message for an email message, and an option to Copy Email to Editor
+
+5. Optionally, use the message as the basis for a new message: click **Copy
+   Email to Editor**. The dialog box closes and you can edit the text, links,
+   and formatting that were duplicated into the **Subject** and **Message**
+   fields.
+
+   When you create a message by copying a previously-sent message, be sure to
+   review and test it thoroughly before you send it to all course participants.
+
 .. _Email Task History Report:
 
 ********************************
 Email Task History Report
 ********************************
 
-You can produce a report of all of the completed bulk email tasks for your
-course. For each message sent, the report includes the username of the
-requester, the date and time it was submitted, the duration and state of the
-entire task, the task status, and the task progress.
+The Email Task History report can help you keep track of who sent messages,
+when, and to how many people. For each message sent, the report includes the
+username of the requester, the date and time it was submitted, the duration and
+state of the entire task, the task status, and the task progress.
 
 You can use this history to investigate questions relating to bulk email
 messages that have been sent, such as:
 
 * How frequently students are sent course-related email messages.
 * Whether a message was sent successfully.
-* The number of people who were sent course-related messages over time.
-
+* The change in the number of people who were sent course-related messages over
+  time.
 
 To produce the Email Task History report:
 
@@ -278,6 +314,7 @@ milestones, as models for your own course communications.
 * :ref:`Midcourse Events`
 * :ref:`Technical Issue`
 * :ref:`Course Farewell and Certificates`
+* :ref:`New Course Run Announcement`
 
 These messages are styled as email messages, but you could also post this
 information in a course discussion topic or on the **Course Info** page.
@@ -294,17 +331,18 @@ Pre-launch reminders raise awareness of the course start date, publicize the
 course, and generate excitement. In addition to the course start date and time,
 the example that follows also lets students know that:
 
-* UTC is used in edX courses. Alternatively, you could include information about
-  your course or the edX platform that will contribute to your students'
+* UTC is used in edX courses. Alternatively, you could include information
+  about your course or the edX platform that will contribute to your students'
   success.
 
-* The course has a companion social media site. Alternatively, you might include
-  information about planned meetups or other community-building opportunities.
+* The course has a companion social media site. Alternatively, you might
+  include information about planned meetups or other community-building
+  opportunities.
 
 You may want to send out more than one message before the course launches: use
 this template as a starting point for crafting the different messages you want
-to deliver. Replace values enclosed by {braces} with information that applies to
-your course.
+to deliver. Replace values enclosed by {braces} with information that applies
+to your course.
 
 :: 
 
@@ -561,3 +599,53 @@ about future access to course materials. Be sure to replace values enclosed by
   Good luck on the final exam and beyond!
 
   {name} and the {course number} staff
+
+.. _New Course Run Announcement:
+
+===============================
+New Course Run Announcement
+===============================
+
+When you prepare a course for a new run, you can use the bulk email feature in
+its previous run (or runs) to inform an engaged and knowledgeable audience:
+your former students. Announcing a new run to students of an earlier run gives
+you the opportunity to highlight key aspects of the course, such as the quality
+and variety of its discussions, or the global interest and relevance of the
+subject, as demonstrated by past enrollment. You can also reveal new features
+or content that have been added to the new course run. By emphasizing the
+value of the course, you get people thinking and talking about their
+experiences, build excitement, and encourage re-enrollment.
+
+This message template offers students who did not complete the course, or who
+did not previously choose the verified certificate track, the opportunity to do
+so. It also invites students to share the course with colleagues and and
+friends. 
+
+When preparing a message from this template, search for values enclosed by
+{braces} and replace them with information that applies to your course.
+
+::
+
+  Subject: Announcing a new run of {course name}
+
+  Hello {course number} leaners,
+
+  The next run of {course number} {course name} begins on {date}! We are glad
+  to share this news with you, the students who made the earlier run{s} of
+  {course number} so succesful.
+
+  {Success story from the previous run.} 
+
+  {New content or features for the upcoming run.}
+
+  Perhaps you want to share the {course name} experience with a friend or
+  colleague, earn an ID-verified certificate of achievement, or work through
+  course content that you weren't able to complete before. When {course number}
+  is offered in {time frame}, we welcome you to join the community of learners
+  again.
+
+  To learn more and to register, visit the {course name} page {add link}.
+
+  We hope to see you in the course,
+
+  The {course number} Staff

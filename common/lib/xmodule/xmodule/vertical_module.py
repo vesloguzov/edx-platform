@@ -6,6 +6,7 @@ from xmodule.studio_editable import StudioEditableModule, StudioEditableDescript
 from pkg_resources import resource_string
 from copy import copy
 
+
 # HACK: This shouldn't be hard-coded to two types
 # OBSOLETE: This obsoletes 'type'
 class_priority = ['video', 'problem']
@@ -45,9 +46,13 @@ class VerticalModule(VerticalFields, XModule, StudioEditableModule):
         Renders the Studio preview view, which supports drag and drop.
         """
         fragment = Fragment()
+        root_xblock = context.get('root_xblock')
+        is_root = root_xblock and root_xblock.location == self.location
+
         # For the container page we want the full drag-and-drop, but for unit pages we want
-        # a more concise version that appears alongside the "View =>" link.
-        if context.get('container_view'):
+        # a more concise version that appears alongside the "View =>" link-- unless it is
+        # the unit page and the vertical being rendered is itself the unit vertical (is_root == True).
+        if is_root or not context.get('is_unit_page'):
             self.render_children(context, fragment, can_reorder=True, can_add=True)
         return fragment
 

@@ -31,11 +31,10 @@ def configure_youtube_api(_step, action):
         raise ValueError('Parameter `action` should be one of "proxies" or "blocks".')
 
 @step('I have created a Video component$')
-def i_created_a_video_component(_step):
-
-    world.create_course_with_unit()
+def i_created_a_video_component(step):
+    step.given('I am in Studio editing a new unit')
     world.create_component_instance(
-        step=_step,
+        step=step,
         category='video',
     )
 
@@ -139,7 +138,7 @@ def xml_only_video(step):
     course = world.scenario_dict['COURSE']
     store = modulestore()
 
-    parent_location = store.get_items(course.id, category='vertical')[0].location
+    parent_location = store.get_items(course.id, qualifiers={'category': 'vertical'})[0].location
 
     youtube_id = 'ABCDEFG'
     world.scenario_dict['YOUTUBE_ID'] = youtube_id
@@ -152,6 +151,7 @@ def xml_only_video(step):
         category='video',
         data='<video youtube="1.00:%s"></video>' % youtube_id,
         modulestore=store,
+        user_id=world.scenario_dict["USER"].id
     )
 
 

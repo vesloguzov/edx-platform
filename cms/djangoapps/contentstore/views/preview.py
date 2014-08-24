@@ -9,7 +9,7 @@ from django.http import Http404, HttpResponseBadRequest
 from django.contrib.auth.decorators import login_required
 from edxmako.shortcuts import render_to_string
 
-from xmodule_modifiers import replace_static_urls, wrap_xblock, wrap_fragment
+from xmodule_modifiers import replace_static_urls, wrap_xblock, wrap_fragment, request_token
 from xmodule.x_module import PREVIEW_VIEWS, STUDENT_VIEW, AUTHOR_VIEW
 from xmodule.error_module import ErrorDescriptor
 from xmodule.exceptions import NotFoundError, ProcessingError
@@ -123,7 +123,13 @@ def _preview_module_system(request, descriptor):
 
     wrappers = [
         # This wrapper wraps the module in the template specified above
-        partial(wrap_xblock, 'PreviewRuntime', display_name_only=display_name_only, usage_id_serializer=unicode),
+        partial(
+            wrap_xblock,
+            'PreviewRuntime',
+            display_name_only=display_name_only,
+            usage_id_serializer=unicode,
+            request_token=request_token(request)
+        ),
 
         # This wrapper replaces urls in the output that start with /static
         # with the correct course-specific url for the static content
@@ -191,8 +197,8 @@ def _studio_wrap_xblock(xblock, view, frag, context, display_name_only=False):
     """
     Wraps the results of rendering an XBlock view in a div which adds a header and Studio action buttons.
     """
-    # Only add the Studio wrapper when on the container page. The unit page will remain as is for now.
-    if context.get('container_view', None) and view in PREVIEW_VIEWS:
+    # Only add the Studio wrapper when on the container page. The "Pages" page will remain as is for now.
+    if not context.get('is_pages_view', None) and view in PREVIEW_VIEWS:
         root_xblock = context.get('root_xblock')
         is_root = root_xblock and xblock.location == root_xblock.location
         is_reorderable = _is_xblock_reorderable(xblock, context)

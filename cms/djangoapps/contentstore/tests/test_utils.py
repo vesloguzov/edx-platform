@@ -9,11 +9,13 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 from contentstore import utils
+from contentstore.tests.utils import CourseTestCase
 from xmodule.modulestore import ModuleStoreEnum
-from xmodule.modulestore.tests.factories import CourseFactory
+from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from opaque_keys.edx.locations import SlashSeparatedCourseKey, Location
 
 from xmodule.modulestore.django import modulestore
+from opaque_keys.edx.locator import CourseLocator
 
 
 class LMSLinksTestCase(TestCase):
@@ -230,7 +232,7 @@ class XBlockVisibilityTestCase(TestCase):
         vertical.start = self.future
         modulestore().update_item(vertical, self.dummy_user)
 
-        self.assertTrue(utils.is_xblock_visible_to_students(vertical))
+        self.assertTrue(utils.is_currently_visible_to_students(vertical))
 
     def _test_visible_to_students(self, expected_visible_without_lock, name, start_date, publish=False):
         """
@@ -238,25 +240,186 @@ class XBlockVisibilityTestCase(TestCase):
         with and without visible_to_staff_only set.
         """
         no_staff_lock = self._create_xblock_with_start_date(name, start_date, publish, visible_to_staff_only=False)
-        self.assertEqual(expected_visible_without_lock, utils.is_xblock_visible_to_students(no_staff_lock))
+        self.assertEqual(expected_visible_without_lock, utils.is_currently_visible_to_students(no_staff_lock))
 
         # any xblock with visible_to_staff_only set to True should not be visible to students.
         staff_lock = self._create_xblock_with_start_date(
             name + "_locked", start_date, publish, visible_to_staff_only=True
         )
-        self.assertFalse(utils.is_xblock_visible_to_students(staff_lock))
+        self.assertFalse(utils.is_currently_visible_to_students(staff_lock))
 
     def _create_xblock_with_start_date(self, name, start_date, publish=False, visible_to_staff_only=False):
         """Helper to create an xblock with a start date, optionally publishing it"""
-        location = Location('edX', 'visibility', '2012_Fall', 'vertical', name)
+        course_key = CourseLocator('edX', 'visibility', '2012_Fall')
 
-        vertical = modulestore().create_xmodule(location)
-        vertical.start = start_date
-        if visible_to_staff_only:
-            vertical.visible_to_staff_only = visible_to_staff_only
-        modulestore().update_item(vertical, self.dummy_user, allow_not_found=True)
+        vertical = modulestore().create_item(
+            self.dummy_user, course_key, 'vertical', name,
+            fields={'start': start_date, 'visible_to_staff_only': visible_to_staff_only}
+        )
 
         if publish:
-            modulestore().publish(location, self.dummy_user)
+            modulestore().publish(vertical.location, self.dummy_user)
 
         return vertical
+
+
+class ReleaseDateSourceTest(CourseTestCase):
+    """Tests for finding the source of an xblock's release date."""
+
+    def setUp(self):
+        super(ReleaseDateSourceTest, self).setUp()
+
+        self.chapter = ItemFactory.create(category='chapter', parent_location=self.course.location)
+        self.sequential = ItemFactory.create(category='sequential', parent_location=self.chapter.location)
+        self.vertical = ItemFactory.create(category='vertical', parent_location=self.sequential.location)
+
+        # Read again so that children lists are accurate
+        self.chapter = self.store.get_item(self.chapter.location)
+        self.sequential = self.store.get_item(self.sequential.location)
+        self.vertical = self.store.get_item(self.vertical.location)
+
+        self.date_one = datetime(1980, 1, 1, tzinfo=UTC)
+        self.date_two = datetime(2020, 1, 1, tzinfo=UTC)
+
+    def _update_release_dates(self, chapter_start, sequential_start, vertical_start):
+        """Sets the release dates of the chapter, sequential, and vertical"""
+        self.chapter.start = chapter_start
+        self.chapter = self.store.update_item(self.chapter, ModuleStoreEnum.UserID.test)
+        self.sequential.start = sequential_start
+        self.sequential = self.store.update_item(self.sequential, ModuleStoreEnum.UserID.test)
+        self.vertical.start = vertical_start
+        self.vertical = self.store.update_item(self.vertical, ModuleStoreEnum.UserID.test)
+
+    def _verify_release_date_source(self, item, expected_source):
+        """Helper to verify that the release date source of a given item matches the expected source"""
+        source = utils.find_release_date_source(item)
+        self.assertEqual(source.location, expected_source.location)
+        self.assertEqual(source.start, expected_source.start)
+
+    def test_chapter_source_for_vertical(self):
+        """Tests a vertical's release date being set by its chapter"""
+        self._update_release_dates(self.date_one, self.date_one, self.date_one)
+        self._verify_release_date_source(self.vertical, self.chapter)
+
+    def test_sequential_source_for_vertical(self):
+        """Tests a vertical's release date being set by its sequential"""
+        self._update_release_dates(self.date_one, self.date_two, self.date_two)
+        self._verify_release_date_source(self.vertical, self.sequential)
+
+    def test_chapter_source_for_sequential(self):
+        """Tests a sequential's release date being set by its chapter"""
+        self._update_release_dates(self.date_one, self.date_one, self.date_one)
+        self._verify_release_date_source(self.sequential, self.chapter)
+
+    def test_sequential_source_for_sequential(self):
+        """Tests a sequential's release date being set by itself"""
+        self._update_release_dates(self.date_one, self.date_two, self.date_two)
+        self._verify_release_date_source(self.sequential, self.sequential)
+
+
+class StaffLockTest(CourseTestCase):
+    """Base class for testing staff lock functions."""
+
+    def setUp(self):
+        super(StaffLockTest, self).setUp()
+
+        self.chapter = ItemFactory.create(category='chapter', parent_location=self.course.location)
+        self.sequential = ItemFactory.create(category='sequential', parent_location=self.chapter.location)
+        self.vertical = ItemFactory.create(category='vertical', parent_location=self.sequential.location)
+        self.orphan = ItemFactory.create(category='vertical', parent_location=self.sequential.location)
+
+        # Read again so that children lists are accurate
+        self.chapter = self.store.get_item(self.chapter.location)
+        self.sequential = self.store.get_item(self.sequential.location)
+        self.vertical = self.store.get_item(self.vertical.location)
+
+        # Orphan the orphaned xblock
+        self.sequential.children = [self.vertical.location]
+        self.sequential = self.store.update_item(self.sequential, ModuleStoreEnum.UserID.test)
+
+    def _set_staff_lock(self, xblock, is_locked):
+        """If is_locked is True, xblock is staff locked. Otherwise, the xblock staff lock field is removed."""
+        field = xblock.fields['visible_to_staff_only']
+        if is_locked:
+            field.write_to(xblock, True)
+        else:
+            field.delete_from(xblock)
+        return self.store.update_item(xblock, ModuleStoreEnum.UserID.test)
+
+    def _update_staff_locks(self, chapter_locked, sequential_locked, vertical_locked):
+        """
+        Sets the staff lock on the chapter, sequential, and vertical
+        If the corresponding argument is False, then the field is deleted from the xblock
+        """
+        self.chapter = self._set_staff_lock(self.chapter, chapter_locked)
+        self.sequential = self._set_staff_lock(self.sequential, sequential_locked)
+        self.vertical = self._set_staff_lock(self.vertical, vertical_locked)
+
+
+class StaffLockSourceTest(StaffLockTest):
+    """Tests for finding the source of an xblock's staff lock."""
+
+    def _verify_staff_lock_source(self, item, expected_source):
+        """Helper to verify that the staff lock source of a given item matches the expected source"""
+        source = utils.find_staff_lock_source(item)
+        self.assertEqual(source.location, expected_source.location)
+        self.assertTrue(source.visible_to_staff_only)
+
+    def test_chapter_source_for_vertical(self):
+        """Tests a vertical's staff lock being set by its chapter"""
+        self._update_staff_locks(True, False, False)
+        self._verify_staff_lock_source(self.vertical, self.chapter)
+
+    def test_sequential_source_for_vertical(self):
+        """Tests a vertical's staff lock being set by its sequential"""
+        self._update_staff_locks(True, True, False)
+        self._verify_staff_lock_source(self.vertical, self.sequential)
+        self._update_staff_locks(False, True, False)
+        self._verify_staff_lock_source(self.vertical, self.sequential)
+
+    def test_vertical_source_for_vertical(self):
+        """Tests a vertical's staff lock being set by itself"""
+        self._update_staff_locks(True, True, True)
+        self._verify_staff_lock_source(self.vertical, self.vertical)
+        self._update_staff_locks(False, True, True)
+        self._verify_staff_lock_source(self.vertical, self.vertical)
+        self._update_staff_locks(False, False, True)
+        self._verify_staff_lock_source(self.vertical, self.vertical)
+
+    def test_orphan_has_no_source(self):
+        """Tests that a orphaned xblock has no staff lock source"""
+        self.assertIsNone(utils.find_staff_lock_source(self.orphan))
+
+    def test_no_source_for_vertical(self):
+        """Tests a vertical with no staff lock set anywhere"""
+        self._update_staff_locks(False, False, False)
+        self.assertIsNone(utils.find_staff_lock_source(self.vertical))
+
+
+class InheritedStaffLockTest(StaffLockTest):
+    """Tests for determining if an xblock inherits a staff lock."""
+
+    def test_no_inheritance(self):
+        """Tests that a locked or unlocked vertical with no locked ancestors does not have an inherited lock"""
+        self._update_staff_locks(False, False, False)
+        self.assertFalse(utils.ancestor_has_staff_lock(self.vertical))
+        self._update_staff_locks(False, False, True)
+        self.assertFalse(utils.ancestor_has_staff_lock(self.vertical))
+
+    def test_inheritance_in_locked_section(self):
+        """Tests that a locked or unlocked vertical in a locked section has an inherited lock"""
+        self._update_staff_locks(True, False, False)
+        self.assertTrue(utils.ancestor_has_staff_lock(self.vertical))
+        self._update_staff_locks(True, False, True)
+        self.assertTrue(utils.ancestor_has_staff_lock(self.vertical))
+
+    def test_inheritance_in_locked_subsection(self):
+        """Tests that a locked or unlocked vertical in a locked subsection has an inherited lock"""
+        self._update_staff_locks(False, True, False)
+        self.assertTrue(utils.ancestor_has_staff_lock(self.vertical))
+        self._update_staff_locks(False, True, True)
+        self.assertTrue(utils.ancestor_has_staff_lock(self.vertical))
+
+    def test_no_inheritance_for_orphan(self):
+        """Tests that an orphaned xblock does not inherit staff lock"""
+        self.assertFalse(utils.ancestor_has_staff_lock(self.orphan))
