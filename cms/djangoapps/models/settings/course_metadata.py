@@ -1,5 +1,6 @@
 from xblock.fields import Scope
 from xmodule.modulestore.django import modulestore
+from xmodule.tabs import CourseTabList
 from django.utils.translation import ugettext as _
 
 
@@ -83,6 +84,9 @@ class CourseMetadata(object):
 
         for key, value in key_values.iteritems():
             setattr(descriptor, key, value)
+
+        if 'discussion_link' in key_values:
+            CourseTabList.update_discussion(descriptor)
 
         if len(key_values) > 0:
             modulestore().update_item(descriptor, user.id)

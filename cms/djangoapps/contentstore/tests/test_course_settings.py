@@ -16,6 +16,7 @@ from xmodule.modulestore.tests.factories import CourseFactory
 
 from models.settings.course_metadata import CourseMetadata
 from xmodule.fields import Date
+from xmodule.tabs import DiscussionTab, ExternalDiscussionTab
 
 from .utils import CourseTestCase
 from xmodule.modulestore.django import modulestore
@@ -548,6 +549,62 @@ class CourseMetadataEditingTest(CourseTestCase):
         })
         course = modulestore().get_course(self.course.id)
         self.assertNotIn(EXTRA_TAB_PANELS.get("open_ended"), course.tabs)
+
+    def test_update_discussion_link_from_json(self):
+        """
+        Test that changing of discussion link results in tabs updating
+        """
+        self.assertIsInstance(self._get_discussion_tab(self.course), DiscussionTab, 'Initial discussion tab is not internal DiscussionTab')
+        test_model = CourseMetadata.update_from_json(
+            self.course,
+            {
+               "discussion_link": {"value": "other_discussion_link"}
+            },
+            user=self.user
+        )
+        # fetch course from database to ensure tabs are generated/fetched correctly for the next request
+        fresh = modulestore().get_course(self.course.id)
+        self.assertNotIsInstance(self._get_discussion_tab(fresh), DiscussionTab,
+            'Discussion link not updated')
+        self.assertIsNotNone(self._get_discussion_tab(fresh),
+            'Discussion link not generated')
+        self.assertIsInstance(self._get_discussion_tab(fresh), ExternalDiscussionTab,
+            'Changing of discussion links not followed by tabs updating')
+
+    def test_restore_builtin_discussion_link(self):
+        """
+        Test that setting of discussion link to empty string
+        results in restoring of builtin discussion tab.
+        """
+        self.assertIsInstance(self._get_discussion_tab(self.course), DiscussionTab, 'Initial discussion tab is not internal DiscussionTab')
+        test_model = CourseMetadata.update_from_json(
+            self.course,
+            {
+               "discussion_link": {"value": "other_discussion_link"}
+            },
+            user=self.user
+        )
+        # fetch course from database to ensure tabs are generated/fetched correctly for the next request
+        fresh = modulestore().get_course(self.course.id)
+        self.assertIsInstance(self._get_discussion_tab(fresh), ExternalDiscussionTab,
+            'Changing of discussion links not followed by tabs updating')
+        # remove discussion link value
+        test_model = CourseMetadata.update_from_json(
+            fresh,
+            {
+               "discussion_link": {"value": None}
+            },
+            user=self.user
+        )
+        # fetch course from database to ensure tabs are generated/fetched correctly for the next request
+        fresh = modulestore().get_course(self.course.id)
+        self.assertIsInstance(self._get_discussion_tab(fresh), DiscussionTab,
+            'Changing of discussion links to null not followed by tabs updating: %s' % self._get_discussion_tab(fresh))
+
+    def _get_discussion_tab(self, course):
+        for tab in course.tabs:
+            if isinstance(tab, (DiscussionTab, ExternalDiscussionTab)):
+                return tab
 
 
 class CourseGraderUpdatesTest(CourseTestCase):
