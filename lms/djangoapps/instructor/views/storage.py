@@ -3,24 +3,32 @@ Report storage views
 """
 import os.path
 
-from django.http import HttpResponse, Http404
+from django_future.csrf import ensure_csrf_cookie
+from django.views.decorators.cache import cache_control
+from django.http import HttpResponse, HttpResponseForbidden, Http404
 from django.conf import settings
 
 from instructor_task.models import ReportStore
+from courseware.access import has_access
+from courseware.courses import get_course_by_id
+
+from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 
-# TODO:
-# protect access
-
+@ensure_csrf_cookie
+@cache_control(no_cache=True, no_store=True, must_revalidate=True)
 def serve_report(request, course_id, filename):
     """
     Serve grade reports from local filesystem using nginx X-Accell-Redirect header.
-    Imply that view is enabled only if ReportStore is instance of LocalFSReportStore.
+    Imply that the view is enabled only if ReportStore is instance of LocalFSReportStore.
     """
-    if True:
-        return HttpResponse('ok')
+    course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+    course = get_course_by_id(course_key, depth=None)
+    if not has_access(request.user, 'staff', course):
+        return HttpResponseForbidden()
+
     store = ReportStore.from_config()
-    store_filepath = store.path_to(course_id, filename)
+    store_filepath = store.path_to(course_key, filename)
 
     if not os.path.exists(store_filepath):
         raise Http404()
@@ -31,5 +39,5 @@ def _report_response(store_filepath, filename):
     response = HttpResponse()
     response['X-Accel-Redirect'] = store_filepath
     response['Content-Type'] = 'text/csv'
-    restpose['Content-Disposition'] = 'attachment;filename=' + filename
+    response['Content-Disposition'] = 'attachment;filename=' + filename
     return response

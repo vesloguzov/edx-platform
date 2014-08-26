@@ -428,9 +428,8 @@ class ProtectedFSReportStore(LocalFSReportStore):
         intermediate directories as needed. Example::
 
             STORAGE_TYPE : "protectedfs"
-            ROOT_PATH : /tmp/edx/report-downloads/
+            ROOT_PATH : /edx/var/edxapp/report_store/
         """
-        # TODO: add root_path example
         return super(ProtectedFSReportStore, cls).from_config()
 
     def links_for(self, course_id):
