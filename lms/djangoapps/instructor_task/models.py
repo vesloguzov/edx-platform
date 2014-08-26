@@ -27,6 +27,7 @@ from boto.s3.key import Key
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models, transaction
+from django.core.urlresolvers import reverse
 
 from xmodule_django.models import CourseKeyField
 
@@ -208,6 +209,8 @@ class ReportStore(object):
             return S3ReportStore.from_config()
         elif storage_type.lower() == "localfs":
             return LocalFSReportStore.from_config()
+        elif storage_type.lower() == "protectedfs":
+            return ProtectedFSReportStore.from_config()
 
 
 class S3ReportStore(ReportStore):
@@ -401,6 +404,47 @@ class LocalFSReportStore(ReportStore):
         return sorted(
             [
                 (filename, ("file://" + urllib.quote(os.path.join(course_dir, filename))))
+                for filename in os.listdir(course_dir)
+            ],
+            reverse=True
+        )
+
+
+class ProtectedFSReportStore(LocalFSReportStore):
+    """
+    LocalFS implementation of a ReportStore. This is meant for production where
+    reports are accessible for all course staff members permanently.
+    The directory structure used to store things is::
+
+        `{settings.GRADES_DOWNLOAD[ROOT_PATH]}/{sha1 hash of course_id}/filename`
+    """
+    @classmethod
+    def from_config(cls):
+        """
+        Generate an instance of this object from Django settings. It assumes
+        that there is a dict in settings named GRADES_DOWNLOAD and that it has
+        a ROOT_PATH that maps to an absolute file path that the web app has
+        write permissions to. `ProtectedFSReportStore` will create any
+        intermediate directories as needed. Example::
+
+            STORAGE_TYPE : "protectedfs"
+            ROOT_PATH : /tmp/edx/report-downloads/
+        """
+        # TODO: add root_path example
+        return super(ProtectedFSReportStore, cls).from_config()
+
+    def links_for(self, course_id):
+        """
+        For a given `course_id`, return a list of `(filename, url)` tuples. `url`
+        can be plugged straight into an href. `ProtectedFSReportStore`
+        will generate URLs reversing name 'serve_report'
+        """
+        course_dir = self.path_to(course_id, '')
+        if not os.path.exists(course_dir):
+            return []
+        return sorted(
+            [
+                (filename, reverse('serve_report', args=[course_id, filename]))
                 for filename in os.listdir(course_dir)
             ],
             reverse=True

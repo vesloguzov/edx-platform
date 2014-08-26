@@ -391,6 +391,11 @@ if settings.COURSEWARE_ENABLED:
                 'courseware.views.submission_history',
                 name='submission_history'),
         )
+    if settings.GRADES_DOWNLOAD['STORAGE_TYPE'] == 'protectedfs':
+        urlpatterns += (
+            url(r'^courses/{}/download_report/(?P<filename>[^/]*)/$'.format(settings.COURSE_ID_PATTERN),
+                'instructor.views.storage.serve_report', name='serve_report'),
+        )
 
 
 if settings.COURSEWARE_ENABLED and settings.FEATURES.get('ENABLE_INSTRUCTOR_LEGACY_DASHBOARD'):
