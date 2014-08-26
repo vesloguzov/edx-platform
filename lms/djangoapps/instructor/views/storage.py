@@ -33,11 +33,11 @@ def serve_report(request, course_id, filename):
     if not os.path.exists(store_filepath):
         raise Http404()
 
-    return _report_response(store_filepath, filename)
+    return _report_response(store.protected_url_for(course_key, filename), filename)
 
-def _report_response(store_filepath, filename):
+def _report_response(protected_url, filename):
     response = HttpResponse()
-    response['X-Accel-Redirect'] = store_filepath
+    response['X-Accel-Redirect'] = protected_url
     response['Content-Type'] = 'text/csv'
     response['Content-Disposition'] = 'attachment;filename=' + filename
     return response

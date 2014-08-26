@@ -418,19 +418,38 @@ class ProtectedFSReportStore(LocalFSReportStore):
 
         `{settings.GRADES_DOWNLOAD[ROOT_PATH]}/{sha1 hash of course_id}/filename`
     """
+    def __init__(self, root_path, protected_url):
+        """
+        Initialize with root_path where we're going to store our files and
+        nginx protected url that would be used to serve files. We will build
+        a directory structure under this for each course.
+        """
+        self.root_path = root_path
+        if not os.path.exists(root_path):
+            os.makedirs(root_path)
+        self.protected_url = protected_url
+
     @classmethod
     def from_config(cls):
         """
         Generate an instance of this object from Django settings. It assumes
         that there is a dict in settings named GRADES_DOWNLOAD and that it has
         a ROOT_PATH that maps to an absolute file path that the web app has
-        write permissions to. `ProtectedFSReportStore` will create any
+        write permissions to; dict also should have 'PROTECTED_URL' that is used
+        in nginx congifuration file. `ProtectedFSReportStore` will create any
         intermediate directories as needed. Example::
 
             STORAGE_TYPE : "protectedfs"
             ROOT_PATH : /edx/var/edxapp/report_store/
+            PROTECTED_URL : /reports_storage/
+
         """
-        return super(ProtectedFSReportStore, cls).from_config()
+        return cls(settings.GRADES_DOWNLOAD['ROOT_PATH'],
+                   settings.GRADES_DOWNLOAD['PROTECTED_URL'])
+
+    def protected_url_for(self, course_id, filename):
+        """Return nginx internal path to a given file for a given course."""
+        return os.path.join(self.protected_url, urllib.quote(course_id.to_deprecated_string(), safe=''), filename)
 
     def links_for(self, course_id):
         """
