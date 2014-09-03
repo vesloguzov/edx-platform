@@ -6566,15 +6566,15 @@ msgstr ""
 
 #: lms/templates/courseware/course_about.html
 msgid "Classes Start"
-msgstr "Занятия начинаются"
+msgstr "Начало курса"
 
 #: lms/templates/courseware/course_about.html
 msgid "Classes End"
-msgstr "Занятия Заканчиваются"
+msgstr "Окончание курса"
 
 #: lms/templates/courseware/course_about.html
-msgid "Estimated Effort"
-msgstr "Оценка сложности"
+msgid "Estimated Effort Per Week"
+msgstr "Еженедельная нагрузка"
 
 #: lms/templates/courseware/course_about.html
 msgid "Prerequisites"
