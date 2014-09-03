@@ -125,6 +125,17 @@
     <div class="intro-inner-wrapper">
       <div class="table">
       <section class="intro">
+        <p class="date-block">
+        % if course.has_ended():
+        ${_("Course Completed - {end_date}").format(end_date=course.end_date_text)}
+        % elif course.has_started():
+        ${_("Course Started - {start_date}").format(start_date=course.start_date_text)}
+        % elif course.start_date_is_still_default: # Course start date TBD
+        ${_("Course has not yet started")}
+        % else:   # hasn't started yet
+        ${_("Course Starts - {start_date}").format(start_date=course.start_date_text)}
+        % endif
+        </p>
         <hgroup>
           <h1>
             ${get_course_about_section(course, "title")}
@@ -290,7 +301,7 @@
         </header>
 
         <ol class="important-dates">
-          <li><div class="icon course-number"></div><p>${_("Course Number")}</p><span class="course-number">${course.display_number_with_default | h}</span></li>
+          ## <li><div class="icon course-number"></div><p>${_("Course Number")}</p><span class="course-number">${course.display_number_with_default | h}</span></li>
           % if not course.start_date_is_still_default:
           <li><div class="icon start"></div><p>${_("Classes Start")}</p><span class="start-date">${course.start_date_text}</span></li>
           % endif
@@ -310,7 +321,7 @@
             % endif
 
           % if get_course_about_section(course, "effort"):
-            <li><div class="icon effort"></div><p>${_("Estimated Effort")}</p><span class="start-date">${get_course_about_section(course, "effort")}</span></li>
+            <li><div class="icon effort"></div><p>${_("Estimated Effort Per Week")}</p><span class="start-date">${get_course_about_section(course, "effort")}</span></li>
           % endif
 
           ##<li><div class="icon length"></div><p>${_('Course Length')}</p><span class="course-length">${_('{number} weeks').format(number=15)}</span></li>
