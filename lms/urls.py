@@ -184,6 +184,13 @@ if settings.WIKI_ENABLED:
         url(r'^courses/(?:[^/]+/[^/]+/[^/]+)/wiki/', include(wiki_pattern())),
     )
 
+# Serve certificates (since updating is not settings-dependent, urlpattern is permanent too
+if settings.CERT_PROTECTED_URL:
+    urlpatterns += (
+        url(r'^courses/{}/certificate/$'.format(settings.COURSE_ID_PATTERN),
+            'certificates.views.serve_certificate', name='serve_certificate'),
+    )
+
 if settings.COURSEWARE_ENABLED:
     urlpatterns += (
         url(r'^courses/{}/jump_to/(?P<location>.*)$'.format(settings.COURSE_ID_PATTERN),
@@ -397,6 +404,7 @@ if settings.COURSEWARE_ENABLED:
             url(r'^courses/{}/download_report/(?P<filename>[^/]*)/$'.format(settings.COURSE_ID_PATTERN),
                 'instructor.views.storage.serve_report', name='serve_report'),
         )
+
 
 
 if settings.COURSEWARE_ENABLED and settings.FEATURES.get('ENABLE_INSTRUCTOR_LEGACY_DASHBOARD'):

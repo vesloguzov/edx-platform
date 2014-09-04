@@ -118,3 +118,56 @@ def update_certificate(request):
         cert.save()
         return HttpResponse(json.dumps({'return_code': 0}),
                             mimetype='application/json')
+
+
+import os.path
+import urllib, urlparse
+
+from django_future.csrf import ensure_csrf_cookie
+from django.views.decorators.cache import cache_control
+from django.http import HttpResponseForbidden, Http404
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+
+from courseware.access import has_access
+from courseware.courses import get_course_by_id
+from student.models import CourseEnrollment
+
+
+@login_required
+@ensure_csrf_cookie
+@cache_control(no_cache=True, no_store=True, must_revalidate=True)
+def serve_certificate(request, course_id):
+    """
+    Serve certificates from local filesystem using nginx X-Accell-Redirect header.
+    """
+    course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+    course = get_course_by_id(course_key, depth=None)
+
+    # TODO: get downloadable certificate
+    certificate = get_object_or_404(GeneratedCertificate,
+                                    user=request.user,
+                                    course_id=course_key)
+    if certificate.status != CertificateStatuses.downloadable:
+        raise Http404()
+
+    filename = course.id.to_deprecated_string().replace('/', '__') + '__' + 'certificate.pdf'
+
+    return protected_static_response(_certificate_protected_url(course, request.user),
+                                     filename,
+                                     content_type='application/pdf')
+
+def _certificate_protected_url(course, user):
+    root_path = settings.CERT_PROTECTED_URL
+    filename = os.path.join(urllib.quote(course.id.to_deprecated_string(), safe=''),
+                            user.username)
+    # Unsafe joining!
+    return urlparse.urljoin(root_path, filename)
+
+def protected_static_response(protected_url, filename, content_type='application/octet-stream'):
+    response = HttpResponse()
+    response['X-Accel-Redirect'] = protected_url
+    response['Content-Type'] = content_type
+    response['Content-Disposition'] = 'attachment;filename=' + filename
+    return response

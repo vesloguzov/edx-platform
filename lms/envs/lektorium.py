@@ -9,6 +9,6 @@ LOCALE_PATHS = (
     _REPO_ROOT + '/conf/lektorium_locale/',
     _REPO_ROOT + '/conf/locale/',
 )
-
 CERT_NAME_SHORT = u"сертификат"
 CERT_NAME_LONG = u"сертификат"
+CERT_PROTECTED_URL = '/certificate_store/'
