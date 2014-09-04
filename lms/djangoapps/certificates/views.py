@@ -145,24 +145,19 @@ def serve_certificate(request, course_id):
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     course = get_course_by_id(course_key, depth=None)
 
-    # TODO: get downloadable certificate
     certificate = get_object_or_404(GeneratedCertificate,
-                                    user=request.user,
-                                    course_id=course_key)
-    if certificate.status != CertificateStatuses.downloadable:
-        raise Http404()
+                                    user=request.user, course_id=course_key,
+                                    status=CertificateStatuses.downloadable)
 
     filename = course.id.to_deprecated_string().replace('/', '__') + '__' + 'certificate.pdf'
 
     return protected_static_response(_certificate_protected_url(course, request.user),
-                                     filename,
-                                     content_type='application/pdf')
+                                     filename, content_type='application/pdf')
 
 def _certificate_protected_url(course, user):
     root_path = settings.CERT_PROTECTED_URL
     filename = os.path.join(urllib.quote(course.id.to_deprecated_string(), safe=''),
                             user.username)
-    # Unsafe joining!
     return urlparse.urljoin(root_path, filename)
 
 def protected_static_response(protected_url, filename, content_type='application/octet-stream'):
