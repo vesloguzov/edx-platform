@@ -2,17 +2,30 @@
 from dogapi import dog_stats_api
 import json
 import logging
+import os.path
+import urllib
+import urlparse
 
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django_future.csrf import ensure_csrf_cookie
+from django.views.decorators.cache import cache_control
+from django.http import HttpResponseForbidden, Http404
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
 
+from protected_static import protected_static_response
 from capa.xqueue_interface import XQUEUE_METRIC_NAME
 from certificates.models import certificate_status_for_student, CertificateStatuses, GeneratedCertificate
 from certificates.queue import XQueueCertInterface
 from xmodule.course_module import CourseDescriptor
 from xmodule.modulestore.django import modulestore
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
+from courseware.access import has_access
+from courseware.courses import get_course_by_id
+from student.models import CourseEnrollment
 
 logger = logging.getLogger(__name__)
 
@@ -120,21 +133,6 @@ def update_certificate(request):
                             mimetype='application/json')
 
 
-import os.path
-import urllib, urlparse
-
-from django_future.csrf import ensure_csrf_cookie
-from django.views.decorators.cache import cache_control
-from django.http import HttpResponseForbidden, Http404
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
-
-from courseware.access import has_access
-from courseware.courses import get_course_by_id
-from student.models import CourseEnrollment
-
-
 @login_required
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
@@ -159,10 +157,3 @@ def _certificate_protected_url(course, user):
     filename = os.path.join(urllib.quote(course.id.to_deprecated_string(), safe=''),
                             user.username)
     return urlparse.urljoin(root_path, filename)
-
-def protected_static_response(protected_url, filename, content_type='application/octet-stream'):
-    response = HttpResponse()
-    response['X-Accel-Redirect'] = protected_url
-    response['Content-Type'] = content_type
-    response['Content-Disposition'] = 'attachment;filename=' + filename
-    return response

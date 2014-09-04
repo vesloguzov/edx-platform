@@ -8,6 +8,7 @@ from django.views.decorators.cache import cache_control
 from django.http import HttpResponse, HttpResponseForbidden, Http404
 from django.conf import settings
 
+from protected_static import protected_static_response
 from instructor_task.models import ReportStore
 from courseware.access import has_access
 from courseware.courses import get_course_by_id
@@ -33,11 +34,5 @@ def serve_report(request, course_id, filename):
     if not os.path.exists(store_filepath):
         raise Http404()
 
-    return _report_response(store.protected_url_for(course_key, filename), filename)
-
-def _report_response(protected_url, filename):
-    response = HttpResponse()
-    response['X-Accel-Redirect'] = protected_url
-    response['Content-Type'] = 'text/csv'
-    response['Content-Disposition'] = 'attachment;filename=' + filename
-    return response
+    return protected_static_response(store.protected_url_for(course_key, filename),
+                                     filename, content_type='text/csv')
