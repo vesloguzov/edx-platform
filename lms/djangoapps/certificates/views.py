@@ -155,5 +155,5 @@ def serve_certificate(request, course_id):
 def _certificate_protected_url(course, user):
     root_path = settings.CERT_PROTECTED_URL
     filename = os.path.join(urllib.quote(course.id.to_deprecated_string(), safe=''),
-                            user.username)
+                            urllib.quote(user.username, safe=''))
     return urlparse.urljoin(root_path, filename)
