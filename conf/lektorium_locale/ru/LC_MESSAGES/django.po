@@ -7339,7 +7339,7 @@ msgstr "Ваша итоговая оценка:"
 
 #: lms/templates/dashboard/_dashboard_certificate_information.html
 msgid "Grade required for a {cert_name_short}:"
-msgstr "Оценка, необходимая для получения {cert_name_short}:"
+msgstr "Оценка, необходимая для получения сертификата:"
 
 #: lms/templates/dashboard/_dashboard_certificate_information.html
 msgid ""
