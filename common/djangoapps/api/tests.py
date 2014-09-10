@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 This file demonstrates writing tests using the unittest module. These will pass
 when you run "manage.py test".
@@ -61,6 +62,12 @@ class UserSerializerTest(TestCase):
         serializer = UserSerializer(data=data)
         self.assertTrue(serializer.is_valid())
 
+    def test_required_fields(self):
+        data = {}
+        serializer = UserSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('uid', serializer.errors)
+
 
 TEST_API_KEY = "test_api_key"
 
@@ -97,3 +104,10 @@ class UserViewSetTest(TestCase):
     def _request_with_auth(self, method, *args, **kwargs):
         """Issue a get request to the given URI with the API key header"""
         return getattr(self.client, method)(HTTP_X_EDX_API_KEY=TEST_API_KEY, *args, **kwargs)
+
+    def test_create_incorrect_username(self):
+        incorrect_uids = ['a b', 'a+b', 'a@b', u'ша']
+        for uid in incorrect_uids:
+            data = {'uid': uid}
+            response = self._request_with_auth('post', self.list_url, data)
+            self.assertEqual(response.status_code, 400)

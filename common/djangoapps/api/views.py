@@ -5,7 +5,7 @@ from rest_framework import viewsets
 from rest_framework import mixins
 from rest_framework import permissions
 
-from api.serializers import UserSerializer
+from api.serializers import UserSerializer, UID_REGEX
 
 class ApiKeyHeaderPermission(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -30,8 +30,8 @@ class UserViewSet(mixins.CreateModelMixin,
                   mixins.ListModelMixin,
                   viewsets.GenericViewSet):
     """
-    ViewSet for users implementing all operations except destroying
-    Uses username as a lookup url parameter (limited to alphanumeric and [.-_])
+    API for operating users.
+    Username is used as a lookup url parameter (limited to alphanumeric and [.-_])
     """
     permission_classes = (ApiKeyHeaderPermission,)
 
@@ -39,4 +39,4 @@ class UserViewSet(mixins.CreateModelMixin,
     serializer_class = UserSerializer
 
     lookup_field = 'username'
-    lookup_regex = '^[\w.-]+$' # standard regex '^[\w.@+-]+$' does not suit for url
+    lookup_regex = UID_REGEX
