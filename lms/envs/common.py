@@ -1712,4 +1712,5 @@ ANALYTICS_DATA_URL = ""
 ANALYTICS_DATA_TOKEN = ""
 ANALYTICS_DASHBOARD_URL = ""
 
+INSTALLED_APPS += ('api',)
 from .lektorium import *
