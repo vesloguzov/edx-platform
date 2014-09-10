@@ -53,3 +53,8 @@ class UserSerializerTest(TestCase):
         self.assertEquals(updated_user.username, data['uid'])
         self.assertEquals(updated_user.email, data['email'])
         self.assertEquals(updated_user.profile.name, data['name'])
+
+    def test_optional_fields(self):
+        data = {'uid': 'test2'}
+        serializer = UserSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
