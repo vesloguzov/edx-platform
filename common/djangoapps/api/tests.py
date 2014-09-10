@@ -7,6 +7,8 @@ Replace this with more appropriate tests for your application.
 
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.test.utils import override_settings
+from django.core.urlresolvers import reverse
 
 from student.tests.factories import UserFactory
 from serializers import UserSerializer
@@ -58,3 +60,40 @@ class UserSerializerTest(TestCase):
         data = {'uid': 'test2'}
         serializer = UserSerializer(data=data)
         self.assertTrue(serializer.is_valid())
+
+
+TEST_API_KEY = "test_api_key"
+
+@override_settings(EDX_API_KEY=TEST_API_KEY)
+class UserViewSetTest(TestCase):
+    def setUp(self):
+        self.user = UserFactory.create(username='test', email='test@example.com')
+        self.detail_url = reverse('user-detail', kwargs={'username': self.user.username})
+
+        self.list_url = reverse('user-list')
+
+    @override_settings(EDX_API_KEY='')
+    def test_empty_api_key_fail(self):
+        response = self.client.get(self.list_url)
+        self.assertEquals(response.status_code, 403)
+
+        response = self.client.get(self.detail_url)
+        self.assertEquals(response.status_code, 403)
+
+        response = self.client.post(self.list_url, {'uid': 'new_test'})
+        self.assertEquals(response.status_code, 403)
+        self.assertFalse(User.objects.filter(username='new_test').exists())
+
+    @override_settings(DEBUG=True)
+    @override_settings(EDX_API_KEY='')
+    def test_empty_api_key_on_debug(self):
+        response = self.client.get(self.list_url)
+        self.assertEquals(response.status_code, 200)
+
+    def test_list(self):
+        response = self._request_with_auth('get', self.list_url)
+        self.assertEquals(response.status_code, 200)
+
+    def _request_with_auth(self, method, *args, **kwargs):
+        """Issue a get request to the given URI with the API key header"""
+        return getattr(self.client, method)(HTTP_X_EDX_API_KEY=TEST_API_KEY, *args, **kwargs)
