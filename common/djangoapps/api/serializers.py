@@ -3,10 +3,14 @@ import re
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 
+from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.exceptions import ItemNotFoundError
 from rest_framework import serializers
-from student.models import UserProfile
+from student.models import UserProfile, CourseEnrollment
+from courseware.courses import course_image_url
 
-UID_REGEX = re.compile('^[\w.-]+$')
+UID_PATTERN = r'[\w.-]+'
+UID_REGEX = re.compile('^%s$' % UID_PATTERN)
 
 class UserSerializer(serializers.ModelSerializer):
     """
@@ -49,3 +53,39 @@ class UserSerializer(serializers.ModelSerializer):
         profile.save()
         # bind updated profile to user for correct patch response
         self.object.profile = profile
+
+
+class CourseSerializer(serializers.Serializer):
+    course_id = serializers.CharField(source='id')
+    name = serializers.CharField(source='display_name')
+    description = serializers.SerializerMethodField('get_description')
+
+    start = serializers.DateTimeField()
+    end = serializers.DateTimeField()
+    enrollment_start = serializers.DateTimeField()
+    enrollment_end = serializers.DateTimeField()
+
+    # categories???
+    # student_count = serializers.IntegerField()
+    # staff ???
+    # registration_possible, ...
+
+    image = serializers.SerializerMethodField('get_image_url')
+    last_modification = serializers.DateTimeField(source='edited_on')
+
+    def get_description(self, course):
+        key = course.id.make_usage_key('about', 'short_description')
+        try:
+            description = modulestore().get_item(key).data
+        except ItemNotFoundError:
+            description = ''
+        return description
+
+    def get_image_url(self, course):
+        return course_image_url(course)
+
+
+class CourseEnrollmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseEnrollment
+        fields = ('course_id', 'mode', 'is_active')
