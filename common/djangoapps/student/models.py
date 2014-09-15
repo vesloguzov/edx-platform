@@ -201,6 +201,9 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, unique=True, db_index=True, related_name='profile')
     name = models.CharField(blank=True, max_length=255, db_index=True)
 
+    # name visible to other users - we only insist it exists but we con't care if it's repetitive like 'anonymous'
+    nickname = models.CharField(blank=False, max_length=255, db_index=True, default='Anonymous')
+
     meta = models.TextField(blank=True)  # JSON dictionary for future expansion
     courseware = models.CharField(blank=True, max_length=255, default='course.xml')
 
