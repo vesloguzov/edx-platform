@@ -7,8 +7,11 @@ from django.core.urlresolvers import reverse
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
 from rest_framework import serializers
+
 from student.models import UserProfile, CourseEnrollment
 from courseware.courses import course_image_url
+from certificates.models import GeneratedCertificate
+
 
 UID_PATTERN = r'[\w.-]+'
 UID_REGEX = re.compile('^%s$' % UID_PATTERN)
@@ -66,6 +69,8 @@ class CourseSerializer(serializers.Serializer):
     enrollment_start = serializers.DateTimeField()
     enrollment_end = serializers.DateTimeField()
 
+    lowest_passing_grade = serializers.CharField(source='lowest_passing_grade')
+
     # categories???
     # student_count = serializers.IntegerField()
     # staff ???
@@ -92,6 +97,23 @@ class CourseSerializer(serializers.Serializer):
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
+    grade = serializers.SerializerMethodField('get_grade')
+    certificate_url = serializers.SerializerMethodField('get_certificate_url')
+
     class Meta:
         model = CourseEnrollment
-        fields = ('course_id', 'mode', 'is_active')
+        fields = ('course_id', 'mode', 'is_active', 'grade', 'certificate_url')
+
+    def get_grade(self, enrollment):
+        certificate = self._get_certificate(enrollment)
+        return certificate.grade if certificate else None
+
+    def get_certificate_url(self, enrollment):
+        certificate = self._get_certificate(enrollment)
+        return certificate.download_url if certificate else None
+
+    def _get_certificate(self, enrollment):
+        if not hasattr(self, '_certificate'):
+            self._certificate = GeneratedCertificate.certificate_for_student(
+                                 enrollment.user, enrollment.course_id)
+        return self._certificate
