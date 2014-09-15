@@ -2,6 +2,7 @@ import re
 
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
+from django.core.urlresolvers import reverse
 
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
@@ -71,6 +72,7 @@ class CourseSerializer(serializers.Serializer):
     # registration_possible, ...
 
     image = serializers.SerializerMethodField('get_image_url')
+    about_url = serializers.SerializerMethodField('get_about_course_url')
     last_modification = serializers.DateTimeField(source='edited_on')
 
     def get_description(self, course):
@@ -83,6 +85,10 @@ class CourseSerializer(serializers.Serializer):
 
     def get_image_url(self, course):
         return course_image_url(course)
+
+    def get_about_course_url(self, course):
+        return reverse('about_course',
+                kwargs={'course_id': course.id.to_deprecated_string()})
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
