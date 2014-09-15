@@ -6,7 +6,7 @@ from rest_framework import viewsets
 from rest_framework import mixins
 from rest_framework import permissions
 from rest_framework.response import Response
-from rest_framework.decorators import detail_route
+from rest_framework.decorators import detail_route, list_route
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from xmodule.error_module import ErrorDescriptor
 from xmodule.modulestore.django import modulestore
@@ -82,6 +82,11 @@ class CourseViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         self.object_list = self._get_available_courses()
         serializer = self.get_serializer(self.object_list, many=True)
         return Response(serializer.data)
+
+    @list_route()
+    def last_modification(self, request, *args, **kwargs):
+        courses = self._get_available_courses()
+        return Response(max(course.edited_on for course in courses) if courses else None)
 
     def _get_available_courses(self):
         # now only courses seen for everybody are shown
