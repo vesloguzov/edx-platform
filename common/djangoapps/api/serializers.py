@@ -89,11 +89,16 @@ class CourseSerializer(serializers.Serializer):
         return description
 
     def get_image_url(self, course):
-        return course_image_url(course)
+        url = course_image_url(course)
+        return self._get_absolute_url(url)
 
     def get_about_course_url(self, course):
-        return reverse('about_course',
+        url = reverse('about_course',
                 kwargs={'course_id': course.id.to_deprecated_string()})
+        return self._get_absolute_url(url)
+
+    def _get_absolute_url(self, url):
+        return self.context['request'].build_absolute_uri(url)
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
