@@ -123,17 +123,6 @@ class UserViewSetTest(APITest):
             response = self._request_with_auth('post', self.list_url, data)
             self.assertEqual(response.status_code, 400)
 
-    def test_courses(self):
-        course_enrolled = CourseFactory.create(number='enrolled')
-        course_other = CourseFactory.create(number='other')
-        CourseEnrollmentFactory.create(course_id=course_enrolled.id, user=self.user)
-
-        url = reverse('user-courses', kwargs={'username': self.user.username})
-        response = self._request_with_auth('get', url)
-
-        self.assertIn(course_enrolled.id.to_deprecated_string(), response.content)
-        self.assertNotIn(course_other.id.to_deprecated_string(), response.content)
-
 
 class CourseViewSetTest(APITest):
     def setUp(self):
@@ -148,3 +137,20 @@ class CourseViewSetTest(APITest):
     def test_detail(self):
         response = self._request_with_auth('get', self.detail_url)
         self.assertEquals(response.status_code, 200)
+
+
+class EnrollmentViewSetTest(APITest):
+    def setUp(self):
+        self.user = UserFactory.create(username='test', email='test@example.com')
+
+        self.course_enrolled = CourseFactory.create(number='enrolled')
+        CourseEnrollmentFactory.create(course_id=self.course_enrolled.id, user=self.user)
+
+        self.course_other = CourseFactory.create(number='other')
+
+    def test_list(self):
+        url = reverse('enrollment-list', kwargs={'user_username': self.user.username})
+        response = self._request_with_auth('get', url)
+
+        self.assertIn(self.course_enrolled.id.to_deprecated_string(), response.content)
+        self.assertNotIn(self.course_other.id.to_deprecated_string(), response.content)

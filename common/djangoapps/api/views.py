@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User, AnonymousUser
 from django.conf import settings
 from django.http import Http404
+from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets
 from rest_framework import mixins
@@ -50,21 +51,6 @@ class UserViewSet(mixins.CreateModelMixin,
     lookup_field = 'username'
     lookup_value_regex = UID_PATTERN
 
-    @detail_route()
-    def courses(self, request, *args, **kwargs):
-        """
-        Returns a list of all the courses user is enrolled in.
-        """
-        user = self.get_object()
-        courses = self._get_enrollments(user)
-        serializer = CourseEnrollmentSerializer(courses, many=True)
-        return Response(serializer.data)
-
-    @staticmethod
-    def _get_enrollments(user):
-        return [enrollment for enrollment in CourseEnrollment.enrollments_for_user(user)
-                if not isinstance(modulestore().get_course(enrollment.course_id), ErrorDescriptor)]
-
 
 class CourseViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """
@@ -96,3 +82,26 @@ class CourseViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         course_id = self.kwargs.get(self.lookup_field, None)
         course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
         return get_course_by_id(course_key)
+
+
+class EnrollmentViewSet(viewsets.GenericViewSet):
+    permission_classes = (ApiKeyHeaderPermission,)
+
+    serializer_class = CourseEnrollmentSerializer
+
+    lookup_field = 'course_id'
+    lookup_regex = settings.COURSE_ID_PATTERN
+
+    def list(self, request, *args, **kwargs):
+        enrollments = self._get_enrollments(*args, **kwargs)
+        serializer = CourseEnrollmentSerializer(enrollments, many=True)
+        return Response(serializer.data)
+
+    def _get_enrollments(self, *args, **kwargs):
+        user = self._get_user(*args, **kwargs)
+        return [enrollment for enrollment in CourseEnrollment.enrollments_for_user(user)
+                if not isinstance(modulestore().get_course(enrollment.course_id), ErrorDescriptor)]
+
+    def _get_user(self, *args, **kwargs):
+        username = self.kwargs['user_username']
+        return get_object_or_404(User, username=username)
