@@ -107,7 +107,7 @@ class CourseEnrollmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CourseEnrollment
-        fields = ('course_id', 'mode', 'is_active', 'grade', 'certificate_url')
+        fields = ('course_id', 'mode', 'grade', 'certificate_url')
 
     def get_grade(self, enrollment):
         certificate = self._get_certificate(enrollment)
