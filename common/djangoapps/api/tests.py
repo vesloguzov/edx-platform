@@ -13,6 +13,7 @@ from django.core.urlresolvers import reverse
 
 from xmodule.modulestore.tests.factories import CourseFactory
 
+from student.models import CourseEnrollment
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 
 from serializers import UserSerializer
@@ -154,3 +155,33 @@ class EnrollmentViewSetTest(APITest):
 
         self.assertIn(self.course_enrolled.id.to_deprecated_string(), response.content)
         self.assertNotIn(self.course_other.id.to_deprecated_string(), response.content)
+
+    def test_enroll(self):
+        url = reverse('enrollment-enroll', kwargs={'user_username': self.user.username,
+                                                   'course_id': self.course_other.id})
+        response = self._request_with_auth('post', url)
+
+        self.assertEquals(response.status_code, 200)
+        self.assertTrue(CourseEnrollment.is_enrolled(self.user, self.course_other.id))
+
+    def test_enroll_error_if_enrolled(self):
+        url = reverse('enrollment-enroll', kwargs={'user_username': self.user.username,
+                                                   'course_id': self.course_enrolled.id})
+        response = self._request_with_auth('post', url)
+        self.assertEquals(response.status_code, 400)
+
+    # TODO: test enrollment to courses with different modes
+
+    def test_unenroll(self):
+        url = reverse('enrollment-unenroll', kwargs={'user_username': self.user.username,
+                                                   'course_id': self.course_enrolled.id})
+        response = self._request_with_auth('post', url)
+
+        self.assertEquals(response.status_code, 204)
+        self.assertFalse(CourseEnrollment.is_enrolled(self.user, self.course_enrolled.id))
+
+    def test_unenroll_error_if_not_enrolled(self):
+        url = reverse('enrollment-unenroll', kwargs={'user_username': self.user.username,
+                                                   'course_id': self.course_other.id})
+        response = self._request_with_auth('post', url)
+        self.assertEquals(response.status_code, 400)

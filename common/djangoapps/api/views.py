@@ -2,10 +2,12 @@ from django.contrib.auth.models import User, AnonymousUser
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import viewsets
 from rest_framework import mixins
 from rest_framework import permissions
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
@@ -14,6 +16,7 @@ from xmodule.modulestore.django import modulestore
 
 from courseware.courses import get_course_by_id, get_courses
 from student.models import CourseEnrollment
+from student.views import enroll_student_with_default_mode, EnrollmentError, EnrollmentModeRequiredException
 
 from api.serializers import UserSerializer, UID_PATTERN, CourseSerializer, CourseEnrollmentSerializer
 
@@ -97,6 +100,34 @@ class EnrollmentViewSet(viewsets.GenericViewSet):
         serializer = CourseEnrollmentSerializer(enrollments, many=True)
         return Response(serializer.data)
 
+    @detail_route(methods=['post'])
+    def enroll(self, request, *args, **kwargs):
+        user = self._get_user(*args, **kwargs)
+        course = self._get_course(*args, **kwargs)
+        try:
+            enrollment = enroll_student_with_default_mode(user, course, auto_register=False)
+        except EnrollmentModeRequiredException:
+            return Response({'detail': _('Enrollment mode required')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        except EnrollmentError as e:
+            return Response({'detail': e.message},
+                            status=status.HTTP_400_BAD_REQUEST)
+        else:
+            serializer = CourseEnrollmentSerializer(enrollment)
+            return Response(serializer.data)
+
+    @detail_route(methods=['post'])
+    def unenroll(self, request, *args, **kwargs):
+        user = self._get_user(*args, **kwargs)
+        course_id = self.kwargs.get(self.lookup_field, None)
+        course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+
+        if not CourseEnrollment.is_enrolled(user, course_key):
+            return Response({'detail': _("User is not enrolled in this course")},
+                            status=status.HTTP_400_BAD_REQUEST)
+        CourseEnrollment.unenroll(user, course_key)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     def _get_enrollments(self, *args, **kwargs):
         user = self._get_user(*args, **kwargs)
         return [enrollment for enrollment in CourseEnrollment.enrollments_for_user(user)
@@ -105,3 +136,8 @@ class EnrollmentViewSet(viewsets.GenericViewSet):
     def _get_user(self, *args, **kwargs):
         username = self.kwargs['user_username']
         return get_object_or_404(User, username=username)
+
+    def _get_course(self, *args, **kwargs):
+        course_id = self.kwargs.get(self.lookup_field, None)
+        course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+        return get_course_by_id(course_key)
