@@ -638,27 +638,6 @@ def change_enrollment(request, auto_register=False):
                         .format(user.username, course_id))
             return HttpResponseBadRequest(_("Course id is invalid"))
 
-        if not has_access(user, 'enroll', course):
-            return HttpResponseBadRequest(_("Enrollment is closed"))
-
-        # see if we have already filled up all allowed enrollments
-        is_course_full = CourseEnrollment.is_course_full(course)
-
-        if is_course_full:
-            return HttpResponseBadRequest(_("Course is full"))
-
-        # check to see if user is currently enrolled in that course
-        if CourseEnrollment.is_enrolled(user, course_id):
-            return HttpResponseBadRequest(
-                _("Student is already enrolled")
-            )
-
-        # We use this flag to determine which condition of an AB-test
-        # for auto-registration we're currently in.
-        # (We have two URLs that both point to this view, but vary the
-        # value of `auto_register`)
-        # In the auto-registration case, we automatically register the student
-        # as "honor" before allowing them to choose a track.
         # TODO (ECOM-16): Once the auto-registration AB-test is complete, delete
         # one of these two conditions and remove the `auto_register` flag.
         if auto_register:
@@ -666,40 +645,6 @@ def change_enrollment(request, auto_register=False):
             # views will recognize that the user is in the "auto-registration"
             # experimental condition.  We can remove this once the AB test completes.
             request.session['auto_register'] = True
-
-            available_modes = CourseMode.modes_for_course_dict(course_id)
-
-            # Handle professional ed as a special case.
-            # If professional ed is included in the list of available modes,
-            # then do NOT automatically enroll the student (we want them to pay first!)
-            # By convention, professional ed should be the *only* available course mode,
-            # if it's included at all -- anything else is a misconfiguration.  But if someone
-            # messes up and adds an additional course mode, we err on the side of NOT
-            # accidentally giving away free courses.
-            if "professional" not in available_modes:
-                # Enroll the user using the default mode (honor)
-                # We're assuming that users of the course enrollment table
-                # will NOT try to look up the course enrollment model
-                # by its slug.  If they do, it's possible (based on the state of the database)
-                # for no such model to exist, even though we've set the enrollment type
-                # to "honor".
-                CourseEnrollment.enroll(user, course.id)
-
-            # If we have more than one course mode or professional ed is enabled,
-            # then send the user to the choose your track page.
-            # (In the case of professional ed, this will redirect to a page that
-            # funnels users directly into the verification / payment flow)
-            if len(available_modes) > 1 or "professional" in available_modes:
-                return HttpResponse(
-                    reverse("course_modes_choose", kwargs={'course_id': unicode(course_id)})
-                )
-
-            # Otherwise, there is only one mode available (the default)
-            return HttpResponse()
-
-        # If auto-registration is disabled, do NOT register the student
-        # before sending them to the "choose your track" page.
-        # This is the control for the auto-registration AB-test.
         else:
             # TODO (ECOM-16): If the user is NOT in the experimental condition,
             # make sure their session reflects this.  We can remove this
@@ -707,23 +652,15 @@ def change_enrollment(request, auto_register=False):
             if 'auto_register' in request.session:
                 del request.session['auto_register']
 
-            # If this course is available in multiple modes, redirect them to a page
-            # where they can choose which mode they want.
-            available_modes = CourseMode.modes_for_course(course_id)
-            if len(available_modes) > 1:
-                return HttpResponse(
-                    reverse("course_modes_choose", kwargs={'course_id': unicode(course_id)})
-                )
-
-            current_mode = available_modes[0]
-            # only automatically enroll people if the only mode is 'honor'
-            if current_mode.slug != 'honor':
-                return HttpResponse(
-                    reverse("course_modes_choose", kwargs={'course_id': unicode(course_id)})
-                )
-
-            CourseEnrollment.enroll(user, course.id, mode=current_mode.slug)
-
+        try:
+            enroll_student_with_default_mode(user, course, auto_register)
+        except EnrollmentModeRequiredException:
+            return HttpResponse(
+                reverse("course_modes_choose", kwargs={'course_id': unicode(course_id)})
+            )
+        except EnrollmentError as e:
+            return HttpResponseBadRequest(e.message)
+        else:
             return HttpResponse()
 
 
@@ -747,6 +684,87 @@ def change_enrollment(request, auto_register=False):
         return HttpResponse()
     else:
         return HttpResponseBadRequest(_("Enrollment action is invalid"))
+
+
+class EnrollmentError(Exception):
+    pass
+
+class EnrollmentModeRequiredException():
+    pass
+
+def enroll_student_with_default_mode(user, course, auto_register=False):
+    """
+    Enroll student without explicit mode sent.
+
+    In case of multiple possible modes raise EnrollmentModeRequiredException.
+    If auto_register is True, create enrollment anyway (except 'professional' mode
+    is enabled).
+    """
+    if not has_access(user, 'enroll', course):
+        return HttpResponseBadRequest(_("Enrollment is closed"))
+
+    # see if we have already filled up all allowed enrollments
+    is_course_full = CourseEnrollment.is_course_full(course)
+
+    if is_course_full:
+        raise EnrollmentError(_("Course is full"))
+
+    # check to see if user is currently enrolled in that course
+    if CourseEnrollment.is_enrolled(user, course.id):
+        raise EnrollmentError(_("Student is already enrolled"))
+
+    # We use this flag to determine which condition of an AB-test
+    # for auto-registration we're currently in.
+    # (We have two URLs that both point to this view, but vary the
+    # value of `auto_register`)
+    # In the auto-registration case, we automatically register the student
+    # as "honor" before allowing them to choose a track.
+    # TODO (ECOM-16): Once the auto-registration AB-test is complete, delete
+    # one of these two conditions and remove the `auto_register` flag.
+    available_modes = CourseMode.modes_for_course_dict(course.id)
+    if auto_register:
+
+        # Handle professional ed as a special case.
+        # If professional ed is included in the list of available modes,
+        # then do NOT automatically enroll the student (we want them to pay first!)
+        # By convention, professional ed should be the *only* available course mode,
+        # if it's included at all -- anything else is a misconfiguration.  But if someone
+        # messes up and adds an additional course mode, we err on the side of NOT
+        # accidentally giving away free courses.
+        if "professional" not in available_modes:
+            # Enroll the user using the default mode (honor)
+            # We're assuming that users of the course enrollment table
+            # will NOT try to look up the course enrollment model
+            # by its slug.  If they do, it's possible (based on the state of the database)
+            # for no such model to exist, even though we've set the enrollment type
+            # to "honor".
+            CourseEnrollment.enroll(user, course.id)
+
+        # If we have more than one course mode or professional ed is enabled,
+        # then send the user to the choose your track page.
+        # (In the case of professional ed, this will redirect to a page that
+        # funnels users directly into the verification / payment flow)
+        if len(available_modes) > 1 or "professional" in available_modes:
+            raise EnrollmentModeRequiredException
+
+        # Otherwise, there is only one mode available (the default) that should be used
+
+    # If auto-registration is disabled, do NOT register the student
+    # before sending them to the "choose your track" page.
+    # This is the control for the auto-registration AB-test.
+    else:
+        # If this course is available in multiple modes, redirect them to a page
+        # where they can choose which mode they want.
+        if len(available_modes) > 1:
+            raise EnrollmentModeRequiredException
+
+        current_mode = available_modes.values()[0]
+        # only automatically enroll people if the only mode is 'honor'
+        if current_mode.slug != 'honor':
+            raise EnrollmentModeRequiredException
+
+        return CourseEnrollment.enroll(user, course.id, mode=current_mode.slug)
+
 
 
 # TODO: This function is kind of gnarly/hackish/etc and is only used in one location.
