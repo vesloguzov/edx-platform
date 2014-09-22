@@ -519,7 +519,7 @@ def push_grades_to_s3(_xmodule_instance_args, _entry_id, course_id, _task_input,
     # Loop over all our students and build our CSV lists in memory
     header = None
     rows = []
-    err_rows = [["id", "username", "error_msg"]]
+    err_rows = [["id", "nickname", "error_msg"]]
     for student, gradeset, err_msg in iterate_grades_for(course_id, enrolled_students):
         # Periodically update task status (this is a cache write)
         if num_attempted % status_interval == 0:
@@ -531,7 +531,7 @@ def push_grades_to_s3(_xmodule_instance_args, _entry_id, course_id, _task_input,
             num_succeeded += 1
             if not header:
                 header = [section['label'] for section in gradeset[u'section_breakdown']]
-                rows.append(["id", "email", "username", "grade"] + header)
+                rows.append(["id", "email", "nickname", "grade"] + header)
 
             percents = {
                 section['label']: section.get('percent', 0.0)
@@ -546,11 +546,11 @@ def push_grades_to_s3(_xmodule_instance_args, _entry_id, course_id, _task_input,
             # possible for a student to have a 0.0 show up in their row but
             # still have 100% for the course.
             row_percents = [percents.get(label, 0.0) for label in header]
-            rows.append([student.id, student.email, student.username, gradeset['percent']] + row_percents)
+            rows.append([student.id, student.email, student.profile.nickname_or_default, gradeset['percent']] + row_percents)
         else:
             # An empty gradeset means we failed to grade a student.
             num_failed += 1
-            err_rows.append([student.id, student.username, err_msg])
+            err_rows.append([student.id, student.profile.nickname_or_default, err_msg])
 
     # By this point, we've got the rows we're going to stuff into our CSV files.
     curr_step = "Uploading CSVs"
