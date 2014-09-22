@@ -5,8 +5,8 @@
 
 <h2>${_("Disable or Reenable student accounts")}</h2>
 <form action="${reverse('disable_account_ajax')}" method="post" data-remote="true" id="disable-form">
-	<label for="username">${_("Username:")}</label>
-	<input type="text" id="username" name="username" required="true">
+	<label for="email">${_("Email:")}</label>
+	<input type="text" id="email" name="email" required="true">
 	<br>
 	<label for="account_action">${_("Disable Account")}</label>
 	<input type="radio" name="account_action" value="disable" id="account_action">

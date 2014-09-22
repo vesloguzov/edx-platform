@@ -1031,10 +1031,10 @@ def manage_user_standing(request):
 
     all_disabled_users = [standing.user for standing in all_disabled_accounts]
 
-    headers = ['username', 'account_changed_by']
+    headers = ['email', 'account_changed_by']
     rows = []
     for user in all_disabled_users:
-        row = [user.username, user.standing.all()[0].changed_by]
+        row = [user.email, user.standing.all()[0].changed_by]
         rows.append(row)
 
     context = {'headers': headers, 'rows': rows}
@@ -1052,10 +1052,10 @@ def disable_account_ajax(request):
     """
     if not request.user.is_staff:
         raise Http404
-    username = request.POST.get('username')
+    email = request.POST.get('email')
     context = {}
-    if username is None or username.strip() == '':
-        context['message'] = _('Please enter a username')
+    if email is None or email.strip() == '':
+        context['message'] = _('Please enter an email')
         return JsonResponse(context, status=400)
 
     account_action = request.POST.get('account_action')
@@ -1063,11 +1063,11 @@ def disable_account_ajax(request):
         context['message'] = _('Please choose an option')
         return JsonResponse(context, status=400)
 
-    username = username.strip()
+    email = email.strip()
     try:
-        user = User.objects.get(username=username)
+        user = User.objects.get(email=email)
     except User.DoesNotExist:
-        context['message'] = _("User with username {} does not exist").format(username)
+        context['message'] = _("User with email {} does not exist").format(email)
         return JsonResponse(context, status=400)
     else:
         user_account, _success = UserStanding.objects.get_or_create(
@@ -1075,12 +1075,12 @@ def disable_account_ajax(request):
         )
         if account_action == 'disable':
             user_account.account_status = UserStanding.ACCOUNT_DISABLED
-            context['message'] = _("Successfully disabled {}'s account").format(username)
-            log.info("{} disabled {}'s account".format(request.user, username))
+            context['message'] = _("Successfully disabled {}'s account").format(email)
+            log.info("{} disabled {}'s account".format(request.user, email))
         elif account_action == 'reenable':
             user_account.account_status = UserStanding.ACCOUNT_ENABLED
-            context['message'] = _("Successfully reenabled {}'s account").format(username)
-            log.info("{} reenabled {}'s account".format(request.user, username))
+            context['message'] = _("Successfully reenabled {}'s account").format(email)
+            log.info("{} reenabled {}'s account".format(request.user, email))
         else:
             context['message'] = _("Unexpected account status")
             return JsonResponse(context, status=400)
