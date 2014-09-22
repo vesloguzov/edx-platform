@@ -597,7 +597,7 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=W06
 
     available_features = instructor_analytics.basic.AVAILABLE_FEATURES
     query_features = [
-        'id', 'username', 'name', 'email', 'language', 'location',
+        'id', 'nickname', 'name', 'email', 'language', 'location',
         'year_of_birth', 'gender', 'level_of_education', 'mailing_address',
         'goals',
     ]
@@ -609,7 +609,7 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=W06
     # used as the header row in the CSV, but could be in the future.
     query_features_names = {
         'id': _('User ID'),
-        'username': _('Username'),
+        'nickname': _('Nickname'),
         'name': _('Name'),
         'email': _('Email'),
         'language': _('Language'),
