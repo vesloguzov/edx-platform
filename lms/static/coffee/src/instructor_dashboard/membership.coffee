@@ -125,7 +125,7 @@ class AuthListWidget extends MemberListWidget
               return @show_errors error unless error is null
               @clear_errors()
               @reload_list()
-        @add_row [member.username, member.email, $revoke_btn]
+        @add_row [member.nickname, member.email, $revoke_btn]
 
   # clear error display
   clear_errors: -> @$error_section?.text ''
@@ -141,7 +141,7 @@ class AuthListWidget extends MemberListWidget
       url: @list_endpoint
       data: rolename: @rolename
       success: (data) => cb? null, data[@rolename]
-      error: std_ajax_err => 
+      error: std_ajax_err =>
         `// Translators: A rolename appears this sentence. A rolename is something like "staff" or "beta tester".`
         cb? gettext("Error fetching list for role") + " '#{@rolename}'"
 
@@ -149,12 +149,12 @@ class AuthListWidget extends MemberListWidget
   # (add or remove them from the list)
   # `action` can be 'allow' or 'revoke'
   # `cb` is called with cb(error, data)
-  modify_member_access: (unique_student_identifier, action, cb) ->
+  modify_member_access: (student_identifier, action, cb) ->
     $.ajax
       dataType: 'json'
       url: @modify_endpoint
       data:
-        unique_student_identifier: unique_student_identifier
+        student_identifier: student_identifier
         rolename: @rolename
         action: action
       success: (data) => @member_response data
@@ -165,10 +165,13 @@ class AuthListWidget extends MemberListWidget
     @clear_input()
     if data.userDoesNotExist
       msg = gettext("Could not find a user with username or email address '<%= identifier %>'.")
-      @show_errors _.template(msg, {identifier: data.unique_student_identifier})
+      @show_errors _.template(msg, {identifier: data.student_identifier})
+    else if data.multipleUsers
+      msg = gettext("Multiple users match nickname: '<%= username %>'; use an email instead.")
+      @show_errors _.template(msg, {username: data.student_identifier})
     else if data.inactiveUser
       msg = gettext("Error: User '<%= username %>' has not yet activated their account. Users must create and activate their accounts before they can be assigned a role.")
-      @show_errors _.template(msg, {username: data.unique_student_identifier})
+      @show_errors _.template(msg, {username: data.student_identifier})
     else if data.removingSelfAsInstructor
       @show_errors gettext "Error: You cannot remove yourself from the Instructor group!"
     else
@@ -189,7 +192,7 @@ class BetaTesterBulkAddition
     @$btn_beta_testers.click (event) =>
       emailStudents = @$checkbox_emailstudents.is(':checked')
       autoEnroll = @$checkbox_autoenroll.is(':checked')
-      send_data = 
+      send_data =
         action: $(event.target).data('action')  # 'add' or 'remove'
         identifiers: @$identifier_input.val()
         email_students: emailStudents
@@ -578,7 +581,7 @@ class Membership
 
     # isolate # initialize BatchEnrollment subsection
     plantTimeout 0, => new BatchEnrollment @$section.find '.batch-enrollment'
-    
+
     # initialize BetaTesterBulkAddition subsection
     plantTimeout 0, => new BetaTesterBulkAddition @$section.find '.batch-beta-testers'
 

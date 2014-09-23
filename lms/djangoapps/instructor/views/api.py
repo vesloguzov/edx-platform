@@ -67,6 +67,8 @@ from .tools import (
     find_unit,
     get_student_from_identifier,
     require_student_from_identifier,
+    get_student_from_email_or_nickname,
+    require_student_from_email_or_nickname,
     handle_dashboard_error,
     parse_datetime,
     set_due_date_extension,
@@ -407,7 +409,7 @@ def bulk_beta_modify_access(request, course_id):
 @require_level('instructor')
 @common_exceptions_400
 @require_query_params(
-    unique_student_identifier="email or username of user to change access",
+    student_identifier="email or nickname of user to change access",
     rolename="'instructor', 'staff', or 'beta'",
     action="'allow' or 'revoke'"
 )
@@ -419,7 +421,7 @@ def modify_access(request, course_id):
     NOTE: instructors cannot remove their own instructor access.
 
     Query parameters:
-    unique_student_identifer is the target user's username or email
+    student_identifier is the target user's email or nickname
     rolename is one of ['instructor', 'staff', 'beta']
     action is one of ['allow', 'revoke']
     """
@@ -428,20 +430,26 @@ def modify_access(request, course_id):
         request.user, 'instructor', course_id, depth=None
     )
     try:
-        user = get_student_from_identifier(request.GET.get('unique_student_identifier'))
+        identifier = request.GET.get('student_identifier')
+        user = get_student_from_email_or_nickname(identifier)
     except User.DoesNotExist:
         response_payload = {
-            'unique_student_identifier': request.GET.get('unique_student_identifier'),
+            'student_identifier': identifier,
             'userDoesNotExist': True,
         }
         return JsonResponse(response_payload)
+    except User.MultipleObjectsReturned:
+        return JsonResponse({
+            'student_identifier': identifier,
+            'multipleUsers': True,
+        })
 
     # Check that user is active, because add_users
     # in common/djangoapps/student/roles.py fails
     # silently when we try to add an inactive user.
     if not user.is_active:
         response_payload = {
-            'unique_student_identifier': user.username,
+            'student_identifier': user.profile.nickname or user.email,
             'inactiveUser': True,
         }
         return JsonResponse(response_payload)
@@ -457,7 +465,7 @@ def modify_access(request, course_id):
     # disallow instructors from removing their own instructor access.
     if rolename == 'instructor' and user == request.user and action != 'allow':
         response_payload = {
-            'unique_student_identifier': user.username,
+            'student_identifier': user.profile.nickname or user.email,
             'rolename': rolename,
             'action': action,
             'removingSelfAsInstructor': True,
@@ -474,7 +482,7 @@ def modify_access(request, course_id):
         ))
 
     response_payload = {
-        'unique_student_identifier': user.username,
+        'student_identifier': user.profile.nickname or user.email,
         'rolename': rolename,
         'action': action,
         'success': 'yes',
@@ -498,6 +506,7 @@ def list_course_role_members(request, course_id):
         "staff": [
             {
                 "username": "staff1",
+                "nickname": "staff",
                 "email": "staff1@example.org",
                 "first_name": "Joe",
                 "last_name": "Shmoe",
@@ -519,6 +528,7 @@ def list_course_role_members(request, course_id):
         """ convert user into dicts for json view """
         return {
             'username': user.username,
+            'nickname': user.profile.nickname_or_default,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,

@@ -134,7 +134,7 @@ def require_student_from_email_or_nickname(identifier):
         )
     except User.MultipleObjectsReturned:
         raise DashboardError(
-            _("Multiple students match nickname: {}; use an email instead".format(identifier))
+            _("Multiple users match nickname: {}; use an email instead".format(identifier))
         )
 
 
