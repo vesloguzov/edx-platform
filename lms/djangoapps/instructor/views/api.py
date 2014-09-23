@@ -1519,13 +1519,13 @@ def spoc_gradebook(request, course_id):
     enrolled_students = User.objects.filter(
         courseenrollment__course_id=course_key,
         courseenrollment__is_active=1
-    ).order_by('username').select_related("profile")
+    ).order_by('profile__nickname').select_related("profile")
 
     # possible extension: implement pagination to show to large courses
 
     student_info = [
         {
-            'username': student.username,
+            'nickname': student.profile.nickname_or_default,
             'id': student.id,
             'email': student.email,
             'grade_summary': student_grades(student, request, course),
