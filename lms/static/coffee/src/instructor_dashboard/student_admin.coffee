@@ -59,16 +59,16 @@ class StudentAdmin
     # go to student progress page
     @$progress_link.click (e) =>
       e.preventDefault()
-      unique_student_identifier = @$field_student_select_progress.val()
-      if not unique_student_identifier
+      student_identifier = @$field_student_select_progress.val()
+      if not student_identifier
         return @$request_response_error_progress.text gettext("Please enter a student email address or username.")
-      error_message = gettext("Error getting student progress url for '<%= student_id %>'. Make sure that the student identifier is spelled correctly.")
-      full_error_message = _.template(error_message, {student_id: unique_student_identifier})
+      error_message = gettext("Error getting student progress url for '<%= student_id %>'. Make sure that the student identifier is spelled correctly and unique or use email instead.")
+      full_error_message = _.template(error_message, {student_id: student_identifier})
 
       $.ajax
         dataType: 'json'
         url: @$progress_link.data 'endpoint'
-        data: unique_student_identifier: unique_student_identifier
+        data: student_identifier: student_identifier
         success: @clear_errors_then (data) ->
           window.location = data.progress_url
         error: std_ajax_err => @$request_response_error_progress.text full_error_message

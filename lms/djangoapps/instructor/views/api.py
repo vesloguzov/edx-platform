@@ -86,6 +86,12 @@ def common_exceptions_400(func):
     Catches common exceptions and renders matching 400 errors.
     (decorator without arguments)
     """
+    def bad_request(message, use_json):
+        if use_json:
+            return JsonResponse({"error": message}, 400)
+        else:
+            return HttpResponseBadRequest(message)
+
     def wrapped(request, *args, **kwargs):  # pylint: disable=C0111
         use_json = (request.is_ajax() or
                     request.META.get("HTTP_ACCEPT", "").startswith("application/json"))
@@ -93,16 +99,13 @@ def common_exceptions_400(func):
             return func(request, *args, **kwargs)
         except User.DoesNotExist:
             message = _("User does not exist.")
-            if use_json:
-                return JsonResponse({"error": message}, 400)
-            else:
-                return HttpResponseBadRequest(message)
+            return bad_request(message, use_json)
+        except User.MultipleObjectsReturned:
+            message = _('Multiple users found, use email instead')
+            return bad_request(message, use_json)
         except AlreadyRunningError:
             message = _("Task is already running.")
-            if use_json:
-                return JsonResponse({"error": message}, 400)
-            else:
-                return HttpResponseBadRequest(message)
+            return bad_request(message, use_json)
     return wrapped
 
 
@@ -890,20 +893,20 @@ def get_distribution(request, course_id):
 @common_exceptions_400
 @require_level('staff')
 @require_query_params(
-    unique_student_identifier="email or username of student for whom to get progress url"
+    student_identifier="email or username of student for whom to get progress url"
 )
 def get_student_progress_url(request, course_id):
     """
     Get the progress url of a student.
     Limited to staff access.
 
-    Takes query paremeter unique_student_identifier and if the student exists
+    Takes query paremeter student_identifier and if the student exists
     returns e.g. {
         'progress_url': '/../...'
     }
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-    user = get_student_from_identifier(request.GET.get('unique_student_identifier'))
+    user = get_student_from_email_or_nickname(request.GET.get('student_identifier'))
 
     progress_url = reverse('student_progress', kwargs={'course_id': course_id.to_deprecated_string(), 'student_id': user.id})
 

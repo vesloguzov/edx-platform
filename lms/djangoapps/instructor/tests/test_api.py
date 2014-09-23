@@ -28,7 +28,7 @@ from courseware.tests.modulestore_config import TEST_DATA_MIXED_MODULESTORE
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from courseware.tests.helpers import LoginEnrollmentTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-from student.tests.factories import UserFactory
+from student.tests.factories import UserFactory, UserProfileFactory
 from courseware.tests.factories import StaffFactory, InstructorFactory, BetaTesterFactory
 from student.roles import CourseBetaTesterRole
 from microsite_configuration import microsite
@@ -1348,6 +1348,9 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
 
         self.students = [UserFactory() for _ in xrange(6)]
         for student in self.students:
+            profile = UserProfileFactory(user=student)
+            profile.nickname = 'nick_' + student.username
+            profile.save()
             CourseEnrollment.enroll(student, self.course.id)
 
     def test_get_ecommerce_purchase_features_csv(self):
@@ -1547,7 +1550,7 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
     def test_get_student_progress_url(self):
         """ Test that progress_url is in the successful response. """
         url = reverse('get_student_progress_url', kwargs={'course_id': self.course.id.to_deprecated_string()})
-        url += "?unique_student_identifier={}".format(
+        url += "?student_identifier={}".format(
             quote(self.students[0].email.encode("utf-8"))
         )
         response = self.client.get(url)
@@ -1555,11 +1558,11 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         res_json = json.loads(response.content)
         self.assertIn('progress_url', res_json)
 
-    def test_get_student_progress_url_from_uname(self):
+    def test_get_student_progress_url_from_nickname(self):
         """ Test that progress_url is in the successful response. """
         url = reverse('get_student_progress_url', kwargs={'course_id': self.course.id.to_deprecated_string()})
-        url += "?unique_student_identifier={}".format(
-            quote(self.students[0].username.encode("utf-8"))
+        url += "?student_identifier={}".format(
+            quote(self.students[0].profile.nickname.encode("utf-8"))
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
