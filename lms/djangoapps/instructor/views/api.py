@@ -255,7 +255,7 @@ def students_update_enrollment(request, course_id):
 
     action = request.GET.get('action')
     identifiers_raw = request.GET.get('identifiers')
-    identifiers = _split_input_list(identifiers_raw)
+    identifiers = _split_input_list_with_nicknames(identifiers_raw)
     auto_enroll = request.GET.get('auto_enroll') in ['true', 'True', True]
     email_students = request.GET.get('email_students') in ['true', 'True', True]
 
@@ -270,7 +270,13 @@ def students_update_enrollment(request, course_id):
         user = None
         email = None
         try:
-            user = get_student_from_identifier(identifier)
+            user = get_student_from_email_or_nickname(identifier)
+        except User.MultipleObjectsReturned:
+            results.append({
+                'identifier': identifier,
+                'nonuniqueNickname': True,
+            })
+            continue
         except User.DoesNotExist:
             email = identifier
         else:
@@ -344,7 +350,7 @@ def bulk_beta_modify_access(request, course_id):
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     action = request.GET.get('action')
     identifiers_raw = request.GET.get('identifiers')
-    identifiers = _split_input_list(identifiers_raw)
+    identifiers = _split_input_list_with_nicknames(identifiers_raw)
     email_students = request.GET.get('email_students') in ['true', 'True', True]
     auto_enroll = request.GET.get('auto_enroll') in ['true', 'True', True]
     results = []
@@ -359,8 +365,7 @@ def bulk_beta_modify_access(request, course_id):
     for identifier in identifiers:
         try:
             error = False
-            user_does_not_exist = False
-            user = get_student_from_identifier(identifier)
+            user = get_student_from_email_or_nickname(identifier)
 
             if action == 'add':
                 allow_access(course, user, rolename)
@@ -371,8 +376,10 @@ def bulk_beta_modify_access(request, course_id):
                     "Unrecognized action '{}'".format(action)
                 ))
         except User.DoesNotExist:
-            error = True
-            user_does_not_exist = True
+            error = 'userDoesNotExist'
+        except User.MultipleObjectsReturned:
+            error = 'nonuniqueNickname'
+
         # catch and log any unexpected exceptions
         # so that one error doesn't cause a 500.
         except Exception as exc:  # pylint: disable=broad-except
@@ -393,8 +400,7 @@ def bulk_beta_modify_access(request, course_id):
             # Tabulate the action result of this email address
             results.append({
                 'identifier': identifier,
-                'error': error,
-                'userDoesNotExist': user_does_not_exist
+                error: bool(error),
             })
 
     response_payload = {
@@ -1482,6 +1488,16 @@ def _split_input_list(str_list):
     """
 
     new_list = re.split(r'[\n\r\s,]', str_list)
+    new_list = [s.strip() for s in new_list]
+    new_list = [s for s in new_list if s != '']
+
+    return new_list
+
+def _split_input_list_with_nicknames(str_list):
+    """
+    Same as _split_input_list, but splits only on line breaks and commas
+    """
+    new_list = re.split(r'[\n\r,]', str_list)
     new_list = [s.strip() for s in new_list]
     new_list = [s for s in new_list if s != '']
 

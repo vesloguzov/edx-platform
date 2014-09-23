@@ -226,9 +226,12 @@ class BetaTesterBulkAddition
     errors = []
     successes = []
     no_users = []
+    nonunique_nickname = []
     for student_results in data_from_server.results
       if student_results.userDoesNotExist
         no_users.push student_results
+      else if student_results.nonuniqueNickname
+        nonunique_nickname.push student_results
       else if student_results.error
         errors.push student_results
       else
@@ -265,6 +268,10 @@ class BetaTesterBulkAddition
       no_users.push $ gettext("Users must create and activate their account before they can be promoted to beta tester.")
       `// Translators: A list of identifiers (which are email addresses and/or usernames) appears after this sentence`
       render_list gettext("Could not find users associated with the following identifiers:"), (sr.identifier for sr in no_users)
+
+    if nonunique_nickname.length
+      `// Translators: A list of identifiers (which are email addresses and/or usernames) appears after this sentence`
+      render_list gettext("The following nicknames are not unique, use emails instead:"), (sr.identifier for sr in nonunique_nickname)
 
 # Wrapper for the batch enrollment subsection.
 # This object handles buttons, success and failure reporting,
@@ -320,6 +327,8 @@ class BatchEnrollment
     #
     # invalid identifiers
     invalid_identifier = []
+    # nonunique_nicknames
+    nonunique_nickname = []
     # students for which there was an error during the action
     errors = []
     # students who are now enrolled in the course
@@ -363,6 +372,9 @@ class BatchEnrollment
       if student_results.invalidIdentifier
         invalid_identifier.push student_results
 
+      else if student_results.nonuniqueNickname
+        nonunique_nickname.push student_results
+
       else if student_results.error
         errors.push student_results
 
@@ -400,6 +412,9 @@ class BatchEnrollment
 
     if invalid_identifier.length
       render_list gettext("The following email addresses and/or usernames are invalid:"), (sr.identifier for sr in invalid_identifier)
+
+    if nonunique_nickname.length
+      render_list gettext("The following nicknames are not unique, use emails instead:"), (sr.identifier for sr in nonunique_nickname)
 
     if errors.length
       errors_label = do ->
