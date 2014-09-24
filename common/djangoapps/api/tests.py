@@ -5,6 +5,7 @@ when you run "manage.py test".
 
 Replace this with more appropriate tests for your application.
 """
+from unittest import skipIf
 
 from django.test import TestCase
 from django.contrib.auth.models import User
@@ -12,11 +13,13 @@ from django.test.utils import override_settings
 from django.core.urlresolvers import reverse
 
 from xmodule.modulestore.tests.factories import CourseFactory
+from rest_framework import mixins
 
 from student.models import CourseEnrollment
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 
 from serializers import UserSerializer
+from views import UserViewSet
 
 TEST_API_KEY = "test_api_key"
 
@@ -106,12 +109,11 @@ class APITest(TestCase):
     def test_empty_api_key_on_debug(self):
         if getattr(self, 'list_url', False):
             response = self.client.get(self.list_url)
-            self.assertEquals(response.status_code, 200)
+            self.assertNotEquals(response.status_code, 403)
 
     def _request_with_auth(self, method, *args, **kwargs):
         """Issue a get request to the given URI with the API key header"""
         return getattr(self.client, method)(HTTP_X_EDX_API_KEY=TEST_API_KEY, *args, **kwargs)
-
 
 
 class UserViewSetTest(APITest):
@@ -128,6 +130,7 @@ class UserViewSetTest(APITest):
         self.assertEquals(response.status_code, 403)
         self.assertFalse(User.objects.filter(username='new_test').exists())
 
+    @skipIf(not issubclass(UserViewSet, mixins.ListModelMixin), 'User list api disabled')
     def test_list(self):
         response = self._request_with_auth('get', self.list_url)
         self.assertEquals(response.status_code, 200)
