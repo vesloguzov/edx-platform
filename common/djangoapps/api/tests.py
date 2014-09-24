@@ -37,12 +37,20 @@ class UserSerializerTest(TestCase):
         self.assertIn('name', data)
         self.assertEquals(self.user.profile.name, data['name'])
 
+        self.assertIn('nickname', data)
+        self.assertEquals(self.user.profile.nickname, data['nickname'])
+
     def test_repetitive_user_not_valid(self):
         serializer = UserSerializer(data={'uid': self.user.username})
         self.assertFalse(serializer.is_valid())
 
     def test_create(self):
-        data = {'uid': 'test1', 'email': 'test1@example.com', 'name': 'Test'}
+        data = {
+            'uid': 'test1',
+            'email': 'test1@example.com',
+            'name': 'Test',
+            'nickname': 'Nick'
+        }
         serializer = UserSerializer(data=data)
         self.assertTrue(serializer.is_valid())
 
@@ -50,9 +58,15 @@ class UserSerializerTest(TestCase):
         self.assertEquals(new_user.username, serializer.data['uid'])
         self.assertEquals(new_user.email, serializer.data['email'])
         self.assertEquals(new_user.profile.name, serializer.data['name'])
+        self.assertEquals(new_user.profile.nickname, serializer.data['nickname'])
 
     def test_update(self):
-        data = {'uid': self.user.username, 'email': 'new_test@example.com', 'name': 'New Test'}
+        data = {
+            'uid': self.user.username,
+            'email': 'new_test@example.com',
+            'name': 'New Test',
+            'nickname': 'New Test'
+        }
         serializer = UserSerializer(self.user, data=data)
         self.assertTrue(serializer.is_valid())
 
@@ -61,6 +75,7 @@ class UserSerializerTest(TestCase):
         self.assertEquals(updated_user.username, data['uid'])
         self.assertEquals(updated_user.email, data['email'])
         self.assertEquals(updated_user.profile.name, data['name'])
+        self.assertEquals(updated_user.profile.nickname, data['nickname'])
 
     def test_optional_fields(self):
         data = {'uid': 'test2'}
@@ -123,6 +138,22 @@ class UserViewSetTest(APITest):
             data = {'uid': uid}
             response = self._request_with_auth('post', self.list_url, data)
             self.assertEqual(response.status_code, 400)
+
+    def test_put_create(self):
+        data = {
+            'uid': '123',
+            'email': 'test-other@example.com',
+            'nickname': 'test',
+            'name': 'Jonh Doe',
+        }
+        response = self._request_with_auth('put', data=data,
+                    path=reverse('user-detail', kwargs={'username': data['uid']}))
+        self.assertEquals(response.status_code, 201)
+
+        user = User.objects.get(username=data['uid'])
+        self.assertEquals(user.email, data['email'])
+        self.assertEquals(user.profile.nickname, data['nickname'])
+        self.assertEquals(user.profile.name, data['name'])
 
 
 class CourseViewSetTest(APITest):

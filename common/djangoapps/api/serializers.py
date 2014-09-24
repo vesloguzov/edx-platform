@@ -25,10 +25,11 @@ class UserSerializer(serializers.ModelSerializer):
     """
     uid = serializers.CharField(source='username', required=True)
     name = serializers.CharField(source='profile.name', max_length=255, required=False)
+    nickname = serializers.CharField(source='profile.nickname', max_length=255, required=False)
 
     class Meta:
         model = User
-        fields = ('uid', 'email', 'name')
+        fields = ('uid', 'email', 'name', 'nickname')
         lookup_field = 'uid'
 
     def validate_uid(self, attrs, source):
@@ -41,7 +42,7 @@ class UserSerializer(serializers.ModelSerializer):
         return attrs
 
     def restore_object(self, attrs, instance=None):
-        profile_data = {'name': attrs.pop('profile.name', '')}
+        profile_data = self._pop_profile_data(attrs)
         instance = super(UserSerializer, self).restore_object(attrs, instance)
         instance._profile_data = profile_data
         return instance
@@ -53,10 +54,17 @@ class UserSerializer(serializers.ModelSerializer):
         super(UserSerializer, self).save_object(obj)
 
         profile, _ = UserProfile.objects.get_or_create(user=self.object)
-        profile.name = profile_data['name']
+        for field, value in profile_data.items():
+            setattr(profile, field, value)
         profile.save()
         # bind updated profile to user for correct patch response
         self.object.profile = profile
+
+    def _pop_profile_data(self, attrs):
+        return {
+            'name': attrs.pop('profile.name', ''),
+            'nickname': attrs.pop('profile.nickname', ''),
+        }
 
 
 class CourseSerializer(serializers.Serializer):
