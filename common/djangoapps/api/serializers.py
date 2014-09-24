@@ -126,7 +126,7 @@ class CourseEnrollmentSerializer(serializers.ModelSerializer):
         return certificate.download_url if certificate else None
 
     def _get_certificate(self, enrollment):
-        if not hasattr(self, '_certificate'):
-            self._certificate = GeneratedCertificate.certificate_for_student(
+        if not hasattr(enrollment, '_certificate'):
+            enrollment._certificate = GeneratedCertificate.certificate_for_student(
                                  enrollment.user, enrollment.course_id)
-        return self._certificate
+        return enrollment._certificate

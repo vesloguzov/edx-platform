@@ -5,6 +5,7 @@ when you run "manage.py test".
 
 Replace this with more appropriate tests for your application.
 """
+import json
 from unittest import skipIf
 
 from django.test import TestCase
@@ -16,6 +17,7 @@ from xmodule.modulestore.tests.factories import CourseFactory
 from rest_framework import mixins
 
 from student.models import CourseEnrollment
+from certificates.models import GeneratedCertificate, CertificateStatuses
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 
 from serializers import UserSerializer
@@ -183,6 +185,9 @@ class EnrollmentViewSetTest(APITest):
 
         self.course_other = CourseFactory.create(number='other')
 
+    def tearDown(self):
+        User.objects.all().delete()
+
     def test_list(self):
         url = reverse('enrollment-list', kwargs={'user_username': self.user.username})
         response = self._request_with_auth('get', url)
@@ -219,3 +224,26 @@ class EnrollmentViewSetTest(APITest):
                                                    'course_id': self.course_other.id})
         response = self._request_with_auth('post', url)
         self.assertEquals(response.status_code, 400)
+
+    def test_certificate(self):
+        """Test certificates are showed for corresponding courses"""
+        course_with_certificate = CourseFactory.create(number='with_certificate')
+        CourseEnrollmentFactory.create(course_id=course_with_certificate.id, user=self.user)
+
+        certificate = GeneratedCertificate.objects.create(
+                       course_id=course_with_certificate.id,
+                       user=self.user,
+                       status = CertificateStatuses.downloadable,
+                       download_url = 'http://example.com/test'
+        )
+
+        url = reverse('enrollment-list', kwargs={'user_username': self.user.username})
+        response = self._request_with_auth('get', url)
+
+        self.assertEquals(response.status_code, 200)
+        data = json.loads(response.content)
+        for item in data:
+            if item['course_id'] == self.course_enrolled.id.to_deprecated_string():
+                self.assertIsNone(item['certificate_url'])
+            elif item['course_id'] == course_with_certificate.id.to_deprecated_string():
+                self.assertEquals(item['certificate_url'], certificate.download_url)
