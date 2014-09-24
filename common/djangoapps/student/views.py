@@ -381,7 +381,7 @@ def register_user(request, extra_context=None):
             settings.PLATFORM_NAME
         ),
         'selected_provider': '',
-        'username': '',
+        'nickname': '',
     }
 
     if extra_context is not None:
@@ -1049,10 +1049,10 @@ def manage_user_standing(request):
 
     all_disabled_users = [standing.user for standing in all_disabled_accounts]
 
-    headers = ['username', 'account_changed_by']
+    headers = ['email', 'account_changed_by']
     rows = []
     for user in all_disabled_users:
-        row = [user.username, user.standing.all()[0].changed_by]
+        row = [user.email, user.standing.all()[0].changed_by]
         rows.append(row)
 
     context = {'headers': headers, 'rows': rows}
@@ -1070,10 +1070,10 @@ def disable_account_ajax(request):
     """
     if not request.user.is_staff:
         raise Http404
-    username = request.POST.get('username')
+    email = request.POST.get('email')
     context = {}
-    if username is None or username.strip() == '':
-        context['message'] = _('Please enter a username')
+    if email is None or email.strip() == '':
+        context['message'] = _('Please enter an email')
         return JsonResponse(context, status=400)
 
     account_action = request.POST.get('account_action')
@@ -1081,11 +1081,11 @@ def disable_account_ajax(request):
         context['message'] = _('Please choose an option')
         return JsonResponse(context, status=400)
 
-    username = username.strip()
+    email = email.strip()
     try:
-        user = User.objects.get(username=username)
+        user = User.objects.get(email=email)
     except User.DoesNotExist:
-        context['message'] = _("User with username {} does not exist").format(username)
+        context['message'] = _("User with email {} does not exist").format(email)
         return JsonResponse(context, status=400)
     else:
         user_account, _success = UserStanding.objects.get_or_create(
@@ -1093,12 +1093,12 @@ def disable_account_ajax(request):
         )
         if account_action == 'disable':
             user_account.account_status = UserStanding.ACCOUNT_DISABLED
-            context['message'] = _("Successfully disabled {}'s account").format(username)
-            log.info("{} disabled {}'s account".format(request.user, username))
+            context['message'] = _("Successfully disabled {}'s account").format(email)
+            log.info("{} disabled {}'s account".format(request.user, email))
         elif account_action == 'reenable':
             user_account.account_status = UserStanding.ACCOUNT_ENABLED
-            context['message'] = _("Successfully reenabled {}'s account").format(username)
-            log.info("{} reenabled {}'s account".format(request.user, username))
+            context['message'] = _("Successfully reenabled {}'s account").format(email)
+            log.info("{} reenabled {}'s account".format(request.user, email))
         else:
             context['message'] = _("Unexpected account status")
             return JsonResponse(context, status=400)
@@ -1154,8 +1154,7 @@ def _do_create_account(post_vars, extended_profile=None):
 
     Note: this function is also used for creating test users.
     """
-    user = User(username=post_vars['username'],
-                email=post_vars['email'],
+    user = User( email=post_vars['email'],
                 is_active=False)
     user.set_password(post_vars['password'])
     registration = Registration()
@@ -1163,15 +1162,10 @@ def _do_create_account(post_vars, extended_profile=None):
     # TODO: Rearrange so that if part of the process fails, the whole process fails.
     # Right now, we can have e.g. no registration e-mail sent out and a zombie account
     try:
-        user.save()
+        save_user_with_auto_username(user)
     except IntegrityError:
         # Figure out the cause of the integrity error
-        if len(User.objects.filter(username=post_vars['username'])) > 0:
-            raise AccountValidationError(
-                _("An account with the Public Username '{username}' already exists.").format(username=post_vars['username']),
-                field="username"
-                )
-        elif len(User.objects.filter(email=post_vars['email'])) > 0:
+        if len(User.objects.filter(email=post_vars['email'])) > 0:
             raise AccountValidationError(
                 _("An account with the Email '{email}' already exists.").format(email=post_vars['email']),
                 field="email"
@@ -1188,6 +1182,7 @@ def _do_create_account(post_vars, extended_profile=None):
 
     profile = UserProfile(user=user)
     profile.name = post_vars['name']
+    profile.nickname = post_vars['nickname']
     profile.level_of_education = post_vars.get('level_of_education')
     profile.gender = post_vars.get('gender')
     profile.mailing_address = post_vars.get('mailing_address')
@@ -1214,6 +1209,13 @@ def _do_create_account(post_vars, extended_profile=None):
     UserPreference.set_preference(user, LANGUAGE_KEY, get_language())
 
     return (user, profile, registration)
+
+def save_user_with_auto_username(user):
+    user.username = 'new_user_%s' % uuid.uuid4().hex[:20]
+    user.save()
+    user.username = 'edx_user_%s' % user.id
+    user.save()
+    return user
 
 
 @ensure_csrf_cookie
@@ -1257,7 +1259,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
         log.debug(u'In create_account with external_auth: user = %s, email=%s', name, email)
 
     # Confirm we have a properly formed request
-    for a in ['username', 'email', 'password', 'name']:
+    for a in ['nickname', 'email', 'password', 'name']:
         if a not in post_vars:
             js['value'] = _("Error (401 {field}). E-mail us.").format(field=a)
             js['field'] = a
@@ -1291,7 +1293,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     # this is a good idea
     # TODO: Check password is sane
 
-    required_post_vars = ['username', 'email', 'name', 'password']
+    required_post_vars = ['nickname', 'email', 'name', 'password']
     required_post_vars += [fieldname for fieldname, val in extra_fields.items()
                            if val == 'required']
     if tos_required:
@@ -1305,7 +1307,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
 
         if field_name not in post_vars or len(post_vars[field_name]) < min_length:
             error_str = {
-                'username': _('Username must be minimum of two characters long'),
+                'nickname': _('Username must be minimum of two characters long'),
                 'email': _('A properly formatted e-mail is required'),
                 'name': _('Your legal name must be a minimum of two characters long'),
                 'password': _('A valid password is required'),
@@ -1329,12 +1331,12 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
             return JsonResponse(js, status=400)
 
         max_length = 75
-        if field_name == 'username':
+        if field_name == 'nickname':
             max_length = 30
 
-        if field_name in ('email', 'username') and len(post_vars[field_name]) > max_length:
+        if field_name in ('email', 'nickname') and len(post_vars[field_name]) > max_length:
             error_str = {
-                'username': _('Username cannot be more than {0} characters long').format(max_length),
+                'nickname': _('Username cannot be more than {0} characters long').format(max_length),
                 'email': _('Email cannot be more than {0} characters long').format(max_length)
             }
             js['value'] = error_str[field_name]
@@ -1346,13 +1348,6 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     except ValidationError:
         js['value'] = _("Valid e-mail is required.").format(field=a)
         js['field'] = 'email'
-        return JsonResponse(js, status=400)
-
-    try:
-        validate_slug(post_vars['username'])
-    except ValidationError:
-        js['value'] = _("Username should only consist of A-Z and 0-9, with no spaces.").format(field=a)
-        js['field'] = 'username'
         return JsonResponse(js, status=400)
 
     # enforce password complexity as an optional feature
@@ -1382,11 +1377,11 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
             extended_profile[field] = post_vars[field]
 
     # Make sure that password and username fields do not match
-    username = post_vars['username']
+    nickname = post_vars['nickname']
     password = post_vars['password']
-    if username == password:
+    if nickname == password:
         js['value'] = _("Username and password fields cannot match")
-        js['field'] = 'username'
+        js['field'] = 'nickname'
         return JsonResponse(js, status=400)
 
     # Ok, looks like everything is legit.  Create the account.
@@ -1437,7 +1432,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     # Immediately after a user creates an account, we log them in. They are only
     # logged in until they close the browser. They can't log in again until they click
     # the activation link from the email.
-    login_user = authenticate(username=post_vars['username'], password=post_vars['password'])
+    login_user = authenticate(username=user.username, password=post_vars['password'])
     login(request, login_user)
     request.session.set_expiry(0)
 
@@ -1515,10 +1510,10 @@ def auto_auth(request):
     unique_name = uuid.uuid4().hex[0:30]
 
     # Use the params from the request, otherwise use these defaults
-    username = request.GET.get('username', unique_name)
+    nickname = request.GET.get('nickname', unique_name)
     password = request.GET.get('password', unique_name)
     email = request.GET.get('email', unique_name + "@example.com")
-    full_name = request.GET.get('full_name', username)
+    full_name = request.GET.get('full_name', nickname)
     is_staff = request.GET.get('staff', None)
     course_id = request.GET.get('course_id', None)
     course_key = None
@@ -1528,7 +1523,7 @@ def auto_auth(request):
 
     # Get or create the user object
     post_data = {
-        'username': username,
+        'nickname': nickname,
         'email': email,
         'password': password,
         'name': full_name,
@@ -1543,7 +1538,7 @@ def auto_auth(request):
         user, profile, reg = _do_create_account(post_data)
     except AccountValidationError:
         # Attempt to retrieve the existing user.
-        user = User.objects.get(username=username)
+        user = User.objects.get(email=email)
         user.email = email
         user.set_password(password)
         user.save()
@@ -1568,7 +1563,7 @@ def auto_auth(request):
         user.roles.add(role)
 
     # Log in as the user
-    user = authenticate(username=username, password=password)
+    user = authenticate(username=user.username, password=password)
     login(request, user)
 
     create_comments_service_user(user)
@@ -1576,7 +1571,7 @@ def auto_auth(request):
     # Provide the user with a valid CSRF token
     # then return a 200 response
     success_msg = u"Logged in user {0} ({1}) with password {2} and user_id {3}".format(
-        username, email, password, user.id
+        user.username, email, password, user.id
     )
     response = HttpResponse(success_msg)
     response.set_cookie('csrftoken', csrf(request)['csrf_token'])

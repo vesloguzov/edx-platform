@@ -30,7 +30,7 @@ from django.db import models, IntegrityError
 from django.db.models import Count
 from django.dispatch import receiver, Signal
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils.translation import ugettext_noop
+from django.utils.translation import ugettext_noop, ugettext
 from django_countries import CountryField
 from track import contexts
 from eventtracking import tracker
@@ -201,6 +201,9 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, unique=True, db_index=True, related_name='profile')
     name = models.CharField(blank=True, max_length=255, db_index=True)
 
+    # name visible to other users - we only insist it exists but we con't care if it's repetitive like 'anonymous'
+    nickname = models.CharField(blank=True, max_length=255, db_index=True, default='')
+
     meta = models.TextField(blank=True)  # JSON dictionary for future expansion
     courseware = models.CharField(blank=True, max_length=255, default='course.xml')
 
@@ -249,6 +252,10 @@ class UserProfile(models.Model):
     country = CountryField(blank=True, null=True)
     goals = models.TextField(blank=True, null=True)
     allow_certificate = models.BooleanField(default=1)
+
+    @property
+    def nickname_or_default(self):
+        return self.nickname or ugettext('anonymous')
 
     def get_meta(self):
         js_str = self.meta

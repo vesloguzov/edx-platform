@@ -98,7 +98,7 @@
 
           <div class="item-metadata">
             <h3 class="user-name">
-              <span class="user-username">${user.username}</span>
+              <span class="user-username">${user.profile.nickname_or_default}</span>
               <span class="user-email">
                 <a class="action action-email" href="mailto:${user.email}" title="${_("send an email message to {email}").format(email=user.email)}">${user.email}</a>
               </span>
@@ -115,7 +115,7 @@
               % endif
             </li>
             <li class="action action-delete ${"is-disabled" if request.user.id == user.id else ""}">
-                <a href="#" class="delete remove-user action-icon" data-id="${user.email}"><i class="icon-trash"></i><span class="sr">${_("Delete the user, {username}").format(username=user.username)}</span></a>
+                <a href="#" class="delete remove-user action-icon" data-id="${user.email}"><i class="icon-trash"></i><span class="sr">${_("Delete the user, {username}").format(username=user.profile.nickname_or_default)}</span></a>
             </li>
           </ul>
           % endif

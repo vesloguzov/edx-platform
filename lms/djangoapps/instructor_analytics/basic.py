@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 
 STUDENT_FEATURES = ('id', 'username', 'first_name', 'last_name', 'is_staff', 'email')
-PROFILE_FEATURES = ('name', 'language', 'location', 'year_of_birth', 'gender',
+PROFILE_FEATURES = ('nickname', 'name', 'language', 'location', 'year_of_birth', 'gender',
                     'level_of_education', 'mailing_address', 'goals')
 ORDER_ITEM_FEATURES = ('list_price', 'unit_cost', 'order_id')
 ORDER_FEATURES = ('purchase_time',)
@@ -81,7 +81,7 @@ def enrolled_students_features(course_id, features):
     students = User.objects.filter(
         courseenrollment__course_id=course_id,
         courseenrollment__is_active=1,
-    ).order_by('username').select_related('profile')
+    ).order_by('profile__nickname').select_related('profile')
 
     def extract_student(student, features):
         """ convert student to dictionary """

@@ -20,30 +20,34 @@ class TestCreateAccount(TestCase):
     "Tests for account creation"
 
     def setUp(self):
-        self.username = "test_user"
         self.url = reverse("create_account")
         self.params = {
-            "username": self.username,
             "email": "test@example.org",
+            "nickname": "test",
             "password": "testpass",
             "name": "Test User",
             "honor_code": "true",
             "terms_of_service": "true",
         }
 
+    def test_create_account(self):
+        response = self.client.post(self.url, self.params)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.filter(email=self.params['email']).exists())
+
     @ddt.data("en", "eo")
     def test_default_lang_pref_saved(self, lang):
         with mock.patch("django.conf.settings.LANGUAGE_CODE", lang):
             response = self.client.post(self.url, self.params)
             self.assertEqual(response.status_code, 200)
-            user = User.objects.get(username=self.username)
+            user = User.objects.get(email=self.params['email'])
             self.assertEqual(UserPreference.get_preference(user, LANGUAGE_KEY), lang)
 
     @ddt.data("en", "eo")
     def test_header_lang_pref_saved(self, lang):
         response = self.client.post(self.url, self.params, HTTP_ACCEPT_LANGUAGE=lang)
         self.assertEqual(response.status_code, 200)
-        user = User.objects.get(username=self.username)
+        user = User.objects.get(email=self.params['email'])
         self.assertEqual(UserPreference.get_preference(user, LANGUAGE_KEY), lang)
 
 
@@ -53,11 +57,10 @@ class TestCreateAccount(TestCase):
 class TestCreateCommentsServiceUser(TransactionTestCase):
 
     def setUp(self):
-        self.username = "test_user"
         self.url = reverse("create_account")
         self.params = {
-            "username": self.username,
             "email": "test@example.org",
+            "nickname": "test",
             "password": "testpass",
             "name": "Test User",
             "honor_code": "true",
@@ -69,10 +72,12 @@ class TestCreateCommentsServiceUser(TransactionTestCase):
         response = self.client.post(self.url, self.params)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(request.called)
+
+        user = User.objects.get(email=self.params['email'])
         args, kwargs = request.call_args
         self.assertEqual(args[0], 'put')
         self.assertTrue(args[1].startswith(TEST_CS_URL))
-        self.assertEqual(kwargs['data']['username'], self.params['username'])
+        self.assertEqual(kwargs['data']['username'], user.username)
 
     @mock.patch("student.models.Registration.register", side_effect=Exception)
     def test_cs_user_not_created(self, register, request):
@@ -82,6 +87,6 @@ class TestCreateCommentsServiceUser(TransactionTestCase):
         except:
             pass
         with self.assertRaises(User.DoesNotExist):
-            User.objects.get(username=self.username)
+            User.objects.get(email=self.params['email'])
         self.assertTrue(register.called)
         self.assertFalse(request.called)
