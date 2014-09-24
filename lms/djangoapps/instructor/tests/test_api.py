@@ -137,9 +137,9 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
             ('get_grading_config', {}),
             ('get_students_features', {}),
             ('get_distribution', {}),
-            ('get_student_progress_url', {'unique_student_identifier': self.user.username}),
-            ('reset_student_attempts', {'problem_to_reset': self.problem_urlname, 'unique_student_identifier': self.user.email}),
-            ('update_forum_role_membership', {'unique_student_identifier': self.user.email, 'rolename': 'Moderator', 'action': 'allow'}),
+            ('get_student_progress_url', {'student_identifier': self.user.email}),
+            ('reset_student_attempts', {'problem_to_reset': self.problem_urlname, 'student_identifier': self.user.email}),
+            ('update_forum_role_membership', {'student_identifier': self.user.email, 'rolename': 'Moderator', 'action': 'allow'}),
             ('list_forum_members', {'rolename': FORUM_ROLE_COMMUNITY_TA}),
             ('proxy_legacy_analytics', {'aname': 'ProblemGradeDistribution'}),
             ('send_email', {'send_to': 'staff', 'subject': 'test', 'message': 'asdf'}),
@@ -151,9 +151,9 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
         # Endpoints that only Instructors can access
         self.instructor_level_endpoints = [
             ('bulk_beta_modify_access', {'identifiers': 'foo@example.org', 'action': 'add'}),
-            ('modify_access', {'unique_student_identifier': self.user.email, 'rolename': 'beta', 'action': 'allow'}),
+            ('modify_access', {'student_identifier': self.user.email, 'rolename': 'beta', 'action': 'allow'}),
             ('list_course_role_members', {'rolename': 'beta'}),
-            ('rescore_problem', {'problem_to_reset': self.problem_urlname, 'unique_student_identifier': self.user.email}),
+            ('rescore_problem', {'problem_to_reset': self.problem_urlname, 'student_identifier': self.user.email}),
         ]
 
     def _access_endpoint(self, endpoint, args, status_code, msg):
@@ -1108,7 +1108,7 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         """ Test with an invalid action parameter. """
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': self.other_staff.email,
+            'student_identifier': self.other_staff.email,
             'rolename': 'staff',
             'action': 'robot-not-an-action',
         })
@@ -1118,7 +1118,7 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         """ Test with an invalid action parameter. """
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': self.other_staff.email,
+            'student_identifier': self.other_staff.email,
             'rolename': 'robot-not-a-roll',
             'action': 'revoke',
         })
@@ -1127,7 +1127,7 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
     def test_modify_access_allow(self):
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': self.other_user.email,
+            'student_identifier': self.other_user.email,
             'rolename': 'staff',
             'action': 'allow',
         })
@@ -1136,7 +1136,7 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
     def test_modify_access_allow_with_uname(self):
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': self.other_instructor.username,
+            'student_identifier': self.other_instructor.username,
             'rolename': 'staff',
             'action': 'allow',
         })
@@ -1145,7 +1145,7 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
     def test_modify_access_revoke(self):
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': self.other_staff.email,
+            'student_identifier': self.other_staff.email,
             'rolename': 'staff',
             'action': 'revoke',
         })
@@ -1154,7 +1154,7 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
     def test_modify_access_revoke_with_username(self):
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': self.other_staff.username,
+            'student_identifier': self.other_staff.username,
             'rolename': 'staff',
             'action': 'revoke',
         })
@@ -1163,13 +1163,13 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
     def test_modify_access_with_fake_user(self):
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': 'GandalfTheGrey',
+            'student_identifier': 'GandalfTheGrey',
             'rolename': 'staff',
             'action': 'revoke',
         })
         self.assertEqual(response.status_code, 200)
         expected = {
-            'unique_student_identifier': 'GandalfTheGrey',
+            'student_identifier': 'GandalfTheGrey',
             'userDoesNotExist': True,
         }
         res_json = json.loads(response.content)
@@ -1180,13 +1180,13 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         self.other_user.save()  # pylint: disable=no-member
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': self.other_user.username,
+            'student_identifier': self.other_user.username,
             'rolename': 'beta',
             'action': 'allow',
         })
         self.assertEqual(response.status_code, 200)
         expected = {
-            'unique_student_identifier': self.other_user.username,
+            'student_identifier': self.other_user.username,
             'inactiveUser': True,
         }
         res_json = json.loads(response.content)
@@ -1196,7 +1196,7 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         """ Test revoking access that a user does not have. """
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': self.other_staff.email,
+            'student_identifier': self.other_staff.email,
             'rolename': 'instructor',
             'action': 'revoke',
         })
@@ -1208,14 +1208,14 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         """
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'unique_student_identifier': self.instructor.email,
+            'student_identifier': self.instructor.email,
             'rolename': 'instructor',
             'action': 'revoke',
         })
         self.assertEqual(response.status_code, 200)
         # check response content
         expected = {
-            'unique_student_identifier': self.instructor.username,
+            'student_identifier': self.instructor.username,
             'rolename': 'instructor',
             'action': 'revoke',
             'removingSelfAsInstructor': True,
@@ -1310,7 +1310,7 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         response = self.client.get(
             url,
             {
-                'unique_student_identifier': unique_student_identifier,
+                'student_identifier': unique_student_identifier,
                 'rolename': rolename,
                 'action': action,
             }
@@ -1597,6 +1597,10 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
         self.client.login(username=self.instructor.username, password='test')
 
         self.student = UserFactory()
+        profile = UserProfileFactory(user=self.student)
+        profile.nickname=self.student.username
+        profile.save()
+
         CourseEnrollment.enroll(self.student, self.course.id)
 
         self.problem_location = msk_from_problem_urlname(
@@ -1627,7 +1631,7 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
         url = reverse('reset_student_attempts', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
             'problem_to_reset': self.problem_urlname,
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 200)
         # make sure problem attempts have been reset.
@@ -1654,7 +1658,7 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
         url = reverse('reset_student_attempts', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
             'problem_to_reset': 'robot-not-a-real-module',
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 400)
 
@@ -1663,7 +1667,7 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
         url = reverse('reset_student_attempts', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
             'problem_to_reset': self.problem_urlname,
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
             'delete_module': True,
         })
         self.assertEqual(response.status_code, 200)
@@ -1682,7 +1686,7 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
         url = reverse('reset_student_attempts', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
             'problem_to_reset': self.problem_urlname,
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
             'all_students': True,
         })
         self.assertEqual(response.status_code, 400)
@@ -1693,18 +1697,18 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
         url = reverse('rescore_problem', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
             'problem_to_reset': self.problem_urlname,
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 200)
         self.assertTrue(act.called)
 
     @patch.object(instructor_task.api, 'submit_rescore_problem_for_student')
-    def test_rescore_problem_single_from_uname(self, act):
+    def test_rescore_problem_single_from_nickname(self, act):
         """ Test rescoring of a single student. """
         url = reverse('rescore_problem', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
             'problem_to_reset': self.problem_urlname,
-            'unique_student_identifier': self.student.username,
+            'student_identifier': self.student.profile.nickname,
         })
         self.assertEqual(response.status_code, 200)
         self.assertTrue(act.called)
@@ -1950,7 +1954,7 @@ class TestInstructorAPITaskLists(ModuleStoreTestCase, LoginEnrollmentTestCase):
             mock_completion_info.side_effect = mock_factory.mock_get_task_completion_info
             response = self.client.get(url, {
                 'problem_location_str': self.problem_urlname,
-                'unique_student_identifier': self.student.email,
+                'student_identifier': self.student.email,
             })
         self.assertEqual(response.status_code, 200)
 

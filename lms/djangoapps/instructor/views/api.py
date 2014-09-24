@@ -948,10 +948,10 @@ def reset_student_attempts(request, course_id):
     )
 
     problem_to_reset = strip_if_string(request.GET.get('problem_to_reset'))
-    student_identifier = request.GET.get('unique_student_identifier', None)
+    student_identifier = request.GET.get('student_identifier', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_identifier(student_identifier)
+        student = get_student_from_email_or_nickname(student_identifier)
     all_students = request.GET.get('all_students', False) in ['true', 'True', True]
     delete_module = request.GET.get('delete_module', False) in ['true', 'True', True]
 
@@ -1010,17 +1010,17 @@ def rescore_problem(request, course_id):
 
     Takes either of the following query paremeters
         - problem_to_reset is a urlname of a problem
-        - unique_student_identifier is an email or username
+        - student_identifier is an email or nickname
         - all_students is a boolean
 
-    all_students and unique_student_identifier cannot both be present.
+    all_students and student_identifier cannot both be present.
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     problem_to_reset = strip_if_string(request.GET.get('problem_to_reset'))
-    student_identifier = request.GET.get('unique_student_identifier', None)
+    student_identifier = request.GET.get('student_identifier', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_identifier(student_identifier)
+        student = get_student_from_email_or_nickname(student_identifier)
 
     all_students = request.GET.get('all_students') in ['true', 'True', True]
 
@@ -1029,7 +1029,7 @@ def rescore_problem(request, course_id):
 
     if all_students and student:
         return HttpResponseBadRequest(
-            "Cannot rescore with all_students and unique_student_identifier."
+            "Cannot rescore with all_students and student_identifier."
         )
 
     try:
@@ -1104,13 +1104,13 @@ def list_instructor_tasks(request, course_id):
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     problem_location_str = strip_if_string(request.GET.get('problem_location_str', False))
-    student = request.GET.get('unique_student_identifier', None)
+    student = request.GET.get('student_identifier', None)
     if student is not None:
-        student = get_student_from_identifier(student)
+        student = get_student_from_email_or_nickname(student)
 
     if student and not problem_location_str:
         return HttpResponseBadRequest(
-            "unique_student_identifier must accompany problem_location_str"
+            "student_identifier must accompany problem_location_str"
         )
 
     if problem_location_str:
