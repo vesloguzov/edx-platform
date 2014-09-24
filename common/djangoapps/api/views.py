@@ -40,7 +40,7 @@ class ApiKeyHeaderPermission(permissions.BasePermission):
 class UserViewSet(mixins.CreateModelMixin,
                   mixins.RetrieveModelMixin,
                   mixins.UpdateModelMixin,
-                  mixins.ListModelMixin,
+                  # mixins.ListModelMixin,
                   viewsets.GenericViewSet):
     """
     API for operating users.
