@@ -1,5 +1,6 @@
 """Django management command to create stub certificate (with 'generating' status) for the course"""
 
+import json
 import lxml.html
 from lxml.etree import XMLSyntaxError, ParserError
 
@@ -21,6 +22,11 @@ from django.test.client import RequestFactory
 from student.models import UserProfile, CourseEnrollment
 from verify_student.models import SoftwareSecurePhotoVerification
 
+# JSON_KEYS
+USERNAME_KEY = 'uid'
+GRADE_KEY = 'grade'
+DISTINCTION_KEY = 'distinction'
+NAME_KEY = 'name'
 
 class Command(BaseCommand):
     help = """Create stub certificates (with 'generating' status) for the course"""
@@ -37,6 +43,11 @@ class Command(BaseCommand):
                     dest='grade_value',
                     default=None,
                     help='The grade string, such as "Distinction", which should be passed to the certificate agent'),
+        make_option('-f', '--file-input',
+                    metavar='FILE_INPUT',
+                    dest='input_file',
+                    default=False,
+                    help='The name of a JSON file with uids, names, grades and other information for certificates generation'),
     )
 
     def handle(self, *args, **options):
@@ -53,12 +64,17 @@ class Command(BaseCommand):
         print "Fetching course data for {0}".format(course_id)
         course = modulestore().get_course(course_id, depth=2)
 
-        result = _generate_cert_stubs(course, forced_grade=options['grade_value'])
+        if options['input_file']:
+            print 'Generating stubs from json...'
+            result = _generate_cert_stubs_from_json(course, options['input_file'])
+        else:
+            print 'Generating stubs...'
+            result = _generate_cert_stubs(course, forced_grade=options['grade_value'])
         for status, certs in result.items():
             print '-' * 80
             print status.upper()
             for cert in certs:
-                print cert.user.username, cert.user.id
+                print cert.user.username, cert.grade
 
 def _generate_cert_stubs(course, forced_grade=None):
     enrolled_students = User.objects.filter(
@@ -72,62 +88,59 @@ def _generate_cert_stubs(course, forced_grade=None):
 
     results = {}
     for student in enrolled_students:
-        cert = _generate_cert_stub_for_student(student, course, whitelist, restricted, request, forced_grade)
-        if cert:
+        if _can_generate_certificate_for_student(student, course):
+            cert = _generate_cert_stub_for_student(student, course, whitelist, restricted, request, forced_grade)
             results.setdefault(cert.status, []).append(cert)
+        else:
+            results.setdefault('INVALID', []).append(GeneratedCertificate.objects.get(user=student, course_id=course.id))
     return results
 
+
+def _generate_cert_stubs_from_json(course, source_file):
+    with open(source_file) as f:
+        data = json.load(f)
+
+    enrolled_students = User.objects.filter(courseenrollment__course_id=course.id)
+    if enrolled_students.filter(username__in=[item[USERNAME_KEY] for item in data]).count() < len(data):
+        raise CommandError('Extra students found in file, exiting')
+
+    results = {}
+    for item in data:
+        student = enrolled_students.get(username=item[USERNAME_KEY])
+        if _can_generate_certificate_for_student(student, course):
+            cert = _generate_cert_stub_for_student_from_json(student, course, item)
+            results.setdefault(cert.status, []).append(cert)
+        else:
+            results.setdefault('INVALID', []).append(GeneratedCertificate.objects.get(user=student, course_id=course.id))
+    return results
+
+
 def _generate_cert_stub_for_student(student, course, whitelist, restricted, request, forced_grade):
-    VALID_STATUSES = [CertificateStatuses.generating,
-                      CertificateStatuses.unavailable,
-                      CertificateStatuses.deleted,
-                      CertificateStatuses.error,
-                      CertificateStatuses.notpassing]
-
-    cert_status = certificate_status_for_student(student, course.id)['status']
-
-    if cert_status not in VALID_STATUSES:
+    if not _can_generate_certificate_for_student(student, course):
         return None
 
     # grade the student
-
-    # re-use the course passed in optionally so we don't have to re-fetch everything
-    # for every student
-    profile = UserProfile.objects.get(user=student)
-    profile_name = profile.name
-
     # Needed
     request.user = student
     request.session = {}
-
-    course_name = course.display_name or course.id.to_deprecated_string()
-    is_whitelisted = whitelist.filter(user=student, course_id=course.id, whitelist=True).exists()
     grade = grades.grade(student, request, course)
-    enrollment_mode, __ = CourseEnrollment.enrollment_mode_for_user(student, course.id)
-    mode_is_verified = (enrollment_mode == GeneratedCertificate.MODES.verified)
-    user_is_verified = SoftwareSecurePhotoVerification.user_is_verified(student)
-    user_is_reverified = SoftwareSecurePhotoVerification.user_is_reverified_for_all(course.id, student)
-    cert_mode = enrollment_mode
-    if (mode_is_verified and not (user_is_verified and user_is_reverified)):
-        template_pdf = "certificate-template-{id.org}-{id.course}.pdf".format(id=course.id)
-        cert_mode = GeneratedCertificate.MODES.honor
     if forced_grade:
         grade['grade'] = forced_grade
-
-    cert, __ = GeneratedCertificate.objects.get_or_create(user=student, course_id=course.id)
-
-    cert.mode = cert_mode
-    cert.user = student
-    cert.grade = grade['percent']
-    cert.course_id = course.id
-    cert.name = profile_name
-    # Strip HTML from grade range label
     grade_contents = grade.get('grade', None)
     try:
         grade_contents = lxml.html.fromstring(grade_contents).text_content()
     except (TypeError, XMLSyntaxError, ParserError) as e:
         #   Despite blowing up the xml parser, bad values here are fine
         grade_contents = None
+
+    # course_name = course.display_name or course.id.to_deprecated_string()
+    is_whitelisted = whitelist.filter(user=student, course_id=course.id, whitelist=True).exists()
+
+    cert_data = {
+        'mode': _get_certificate_mode(student, course),
+        'grade': grade['percent'],
+        'name': student.profile.name,
+    }
 
     if is_whitelisted or grade_contents is not None:
 
@@ -137,13 +150,52 @@ def _generate_cert_stub_for_student(student, course, whitelist, restricted, requ
         # on the queue
 
         if restricted.filter(user=student).exists():
-            cert.status = CertificateStatuses.restricted
-            cert.save()
+            cert_data['status'] = CertificateStatuses.restricted
         else:
-            cert.status = CertificateStatuses.generating
-            cert.save()
+            cert_data['status'] = CertificateStatuses.generating
     else:
-        cert.status = CertificateStatuses.notpassing
-        cert.save()
+        cert_data['status'] = CertificateStatuses.notpassing
+    cert = _update_or_create_certificate_stub(student, course, cert_data)
 
+    return cert
+
+
+def _generate_cert_stub_for_student_from_json(student, course, data):
+    cert_data = {
+        'mode': _get_certificate_mode(student, course),
+        'grade': data[GRADE_KEY],
+        'name': data[NAME_KEY],
+        'status': CertificateStatuses.generating,
+    }
+    return _update_or_create_certificate_stub(student, course, cert_data)
+
+
+def _get_certificate_mode(student, course):
+    enrollment_mode, __ = CourseEnrollment.enrollment_mode_for_user(student, course.id)
+    mode_is_verified = (enrollment_mode == GeneratedCertificate.MODES.verified)
+    user_is_verified = SoftwareSecurePhotoVerification.user_is_verified(student)
+    user_is_reverified = SoftwareSecurePhotoVerification.user_is_reverified_for_all(course.id, student)
+    cert_mode = enrollment_mode
+    if (mode_is_verified and not (user_is_verified and user_is_reverified)):
+        return GeneratedCertificate.MODES.honor
+    else:
+        return enrollment_mode
+
+def _can_generate_certificate_for_student(student, course):
+    VALID_STATUSES = [CertificateStatuses.generating,
+                      CertificateStatuses.unavailable,
+                      CertificateStatuses.deleted,
+                      CertificateStatuses.error,
+                      CertificateStatuses.notpassing]
+    cert_status = certificate_status_for_student(student, course.id)['status']
+    return cert_status in VALID_STATUSES
+
+
+def _update_or_create_certificate_stub(student, course, data):
+    cert, __ = GeneratedCertificate.objects.get_or_create(user=student, course_id=course.id)
+    cert.mode = data['mode']
+    cert.grade = data['grade']
+    cert.name = data['name']
+    cert.status = data['status']
+    cert.save()
     return cert
