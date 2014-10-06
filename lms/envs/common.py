@@ -578,6 +578,7 @@ USE_TZ = True
 
 # CMS base
 CMS_BASE = 'localhost:8001'
+LMS_BASE = 'localhost:8000'
 
 # Site info
 SITE_ID = 1

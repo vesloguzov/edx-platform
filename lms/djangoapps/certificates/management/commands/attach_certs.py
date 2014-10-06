@@ -3,11 +3,13 @@
 import os
 import shutil
 import urllib
+import urlparse
 import lxml.html
 from lxml.etree import XMLSyntaxError, ParserError
 
 from optparse import make_option
 from django.core.management.base import BaseCommand, CommandError
+from django.conf import settings
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
@@ -79,12 +81,14 @@ def _attach_certificates(course, src_dir):
     result['files_left'] = files.values()
     return result
 
-def _attach_certificate(filename, certificate):
-    dst_dir = os.path.join(settings.CERT_STORAGE_PATH,
-                      urllib.quote(certificate.course_id.to_deprecated_string(), safe=''))
+def _attach_certificate(src_filename, certificate):
+    dst_dir = os.path.join(settings.CERT_STORAGE_PATH, certificate.download_uuid)
+    dst_filename = 'Certificate_{}_{}.pdf'.format(certificate.course_id.org, certificate.course_id.course)
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir)
-    shutil.copy(filename, os.path.join(dst_dir, urllib.quote(certificate.user.username, safe='')))
+    shutil.copy(src_filename, os.path.join(dst_dir, dst_filename))
+
     certificate.status = CertificateStatuses.downloadable
-    certificate.download_url = reverse('serve_certificate', kwargs={'course_id': certificate.course_id})
+    certificate.download_url = urlparse.urljoin(settings.LMS_BASE,
+            os.path.join(settings.CERT_URL, certificate.download_uuid, dst_filename))
     certificate.save()

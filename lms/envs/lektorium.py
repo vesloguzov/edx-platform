@@ -11,5 +11,5 @@ LOCALE_PATHS = (
 )
 CERT_NAME_SHORT = u"сертификат"
 CERT_NAME_LONG = u"сертификат"
-CERT_PROTECTED_URL = '/certificate_store/'
+CERT_URL = '/certificates/'
 CERT_STORAGE_PATH = '/edx/var/edxapp/certificate_store/'

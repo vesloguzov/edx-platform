@@ -131,29 +131,3 @@ def update_certificate(request):
         cert.save()
         return HttpResponse(json.dumps({'return_code': 0}),
                             mimetype='application/json')
-
-
-@login_required
-@ensure_csrf_cookie
-@cache_control(no_cache=True, no_store=True, must_revalidate=True)
-def serve_certificate(request, course_id):
-    """
-    Serve certificates from local filesystem using nginx X-Accell-Redirect header.
-    """
-    course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-    course = get_course_by_id(course_key, depth=None)
-
-    certificate = get_object_or_404(GeneratedCertificate,
-                                    user=request.user, course_id=course_key,
-                                    status=CertificateStatuses.downloadable)
-
-    filename = course.id.to_deprecated_string().replace('/', '__') + '__' + 'certificate.pdf'
-
-    return protected_static_response(_certificate_protected_url(course, request.user),
-                                     filename, content_type='application/pdf')
-
-def _certificate_protected_url(course, user):
-    root_path = settings.CERT_PROTECTED_URL
-    filename = os.path.join(urllib.quote(course.id.to_deprecated_string(), safe=''),
-                            urllib.quote(user.username, safe=''))
-    return urlparse.urljoin(root_path, filename)

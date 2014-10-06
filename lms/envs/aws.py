@@ -143,6 +143,7 @@ SESSION_COOKIE_DOMAIN = ENV_TOKENS.get('SESSION_COOKIE_DOMAIN')
 REGISTRATION_EXTRA_FIELDS = ENV_TOKENS.get('REGISTRATION_EXTRA_FIELDS', REGISTRATION_EXTRA_FIELDS)
 
 CMS_BASE = ENV_TOKENS.get('CMS_BASE', 'studio.edx.org')
+LMS_BASE = ENV_TOKENS.get('LMS_BASE', 'edx.org')
 
 # allow for environments to specify what cookie name our login subsystem should use
 # this is to fix a bug regarding simultaneous logins between edx.org and edge.edx.org which can

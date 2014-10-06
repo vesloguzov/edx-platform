@@ -1,6 +1,7 @@
 """Django management command to create stub certificate (with 'generating' status) for the course"""
 
 import json
+import uuid
 import lxml.html
 from lxml.etree import XMLSyntaxError, ParserError
 
@@ -48,6 +49,11 @@ class Command(BaseCommand):
                     dest='input_file',
                     default=False,
                     help='The name of a JSON file with uids, names, grades and other information for certificates generation'),
+        make_option('-U', '--create-uids',
+                    metavar='CREATE_UUIDS',
+                    dest='create_uuids',
+                    default=False,
+                    help='create uuids for certificates'),
     )
 
     def handle(self, *args, **options):
@@ -66,17 +72,17 @@ class Command(BaseCommand):
 
         if options['input_file']:
             print 'Generating stubs from json...'
-            result = _generate_cert_stubs_from_json(course, options['input_file'])
+            result = _generate_cert_stubs_from_json(course, options['input_file'], options['create_uuids'])
         else:
             print 'Generating stubs...'
-            result = _generate_cert_stubs(course, forced_grade=options['grade_value'])
+            result = _generate_cert_stubs(course, forced_grade=options['grade_value'], create_uuids=options['create_uuids'])
         for status, certs in result.items():
             print '-' * 80
             print status.upper()
             for cert in certs:
                 print cert.user.username, cert.grade
 
-def _generate_cert_stubs(course, forced_grade=None):
+def _generate_cert_stubs(course, forced_grade=None, create_uuids=False):
     enrolled_students = User.objects.filter(
         courseenrollment__course_id=course.id
     )
@@ -89,14 +95,14 @@ def _generate_cert_stubs(course, forced_grade=None):
     results = {}
     for student in enrolled_students:
         if _can_generate_certificate_for_student(student, course):
-            cert = _generate_cert_stub_for_student(student, course, whitelist, restricted, request, forced_grade)
+            cert = _generate_cert_stub_for_student(student, course, whitelist, restricted, request, forced_grade, create_uuids)
             results.setdefault(cert.status, []).append(cert)
         else:
             results.setdefault('INVALID', []).append(GeneratedCertificate.objects.get(user=student, course_id=course.id))
     return results
 
 
-def _generate_cert_stubs_from_json(course, source_file):
+def _generate_cert_stubs_from_json(course, source_file, create_uuids=False):
     with open(source_file) as f:
         data = json.load(f)
 
@@ -108,6 +114,8 @@ def _generate_cert_stubs_from_json(course, source_file):
     for item in data:
         student = enrolled_students.get(username=item[USERNAME_KEY])
         if _can_generate_certificate_for_student(student, course):
+            if create_uuids:
+                item['download_uuid'] = uuid.uuid4().hex
             cert = _generate_cert_stub_for_student_from_json(student, course, item)
             results.setdefault(cert.status, []).append(cert)
         else:
@@ -115,7 +123,7 @@ def _generate_cert_stubs_from_json(course, source_file):
     return results
 
 
-def _generate_cert_stub_for_student(student, course, whitelist, restricted, request, forced_grade):
+def _generate_cert_stub_for_student(student, course, whitelist, restricted, request, forced_grade, create_uuids):
     if not _can_generate_certificate_for_student(student, course):
         return None
 
@@ -141,6 +149,8 @@ def _generate_cert_stub_for_student(student, course, whitelist, restricted, requ
         'grade': grade['percent'],
         'name': student.profile.name,
     }
+    if create_uuids:
+        cert_data['download_uuid'] = uuid.uuid4().hex
 
     if is_whitelisted or grade_contents is not None:
 
@@ -166,6 +176,7 @@ def _generate_cert_stub_for_student_from_json(student, course, data):
         'grade': data[GRADE_KEY],
         'name': data[NAME_KEY],
         'status': CertificateStatuses.generating,
+        'download_uuid': data['download_uuid'],
     }
     return _update_or_create_certificate_stub(student, course, cert_data)
 
@@ -197,5 +208,7 @@ def _update_or_create_certificate_stub(student, course, data):
     cert.grade = data['grade']
     cert.name = data['name']
     cert.status = data['status']
+    if 'download_uuid' in data:
+        cert.download_uuid = data['download_uuid']
     cert.save()
     return cert
