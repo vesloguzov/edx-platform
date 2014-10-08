@@ -86,6 +86,7 @@ class CourseSerializer(serializers.Serializer):
 
     image = serializers.SerializerMethodField('get_image_url')
     about_url = serializers.SerializerMethodField('get_about_course_url')
+    root_url = serializers.SerializerMethodField('get_root_course_url')
     last_modification = serializers.DateTimeField(source='edited_on')
 
     def get_description(self, course):
@@ -102,6 +103,11 @@ class CourseSerializer(serializers.Serializer):
 
     def get_about_course_url(self, course):
         url = reverse('about_course',
+                kwargs={'course_id': course.id.to_deprecated_string()})
+        return self._get_absolute_url(url)
+
+    def get_root_course_url(self, course):
+        url = reverse('course_root',
                 kwargs={'course_id': course.id.to_deprecated_string()})
         return self._get_absolute_url(url)
 
