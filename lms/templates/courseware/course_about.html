@@ -154,7 +154,7 @@
           <span class="register disabled">${_("You are registered for this course")}</span>
 
           %if show_courseware_link:
-            <strong>${_("View Courseware")}</strong>
+            <strong class='view-course'>${_("View Courseware")}</strong>
             </a>
           %endif
 
@@ -222,15 +222,6 @@
           <a class="instructor-info-action" href="${studio_url}">${_("View About Page in studio")}</a>
         </div>
       % endif
-      
-      <nav>
-        <a href="#" class="active">${_("Overview")}</a>
-      ##  <a href="#">${_("FAQ")}</a>
-      ##  <a href="#">${_("Requirements")}</a>
-      ##  <a href="#">${_("Text-book")}</a>
-      ##  <a href="#">${_("Syllabus")}</a>
-      ##  <a href="#">${_("Reviews")}</a>
-      </nav>
 
       <div class="inner-wrapper">
         ${get_course_about_section(course, "overview")}
