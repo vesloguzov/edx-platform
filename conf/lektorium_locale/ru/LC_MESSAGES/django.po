@@ -5850,7 +5850,7 @@ msgstr "Пожалуйста поделитесь своими причинам�
 
 #: lms/templates/register.html lms/templates/university_profile/edge.html
 msgid "Register"
-msgstr "Регистрация"
+msgstr "Зарегистрироваться"
 
 #: lms/templates/register.html lms/templates/signup_modal.html
 msgid "Create My Account"
@@ -6515,11 +6515,11 @@ msgstr "О {course.display_number_with_default}"
 
 #: lms/templates/courseware/course_about.html
 msgid "You are registered for this course"
-msgstr "Вы зарегистрированы для участия в этом курсе"
+msgstr "Вы зарегистрированы на курс"
 
 #: lms/templates/courseware/course_about.html
 msgid "View Courseware"
-msgstr "Посмотреть программу курса"
+msgstr "Просмотр курса"
 
 #: lms/templates/courseware/course_about.html
 msgid "This course is in your <a href=\"{cart_link}\">cart</a>."
@@ -7480,7 +7480,7 @@ msgstr "Посмотреть курс из архива"
 
 #: lms/templates/dashboard/_dashboard_course_listing.html
 msgid "View Course"
-msgstr "Посмотреть курс"
+msgstr "Просмотр курса"
 
 #. Translators: The course's name will be added to the end of this sentence.
 #: lms/templates/dashboard/_dashboard_course_listing.html
