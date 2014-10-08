@@ -7432,11 +7432,11 @@ msgstr "Документ подтверждён"
 
 #: lms/templates/dashboard/_dashboard_course_listing.html
 msgid "Course Completed - {end_date}"
-msgstr "Курс завершён - {end_date}"
+msgstr "Курс завершён {end_date}"
 
 #: lms/templates/dashboard/_dashboard_course_listing.html
 msgid "Course Started - {start_date}"
-msgstr "Курс начался - {start_date}"
+msgstr "Курс начался {start_date}"
 
 #: lms/templates/dashboard/_dashboard_course_listing.html
 msgid "Course has not yet started"
@@ -7444,7 +7444,7 @@ msgstr "Курс ещё не начался"
 
 #: lms/templates/dashboard/_dashboard_course_listing.html
 msgid "Course Starts - {start_date}"
-msgstr "Курс начинается - {start_date}"
+msgstr "Курс начинается {start_date}"
 
 #: lms/templates/dashboard/_dashboard_course_listing.html
 msgid "Document your accomplishment!"

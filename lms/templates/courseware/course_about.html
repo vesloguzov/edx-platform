@@ -320,7 +320,7 @@
             </li>
             % endif
 
-          % if get_course_about_section(course, "effort"):
+          % if get_course_about_section(course, "effort").strip():
             <li><div class="icon effort"></div><p>${_("Estimated Effort Per Week")}</p><span class="start-date">${get_course_about_section(course, "effort")}</span></li>
           % endif
 
