@@ -701,7 +701,7 @@ def enroll_student_with_default_mode(user, course, auto_register=False):
     is enabled).
     """
     if not has_access(user, 'enroll', course):
-        return HttpResponseBadRequest(_("Enrollment is closed"))
+        raise EnrollmentError(_("Enrollment is closed"))
 
     # see if we have already filled up all allowed enrollments
     is_course_full = CourseEnrollment.is_course_full(course)

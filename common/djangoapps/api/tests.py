@@ -6,6 +6,7 @@ when you run "manage.py test".
 Replace this with more appropriate tests for your application.
 """
 import json
+import datetime
 from unittest import skipIf
 
 from django.test import TestCase
@@ -247,3 +248,11 @@ class EnrollmentViewSetTest(APITest):
                 self.assertIsNone(item['certificate_url'])
             elif item['course_id'] == course_with_certificate.id.to_deprecated_string():
                 self.assertEquals(item['certificate_url'], certificate.download_url)
+
+    def test_enroll_error_on_closed_enrollment(self):
+        course_enrollment_closed = CourseFactory.create(number='closed_enrollment',
+                                                        enrollment_end=datetime.datetime(1970, 1, 1))
+        url = reverse('enrollment-enroll', kwargs={'user_username': self.user.username,
+                                                   'course_id': course_enrollment_closed.id})
+        response = self._request_with_auth('post', url)
+        self.assertEquals(response.status_code, 400)
