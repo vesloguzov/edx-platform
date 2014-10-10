@@ -5584,7 +5584,7 @@ msgstr "Открыть Ответ"
 #: lms/templates/problem.html
 msgid "You have used {num_used} of {num_total} submissions"
 msgstr ""
-"Вы использовали {num used} из {num_total} возможностей прислать свои "
+"Вы использовали {num_used} из {num_total} возможностей прислать свои "
 "материалы на рассмотрение"
 
 #: lms/templates/provider_login.html
