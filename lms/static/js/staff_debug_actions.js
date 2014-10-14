@@ -22,7 +22,7 @@ var StaffDebug = (function(){
   do_idash_action = function(action){
     var pdata = {
         'problem_to_reset': action.location,
-        'unique_student_identifier': get_user(action.locationName),
+        'student_identifier': get_user(action.locationName),
         'delete_module': action.delete_module
     }
     $.ajax({
