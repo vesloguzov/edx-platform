@@ -3,6 +3,7 @@
 Tests courseware views.py
 """
 import unittest
+import urllib
 from datetime import datetime
 
 from mock import MagicMock, patch, create_autospec
@@ -309,9 +310,8 @@ class ViewsTestCase(TestCase):
 
         url = reverse('submission_history', kwargs={
             'course_id': self.course_key.to_deprecated_string(),
-            'student_username': 'dummy',
             'location': self.component.location.to_deprecated_string(),
-        })
+        }) + '?student_identifier=dummy'
         response = self.client.get(url)
         # Tests that we do not get an "Invalid x" response when passing correct arguments to view
         self.assertFalse('Invalid' in response.content)
@@ -325,18 +325,16 @@ class ViewsTestCase(TestCase):
         # try it with an existing user and a malicious location
         url = reverse('submission_history', kwargs={
             'course_id': self.course_key.to_deprecated_string(),
-            'student_username': 'dummy',
             'location': '<script>alert("hello");</script>'
-        })
+        }) + '?student_identifier=dummy'
         response = self.client.get(url)
         self.assertFalse('<script>' in response.content)
 
         # try it with a malicious user and a non-existent location
         url = reverse('submission_history', kwargs={
             'course_id': self.course_key.to_deprecated_string(),
-            'student_username': '<script>alert("hello");</script>',
             'location': 'dummy'
-        })
+            }) + urllib.urlencode({'student_identifier': '<script>alert("hello");</script>'})
         response = self.client.get(url)
         self.assertFalse('<script>' in response.content)
 

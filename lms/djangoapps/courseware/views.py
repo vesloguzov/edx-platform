@@ -51,6 +51,7 @@ from opaque_keys import InvalidKeyError
 from microsite_configuration import microsite
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from instructor.enrollment import uses_shib
+from instructor.views.tools import get_student_from_email_or_nickname
 
 log = logging.getLogger("edx.courseware")
 
@@ -853,7 +854,7 @@ def fetch_reverify_banner_info(request, course_key):
 
 @login_required
 @verify_course_id
-def submission_history(request, course_id, student_username, location):
+def submission_history(request, course_id, location):
     """Render an HTML fragment (meant for inclusion elsewhere) that renders a
     history of all state changes made by this user for this problem location.
     Right now this only works for problems because that's all
@@ -870,25 +871,31 @@ def submission_history(request, course_id, student_username, location):
     course = get_course_with_access(request.user, 'load', course_key)
     staff_access = has_access(request.user, 'staff', course)
 
-    # Permission Denied if they don't have staff access and are trying to see
-    # somebody else's submission history.
-    if (student_username != request.user.username) and (not staff_access):
-        raise PermissionDenied
+    student_identifier = request.REQUEST.get('student_identifier')
+    if not student_identifier:
+        return HttpResponse(escape(_(u'No user identifier submitted.')))
 
     try:
-        student = User.objects.get(username=student_username)
+        student = get_student_from_email_or_nickname(student_identifier)
         student_module = StudentModule.objects.get(
             course_id=course_key,
             module_state_key=usage_key,
             student_id=student.id
         )
     except User.DoesNotExist:
-        return HttpResponse(escape(_(u'User {username} does not exist.').format(username=student_username)))
+        return HttpResponse(escape(_(u'User {username} does not exist.').format(username=student_identifier)))
+    except User.MultipleObjectsReturned:
+        return HttpResponse(escape(_("Multiple users match nickname: {}; use an email instead".format(identifier))))
     except StudentModule.DoesNotExist:
         return HttpResponse(escape(_(u'User {username} has never accessed problem {location}').format(
-            username=student_username,
+            username=student_identifier,
             location=location
         )))
+    # Permission Denied if they don't have staff access and are trying to see
+    # somebody else's submission history.
+    if student is not request.user and (not staff_access):
+        raise PermissionDenied
+
     history_entries = StudentModuleHistory.objects.filter(
         student_module=student_module
     ).order_by('-id')
