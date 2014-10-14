@@ -933,7 +933,7 @@ def reset_student_attempts(request, course_id):
 
     Takes some of the following query paremeters
         - problem_to_reset is a urlname of a problem
-        - unique_student_identifier is an email or username
+        - student_identifier is an email or username
         - all_students is a boolean
             requires instructor access
             mutually exclusive with delete_module
@@ -958,7 +958,7 @@ def reset_student_attempts(request, course_id):
     # parameter combinations
     if all_students and student:
         return HttpResponseBadRequest(
-            "all_students and unique_student_identifier are mutually exclusive."
+            "all_students and student_identifier are mutually exclusive."
         )
     if all_students and delete_module:
         return HttpResponseBadRequest(
@@ -1099,7 +1099,7 @@ def list_instructor_tasks(request, course_id):
     Takes optional query paremeters.
         - With no arguments, lists running tasks.
         - `problem_location_str` lists task history for problem
-        - `problem_location_str` and `unique_student_identifier` lists task
+        - `problem_location_str` and `student_identifier` lists task
             history for problem AND student (intersection)
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
