@@ -17,7 +17,7 @@ from django.test.client import RequestFactory
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
-from student.models import CourseEnrollment
+from student.models import CourseEnrollment, UserProfile
 from student.tests.factories import AdminFactory
 from edxmako.middleware import MakoMiddleware
 from edxmako.tests import mako_middleware_process_request
@@ -90,6 +90,7 @@ class ViewsTestCase(TestCase):
         self.course_key = self.course.id
         self.user = User.objects.create(username='dummy', password='123456',
                                         email='test@mit.edu')
+        UserProfile.objects.get_or_create(user=self.user)
         self.date = datetime(2013, 1, 22, tzinfo=UTC)
         self.enrollment = CourseEnrollment.enroll(self.user, self.course_key)
         self.enrollment.created = self.date
