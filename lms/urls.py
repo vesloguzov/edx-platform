@@ -431,7 +431,8 @@ if settings.FEATURES.get('AUTH_USE_SHIB'):
 
 if settings.FEATURES.get('AUTH_USE_CAS'):
     urlpatterns += (
-        url(r'^cas-auth/login/$', 'external_auth.views.cas_login', name="cas-login"),
+        url(r'^cas-auth/login/$', 'django_cas.views.login', name="cas-login"),
+        url(r'^cas-auth/instant-login/$', 'django_cas.views.instant_login', name="cas-instant-login"),
         url(r'^cas-auth/logout/$', 'django_cas.views.logout', {'next_page': '/'}, name="cas-logout"),
     )
 

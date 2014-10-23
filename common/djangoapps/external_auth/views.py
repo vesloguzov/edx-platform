@@ -6,6 +6,7 @@ import re
 import string       # pylint: disable=W0402
 import fnmatch
 import unicodedata
+import datetime
 
 from textwrap import dedent
 from external_auth.models import ExternalAuthMap
@@ -27,6 +28,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpRequest, HttpRes
 from django.utils.http import urlquote, is_safe_url
 from django.shortcuts import redirect
 from django.utils.translation import ugettext as _
+from django.db import IntegrityError
 
 from edxmako.shortcuts import render_to_response, render_to_string
 try:
@@ -468,28 +470,67 @@ def ssl_login(request):
 # -----------------------------------------------------------------------------
 # CAS (Central Authentication Service)
 # -----------------------------------------------------------------------------
-def cas_login(request, next_page=None, required=False):
+def cas_create_user(username, attributes):
     """
-        Uses django_cas for authentication.
+        Uses django_cas for user creation.
         CAS is a common authentcation method pioneered by Yale.
         See http://en.wikipedia.org/wiki/Central_Authentication_Service
 
-        Does normal CAS login then generates user_profile if nonexistent,
-        and if login was successful.  We assume that user details are
-        maintained by the central service, and thus an empty user profile
-        is appropriate.
+        After successful CAS login authenticates user or creates new user and
+        corresponding user profile if nonexistent.
+
+        Utilizes CAS response attributes to retrieve required email field and
+        fill profile informaiton if possible.
     """
 
-    ret = django_cas_login(request, next_page, required)
+    email = attributes[settings.CAS_ATTRIBUTE_KEYS['email']]
+    try:
+        user = User.objects.create(username=username, email=email)
+    except IntegrityError:
+        log.error('Failed to create user from CAS response: username="{}" email="{}"'.format(username, email))
+        raise
+    else:
+        # since user profile has no required or unique fields, no exception handling is used
+        _create_profile_from_attributes(user, attributes)
+        return user
 
-    if request.user.is_authenticated():
-        user = request.user
-        if not UserProfile.objects.filter(user=user):
-            user_profile = UserProfile(name=user.username, user=user)
-            user_profile.save()
 
-    return ret
+def _create_profile_from_attributes(user, attributes):
+    profile = UserProfile(user=user)
+    keys = settings.CAS_ATTRIBUTE_KEYS
 
+    for field in ('name', 'nickname'):
+        value = attributes.get(keys[field])
+        if value:
+            setattr(profile, field, value)
+
+
+    day_of_birth = attributes.get(keys['day_of_birth'])
+    if day_of_birth:
+        try:
+            day_of_birth = _get_date_from_string(day_of_birth)
+        except:
+            # just ignore invalid date
+            log.warning('Invalid datetime format: {}'.format(day_of_birth))
+        else:
+            profile.year = day_of_birth.year
+
+    gender = attributes.get(keys['gender'])
+    if gender:
+        # suppose something like 'male' or 'female' is received
+        if gender.startswith('m'):
+            profile.gender = 'm'
+        elif gender.startswith('f'):
+            profile.gender = 'f'
+    profile.save()
+
+
+def _get_date_from_string(datestring):
+    for _format in settings.DATE_INPUT_FORMATS + settings.DATETIME_INPUT_FORMATS:
+        try:
+            return datetime.datetime.strptime(datestring, _format).date()
+        except ValueError:
+            pass
 
 # -----------------------------------------------------------------------------
 # Shibboleth (Stanford and others.  Uses *Apache* environment variables)
