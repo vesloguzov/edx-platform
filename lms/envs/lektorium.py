@@ -25,3 +25,6 @@ CAS_ATTRIBUTE_KEYS = {
     # 'language': 'language',
     # 'level_of_education',
 }
+CAS_INSTANT_LOGIN_EXEMPT = (
+    'api.',
+)
