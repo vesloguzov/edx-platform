@@ -262,6 +262,28 @@ class HideableTab(CourseTab):
         return self.is_hidden == other.get('is_hidden', False)
 
 
+class SingularTab(CourseTab):
+    """
+    Abstract class for tabs with types appearing only once per course
+
+    Required for tabs having default fake name translations
+    """
+    # created especially for advanced module tabs that were not correctly remove,
+    # but could be applied to ordinary tabs if required
+    def __eq__(self, other):
+        """
+        Overrides the equal operator to check equality of member variables rather than the object's address.
+        Also allows comparison with dict-type tabs (needed to support callers implemented before this class
+        was implemented). Compares only tab types, names are ignored.
+        """
+
+        if type(other) is dict and not self.validate(other, raise_error=False):
+            # 'other' is a dict-type tab and did not validate
+            return False
+
+        return self.type == other.get('type')
+
+
 class CoursewareTab(CourseTab):
     """
     A tab containing the course content.
@@ -581,14 +603,14 @@ class HtmlTextbookTabs(TextbookTabsBase):
             )
 
 
-class GradingTab(object):
+class GradingTab(SingularTab):
     """
     Abstract class for tabs that involve Grading.
     """
     pass
 
 
-class StaffGradingTab(StaffTab, GradingTab):
+class StaffGradingTab(GradingTab, StaffTab):
     """
     A tab for staff grading.
     """
@@ -604,7 +626,7 @@ class StaffGradingTab(StaffTab, GradingTab):
         )
 
 
-class PeerGradingTab(AuthenticatedCourseTab, GradingTab):
+class PeerGradingTab(GradingTab, AuthenticatedCourseTab):
     """
     A tab for peer grading.
     """
@@ -620,7 +642,7 @@ class PeerGradingTab(AuthenticatedCourseTab, GradingTab):
         )
 
 
-class OpenEndedGradingTab(AuthenticatedCourseTab, GradingTab):
+class OpenEndedGradingTab(GradingTab, AuthenticatedCourseTab):
     """
     A tab for open ended grading.
     """
@@ -654,7 +676,7 @@ class SyllabusTab(CourseTab):
         )
 
 
-class NotesTab(AuthenticatedCourseTab):
+class NotesTab(SingularTab, AuthenticatedCourseTab):
     """
     A tab for the course notes.
     """
