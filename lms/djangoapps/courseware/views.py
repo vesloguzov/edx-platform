@@ -909,7 +909,7 @@ def submission_history(request, course_id, location):
 
     context = {
         'history_entries': history_entries,
-        'username': student.username,
+        'nickname': student.profile.nickname or student.email,
         'location': location,
         'course_id': course_key.to_deprecated_string()
     }
