@@ -1154,15 +1154,22 @@ def _do_create_account(post_vars, extended_profile=None):
 
     Note: this function is also used for creating test users.
     """
-    user = User( email=post_vars['email'],
+    user = User(email=post_vars['email'],
                 is_active=False)
     user.set_password(post_vars['password'])
     registration = Registration()
 
+    if 'username' in post_vars:
+        user.username = post_vars['username']
+        log.warning('Creating user with predefined username: {}'.format(user.username))
     # TODO: Rearrange so that if part of the process fails, the whole process fails.
     # Right now, we can have e.g. no registration e-mail sent out and a zombie account
+
     try:
-        save_user_with_auto_username(user)
+        if user.username:
+            user.save()
+        else:
+            save_user_with_auto_username(user)
     except IntegrityError:
         # Figure out the cause of the integrity error
         if len(User.objects.filter(email=post_vars['email'])) > 0:
@@ -1182,7 +1189,7 @@ def _do_create_account(post_vars, extended_profile=None):
 
     profile = UserProfile(user=user)
     profile.name = post_vars['name']
-    profile.nickname = post_vars['nickname']
+    profile.nickname = post_vars.get('nickname', '')
     profile.level_of_education = post_vars.get('level_of_education')
     profile.gender = post_vars.get('gender')
     profile.mailing_address = post_vars.get('mailing_address')
