@@ -841,6 +841,25 @@ class CourseEnrollment(models.Model):
             raise
 
     @classmethod
+    def enroll_pending(cls, user):
+        """
+        Enroll a user in course he was enrolled by email. This saves immediately.
+
+        Returns a CoursewareEnrollment object.
+
+        `user` is a Django User object. If it hasn't been saved yet (no `.id`
+               attribute), this method will automatically save it before
+               adding an enrollment for it.
+
+        `course_id` is our usual course_id string (e.g. "edX/Test101/2013_Fall)
+
+        """
+        pending_enrollments = CourseEnrollmentAllowed.objects.filter(email=user.email)
+        for pending_enrollment in pending_enrollments:
+            if pending_enrollment.auto_enroll:
+                cls.enroll(user, pending_enrollment.course_id)
+
+    @classmethod
     def unenroll(cls, user, course_id):
         """
         Remove the user from a given course. If the relevant `CourseEnrollment`
