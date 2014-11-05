@@ -51,7 +51,8 @@ class UserSerializer(serializers.ModelSerializer):
         profile_data = self.object._profile_data
         del(self.object._profile_data)
 
-        super(UserSerializer, self).save_object(obj)
+        created = not obj.pk
+        super(UserSerializer, self).save_object(obj, **kwargs)
 
         profile, _ = UserProfile.objects.get_or_create(user=self.object)
         for field, value in profile_data.items():
@@ -59,6 +60,9 @@ class UserSerializer(serializers.ModelSerializer):
         profile.save()
         # bind updated profile to user for correct patch response
         self.object.profile = profile
+
+        if created:
+            CourseEnrollment.enroll_pending(obj)
 
     def _pop_profile_data(self, attrs):
         return {

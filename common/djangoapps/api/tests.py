@@ -20,6 +20,7 @@ from rest_framework import mixins
 from student.models import CourseEnrollment
 from certificates.models import GeneratedCertificate, CertificateStatuses
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
+from instructor.enrollment import enroll_email
 
 from serializers import UserSerializer
 from views import UserViewSet
@@ -29,6 +30,9 @@ TEST_API_KEY = "test_api_key"
 class UserSerializerTest(TestCase):
     def setUp(self):
         self.user = UserFactory.create(username='test', email='test@example.com')
+
+    def tearDown(self):
+        User.objects.all().delete()
 
     def test_serialization(self):
         serializer = UserSerializer(instance=self.user)
@@ -125,6 +129,9 @@ class UserViewSetTest(APITest):
         self.detail_url = reverse('user-detail', kwargs={'username': self.user.username})
         self.list_url = reverse('user-list')
 
+    def tearDown(self):
+        User.objects.all().delete()
+
     @override_settings(EDX_API_KEY='')
     def test_empty_api_key_fail(self):
         super(UserViewSetTest, self).test_empty_api_key_fail()
@@ -160,6 +167,19 @@ class UserViewSetTest(APITest):
         self.assertEquals(user.email, data['email'])
         self.assertEquals(user.profile.nickname, data['nickname'])
         self.assertEquals(user.profile.name, data['name'])
+
+    def test_enroll_pending(self):
+        data = {
+            'uid': 'new_test',
+            'email': 'new_test@example.com',
+        }
+        course = CourseFactory.create()
+        enroll_email(course.id, data['email'], auto_enroll=True)
+
+        response = self._request_with_auth('put', data=data,
+                    path=reverse('user-detail', kwargs={'username': data['uid']}))
+        user = User.objects.get(username=data['uid'])
+        self.assertTrue(CourseEnrollment.is_enrolled(user, course.id))
 
 
 class CourseViewSetTest(APITest):
