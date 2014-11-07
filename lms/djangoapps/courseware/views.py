@@ -52,6 +52,7 @@ from microsite_configuration import microsite
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from instructor.enrollment import uses_shib
 from instructor.views.tools import get_student_from_email_or_nickname
+from required_student_data.views import require_student_data
 
 log = logging.getLogger("edx.courseware")
 
@@ -541,6 +542,7 @@ def jump_to(request, course_id, location):
 
 @ensure_csrf_cookie
 @verify_course_id
+@require_student_data
 def course_info(request, course_id):
     """
     Display the course's info.html, or 404 if there is no such course.

@@ -27,6 +27,8 @@ urlpatterns = ('',  # nopep8
     url(r'^accept_name_change$', 'student.views.accept_name_change'),
     url(r'^reject_name_change$', 'student.views.reject_name_change'),
     url(r'^pending_name_changes$', 'student.views.pending_name_changes'),
+    url(r'^update_required_data$', 'required_student_data.views.update_required_data', name='update_required_data'),
+    url(r'^postpone_required_data_update$', 'required_student_data.views.postpone_required_data_update', name='postpone_required_data_update'),
     url(r'^event$', 'track.views.user_track'),
     url(r'^t/(?P<template>[^/]*)$', 'static_template_view.views.index'),   # TODO: Is this used anymore? What is STATIC_GRAB?
 
