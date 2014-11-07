@@ -92,7 +92,8 @@ def postpone_required_data_update(request):
     return JsonResponse({'success': True})
 
 def _postpone_student_data_update(session):
-    session['REQUIRE_USER_DATA'] = datetime.datetime.now() + USER_DATA_REQUEST_TIMEOUT
+    timeout = getattr(settings, 'USER_DATA_REQUEST_TIMEOUT', datetime.timedelta(hours=24))
+    session['REQUIRE_USER_DATA'] = datetime.datetime.now() + timeout
 
 
 class RequiredStudentDataForm(forms.ModelForm):
