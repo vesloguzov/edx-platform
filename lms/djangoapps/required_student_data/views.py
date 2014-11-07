@@ -35,9 +35,7 @@ def _require_student_data(request, course_id):
     else:
         staff_access = request.user.is_staff
     if staff_access:
-        # TODO: turn on
-        # return False
-        pass
+        return False
 
     if _required_data_complete(request.user):
         return False
@@ -49,13 +47,6 @@ def _require_student_data(request, course_id):
 def _required_data_complete(user):
     profile = user.profile
     return (profile.first_name or profile.last_name) and profile.birthdate
-
-# ask for data:
-# is authenticated
-# is not staff for the course
-# has empty fields
-# request.session['REQUIRE_USER_DATA']
-
 
 def require_authenticated_or_404(view_func):
     @functools.wraps(view_func, assigned=available_attrs(view_func))
