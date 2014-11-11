@@ -1,0 +1,139 @@
+<%!
+from django.utils.translation import ugettext as _
+from django.core.urlresolvers import reverse
+%>
+<% form = request._required_student_data_form %>
+<style>
+#popup_overlay {
+    position: fixed;
+    z-index:100;
+    top: 0px;
+    left: 0px;
+    height:100%;
+    width:100%;
+    background: #000;
+    display: none;
+}
+</style>
+<script>
+// TODO: disable/enable button on changes
+  $(function(){
+    $.fn.extend({
+        popupModal: function(options){
+            var defaults = {
+                top: 100,
+                overlay: 0.5,
+                overlay_id: null,
+                closeButton: null,
+                onClose: null
+            }
+            var overlay = $('<div id="popup_overlay"></div>');
+            $('body').append(overlay);
+            options = $.extend(defaults, options);
+
+            return this.each(function(){
+                var _options = options;
+                var _this = $(this);
+
+                function show_modal(){
+                    var modal_height = _this.outerHeight();
+                    var modal_width = _this.outerWidth();
+                    overlay.css({'display': 'block', opacity: 0})
+                    overlay.fadeTo(200, _options.overlay);
+                    _this.css({
+                        'display' : 'block',
+                        'position' : 'fixed',
+                        'opacity' : 0,
+                        'z-index': 11000,
+                        'left' : 50 + '%',
+                        'margin-left' : -(modal_width/2) + "px",
+                        'top' : _options.top + "px"
+                    });
+                    _this.fadeTo(200, 1);
+                }
+                function close_modal(){
+                    overlay.fadeOut(200);
+                    _this.css('display', 'none');
+                    if (_options.onClose)
+                        _options.onClose(_this);
+                }
+                $('#popup_overlay').add(_options.closeButton).click(close_modal);
+                show_modal();
+            });
+        }
+    });
+    $('#send_student_data').popupModal({
+      closeButton: ".close-modal",
+      onClose: function(){
+        alert('Closing');
+      }
+    });
+    accessible_modal('.send_student_data', '#send_student_data .close-modal', '#send_student_data', '#content');
+    $('.date').datepicker('destroy').datepicker();
+    $('#required_student_data_form').submit(function(){
+        $('.modal-form-error').remove();
+        var data = $(this).serialize();
+        $.post('${ reverse("update_required_data") }', data, function(response){
+            if (response.success){
+            // TODO: close???
+            } else {
+              errors = response.errors;
+              $.each(errors, function(key, error_str){
+                  var error_div = $('<div></div>').addClass("modal-form-error").text(error_str);
+                  if (key == '')
+                    error_div.appendTo($('#required_student_data_error'));
+                  else
+                    error_div.insertAfter($('#' + key));
+              });
+            }
+        });
+        return false;
+    });
+  });
+</script>
+<!--<a href="#send_student_data" class="send_student_data" rel="leanModal" style="display: none">HEY!!!</a>-->
+
+<section id="send_student_data" class="modal" aria-hidden="true">
+  <div class="inner-wrapper" role="dialog" aria-labelledby="user-data-title">
+    <button class="close-modal">
+      <i class="icon-remove"></i>
+      <span class="sr">
+        ## Translators: this is a control to allow users to exit out of this modal interface (a menu or piece of UI that takes the full focus of the screen)
+        ${_('Postpone')}
+      </span>
+    </button>
+
+    <header>
+      <h2 id="user-data-title">
+        ${_("Personal information")}
+        <span class="sr">,
+          ## Translators: this text gives status on if the modal interface (a menu or piece of UI that takes the full focus of the screen) is open or not
+          ${_("window open")}
+        </span>
+      </h2>
+      <hr/>
+    </header>
+    <div id="student_data_body">
+      <form id="required_student_data_form">
+        <div id="required_student_data_error"></div>
+        <p>${_("Please type in your real name and date of birth below. We'll need this information in order to issue your certificate of completion.")}
+        <br>${_('We do not transfer your data to the third parties.')}</p>
+        <fieldset>
+          <div class="input-group">
+            <label>${_("First name")}</label>
+            ${ form['first_name'] }
+            <label>${_("Last name")}</label>
+            ${ form['last_name'] }
+            <label>${_("Date of birth:")}</label>
+            ## TODO: check date output format
+            <input id="${ form['birthdate'].auto_id }" name="${ form['birthdate'].name }" value="${ form['birthdate'].value() or '' }" type="text" class="date datepicker"/>
+          </div>
+          <div class="submit submit-cancel">
+            <input type="submit" id="submit" value="${_('Save')}">
+            <input type="button" id="postpone" value="${_('Submit later')}">
+          </div>
+        </fieldset>
+      </form>
+    </div>
+  </div>
+</section>

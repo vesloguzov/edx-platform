@@ -131,11 +131,7 @@
 
   <%include file="widgets/segment-io.html" />
   % if hasattr(request, '_required_student_data_form'):
-  <form id="required_student_data_form">
-  </form>
-  <script>
-    alert('Hello!')
-  </script>
+    <%include file="required_student_data.html" />
   % endif
 
 </body>
