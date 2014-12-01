@@ -5,10 +5,12 @@ from datetime import datetime, timedelta
 import pytz
 import ddt
 import unittest
+from mock import patch
 
 from django.test.utils import override_settings
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.core import mail
 from xmodule.modulestore.tests.django_utils import (
     ModuleStoreTestCase, mixed_store_config
 )
@@ -141,6 +143,20 @@ class EnrollmentTest(ModuleStoreTestCase):
     def test_invalid_enrollment_action(self):
         resp = self._change_enrollment('not_an_action')
         self.assertEqual(resp.status_code, 400)
+
+    @patch.dict('django.conf.settings.FEATURES', {'SEND_ENROLLMENT_EMAIL': True})
+    def test_email_on_enroll(self):
+        self._change_enrollment('enroll')
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(
+            mail.outbox[0].subject,
+            'You have enrolled in Robot Super Course'
+        )
+        self.assertIn(
+            reverse('course_root', kwargs={'course_id': self.course.id.to_deprecated_string()}),
+            mail.outbox[0].body
+        )
 
     def _change_enrollment(self, action, course_id=None, auto_reg=False):
         """
