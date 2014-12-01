@@ -8,11 +8,13 @@ Replace this with more appropriate tests for your application.
 import json
 import datetime
 from unittest import skipIf
+from mock import patch
 
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.test.utils import override_settings
 from django.core.urlresolvers import reverse
+from django.core import mail
 
 from xmodule.modulestore.tests.factories import CourseFactory
 from rest_framework import mixins
@@ -203,6 +205,23 @@ class EnrollmentViewSetTest(APITest):
 
         self.assertEquals(response.status_code, 200)
         self.assertTrue(CourseEnrollment.is_enrolled(self.user, self.course_other.id))
+
+    @patch.dict('django.conf.settings.FEATURES', {'SEND_ENROLLMENT_EMAIL': True})
+    def test_enrollment_email(self):
+        url = reverse('enrollment-enroll', kwargs={'user_username': self.user.username,
+                                                   'course_id': self.course_other.id})
+        response = self._request_with_auth('post', url)
+        self.assertEquals(response.status_code, 200)
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(
+            mail.outbox[0].subject,
+            'You have enrolled in Robot Super Course'
+        )
+        self.assertIn(
+            reverse('course_root', kwargs={'course_id': self.course_other.id.to_deprecated_string()}),
+            mail.outbox[0].body
+        )
 
     def test_enroll_error_if_enrolled(self):
         url = reverse('enrollment-enroll', kwargs={'user_username': self.user.username,
