@@ -1097,6 +1097,13 @@ PIPELINE_JS = {
         'output_filename': 'js/instructor_dash.js',
         'test_order': 9,
     },
+    'modalform': {
+        'source_filenames': [
+            'js/jquery.basicmodal.js',
+            'js/jquery.ajaxform.js'],
+        'output_filename': 'js/modalform.js',
+        'test_order': 10,
+    }
 }
 
 PIPELINE_DISABLE_WRAPPER = True

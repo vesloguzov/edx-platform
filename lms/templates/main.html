@@ -130,7 +130,9 @@
   <%block name="js_extra"/>
 
   <%include file="widgets/segment-io.html" />
+
   % if hasattr(request, '_required_student_data_form'):
+    <%static:js group='modalform'/>
     <%include file="required_student_data.html" />
   % endif
 

@@ -1,105 +1,66 @@
 <%!
 from django.utils.translation import ugettext as _
 from django.core.urlresolvers import reverse
+from django.utils.formats import get_format
 %>
 <% form = request._required_student_data_form %>
 <style>
-#popup_overlay {
+#popup_overlay, #basicmodal-overlay {
     position: fixed;
-    z-index:100;
+    z-index: 2;
     top: 0px;
     left: 0px;
-    height:100%;
-    width:100%;
+    height: 100%;
+    width: 100%;
     background: #000;
     display: none;
 }
 </style>
 <script>
-// TODO: disable/enable button on changes
-  $(function(){
-    $.fn.extend({
-        popupModal: function(options){
-            var defaults = {
-                top: 100,
-                overlay: 0.5,
-                overlay_id: null,
-                closeButton: null,
-                onClose: null
-            }
-            var overlay = $('<div id="popup_overlay"></div>');
-            $('body').append(overlay);
-            options = $.extend(defaults, options);
-
-            return this.each(function(){
-                var _options = options;
-                var _this = $(this);
-
-                function show_modal(){
-                    var modal_height = _this.outerHeight();
-                    var modal_width = _this.outerWidth();
-                    overlay.css({'display': 'block', opacity: 0})
-                    overlay.fadeTo(200, _options.overlay);
-                    _this.css({
-                        'display' : 'block',
-                        'position' : 'fixed',
-                        'opacity' : 0,
-                        'z-index': 11000,
-                        'left' : 50 + '%',
-                        'margin-left' : -(modal_width/2) + "px",
-                        'top' : _options.top + "px"
-                    });
-                    _this.fadeTo(200, 1);
-                }
-                function close_modal(){
-                    overlay.fadeOut(200);
-                    _this.css('display', 'none');
-                    if (_options.onClose)
-                        _options.onClose(_this);
-                }
-                $('#popup_overlay').add(_options.closeButton).click(close_modal);
-                show_modal();
-            });
-        }
-    });
-    $('#send_student_data').popupModal({
-      closeButton: ".close-modal",
-      onClose: function(){
-        alert('Closing');
-      }
-    });
-    accessible_modal('.send_student_data', '#send_student_data .close-modal', '#send_student_data', '#content');
-    $('.date').datepicker('destroy').datepicker();
-    $('#required_student_data_form').submit(function(){
-        $('.modal-form-error').remove();
-        var data = $(this).serialize();
-        $.post('${ reverse("update_required_data") }', data, function(response){
-            if (response.success){
-            // TODO: close???
-            } else {
-              errors = response.errors;
-              $.each(errors, function(key, error_str){
-                  var error_div = $('<div></div>').addClass("modal-form-error").text(error_str);
-                  if (key == '')
-                    error_div.appendTo($('#required_student_data_error'));
-                  else
-                    error_div.insertAfter($('#' + key));
-              });
-            }
-        });
+$(function(){
+    var postpone = function(){
+        $.post('${ reverse("postpone_required_data_update") }')
         return false;
+    }
+
+    $('#send_student_data').basicModal({
+        autoOpen: true,
+        closeButton: $(this).find('.close-modal'),
+        onOpen: function(modal){
+        modal.find('.date').datepicker('destroy').datepicker({
+            changeMonth: true,
+            changeYear: true,
+            maxDate: '-1Y',
+            minDate: '-120Y',
+            yearRange: '-120:-1',
+            dateFormat: '${ get_format('DATE_INPUT_FORMATS')[0] }'.replace('%Y', 'yy').replace('%y', 'y').replace('%m', 'mm').replace('%d', 'dd'),
+            // TODO
+            defaultDate: new Date(1988, 6, 15),
+            firstDay: 1
+        });
+        },
+        onUserClose: postpone
     });
+
+    $('#required_student_data_form').ajaxForm({
+        onSuccess: function(){
+            $('#send_student_data').basicModal('close');
+        },
+        onCancel: function(){
+            postpone();
+            $('#send_student_data').basicModal('close');
+        },
+        errorClass: 'modal-form-error'
+    });
+
   });
 </script>
-<!--<a href="#send_student_data" class="send_student_data" rel="leanModal" style="display: none">HEY!!!</a>-->
-
 <section id="send_student_data" class="modal" aria-hidden="true">
   <div class="inner-wrapper" role="dialog" aria-labelledby="user-data-title">
     <button class="close-modal">
       <i class="icon-remove"></i>
       <span class="sr">
-        ## Translators: this is a control to allow users to exit out of this modal interface (a menu or piece of UI that takes the full focus of the screen)
-        ${_('Postpone')}
+        ${_('Submit later')}
       </span>
     </button>
 
@@ -114,23 +75,25 @@ from django.core.urlresolvers import reverse
       <hr/>
     </header>
     <div id="student_data_body">
-      <form id="required_student_data_form">
-        <div id="required_student_data_error"></div>
+        <form id="required_student_data_form" action="${ reverse("update_required_data") }">
         <p>${_("Please type in your real name and date of birth below. We'll need this information in order to issue your certificate of completion.")}
         <br>${_('We do not transfer your data to the third parties.')}</p>
         <fieldset>
           <div class="input-group">
+            <div class="non_field_errors"></div>
             <label>${_("First name")}</label>
             ${ form['first_name'] }
+            <div id="${ form['first_name'].auto_id }_error"></div>
             <label>${_("Last name")}</label>
             ${ form['last_name'] }
+            <div id="${ form['first_name'].auto_id }_error"></div>
             <label>${_("Date of birth:")}</label>
-            ## TODO: check date output format
-            <input id="${ form['birthdate'].auto_id }" name="${ form['birthdate'].name }" value="${ form['birthdate'].value() or '' }" type="text" class="date datepicker"/>
+            ${ form['birthdate'] }
+            <div id="${ form['birthdate'].auto_id }_error"></div>
           </div>
           <div class="submit submit-cancel">
             <input type="submit" id="submit" value="${_('Save')}">
-            <input type="button" id="postpone" value="${_('Submit later')}">
+            <input type="button" id="postpone" class="cancel" value="${_('Submit later')}">
           </div>
         </fieldset>
       </form>

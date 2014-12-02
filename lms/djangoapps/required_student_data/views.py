@@ -9,6 +9,7 @@ from django.utils.decorators import available_attrs
 from django.views.decorators.http import require_POST
 from django_future.csrf import ensure_csrf_cookie
 from django.conf import settings
+from django.utils.formats import get_format
 
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
@@ -21,7 +22,7 @@ def require_student_data(view_func):
     def decorator(request, *args, **kwargs):
         course_id = kwargs.get('course_id') or (len(args) > 0 and args[0])
         if _require_student_data(request, course_id):
-            request._required_student_data_form = RequiredStudentDataForm(instance=request.user.profile)
+            form = request._required_student_data_form = RequiredStudentDataForm(instance=request.user.profile)
         return view_func(request, *args, **kwargs)
     return decorator
 
@@ -64,15 +65,16 @@ def require_authenticated_or_404(view_func):
 def update_required_data(request):
     form = RequiredStudentDataForm(request.POST, instance=request.user.profile)
     if form.is_valid():
-        form.save()
-        # add a timeout for next check if user removes some data in future
+        profile = form.save()
+        print 'BIRTHDATE:', form.cleaned_data['birthdate'], profile.birthdate
+        # add a timeout for next check if user removes some data in future or submitted partial data
         _postpone_student_data_update(request.session)
         return JsonResponse({'success': True})
     else:
         return JsonResponse({
             'success': False,
             'errors': _form_errors_to_json(form),
-        }, status=400)
+        })
 
 
 @ensure_csrf_cookie
@@ -88,6 +90,7 @@ def _postpone_student_data_update(session):
 
 
 class RequiredStudentDataForm(forms.ModelForm):
+    birthdate = forms.DateField(localize=True, widget=forms.DateInput(attrs={'class': 'date'}))
     class Meta:
         model = UserProfile
         fields = ('first_name', 'last_name', 'birthdate')
