@@ -1430,6 +1430,8 @@ REGISTRATION_EXTRA_FIELDS = {
     'country': 'hidden',
 }
 
+REQUIRE_STUDENT_DATA_FOR_COURSEWARE = False
+
 ########################## CERTIFICATE NAME ########################
 CERT_NAME_SHORT = "Certificate"
 CERT_NAME_LONG = "Certificate of Achievement"

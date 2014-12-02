@@ -16,6 +16,7 @@ from xmodule.modulestore.tests.factories import CourseFactory
 from student.tests.factories import UserFactory, UserProfileFactory
 from student.roles import CourseStaffRole
 
+@override_settings(REQUIRE_STUDENT_DATA_FOR_COURSEWARE=True)
 class RequiredStudentDataTest(TestCase):
     """
     Tests for required student data form
@@ -92,7 +93,6 @@ class RequiredStudentDataTest(TestCase):
         data = self.data.copy()
         data['birthdate'] = 'invalid'
         response = self.client.post(self.update_url, data)
-        self.assertEqual(response.status_code, 400)
 
         self.assertIn('errors', response.content)
         self.assertIn('birthdate', response.content)

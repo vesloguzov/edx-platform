@@ -17,14 +17,16 @@ from student.models import UserProfile
 from courseware.access import has_access
 from util.json_request import JsonResponse
 
+
 def require_student_data(view_func):
     @functools.wraps(view_func, assigned=available_attrs(view_func))
     def decorator(request, *args, **kwargs):
         course_id = kwargs.get('course_id') or (len(args) > 0 and args[0])
-        if _require_student_data(request, course_id):
+        if settings.REQUIRE_STUDENT_DATA_FOR_COURSEWARE and _require_student_data(request, course_id):
             form = request._required_student_data_form = RequiredStudentDataForm(instance=request.user.profile)
         return view_func(request, *args, **kwargs)
     return decorator
+
 
 def _require_student_data(request, course_id):
     if not request.user.is_authenticated():
@@ -45,9 +47,11 @@ def _require_student_data(request, course_id):
     return (not student_data_requested
             or student_data_requested < datetime.datetime.now())
 
+
 def _required_data_complete(user):
     profile = user.profile
     return (profile.first_name or profile.last_name) and profile.birthdate
+
 
 def require_authenticated_or_404(view_func):
     @functools.wraps(view_func, assigned=available_attrs(view_func))
@@ -66,7 +70,6 @@ def update_required_data(request):
     form = RequiredStudentDataForm(request.POST, instance=request.user.profile)
     if form.is_valid():
         profile = form.save()
-        print 'BIRTHDATE:', form.cleaned_data['birthdate'], profile.birthdate
         # add a timeout for next check if user removes some data in future or submitted partial data
         _postpone_student_data_update(request.session)
         return JsonResponse({'success': True})
@@ -90,7 +93,7 @@ def _postpone_student_data_update(session):
 
 
 class RequiredStudentDataForm(forms.ModelForm):
-    birthdate = forms.DateField(localize=True, widget=forms.DateInput(attrs={'class': 'date'}))
+    birthdate = forms.DateField(required=False, localize=True, widget=forms.DateInput(attrs={'class': 'date'}))
     class Meta:
         model = UserProfile
         fields = ('first_name', 'last_name', 'birthdate')
