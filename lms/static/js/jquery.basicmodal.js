@@ -124,7 +124,6 @@ var methods = {
             options.closeButton.focus();
 
         item.data('basicmodal').accessible = true;
-        console.log('made accessible');
     }
 };
 
