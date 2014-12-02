@@ -264,6 +264,7 @@ def chat_settings(course, user):
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @verify_course_id
+@require_student_data
 def index(request, course_id, chapter=None, section=None,
           position=None):
     """
@@ -574,6 +575,7 @@ def course_info(request, course_id):
 
 @ensure_csrf_cookie
 @verify_course_id
+@require_student_data
 def static_tab(request, course_id, tab_slug):
     """
     Display the courses tab with the given name.
@@ -775,6 +777,7 @@ def mktg_course_about(request, course_id):
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @transaction.commit_manually
 @verify_course_id
+@require_student_data
 def progress(request, course_id, student_id=None):
     """
     Wraps "_progress" with the manual_transaction context manager just in case

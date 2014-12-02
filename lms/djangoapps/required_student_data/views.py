@@ -19,6 +19,9 @@ from util.json_request import JsonResponse
 
 
 def require_student_data(view_func):
+    """
+    Docorator for views where form with personal info request is shown before content access
+    """
     @functools.wraps(view_func, assigned=available_attrs(view_func))
     def decorator(request, *args, **kwargs):
         course_id = kwargs.get('course_id') or (len(args) > 0 and args[0])
