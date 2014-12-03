@@ -44,8 +44,7 @@ var methods = {
         item.css({
             'position' : 'fixed',
             'opacity' : 0,
-            // TODO: add to options
-            'z-index': 3, // jQuery-ui compatible
+            'z-index': parseInt($('#basicmodal-overlay').css('z-index')) + 1 || 101,
             'left' : 50 + '%',
             'margin-left' : -(item.outerWidth()/2) + "px",
             'top' : options.top + "px"

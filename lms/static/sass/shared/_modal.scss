@@ -9,6 +9,17 @@
     width:100%;
     z-index:100;
 }
+#basicmodal-overlay {
+    position: fixed;
+    z-index: 100;
+    top: 0px;
+    left: 0px;
+    height: 100%;
+    width: 100%;
+    background: #000;
+    display: none;
+}
+
 @mixin blue-button {
   border: 1px solid #2d81ad;
   @include linear-gradient(top, #6dccf1, #38a8e5);

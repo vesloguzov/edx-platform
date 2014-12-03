@@ -4,18 +4,6 @@ from django.core.urlresolvers import reverse
 from django.utils.formats import get_format
 %>
 <% form = request._required_student_data_form %>
-<style>
-#popup_overlay, #basicmodal-overlay {
-    position: fixed;
-    z-index: 2;
-    top: 0px;
-    left: 0px;
-    height: 100%;
-    width: 100%;
-    background: #000;
-    display: none;
-}
-</style>
 <script>
 $(function(){
     var postpone = function(){
@@ -27,7 +15,11 @@ $(function(){
         autoOpen: true,
         closeButton: $(this).find('.close-modal'),
         onOpen: function(modal){
-        modal.find('.date').datepicker('destroy').datepicker({
+        modal.find('.date').css({
+            'position': 'relative',
+            'z-index': parseInt(modal.css('z-index')) + 1 || 102
+         })
+         .datepicker('destroy').datepicker({
             changeMonth: true,
             changeYear: true,
             maxDate: '-1Y',
