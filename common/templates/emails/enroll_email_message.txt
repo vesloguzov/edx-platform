@@ -2,7 +2,7 @@
 
 ${_("Dear {full_name}").format(full_name=full_name)}
 
-${_("You have enrolled in {course_name} at {site_name}."
+${_("You have enrolled in {course_name} at {site_name}. "
 	"The course should now appear on your {site_name} "
 	"dashboard.").format(
 		course_name=course.display_name_with_default,

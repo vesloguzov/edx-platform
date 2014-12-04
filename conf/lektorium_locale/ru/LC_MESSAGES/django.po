@@ -8088,7 +8088,7 @@ msgstr "Ваша учетная запись на {platform_name}"
 #: lms/templates/emails/remove_beta_tester_email_message.txt
 #: lms/templates/emails/unenroll_email_enrolledmessage.txt
 msgid "Dear {full_name}"
-msgstr "Уважаемый/уважаемая {full_name}"
+msgstr "Здравствуйте, {full_name}!"
 
 #: lms/templates/emails/add_beta_tester_email_message.txt
 msgid ""
@@ -8102,8 +8102,7 @@ msgstr ""
 #: lms/templates/emails/enroll_email_enrolledmessage.txt
 msgid "To start accessing course materials, please visit {course_url}"
 msgstr ""
-"Чтобы начать просматривать материалы курса, пожалуйста, посетите сайт "
-"{course_url}"
+"Для доступа к материалам курса, пожалуйста, перейдите по ссылке {course_url}"
 
 #: lms/templates/emails/add_beta_tester_email_message.txt
 msgid "Visit {course_about_url} to join the course and begin the beta test."
@@ -8231,15 +8230,15 @@ msgstr "Затем Вы сможете зарегистрироваться на
 
 #: lms/templates/emails/enroll_email_allowedsubject.txt
 msgid "You have been invited to register for {course_name}"
-msgstr "Вы получили приглашение зарегистрироваться на курс {course_name}"
+msgstr "Вы получили приглашение зарегистрироваться на курс «{course_name}»"
 
 #: lms/templates/emails/enroll_email_enrolledmessage.txt
 msgid ""
 "You have been enrolled in {course_name} at {site_name} by a member of the "
 "course staff. The course should now appear on your {site_name} dashboard."
 msgstr ""
-"Вы были зарегистрированы в {course_name} на {site_name} в качестве "
-"сотрудника курса. Курс должен сейчас появиться на вашей {site_name} панели."
+"Вы были зарегистрированы в {course_name} на {site_name} сотрудником курса. "
+"Курс должен сейчас появиться в вашем личном кабинете {site_name}."
 
 #: lms/templates/emails/enroll_email_enrolledmessage.txt
 #: lms/templates/emails/unenroll_email_enrolledmessage.txt
@@ -8249,7 +8248,7 @@ msgstr ""
 
 #: lms/templates/emails/enroll_email_enrolledsubject.txt
 msgid "You have been enrolled in {course_name}"
-msgstr "Вы зарегистрированы на курсе {course_name}"
+msgstr "Вы записаны на курс «{course_name}»"
 
 #: lms/templates/emails/order_confirmation_email.txt
 msgid "Hi {name}"
@@ -14202,3 +14201,15 @@ msgstr "Для поддержания достоверности все факт
 #: lms/templates/dashboard.html
 msgid "Enter your desired full name, as it will appear on your certificate:"
 msgstr "Введите своё полное имя, которое будет указано на Вашем сертификате:"
+
+#: lms/templates/emails/enroll_email_enrolledsubject.txt
+msgid "You have enrolled in {course_name}"
+msgstr "Вы записались на курсе «{course_name}»"
+
+#: common/templates/emails/enroll_email_message.txt
+msgid ""
+"You have enrolled in {course_name} at {site_name}. "
+"The course should now appear on your {site_name} dashboard."
+msgstr ""
+"Вы записались на курс «{course_name}» на {site_name}. "
+"Курс должен теперь появиться в Вашем личном кабинете {site_name}."
