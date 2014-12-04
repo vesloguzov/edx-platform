@@ -24,12 +24,15 @@ class UserSerializer(serializers.ModelSerializer):
     profile.name as name
     """
     uid = serializers.CharField(source='username', required=True)
-    name = serializers.CharField(source='profile.name', max_length=255, required=False)
-    nickname = serializers.CharField(source='profile.nickname', max_length=255, required=False)
+    name = serializers.CharField(source='profile.name', default='', max_length=255, required=False)
+    nickname = serializers.CharField(source='profile.nickname', default='', max_length=255, required=False)
+    first_name = serializers.CharField(source='profile.first_name', default='', max_length=255, required=False)
+    last_name = serializers.CharField(source='profile.last_name', default='', max_length=255, required=False)
+    birthdate = serializers.DateField(source='profile.birthdate', default='', required=False)
 
     class Meta:
         model = User
-        fields = ('uid', 'email', 'name', 'nickname')
+        fields = ('uid', 'email', 'name', 'nickname', 'first_name', 'last_name', 'birthdate')
         lookup_field = 'uid'
 
     def validate_uid(self, attrs, source):
@@ -61,10 +64,12 @@ class UserSerializer(serializers.ModelSerializer):
         self.object.profile = profile
 
     def _pop_profile_data(self, attrs):
-        return {
-            'name': attrs.pop('profile.name', ''),
-            'nickname': attrs.pop('profile.nickname', ''),
-        }
+        profile_data = {}
+        for source in attrs.keys():
+            if source.startswith('profile.'):
+                profile_field_name = source.split('.')[-1]
+                profile_data[profile_field_name] = attrs.pop(source, None)
+        return profile_data
 
 
 class CourseSerializer(serializers.Serializer):

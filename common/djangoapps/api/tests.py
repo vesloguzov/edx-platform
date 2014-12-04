@@ -55,7 +55,10 @@ class UserSerializerTest(TestCase):
             'uid': 'test1',
             'email': 'test1@example.com',
             'name': 'Test',
-            'nickname': 'Nick'
+            'nickname': 'Nick',
+            'first_name': 'FirstTest',
+            'last_name': 'LastTest',
+            'birthdate': datetime.date.today()
         }
         serializer = UserSerializer(data=data)
         self.assertTrue(serializer.is_valid())
@@ -65,6 +68,9 @@ class UserSerializerTest(TestCase):
         self.assertEquals(new_user.email, serializer.data['email'])
         self.assertEquals(new_user.profile.name, serializer.data['name'])
         self.assertEquals(new_user.profile.nickname, serializer.data['nickname'])
+        self.assertEquals(new_user.profile.first_name, serializer.data['first_name'])
+        self.assertEquals(new_user.profile.last_name, serializer.data['last_name'])
+        self.assertEquals(new_user.profile.birthdate, serializer.data['birthdate'])
 
     def test_update(self):
         data = {
@@ -93,6 +99,38 @@ class UserSerializerTest(TestCase):
         serializer = UserSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('uid', serializer.errors)
+
+    def test_partial_update(self):
+        """
+        Test that not required fields with defaults are not changed during partial update
+        """
+        data = {
+            'uid': self.user.username,
+            'nickname': 'New Test'
+        }
+        profile = self.user.profile
+        profile.name = 'not-to-be-changed'
+        profile.save()
+
+        serializer = UserSerializer(self.user, data=data, partial=True)
+        self.assertTrue(serializer.is_valid())
+        updated_user = serializer.save()
+        self.assertEqual(updated_user.profile.nickname, data['nickname'])
+        self.assertEqual(updated_user.profile.name, 'not-to-be-changed')
+
+    def test_defaults_on_update(self):
+        data = {
+            'uid': self.user.username,
+            'nickname': 'New Test'
+        }
+        profile = self.user.profile
+        profile.name = 'to-be-removed'
+        profile.save()
+
+        serializer = UserSerializer(self.user, data=data)
+        self.assertTrue(serializer.is_valid())
+        updated_user = serializer.save()
+        self.assertEqual(updated_user.profile.name, '')
 
 
 @override_settings(EDX_API_KEY=TEST_API_KEY)
@@ -125,6 +163,9 @@ class UserViewSetTest(APITest):
         self.detail_url = reverse('user-detail', kwargs={'username': self.user.username})
         self.list_url = reverse('user-list')
 
+    def tearDown(self):
+        User.objects.all().delete()
+
     @override_settings(EDX_API_KEY='')
     def test_empty_api_key_fail(self):
         super(UserViewSetTest, self).test_empty_api_key_fail()
@@ -151,15 +192,41 @@ class UserViewSetTest(APITest):
             'email': 'test-other@example.com',
             'nickname': 'test',
             'name': 'Jonh Doe',
+            'birthdate': '2014-01-26',
         }
         response = self._request_with_auth('put', data=data,
                     path=reverse('user-detail', kwargs={'username': data['uid']}))
         self.assertEquals(response.status_code, 201)
 
         user = User.objects.get(username=data['uid'])
-        self.assertEquals(user.email, data['email'])
-        self.assertEquals(user.profile.nickname, data['nickname'])
-        self.assertEquals(user.profile.name, data['name'])
+        self.assertEqual(user.email, data['email'])
+        self.assertEqual(user.profile.nickname, data['nickname'])
+        self.assertEqual(user.profile.name, data['name'])
+        self.assertEqual(user.profile.first_name, '') # default
+        self.assertEqual(user.profile.last_name, '') # default
+        self.assertEqual(user.profile.birthdate, datetime.date(2014, 1, 26))
+
+    def test_patch(self):
+        """
+        Test only fields that were patched are updated
+        """
+        data = {
+            'uid': self.user.username,
+            'name': 'New Name',
+            'first_name': 'NewFirstName',
+        }
+        response = self._request_with_auth('post', data=data,
+                    path=reverse('user-detail', kwargs={'username': data['uid']}),
+                    HTTP_X_HTTP_METHOD_OVERRIDE='PATCH')
+        self.assertEquals(response.status_code, 200)
+
+        user = User.objects.get(username=self.user.username)
+        self.assertEqual(user.profile.name, data['name'])
+        self.assertEqual(user.profile.first_name, data['first_name'])
+
+        self.assertEqual(user.profile.last_name, self.user.profile.last_name)
+        self.assertEqual(user.email, self.user.email)
+
 
 
 class CourseViewSetTest(APITest):

@@ -205,8 +205,8 @@ class UserProfile(models.Model):
     nickname = models.CharField(blank=True, max_length=255, db_index=True, default='')
 
     # fields required for synchronization
-    first_name = models.CharField(blank=True, max_length=255)
-    last_name = models.CharField(blank=True, max_length=255)
+    first_name = models.CharField(blank=True, default='', max_length=255)
+    last_name = models.CharField(blank=True, default='', max_length=255)
     birthdate = models.DateField(blank=True, null=True)
 
     meta = models.TextField(blank=True)  # JSON dictionary for future expansion
