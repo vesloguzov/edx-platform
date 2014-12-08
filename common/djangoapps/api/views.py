@@ -38,7 +38,7 @@ class ApiKeyHeaderPermission(permissions.BasePermission):
         )
 
 class UserViewSet(mixins.CreateModelMixin,
-                  # mixins.RetrieveModelMixin,
+                  mixins.RetrieveModelMixin,
                   mixins.UpdateModelMixin,
                   # mixins.ListModelMixin,
                   viewsets.GenericViewSet):

@@ -52,6 +52,7 @@ from microsite_configuration import microsite
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from instructor.enrollment import uses_shib
 from instructor.views.tools import get_student_from_email_or_nickname
+from required_student_data.views import require_student_data
 
 log = logging.getLogger("edx.courseware")
 
@@ -263,6 +264,7 @@ def chat_settings(course, user):
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @verify_course_id
+@require_student_data
 def index(request, course_id, chapter=None, section=None,
           position=None):
     """
@@ -541,6 +543,7 @@ def jump_to(request, course_id, location):
 
 @ensure_csrf_cookie
 @verify_course_id
+@require_student_data
 def course_info(request, course_id):
     """
     Display the course's info.html, or 404 if there is no such course.
@@ -572,6 +575,7 @@ def course_info(request, course_id):
 
 @ensure_csrf_cookie
 @verify_course_id
+@require_student_data
 def static_tab(request, course_id, tab_slug):
     """
     Display the courses tab with the given name.
@@ -773,6 +777,7 @@ def mktg_course_about(request, course_id):
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @transaction.commit_manually
 @verify_course_id
+@require_student_data
 def progress(request, course_id, student_id=None):
     """
     Wraps "_progress" with the manual_transaction context manager just in case

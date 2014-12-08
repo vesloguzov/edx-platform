@@ -14202,3 +14202,109 @@ msgstr "Для поддержания достоверности все факт
 #: lms/templates/dashboard.html
 msgid "Enter your desired full name, as it will appear on your certificate:"
 msgstr "Введите своё полное имя, которое будет указано на Вашем сертификате:"
+
+#: lms/templates/required_student_data.html
+msgid "Personal information"
+msgstr "Личные данные"
+
+#: lms/templates/required_student_data.html
+msgid ""
+"Please type in your personal information for issuing your certificate of completion"
+msgstr ""
+"Пожалуйста, введите Ваши личные данные, необходимые для выпуска сертификата"
+
+#: lms/templates/required_student_data.html
+msgid "All the fields are required"
+msgstr "Все поля обязательны для заполнения"
+
+#: lms/templates/required_student_data.html
+msgid "First name"
+msgstr "Имя"
+
+#: lms/templates/required_student_data.html
+msgid "Last name"
+msgstr "Фамилия"
+
+#: lms/templates/required_student_data.html
+msgid "Date of birth"
+msgstr "Дата рождения"
+
+#: lms/templates/required_student_data.html
+msgid "Submit later"
+msgstr "Не сейчас"
+
+#: lms/templates/required_student_data.html
+msgid "Jan"
+msgstr "Январь"
+
+#: lms/templates/required_student_data.html
+msgid "Feb"
+msgstr "Февраль"
+
+#: lms/templates/required_student_data.html
+msgid "Mar"
+msgstr "Март"
+
+#: lms/templates/required_student_data.html
+msgid "Apr"
+msgstr "Апрель"
+
+#: lms/templates/required_student_data.html
+msgid "May"
+msgstr "Май"
+
+#: lms/templates/required_student_data.html
+msgid "Jun"
+msgstr "Июнь"
+
+#: lms/templates/required_student_data.html
+msgid "Jul"
+msgstr "Июль"
+
+#: lms/templates/required_student_data.html
+msgid "Aug"
+msgstr "Август"
+
+#: lms/templates/required_student_data.html
+msgid "Sep"
+msgstr "Сентябрь"
+
+#: lms/templates/required_student_data.html
+msgid "Oct"
+msgstr "Октябрь"
+
+#: lms/templates/required_student_data.html
+msgid "Nov"
+msgstr "Ноябрь"
+
+#: lms/templates/required_student_data.html
+msgid "Dec"
+msgstr "Декабрь"
+
+#: lms/templates/required_student_data.html
+msgid "Mo"
+msgstr "Пн"
+
+#: lms/templates/required_student_data.html
+msgid "Tu"
+msgstr "Вт"
+
+#: lms/templates/required_student_data.html
+msgid "We"
+msgstr "Ср"
+
+#: lms/templates/required_student_data.html
+msgid "Th"
+msgstr "Чт"
+
+#: lms/templates/required_student_data.html
+msgid "Fr"
+msgstr "Пт"
+
+#: lms/templates/required_student_data.html
+msgid "Sa"
+msgstr "Сб"
+
+#: lms/templates/required_student_data.html
+msgid "Su"
+msgstr "Вс"

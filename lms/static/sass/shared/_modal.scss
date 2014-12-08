@@ -9,6 +9,29 @@
     width:100%;
     z-index:100;
 }
+#basicmodal-overlay {
+    position: fixed;
+    z-index: 100;
+    top: 0px;
+    left: 0px;
+    height: 100%;
+    width: 100%;
+    background: #000;
+    display: none;
+}
+
+@mixin blue-button {
+  border: 1px solid #2d81ad;
+  @include linear-gradient(top, #6dccf1, #38a8e5);
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .3);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 1px 1px rgba(0, 0, 0, .15);
+
+  &:hover, &:focus {
+    border-color: #297095;
+    @include linear-gradient(top, #4fbbe4, #2090d0);
+  }
+}
 
 .modal {
   background: rgba(0,0,0, 0.6);
@@ -238,6 +261,27 @@
           margin: 0 auto;
           width: 100%;
           white-space: normal;
+        }
+      }
+
+      .submit-cancel {
+        display: table;
+        font-size: 0;
+
+        input {
+          display: inline-block;
+          width: 185px;
+          margin-left: 8px;
+          font-size: 19px;
+          font-weight: normal;
+          text-transform: uppercase;
+
+          &[type="submit"] {
+              display: inline-block;
+              width: 185px;
+              margin-left: 0;
+              @include blue-button;
+          }
         }
       }
     }

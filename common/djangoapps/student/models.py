@@ -204,6 +204,11 @@ class UserProfile(models.Model):
     # name visible to other users - we only insist it exists but we con't care if it's repetitive like 'anonymous'
     nickname = models.CharField(blank=True, max_length=255, db_index=True, default='')
 
+    # fields required for synchronization
+    first_name = models.CharField(blank=True, default='', max_length=255)
+    last_name = models.CharField(blank=True, default='', max_length=255)
+    birthdate = models.DateField(blank=True, null=True)
+
     meta = models.TextField(blank=True)  # JSON dictionary for future expansion
     courseware = models.CharField(blank=True, max_length=255, default='course.xml')
 

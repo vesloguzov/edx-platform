@@ -997,6 +997,7 @@ PIPELINE_CSS = {
             'js/vendor/CodeMirror/codemirror.css',
             'css/vendor/jquery.treeview.css',
             'css/vendor/ui-lightness/jquery-ui-1.8.22.custom.css',
+            'css/vendor/slickgrid/smoothness/jquery-ui-1.8.16.custom.css',
         ],
         'output_filename': 'css/lms-style-course-vendor.css',
     },
@@ -1097,6 +1098,13 @@ PIPELINE_JS = {
         'output_filename': 'js/instructor_dash.js',
         'test_order': 9,
     },
+    'modalform': {
+        'source_filenames': [
+            'js/jquery.basicmodal.js',
+            'js/jquery.ajaxform.js'],
+        'output_filename': 'js/modalform.js',
+        'test_order': 10,
+    }
 }
 
 PIPELINE_DISABLE_WRAPPER = True
@@ -1423,6 +1431,8 @@ REGISTRATION_EXTRA_FIELDS = {
     'country': 'hidden',
 }
 
+REQUIRE_STUDENT_DATA_FOR_COURSEWARE = False
+
 ########################## CERTIFICATE NAME ########################
 CERT_NAME_SHORT = "Certificate"
 CERT_NAME_LONG = "Certificate of Achievement"
@@ -1713,5 +1723,8 @@ ANALYTICS_DATA_URL = ""
 ANALYTICS_DATA_TOKEN = ""
 ANALYTICS_DASHBOARD_URL = ""
 
-INSTALLED_APPS += ('api',)
+INSTALLED_APPS += (
+    'api',
+    'required_student_data',
+)
 from .lektorium import *

@@ -1,4 +1,5 @@
 # coding=utf-8
+import datetime
 
 from path import path
 _PROJECT_ROOT = path(__file__).abspath().dirname().dirname()
@@ -28,3 +29,5 @@ CAS_ATTRIBUTE_KEYS = {
 CAS_INSTANT_LOGIN_EXEMPT = (
     'api.',
 )
+
+USER_DATA_REQUEST_TIMEOUT = datetime.timedelta(hours=24)
