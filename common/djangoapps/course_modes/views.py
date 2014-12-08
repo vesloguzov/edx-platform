@@ -20,6 +20,8 @@ from verify_student.models import SoftwareSecurePhotoVerification
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from xmodule.modulestore.django import modulestore
 
+from student.views import send_enrollment_email
+
 
 class ChooseModeView(View):
     """
@@ -143,6 +145,8 @@ class ChooseModeView(View):
 
         if requested_mode in ("audit", "honor"):
             CourseEnrollment.enroll(user, course_key, requested_mode)
+            if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL'):
+                send_enrollment_email(user, course, use_https_for_links=request.is_secure())
             return redirect('dashboard')
 
         mode_info = allowed_modes[requested_mode]

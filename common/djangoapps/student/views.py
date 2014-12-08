@@ -9,6 +9,8 @@ import time
 import json
 from collections import defaultdict
 from pytz import UTC
+import smtplib
+from boto.exception import BotoServerError  # this is a super-class of SESError and catches connection errors
 
 from django.conf import settings
 from django.contrib.auth import logout, authenticate, login
@@ -661,6 +663,8 @@ def change_enrollment(request, auto_register=False):
         except EnrollmentError as e:
             return HttpResponseBadRequest(e.message)
         else:
+            if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL'):
+                send_enrollment_email(user, course, use_https_for_links=request.is_secure())
             return HttpResponse()
 
 
@@ -764,6 +768,44 @@ def enroll_student_with_default_mode(user, course, auto_register=False):
             raise EnrollmentModeRequiredException
 
         return CourseEnrollment.enroll(user, course.id, mode=current_mode.slug)
+
+
+def send_enrollment_email(user, course, use_https_for_links=True):
+    """
+    Construct the email and then send it.
+    """
+    site_name = microsite.get_value('SITE_NAME', settings.SITE_NAME)
+    course_url = u'{protocol}://{site}{path}'.format(
+        protocol='https' if use_https_for_links else 'http',
+        site=site_name,
+        path=reverse('course_root', kwargs={'course_id': course.id.to_deprecated_string()})
+    )
+
+    context = {
+        'full_name': user.profile.name or user.nickname_or_default,
+        'course': course,
+        'course_url': course_url,
+        'site_name': site_name,
+    }
+
+    subject = render_to_string('emails/enroll_email_subject.txt', context)
+    message = render_to_string('emails/enroll_email_message.txt', context)
+
+    # Remove leading and trailing whitespace from body
+    message = message.strip()
+
+    # Email subject *must not* contain newlines
+    subject = ''.join(subject.splitlines())
+    from_address = microsite.get_value(
+        'email_from_address',
+        settings.DEFAULT_FROM_EMAIL
+    )
+
+    try:
+        user.email_user(subject, message, from_address)
+    except (smtplib.SMTPException, BotoServerError):  # sadly need to handle diff. mail backends individually
+        log.error('Failed sending enrollment e-mail to user %s for course %s',
+                  user.username, course.id.to_deprecated_string())
 
 
 

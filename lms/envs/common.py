@@ -131,6 +131,9 @@ FEATURES = {
     #   for all Mongo-backed courses.
     'REQUIRE_COURSE_EMAIL_AUTH': True,
 
+    # Enables sending emails on enrollment
+    'SEND_ENROLLMENT_EMAIL': False,
+
     # Analytics experiments - shows instructor analytics tab in LMS instructor dashboard.
     # Enabling this feature depends on installation of a separate analytics server.
     'ENABLE_INSTRUCTOR_ANALYTICS': False,
