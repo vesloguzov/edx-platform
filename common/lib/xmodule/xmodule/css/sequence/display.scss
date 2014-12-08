@@ -138,6 +138,20 @@ nav.sequence-nav {
           }
         }
 
+        &.has_title {
+            line-height: 42px;
+        }
+
+        span {
+            display: inline-block;
+            max-height: 38px;
+            line-height: 1.3;
+            vertical-align: middle;
+            overflow: hidden;
+            font-size: 90%;
+            color: #555;
+        }
+
         //video
         &.seq_video {
           &.inactive {
@@ -151,6 +165,13 @@ nav.sequence-nav {
           &.active {
             @extend .active;
             background-image: url('../images/sequence-nav/video-icon-current.png');
+          }
+          &.has_title {
+              background-position: 4px 17px !important;
+
+              span {
+                  padding-left: 22px;
+              }
           }
         }
 
@@ -166,6 +187,12 @@ nav.sequence-nav {
 
           &.active {
             background-image: url('../images/sequence-nav/document-icon-current.png');
+          }
+          &.has_title {
+              background-position: 4px 16px !important;
+              span {
+                  padding-left: 18px;
+              }
           }
         }
 
@@ -193,6 +220,12 @@ nav.sequence-nav {
 
           &.progress-done {
             background-image: url('../images/sequence-nav/list-finished.png');
+          }
+          &.has_title {
+              background-position: 4px 14px !important;
+              span {
+                  padding-left: 33px;
+              }
           }
         }
 

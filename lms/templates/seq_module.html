@@ -8,13 +8,14 @@
 
     <div class="sequence-list-wrapper">
       <ol role="tablist" aria-label="${_('Section Navigation')}" id="sequence-list">
+        <% show_titles = True if len(items) <= 4 else False %>
         % for idx, item in enumerate(items):
         ## TODO (vshnayder): add item.progress_detail either to the title or somewhere else.
         ## Make sure it gets updated after ajax calls.
         ## implementation note: will need to figure out how to handle combining detail
         ## statuses of multiple modules in js.
         <li>
-        <a class="seq_${item['type']} inactive progress-${item['progress_status']}"
+        <a class="seq_${item['type']} inactive progress-${item['progress_status']}${ ' has_title' if show_titles else ''}"
            data-id="${item['id']}"
            data-element="${idx+1}"
            href="javascript:void(0);"
@@ -24,7 +25,12 @@
            id="tab_${idx}"
            tabindex="0"
            role="tab">
+           % if show_titles:
+           <span
+            data-element="${idx+1}">${item['title']}</span>
+           % else:
             <p aria-hidden="false">${item['title']}</p>
+           %endif
           </a>
         </li>
         % endfor
