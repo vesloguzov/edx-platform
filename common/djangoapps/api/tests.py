@@ -22,6 +22,7 @@ from rest_framework import mixins
 from student.models import CourseEnrollment
 from certificates.models import GeneratedCertificate, CertificateStatuses
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
+from instructor.enrollment import enroll_email
 
 from serializers import UserSerializer
 from views import UserViewSet
@@ -31,6 +32,9 @@ TEST_API_KEY = "test_api_key"
 class UserSerializerTest(TestCase):
     def setUp(self):
         self.user = UserFactory.create(username='test', email='test@example.com')
+
+    def tearDown(self):
+        User.objects.all().delete()
 
     def test_serialization(self):
         serializer = UserSerializer(instance=self.user)
@@ -229,6 +233,19 @@ class UserViewSetTest(APITest):
         self.assertEqual(user.profile.last_name, self.user.profile.last_name)
         self.assertEqual(user.email, self.user.email)
 
+
+    def test_enroll_pending(self):
+        data = {
+            'uid': 'new_test',
+            'email': 'new_test@example.com',
+        }
+        course = CourseFactory.create()
+        enroll_email(course.id, data['email'], auto_enroll=True)
+
+        response = self._request_with_auth('put', data=data,
+                    path=reverse('user-detail', kwargs={'username': data['uid']}))
+        user = User.objects.get(username=data['uid'])
+        self.assertTrue(CourseEnrollment.is_enrolled(user, course.id))
 
 
 class CourseViewSetTest(APITest):

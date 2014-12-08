@@ -47,6 +47,7 @@ from openid.extensions import ax, sreg
 from ratelimitbackend.exceptions import RateLimitException
 
 import student.views
+from student.models import CourseEnrollment
 from xmodule.modulestore.django import modulestore
 from xmodule.course_module import CourseDescriptor
 from xmodule.modulestore.exceptions import ItemNotFoundError
@@ -492,6 +493,7 @@ def cas_create_user(username, attributes):
     else:
         # since user profile has no required or unique fields, no exception handling is used
         _create_profile_from_attributes(user, attributes)
+        CourseEnrollment.enroll_pending(user)
         return user
 
 
