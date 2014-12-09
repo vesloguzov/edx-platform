@@ -1237,7 +1237,7 @@ msgstr "Программа курса"
 #: common/lib/xmodule/xmodule/tabs.py
 #: lms/djangoapps/instructor/views/instructor_dashboard.py
 msgid "Course Info"
-msgstr "Информация о курсе"
+msgstr "Новости"
 
 #. #-#-#-#-#  django-partial.po (edx-platform)  #-#-#-#-#
 #. Translators: "Progress" is the name of the student's course progress page
@@ -1257,7 +1257,7 @@ msgstr "Вики"
 #. the discussion forums
 #: common/lib/xmodule/xmodule/tabs.py common/lib/xmodule/xmodule/tabs.py
 msgid "Discussion"
-msgstr "Обсуждение"
+msgstr "Форум"
 
 #: common/lib/xmodule/xmodule/tabs.py cms/templates/textbooks.html
 #: cms/templates/textbooks.html cms/templates/widgets/header.html
@@ -4588,7 +4588,7 @@ msgstr "Свернуть инструкции"
 
 #: lms/templates/annotatable.html
 msgid "Guided Discussion"
-msgstr "Контролируемые дискуссии"
+msgstr "Контролируемый форум"
 
 #: lms/templates/annotatable.html
 msgid "Hide Annotations"
@@ -6748,7 +6748,7 @@ msgstr "Поиск студентов"
 
 #: lms/templates/courseware/info.html
 msgid "{course_number} Course Info"
-msgstr "Информация о курсе {course_number}"
+msgstr "Информация по курсу {course_number}"
 
 #: lms/templates/courseware/info.html
 msgid "View Updates in Studio"
@@ -7275,7 +7275,7 @@ msgstr "Новости - MITx 6.002x"
 
 #: lms/templates/courseware/news.html
 msgid "Updates to Discussion Posts You Follow"
-msgstr "Новые сообщения в обсуждениях, за которыми следите"
+msgstr "Новые сообщения на форуме, за которыми Вы следите"
 
 #: lms/templates/courseware/progress.html
 msgid "{course_number} Progress"
@@ -8939,7 +8939,7 @@ msgstr "Добавить Бета Тестера"
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 msgid "Discussion Admins"
-msgstr "Администраторы Обсуждений"
+msgstr "Администраторы форума"
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 msgid ""
@@ -8947,7 +8947,7 @@ msgid ""
 " re-open threads, endorse responses, and see posts from all cohorts. They "
 "CAN add/delete other moderators and their posts are marked as 'staff'."
 msgstr ""
-"Администраторы обсуждений могут редактировать или удалять сообщения, снимать"
+"Администраторы форума могут редактировать или удалять сообщения, снимать"
 " пометки о неправильном использовании, закрывать и открывать созданные "
 "участниками темы, рекомендовать ответы, а также просматривать сообщения всех"
 " групп студентов.  Они МОГУТ добавлять или удалять других модераторов; их "
@@ -8955,11 +8955,11 @@ msgstr ""
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 msgid "Add Discussion Admin"
-msgstr "Добавить Администратора Обсуждений"
+msgstr "Добавить администратора форума"
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 msgid "Discussion Moderators"
-msgstr "Модераторы Обсуждений"
+msgstr "Модераторы форума"
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 msgid ""
@@ -8968,7 +8968,7 @@ msgid ""
 "They CANNOT add/delete other moderators and their posts are marked as "
 "'staff'."
 msgstr ""
-"Модераторы обсуждений могут редактировать или удалять сообщения, снимать "
+"Модераторы форума могут редактировать или удалять сообщения, снимать "
 "пометки о неправильном использовании, закрывать и открывать созданные "
 "участниками темы, рекомендовать ответы,  а также просматривать сообщения "
 "всех групп.  Они НЕ МОГУТ добавлять или удалять других модераторов; их "
@@ -8980,7 +8980,7 @@ msgstr "Добавить модератора"
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 msgid "Discussion Community TAs"
-msgstr "Обсуждение Старост Сообщества"
+msgstr "Старосты сообщества"
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 msgid ""
@@ -8990,17 +8990,17 @@ msgid ""
 "from all cohorts. Their posts are marked 'Community TA'."
 msgstr ""
 "Старосты Сообщества - это члены сообщества, которые могут быть очень полезны"
-" вам в ветках обсуждения. Они могут редактировать и удалять любой пост, "
+" вам в ветках форума. Они могут редактировать и удалять любой пост, "
 "закрывать и открывать ветки, поддерживать ответы и видеть все посты. Их "
 "посты маркируются словами \"Староста Сообщества\"."
 
 #: lms/templates/instructor/instructor_dashboard_2/membership.html
 msgid "Add Community TA"
-msgstr "Добавить Старосту Сообщества"
+msgstr "Добавить старосту сообщества"
 
 #: lms/templates/instructor/instructor_dashboard_2/metrics.html
 msgid "Reload Graphs"
-msgstr "Обновить Графики"
+msgstr "Обновить графики"
 
 #: lms/templates/instructor/instructor_dashboard_2/metrics.html
 msgid "Count of Students Opened a Subsection"
@@ -9168,7 +9168,7 @@ msgid ""
 "submitted for this problem, click on this button"
 msgstr ""
 "Описанные действия протекают в фоновом режиме, и статус активных заданий "
-"появится на закладке с Информацией о курсе. Чтобы просмотреть статус всех "
+"появится на закладке с Новостями. Чтобы просмотреть статус всех "
 "поручений, связанных с этой задачей, нажмите эту кнопку."
 
 #: lms/templates/instructor/instructor_dashboard_2/student_admin.html
@@ -11284,7 +11284,7 @@ msgid ""
 "textbooks and custom pages that you create."
 msgstr ""
 "Страницы перечислены горизонтально вверху вашего курса. Страницы по "
-"умолчанию (Материалы курса, Информация, Дискуссии, Вики и Прогресс) "
+"умолчанию (Материалы курса, Информация, Форум, Вики и Прогресс) "
 "продолжаются учебниками и страницами, которые вы создаете."
 
 #: cms/templates/edit-tabs.html
@@ -11332,7 +11332,7 @@ msgid ""
 "textbooks and custom pages."
 msgstr ""
 "Страницы появляются в верхней навигационной панели курса. Страницы по "
-"умолчанию (Материалы курса, Информация, Дискуссии, Вики и Прогресс) "
+"умолчанию (Материалы курса, Новости, Форум, Вики и Прогресс) "
 "продолжаются учебниками и страницами, которые вы создаете."
 
 #: cms/templates/edit-tabs.html cms/templates/howitworks.html
