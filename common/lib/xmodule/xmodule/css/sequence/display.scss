@@ -138,61 +138,113 @@ nav.sequence-nav {
           }
         }
 
+        &.has_title {
+            line-height: 42px;
+            background-image: none !important;
+            text-align: center;
+        }
+
+        span {
+            display: inline-block;
+            max-height: 38px;
+            line-height: 1.3;
+            vertical-align: middle;
+            overflow: hidden;
+            font-size: 90%;
+            color: #555;
+            background-repeat: no-repeat;
+            background-position: 4px center;
+            text-align: left;
+        }
+
         //video
         &.seq_video {
           &.inactive {
-            background-image: url('../images/sequence-nav/video-icon-normal.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/video-icon-normal.png');
+            }
           }
 
           &.visited {
-            background-image: url('../images/sequence-nav/video-icon-visited.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/video-icon-visited.png');
+            }
           }
 
           &.active {
-            @extend .active;
-            background-image: url('../images/sequence-nav/video-icon-current.png');
+            &, &.has_title span {
+              @extend .active;
+              background-image: url('../images/sequence-nav/video-icon-current.png');
+            }
+          }
+          &.has_title span {
+            padding-left: 22px;
           }
         }
 
         //other
         &.seq_other {
           &.inactive {
-            background-image: url('../images/sequence-nav/document-icon-normal.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/document-icon-normal.png');
+            }
           }
 
           &.visited {
-            background-image: url('../images/sequence-nav/document-icon-visited.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/document-icon-visited.png');
+            }
           }
 
           &.active {
-            background-image: url('../images/sequence-nav/document-icon-current.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/document-icon-current.png');
+            }
+          }
+          &.has_title span {
+            padding-left: 18px;
           }
         }
 
         //vertical & problems
         &.seq_vertical, &.seq_problem {
           &.inactive {
-            background-image: url('../images/sequence-nav/list-icon-normal.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/list-icon-normal.png');
+            }
           }
 
           &.visited {
-            background-image: url('../images/sequence-nav/list-icon-visited.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/list-icon-visited.png');
+            }
           }
 
           &.active {
-            background-image: url('../images/sequence-nav/list-icon-current.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/list-icon-current.png');
+            }
           }
 
           &.progress-none {
-            background-image: url('../images/sequence-nav/list-unstarted.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/list-unstarted.png');
+            }
           }
 
           &.progress-some, &.progress-in_progress {
-            background-image: url('../images/sequence-nav/list-unfinished.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/list-unfinished.png');
+            }
           }
 
           &.progress-done {
-            background-image: url('../images/sequence-nav/list-finished.png');
+            &, &.has_title span {
+              background-image: url('../images/sequence-nav/list-finished.png');
+            }
+          }
+          &.has_title span {
+            padding-left: 33px;
           }
         }
 
