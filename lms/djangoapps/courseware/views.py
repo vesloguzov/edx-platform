@@ -713,6 +713,7 @@ def course_about(request, course_id):
         'invitation_only': invitation_only,
         'active_reg_button': active_reg_button,
         'is_shib_course': is_shib_course,
+        'disable_courseware_header': True,
     })
 
 
