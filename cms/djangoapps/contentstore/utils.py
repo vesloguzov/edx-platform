@@ -260,7 +260,7 @@ def remove_extra_panel_tab(tab_type, course):
     Used to remove the panel tab from a course if it exists.
     @param tab_type: A string representing the tab type.
     @param course: A course object from the modulestore.
-    @return: Boolean indicating whether or not a tab was added and a list of tabs for the course.
+    @return: Boolean indicating whether or not a tab was removed and a list of tabs for the course.
     """
     # Copy course tabs
     course_tabs = copy.copy(course.tabs)
