@@ -31,3 +31,5 @@ CAS_INSTANT_LOGIN_EXEMPT = (
 )
 
 USER_DATA_REQUEST_TIMEOUT = datetime.timedelta(hours=24)
+
+SYNC_USER_URL = 'https://lektorium.tv/uidname/node/25618?api-key={}'

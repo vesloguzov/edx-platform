@@ -13,6 +13,7 @@ from django.utils.formats import get_format
 
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
+from sync.tasks import sync_user_profile
 from student.models import UserProfile
 from courseware.access import has_access
 from util.json_request import JsonResponse
@@ -75,6 +76,8 @@ def update_required_data(request):
         profile = form.save()
         # add a timeout for next check if user removes some data in future or submitted partial data
         _postpone_student_data_update(request.session)
+        # TODO: move to signal receiver
+        sync_user_profile.apply_async([request.user])
         return JsonResponse({'success': True})
     else:
         return JsonResponse({

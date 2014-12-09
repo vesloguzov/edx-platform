@@ -1726,5 +1726,6 @@ ANALYTICS_DASHBOARD_URL = ""
 INSTALLED_APPS += (
     'api',
     'required_student_data',
+    'sync',
 )
 from .lektorium import *
