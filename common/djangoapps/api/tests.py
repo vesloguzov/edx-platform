@@ -83,7 +83,9 @@ class UserSerializerTest(TestCase):
             'uid': self.user.username,
             'email': 'new_test@example.com',
             'name': 'New Test',
-            'nickname': 'New Test'
+            'nickname': 'New Test',
+            'first_name': 'Test name',
+            'last_name': 'Test surname',
         }
         serializer = UserSerializer(self.user, data=data)
         self.assertTrue(serializer.is_valid())
@@ -94,6 +96,8 @@ class UserSerializerTest(TestCase):
         self.assertEquals(updated_user.email, data['email'])
         self.assertEquals(updated_user.profile.name, data['name'])
         self.assertEquals(updated_user.profile.nickname, data['nickname'])
+        self.assertEquals(updated_user.profile.first_name, data['first_name'])
+        self.assertEquals(updated_user.profile.last_name, data['last_name'])
 
     def test_optional_fields(self):
         data = {'uid': 'test2'}
@@ -198,6 +202,8 @@ class UserViewSetTest(APITest):
             'email': 'test-other@example.com',
             'nickname': 'test',
             'name': 'Jonh Doe',
+            'first_name': 'Jonh',
+            'last_name': 'Doe',
             'birthdate': '2014-01-26',
         }
         response = self._request_with_auth('put', data=data,
@@ -208,8 +214,8 @@ class UserViewSetTest(APITest):
         self.assertEqual(user.email, data['email'])
         self.assertEqual(user.profile.nickname, data['nickname'])
         self.assertEqual(user.profile.name, data['name'])
-        self.assertEqual(user.profile.first_name, '') # default
-        self.assertEqual(user.profile.last_name, '') # default
+        self.assertEqual(user.profile.first_name, data['first_name'])
+        self.assertEqual(user.profile.last_name, data['last_name'])
         self.assertEqual(user.profile.birthdate, datetime.date(2014, 1, 26))
 
     def test_patch(self):
