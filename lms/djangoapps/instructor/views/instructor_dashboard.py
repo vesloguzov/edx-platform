@@ -9,7 +9,7 @@ import pytz
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.utils.translation import ugettext as _
+from django.utils.translation import pgettext, ugettext as _
 from django_future.csrf import ensure_csrf_cookie
 from django.views.decorators.cache import cache_control
 from edxmako.shortcuts import render_to_response
@@ -212,7 +212,7 @@ def _section_course_info(course_key, access):
 
     section_data = {
         'section_key': 'course_info',
-        'section_display_name': _('Course Info'),
+        'section_display_name': pgettext('Instructor dashboard title', 'Course Info'),
         'access': access,
         'course_id': course_key,
         'course_display_name': course.display_name,

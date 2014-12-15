@@ -1235,9 +1235,13 @@ msgstr "Программа курса"
 #. Translators: "Course Info" is the name of the course's information and
 #. updates page
 #: common/lib/xmodule/xmodule/tabs.py
-#: lms/djangoapps/instructor/views/instructor_dashboard.py
 msgid "Course Info"
 msgstr "Новости"
+
+#: lms/djangoapps/instructor/views/instructor_dashboard.py
+msgctxt "Instructor dashboard title"
+msgid "Course Info"
+msgstr "Информация о курсе"
 
 #. #-#-#-#-#  django-partial.po (edx-platform)  #-#-#-#-#
 #. Translators: "Progress" is the name of the student's course progress page
@@ -6748,7 +6752,7 @@ msgstr "Поиск студентов"
 
 #: lms/templates/courseware/info.html
 msgid "{course_number} Course Info"
-msgstr "Информация по курсу {course_number}"
+msgstr "Новости курса {course_number}"
 
 #: lms/templates/courseware/info.html
 msgid "View Updates in Studio"
