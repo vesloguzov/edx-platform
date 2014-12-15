@@ -142,6 +142,14 @@ class UserSerializerTest(TestCase):
         updated_user = serializer.save()
         self.assertEqual(updated_user.profile.name, '')
 
+    def test_invalid_on_duplicate_email(self):
+        data = {
+            'uid': self.user.username + '-new',
+            'email': self.user.email,
+        }
+        serializer = UserSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+
 
 @override_settings(EDX_API_KEY=TEST_API_KEY)
 class APITest(TestCase):
@@ -218,6 +226,15 @@ class UserViewSetTest(APITest):
         self.assertEqual(user.profile.last_name, data['last_name'])
         self.assertEqual(user.profile.birthdate, datetime.date(2014, 1, 26))
 
+    def test_put_fail_on_duplicate_email(self):
+        data = {
+            'uid': '123',
+            'email': self.user.email
+        }
+        response = self._request_with_auth('put', data=data,
+                    path=reverse('user-detail', kwargs={'username': data['uid']}))
+        self.assertEquals(response.status_code, 400)
+
     def test_patch(self):
         """
         Test only fields that were patched are updated
@@ -238,7 +255,6 @@ class UserViewSetTest(APITest):
 
         self.assertEqual(user.profile.last_name, self.user.profile.last_name)
         self.assertEqual(user.email, self.user.email)
-
 
     def test_enroll_pending(self):
         data = {

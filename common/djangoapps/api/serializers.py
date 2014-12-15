@@ -44,6 +44,17 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(_('UID must consist of letters, digits, ".", "_" and "-"'))
         return attrs
 
+    def validate_email(self, attrs, source):
+        """
+        Validate uniqueness of the email
+        """
+        uid = attrs.get('username')
+        email = attrs.get('email', '')
+        # since the uid could be absent in case of other errors, we need to check for it
+        if uid and User.objects.filter(email=email).exclude(username=uid).exists():
+            raise serializers.ValidationError(_('Duplicate email "{}"').format(email))
+        return attrs
+
     def restore_object(self, attrs, instance=None):
         profile_data = self._pop_profile_data(attrs)
         instance = super(UserSerializer, self).restore_object(attrs, instance)
