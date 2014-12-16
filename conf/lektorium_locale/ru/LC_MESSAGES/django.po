@@ -14314,7 +14314,7 @@ msgstr "Вс"
 
 #: lms/templates/emails/enroll_email_enrolledsubject.txt
 msgid "You have enrolled in {course_name}"
-msgstr "Вы записались на курсе «{course_name}»"
+msgstr "Вы записались на курс «{course_name}»"
 
 #: common/templates/emails/enroll_email_message.txt
 msgid ""
