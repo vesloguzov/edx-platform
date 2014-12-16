@@ -8108,6 +8108,14 @@ msgid "To start accessing course materials, please visit {course_url}"
 msgstr ""
 "Для доступа к материалам курса, пожалуйста, перейдите по ссылке {course_url}"
 
+#: lms/templates/emails/enroll_email_enrolledmessage.txt
+msgid "When the course starts, you'll get an email with a link to the courseware."
+msgstr "Когда курс начнётся, Вам придёт приглашение со ссылкой на онлайн-класс."
+
+#: lms/templates/emails/enroll_email_enrolledmessage.txt
+msgid "For the description of the course, please visit {course_about_url}."
+msgstr "Подробное описание курса можно найти на странице {course_about_url}."
+
 #: lms/templates/emails/add_beta_tester_email_message.txt
 msgid "Visit {course_about_url} to join the course and begin the beta test."
 msgstr ""

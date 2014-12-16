@@ -778,13 +778,21 @@ def send_enrollment_email(user, course, use_https_for_links=True):
     course_url = u'{protocol}://{site}{path}'.format(
         protocol='https' if use_https_for_links else 'http',
         site=site_name,
-        path=reverse('course_about', kwargs={'course_id': course.id.to_deprecated_string()})
+        path=reverse('course_root', kwargs={'course_id': course.id.to_deprecated_string()})
     )
+    course_about_url = None
+    if not settings.FEATURES.get('ENABLE_MKTG_SITE', False):
+        course_about_url = u'{protocol}://{site}{path}'.format(
+            protocol='https' if use_https_for_links else 'http',
+            site=site_name,
+            path=reverse('about_course', kwargs={'course_id': course.id.to_deprecated_string()})
+        )
 
     context = {
         'full_name': user.profile.name or user.nickname_or_default,
         'course': course,
         'course_url': course_url,
+        'course_about_url': course_about_url,
         'site_name': site_name,
     }
 

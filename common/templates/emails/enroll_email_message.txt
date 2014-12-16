@@ -9,9 +9,18 @@ ${_("You have enrolled in {course_name} at {site_name}. "
 		site_name=site_name
 	)}
 
+% if course.has_started():
 ${_("To start accessing course materials, please visit {course_url}").format(
 		course_url=course_url
 	)}
+% else:
+${_("When the course starts, you'll get an email with a link to the courseware.")}
+% if course_about_url:
+${_("For the description of the course, please visit {course_about_url}.").format(
+		course_about_url=course_about_url
+	)}
+% endif
+% endif
 
 ----
 ${_("This email was automatically sent from {site_name} to "
