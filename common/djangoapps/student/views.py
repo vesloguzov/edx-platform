@@ -778,7 +778,7 @@ def send_enrollment_email(user, course, use_https_for_links=True):
     course_url = u'{protocol}://{site}{path}'.format(
         protocol='https' if use_https_for_links else 'http',
         site=site_name,
-        path=reverse('course_root', kwargs={'course_id': course.id.to_deprecated_string()})
+        path=reverse('course_about', kwargs={'course_id': course.id.to_deprecated_string()})
     )
 
     context = {
