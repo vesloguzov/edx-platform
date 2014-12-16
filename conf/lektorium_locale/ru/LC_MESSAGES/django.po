@@ -1230,7 +1230,7 @@ msgstr ""
 #: common/lib/xmodule/xmodule/tabs.py
 #: lms/templates/courseware/courseware-error.html
 msgid "Courseware"
-msgstr "Программа курса"
+msgstr "Видео и задания"
 
 #. Translators: "Course Info" is the name of the course's information and
 #. updates page
@@ -1300,7 +1300,7 @@ msgstr ""
 #. their course
 #: common/lib/xmodule/xmodule/tabs.py
 msgid "Instructor"
-msgstr "Преподаватель"
+msgstr "Управление курсом"
 
 #. Translators: "Self" is used to denote an openended response that is self-
 #. graded
@@ -6548,7 +6548,7 @@ msgstr "Просмотреть Информационную Страницу в 
 msgid "Overview"
 msgstr "Обзор"
 
-#: lms/templates/courseware/course_about.html
+#: lms/templates/Видео и заданияcourseware/course_about.html
 msgid "Share with friends and family!"
 msgstr "Поделиться с семьёй и друзьями!"
 
@@ -6624,7 +6624,7 @@ msgstr ""
 
 #: lms/templates/courseware/courseware.html
 msgid "{course_number} Courseware"
-msgstr "{course_number} Программа курса"
+msgstr "{course_number} Видео и задания"
 
 #: lms/templates/courseware/courseware.html
 msgid "Return to Exam"
@@ -7259,7 +7259,7 @@ msgstr "О курсе {course_number}"
 
 #: lms/templates/courseware/mktg_course_about.html
 msgid "Access Courseware"
-msgstr "Доступ к Материалам Курса"
+msgstr "Доступ к Курсу"
 
 #: lms/templates/courseware/mktg_course_about.html
 msgid "You Are Registered"
@@ -11296,7 +11296,7 @@ msgid ""
 "textbooks and custom pages that you create."
 msgstr ""
 "Страницы перечислены горизонтально вверху вашего курса. Страницы по "
-"умолчанию (Материалы курса, Информация, Форум, Вики и Прогресс) "
+"умолчанию (Видео и задания, Информация, Форум, Вики и Прогресс) "
 "продолжаются учебниками и страницами, которые вы создаете."
 
 #: cms/templates/edit-tabs.html
@@ -11344,7 +11344,7 @@ msgid ""
 "textbooks and custom pages."
 msgstr ""
 "Страницы появляются в верхней навигационной панели курса. Страницы по "
-"умолчанию (Материалы курса, Новости, Форум, Вики и Прогресс) "
+"умолчанию (Видео и задания, Новости, Форум, Вики и Прогресс) "
 "продолжаются учебниками и страницами, которые вы создаете."
 
 #: cms/templates/edit-tabs.html cms/templates/howitworks.html
