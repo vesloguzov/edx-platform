@@ -2,6 +2,7 @@
 Tests for required student data form
 """
 import json
+import ddt
 import datetime
 from time import sleep
 
@@ -16,6 +17,7 @@ from xmodule.modulestore.tests.factories import CourseFactory
 from student.tests.factories import UserFactory, UserProfileFactory
 from student.roles import CourseStaffRole
 
+@ddt.ddt
 @override_settings(REQUIRE_STUDENT_DATA_FOR_COURSEWARE=True)
 class RequiredStudentDataTest(TestCase):
     """
@@ -30,6 +32,7 @@ class RequiredStudentDataTest(TestCase):
             'first_name': 'test',
             'last_name': 'test',
             'birthdate': '2014-07-28',
+            'city': 'Capital',
         }
 
     def setUp(self):
@@ -38,7 +41,8 @@ class RequiredStudentDataTest(TestCase):
             user=self.user,
             first_name='',
             last_name='',
-            birthdate=None
+            birthdate=None,
+            city='',
         )
         self.client = Client()
         self.client.login(username=self.user.username, password='test')
@@ -75,15 +79,17 @@ class RequiredStudentDataTest(TestCase):
         profile = self.user.profile
         self.assertEqual(profile.first_name, self.data['first_name'])
         self.assertEqual(profile.last_name, self.data['last_name'])
+        self.assertEqual(profile.city, self.data['city'])
         self.assertEqual(
             profile.birthdate and profile.birthdate.strftime('%Y-%m-%d'),
             self.data['birthdate']
         )
 
+    @ddt.data('first_name', 'last_name')
     @override_settings(USER_DATA_REQUEST_TIMEOUT=datetime.timedelta(seconds=1))
-    def test_skip_last_name(self):
+    def test_allow_one_part_of_name(self, name_part):
         data = self.data.copy()
-        data['last_name'] = ''
+        data[name_part] = ''
         response = self.client.post(self.update_url, data)
         sleep(2)
         self.assertFalse(self._form_appears())
@@ -97,11 +103,12 @@ class RequiredStudentDataTest(TestCase):
         self.assertIn('errors', response.content)
         self.assertIn('birthdate', response.content)
 
+    @ddt.data('birthdate', 'city')
     @override_settings(USER_DATA_REQUEST_TIMEOUT=datetime.timedelta(seconds=1))
-    def test_partial_update_postponed(self):
+    def test_partial_update_postponed(self, missing_field):
         '''Test wheter partial update is processed but request is fired again'''
         data = self.data.copy()
-        data['birthdate'] = ''
+        data[missing_field] = ''
         response = self.client.post(self.update_url, data)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(self._form_appears())

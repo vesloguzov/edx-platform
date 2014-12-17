@@ -54,7 +54,9 @@ def _require_student_data(request, course_id):
 
 def _required_data_complete(user):
     profile = user.profile
-    return (profile.first_name or profile.last_name) and profile.birthdate
+    return ((profile.first_name or profile.last_name)
+            and profile.birthdate
+            and profile.city)
 
 
 def require_authenticated_or_404(view_func):
@@ -102,7 +104,8 @@ class RequiredStudentDataForm(forms.ModelForm):
     birthdate = forms.DateField(required=False, localize=True, widget=forms.DateInput(attrs={'class': 'date'}))
     class Meta:
         model = UserProfile
-        fields = ('first_name', 'last_name', 'birthdate')
+        fields = ('first_name', 'last_name', 'birthdate', 'city')
+        widgets = {'city': forms.widgets.TextInput}
 
 
 def _form_errors_to_json(form):
