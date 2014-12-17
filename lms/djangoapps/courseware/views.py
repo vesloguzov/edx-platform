@@ -52,7 +52,7 @@ from microsite_configuration import microsite
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from instructor.enrollment import uses_shib
 from instructor.views.tools import get_student_from_email_or_nickname
-from required_student_data.views import require_student_data
+from required_student_data.decorators import require_student_data
 
 log = logging.getLogger("edx.courseware")
 
