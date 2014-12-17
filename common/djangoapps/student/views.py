@@ -789,7 +789,7 @@ def send_enrollment_email(user, course, use_https_for_links=True):
         )
 
     context = {
-        'full_name': user.profile.name or user.nickname_or_default,
+        'full_name': user.profile.name or user.profile.nickname_or_default,
         'course': course,
         'course_url': course_url,
         'course_about_url': course_about_url,
