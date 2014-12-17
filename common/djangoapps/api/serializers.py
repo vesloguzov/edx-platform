@@ -29,10 +29,11 @@ class UserSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='profile.first_name', default='', max_length=255, required=False)
     last_name = serializers.CharField(source='profile.last_name', default='', max_length=255, required=False)
     birthdate = serializers.DateField(source='profile.birthdate', default='', required=False)
+    city = serializers.CharField(source='profile.city', default='', max_length=255, required=False)
 
     class Meta:
         model = User
-        fields = ('uid', 'email', 'name', 'nickname', 'first_name', 'last_name', 'birthdate')
+        fields = ('uid', 'email', 'name', 'nickname', 'first_name', 'last_name', 'birthdate', 'city')
         lookup_field = 'uid'
 
     def validate_uid(self, attrs, source):

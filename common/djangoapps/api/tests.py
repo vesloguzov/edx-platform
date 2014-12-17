@@ -29,7 +29,18 @@ from views import UserViewSet
 
 TEST_API_KEY = "test_api_key"
 
+API_PROFILE_FIELDS = (
+    'name',
+    'nickname',
+    'first_name',
+    'last_name',
+    'birthdate',
+    'city',
+)
+
 class UserSerializerTest(TestCase):
+    profile_fields = API_PROFILE_FIELDS
+
     def setUp(self):
         self.user = UserFactory.create(username='test', email='test@example.com')
 
@@ -46,11 +57,10 @@ class UserSerializerTest(TestCase):
         self.assertIn('email', data)
         self.assertEquals(self.user.email, data['email'])
 
-        self.assertIn('name', data)
-        self.assertEquals(self.user.profile.name, data['name'])
+        for field_name in self.profile_fields:
+            self.assertIn(field_name, data)
+            self.assertEquals(getattr(self.user.profile, field_name), data[field_name])
 
-        self.assertIn('nickname', data)
-        self.assertEquals(self.user.profile.nickname, data['nickname'])
 
     def test_repetitive_user_not_valid(self):
         serializer = UserSerializer(data={'uid': self.user.username})
@@ -64,7 +74,8 @@ class UserSerializerTest(TestCase):
             'nickname': 'Nick',
             'first_name': 'FirstTest',
             'last_name': 'LastTest',
-            'birthdate': datetime.date.today()
+            'birthdate': datetime.date.today(),
+            'city': 'Test city'
         }
         serializer = UserSerializer(data=data)
         self.assertTrue(serializer.is_valid())
@@ -72,11 +83,8 @@ class UserSerializerTest(TestCase):
         new_user = serializer.save()
         self.assertEquals(new_user.username, serializer.data['uid'])
         self.assertEquals(new_user.email, serializer.data['email'])
-        self.assertEquals(new_user.profile.name, serializer.data['name'])
-        self.assertEquals(new_user.profile.nickname, serializer.data['nickname'])
-        self.assertEquals(new_user.profile.first_name, serializer.data['first_name'])
-        self.assertEquals(new_user.profile.last_name, serializer.data['last_name'])
-        self.assertEquals(new_user.profile.birthdate, serializer.data['birthdate'])
+        for field_name in self.profile_fields:
+            self.assertEquals(getattr(new_user.profile, field_name), data[field_name])
 
     def test_update(self):
         data = {
@@ -176,6 +184,8 @@ class APITest(TestCase):
 
 
 class UserViewSetTest(APITest):
+    profile_fields = API_PROFILE_FIELDS
+
     def setUp(self):
         self.user = UserFactory.create(username='test', email='test@example.com')
         self.detail_url = reverse('user-detail', kwargs={'username': self.user.username})
@@ -213,6 +223,7 @@ class UserViewSetTest(APITest):
             'first_name': 'Jonh',
             'last_name': 'Doe',
             'birthdate': '2014-01-26',
+            'city': 'Capital',
         }
         response = self._request_with_auth('put', data=data,
                     path=reverse('user-detail', kwargs={'username': data['uid']}))
@@ -220,11 +231,12 @@ class UserViewSetTest(APITest):
 
         user = User.objects.get(username=data['uid'])
         self.assertEqual(user.email, data['email'])
-        self.assertEqual(user.profile.nickname, data['nickname'])
-        self.assertEqual(user.profile.name, data['name'])
-        self.assertEqual(user.profile.first_name, data['first_name'])
-        self.assertEqual(user.profile.last_name, data['last_name'])
-        self.assertEqual(user.profile.birthdate, datetime.date(2014, 1, 26))
+
+        for field_name in self.profile_fields:
+            if field_name == 'birthdate':
+                self.assertEqual(user.profile.birthdate, datetime.date(2014, 1, 26))
+            else:
+                self.assertEquals(getattr(user.profile, field_name), data[field_name])
 
     def test_put_fail_on_duplicate_email(self):
         data = {
@@ -235,6 +247,7 @@ class UserViewSetTest(APITest):
                     path=reverse('user-detail', kwargs={'username': data['uid']}))
         self.assertEquals(response.status_code, 400)
 
+    # TODO: test various variants of patch data
     def test_patch(self):
         """
         Test only fields that were patched are updated
