@@ -49,6 +49,26 @@ $(function(){
         errorClass: 'modal-form-error'
     });
 
+    <%namespace name='static' file='static_content.html'/>
+    $.getJSON('${static.url('js/cities.js')}', function(data){
+        $('#${ form['city'].auto_id }').autocomplete({
+            autoFocus: true, // since we position autocomplete box upwards
+            appendTo: $('#send_student_data'),
+            position: {my: 'left bottom', at: 'left top', collision: 'none'},
+            source: function( request, response ) {
+                // match values starting with term first and others later
+                var start_matcher = new RegExp( '^' + $.ui.autocomplete.escapeRegex( request.term ), "i" );
+                var additional_matcher = new RegExp( '^.+' + $.ui.autocomplete.escapeRegex( request.term ), "i" );
+                result =  $.grep( data, function( value ) {
+                    return start_matcher.test(value);
+                }).concat($.grep( data, function( value ) {
+                    return additional_matcher.test(value);
+                }))
+                response(result);
+            }
+        });
+    });
+
   });
 </script>
 <section id="send_student_data" class="modal" aria-hidden="true">
@@ -56,7 +76,7 @@ $(function(){
     <button class="close-modal">
       <i class="icon-remove"></i>
       <span class="sr">
-        ${_('Submit later')}
+        ${_('Submit later')}:
       </span>
     </button>
 

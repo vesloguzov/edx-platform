@@ -368,6 +368,10 @@
     color: $dark-gray;
   }
 
+  .ui-autocomplete {
+      max-height: 12em;
+      overflow-y: scroll;
+  }
 
 }
 
