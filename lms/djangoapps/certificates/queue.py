@@ -65,7 +65,8 @@ class XQueueCertInterface(object):
             requests_auth = None
 
         if request is None:
-            factory = RequestFactory()
+            # HTTP_HOST set to localhost to correspond safe ALLOWED_HOSTS setting
+            factory = RequestFactory(HTTP_HOST='127.0.0.1')
             self.request = factory.get('/')
         else:
             self.request = request

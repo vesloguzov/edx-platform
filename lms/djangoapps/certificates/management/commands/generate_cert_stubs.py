@@ -87,7 +87,7 @@ def _generate_cert_stubs(course, forced_grade=None, create_uuids=False):
         courseenrollment__course_id=course.id
     )
 
-    factory = RequestFactory()
+    factory = RequestFactory(HTTP_HOST='127.0.0.1')
     request = factory.get('/')
     whitelist = CertificateWhitelist.objects.all()
     restricted = UserProfile.objects.filter(allow_certificate=False)

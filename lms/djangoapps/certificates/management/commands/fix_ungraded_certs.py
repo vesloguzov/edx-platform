@@ -33,7 +33,7 @@ class Command(BaseCommand):
         ungraded = GeneratedCertificate.objects.filter(
                 course_id__exact=course_id).filter(grade__exact='')
         course = courses.get_course_by_id(course_id)
-        factory = RequestFactory()
+        factory = RequestFactory(HTTP_HOST='127.0.0.1')
         request = factory.get('/')
 
         for cert in ungraded:
