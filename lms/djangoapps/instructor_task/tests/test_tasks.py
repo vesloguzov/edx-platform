@@ -485,6 +485,6 @@ class TestCalculateGradesCSVInstructorTask(TestInstructorTasks):
     def _create_unicode_students_with_state(self, *args, **kwargs):
         students = super(TestCalculateGradesCSVInstructorTask, self)._create_students_with_state(*args, **kwargs)
         for student in students:
-            student.username = 'тестовый' + student.username
+            student.username = u'тестовый' + student.username
             student.save()
 
