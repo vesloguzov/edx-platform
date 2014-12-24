@@ -518,8 +518,9 @@ def iterate_grades_for(course_id, students):
 
     # We make a fake request because grading code expects to be able to look at
     # the request. We have to attach the correct user to the request before
-    # grading that student.
-    request = RequestFactory().get('/')
+    # grading that student. HTTP_HOST set to localhost to correspond safe
+    # ALLOWED_HOSTS setting
+    request = RequestFactory(HTTP_HOST='127.0.0.1').get('/')
 
     for student in students:
         with dog_stats_api.timer('lms.grades.iterate_grades_for', tags=['action:{}'.format(course_id)]):

@@ -3,12 +3,18 @@ Test grade calculation.
 """
 from django.http import Http404
 from django.test.utils import override_settings
+from django.test.client import RequestFactory
+from django.core.exceptions import SuspiciousOperation
 from mock import patch
 
+from capa.tests.response_xml_factory import OptionResponseXMLFactory
+
 from courseware.tests.modulestore_config import TEST_DATA_MIXED_MODULESTORE
-from student.tests.factories import UserFactory
-from xmodule.modulestore.tests.factories import CourseFactory
+from courseware.tests.factories import StudentModuleFactory
+from student.tests.factories import UserFactory, CourseEnrollmentFactory
+from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.django import modulestore
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 from courseware.grades import grade, iterate_grades_for
@@ -26,6 +32,76 @@ def _grade_with_errors(student, request, course, keep_raw_scores=False):
         raise Exception("I don't like {}".format(student.username))
 
     return grade(student, request, course, keep_raw_scores=keep_raw_scores)
+
+def _create_gradable_problem(course):
+    """
+    Add problem prepared for grading withing the course
+    """
+    # add a chapter
+    chapter = ItemFactory.create(parent_location=course.location)
+    # add a sequence to the course to which the problems can be added
+    problem_section = ItemFactory.create(parent_location=chapter.location,
+                                         category='sequential',
+                                         metadata={'graded': True, 'format': 'Homework'})
+    # create problem
+    OPTION_1 = 'option 1'
+    OPTION_2 = 'option 2'
+    PROBLEM_URL_NAME = 'TEST_PROBLEM'
+
+    factory = OptionResponseXMLFactory()
+    factory_args = {'question_text': 'The correct answer is {0}'.format(OPTION_1),
+                    'options': [OPTION_1, OPTION_2],
+                    'correct_option': OPTION_1,
+                    'num_responses': 2}
+    problem_xml = factory.build_xml(**factory_args)
+    problem = ItemFactory.create(parent_location=problem_section.location,
+                       parent=problem_section,
+                       category="problem",
+                       display_name=PROBLEM_URL_NAME,
+                       data=problem_xml)
+    problem_location = course.id.make_usage_key('problem', PROBLEM_URL_NAME)
+    return problem_location
+
+def _prepare_grading_for_student(course, problem_location, student):
+    """
+    Enroll student for the course and imitate problem access
+    """
+    CourseEnrollmentFactory.create(course_id=course.id, user=student)
+    StudentModuleFactory.create(course_id=course.id,
+                                module_state_key=problem_location,
+                                student=student,
+                                grade=None,
+                                max_grade=None,
+                                state=None)
+
+
+@override_settings(MODULESTORE=TEST_DATA_MIXED_MODULESTORE)
+class TestGradingRequest(ModuleStoreTestCase):
+    """
+    Test correct fake request handling for single student grading
+    """
+    def setUp(self):
+        self.student = UserFactory.create()
+        course = CourseFactory()
+
+        problem_location = _create_gradable_problem(course)
+        _prepare_grading_for_student(course, problem_location, self.student)
+
+        # update course for correct get_children() call
+        store = modulestore()
+        self.course = store.get_course(course.id)
+
+    @override_settings(DEBUG=False, ALLOWED_HOSTS=['127.0.0.1'])
+    def test_grading_fail_on_request_with_empty_host(self):
+        request = RequestFactory().get('/')
+        with self.assertRaises(SuspiciousOperation):
+            grade(self.student, request, self.course)
+
+    @override_settings(DEBUG=False, ALLOWED_HOSTS=['127.0.0.1'])
+    def test_grading_success_on_request_with_localhost(self):
+        request = RequestFactory(HTTP_HOST='127.0.0.1').get('/')
+        _grade = grade(self.student, request, self.course)
+        self.assertEqual(_grade['percent'], 0.0)
 
 
 @override_settings(MODULESTORE=TEST_DATA_MIXED_MODULESTORE)
@@ -106,6 +182,28 @@ class TestGradeIteration(ModuleStoreTestCase):
         self.assertTrue(all_gradesets[student2])
         self.assertTrue(all_gradesets[student5])
 
+    @override_settings(DEBUG=False, ALLOWED_HOSTS=[])
+    def test_grading_fail_on_empty_allowed_hosts(self):
+        """
+        Test usage of RequestFactory with invalid HTTP_HOST for grading
+        """
+        self._prepare_gradable_problem_for_students()
+
+        all_gradesets, all_errors = self._gradesets_and_errors_for(self.course.id, self.students)
+        self.assertFalse(any(all_gradesets.values()))
+        self.assertTrue(all(all_errors.values()))
+
+    @override_settings(DEBUG=False, ALLOWED_HOSTS=['127.0.0.1'])
+    def test_grading_success_on_allowed_hosts(self):
+        """
+        Test usage of RequestFactory with valid HTTP_HOST for grading
+        """
+        self._prepare_gradable_problem_for_students()
+
+        all_gradesets, all_errors = self._gradesets_and_errors_for(self.course.id, self.students)
+        self.assertTrue(all(all_gradesets.values()))
+        self.assertFalse(any(all_errors.values()))
+
     ################################# Helpers #################################
     def _gradesets_and_errors_for(self, course_id, students):
         """Simple helper method to iterate through student grades and give us
@@ -121,3 +219,11 @@ class TestGradeIteration(ModuleStoreTestCase):
                 students_to_errors[student] = err_msg
 
         return students_to_gradesets, students_to_errors
+
+    def _prepare_gradable_problem_for_students(self):
+        problem_location = _create_gradable_problem(self.course)
+        for student in self.students:
+            _prepare_grading_for_student(self.course, problem_location, student)
+        # update course for correct get_children() call
+        store = modulestore()
+        self.course = store.get_course(self.course.id)
