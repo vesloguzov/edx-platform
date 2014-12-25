@@ -403,7 +403,9 @@ def bulk_beta_modify_access(request, course_id):
             # Tabulate the action result of this email address
             results.append({
                 'identifier': identifier,
-                error: bool(error),
+                'error': bool(error),
+                'userDoesNotExist': error == 'userDoesNotExist',
+                'nonuniqueNickname': error == 'nonuniqueNickname'
             })
 
     response_payload = {

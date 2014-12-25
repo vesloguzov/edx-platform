@@ -788,6 +788,10 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.assertTrue(CourseBetaTesterRole(self.course.id).has_user(self.beta_tester))
 
         self.notenrolled_student = UserFactory(username='NotEnrolledStudent')
+        # provide nickname to test enrollment by nickname
+        profile = self.notenrolled_student.profile
+        profile.nickname = 'not enrolled student'
+        profile.save()
 
         self.notregistered_email = 'robot-not-an-email-yet@robot.org'
         self.assertEqual(User.objects.filter(email=self.notregistered_email).count(), 0)
@@ -825,22 +829,23 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         Test Helper Method (not a test, called by other tests)
 
         Takes a client response from a call to bulk_beta_modify_access with 'email_students': False,
-        and the student identifier (email or username) given as 'identifiers' in the request.
+        and the student identifier (email or nickname) given as 'identifiers' in the request.
 
         Asserts the reponse returns cleanly, that the student was added as a beta tester, and the
-        response properly contains their identifier, 'error': False, and 'userDoesNotExist': False.
-        Additionally asserts no email was sent.
+        response properly contains their identifier, 'error': False, 'userDoesNotExist': False
+        and 'nonuniqueNickname': False. Additionally asserts no email was sent.
         """
         self.assertEqual(response.status_code, 200)
         self.assertTrue(CourseBetaTesterRole(self.course.id).has_user(self.notenrolled_student))
         # test the response data
         expected = {
-            "action": "add",
-            "results": [
+            u"action": u"add",
+            u"results": [
                 {
-                    "identifier": identifier,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": identifier,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -863,16 +868,16 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.add_notenrolled(response, self.notenrolled_student.email)
         self.assertTrue(CourseEnrollment.is_enrolled(self.notenrolled_student, self.course.id))
 
-    def test_add_notenrolled_username(self):
+    def test_add_notenrolled_nickname(self):
         url = reverse('bulk_beta_modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
-        response = self.client.get(url, {'identifiers': self.notenrolled_student.username, 'action': 'add', 'email_students': False})
-        self.add_notenrolled(response, self.notenrolled_student.username)
+        response = self.client.get(url, {'identifiers': self.notenrolled_student.profile.nickname, 'action': 'add', 'email_students': False})
+        self.add_notenrolled(response, self.notenrolled_student.profile.nickname)
         self.assertFalse(CourseEnrollment.is_enrolled(self.notenrolled_student, self.course.id))
 
-    def test_add_notenrolled_username_autoenroll(self):
+    def test_add_notenrolled_nickname_autoenroll(self):
         url = reverse('bulk_beta_modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
-        response = self.client.get(url, {'identifiers': self.notenrolled_student.username, 'action': 'add', 'email_students': False, 'auto_enroll': True})
-        self.add_notenrolled(response, self.notenrolled_student.username)
+        response = self.client.get(url, {'identifiers': self.notenrolled_student.profile.nickname, 'action': 'add', 'email_students': False, 'auto_enroll': True})
+        self.add_notenrolled(response, self.notenrolled_student.profile.nickname)
         self.assertTrue(CourseEnrollment.is_enrolled(self.notenrolled_student, self.course.id))
 
     @ddt.data('http', 'https')
@@ -886,12 +891,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.assertTrue(CourseBetaTesterRole(self.course.id).has_user(self.notenrolled_student))
         # test the response data
         expected = {
-            "action": "add",
-            "results": [
+            u"action": u"add",
+            u"results": [
                 {
-                    "identifier": self.notenrolled_student.email,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": self.notenrolled_student.email,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -931,12 +937,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.assertTrue(CourseBetaTesterRole(self.course.id).has_user(self.notenrolled_student))
         # test the response data
         expected = {
-            "action": "add",
-            "results": [
+            u"action": u"add",
+            u"results": [
                 {
-                    "identifier": self.notenrolled_student.email,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": self.notenrolled_student.email,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -990,12 +997,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.assertEqual(response.status_code, 200)
         # test the response data
         expected = {
-            "action": "add",
-            "results": [
+            u"action": u"add",
+            u"results": [
                 {
-                    "identifier": self.notregistered_email,
-                    "error": True,
-                    "userDoesNotExist": True
+                    u"identifier": self.notregistered_email,
+                    u"error": True,
+                    u"userDoesNotExist": True,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -1018,12 +1026,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
 
         # test the response data
         expected = {
-            "action": "remove",
-            "results": [
+            u"action": u"remove",
+            u"results": [
                 {
-                    "identifier": self.beta_tester.email,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": self.beta_tester.email,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -1046,12 +1055,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
 
         # test the response data
         expected = {
-            "action": "remove",
-            "results": [
+            u"action": u"remove",
+            u"results": [
                 {
-                    "identifier": self.beta_tester.email,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": self.beta_tester.email,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
