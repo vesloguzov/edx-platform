@@ -279,6 +279,9 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
             self.course.id
         )
         self.notenrolled_student = UserFactory(username='NotEnrolledStudent', first_name='NotEnrolled', last_name='Student')
+        profile = self.notenrolled_student.profile
+        profile.nickname = 'not enrolled student'
+        profile.save()
 
         # Create invited, but not registered, user
         cea = CourseEnrollmentAllowed(email='robot-allowed@robot.org', course_id=self.course.id)
@@ -340,7 +343,7 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
         res_json = json.loads(response.content)
         self.assertEqual(res_json, expected)
 
-    def test_invalid_username(self):
+    def test_invalid_nickname(self):
         url = reverse('students_update_enrollment', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {'identifiers': 'percivaloctavius', 'action': 'enroll', 'email_students': False})
         self.assertEqual(response.status_code, 200)
@@ -360,29 +363,29 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
         res_json = json.loads(response.content)
         self.assertEqual(res_json, expected)
 
-    def test_enroll_with_username(self):
+    def test_enroll_with_nickname(self):
         url = reverse('students_update_enrollment', kwargs={'course_id': self.course.id.to_deprecated_string()})
-        response = self.client.get(url, {'identifiers': self.notenrolled_student.username, 'action': 'enroll', 'email_students': False})
+        response = self.client.get(url, {'identifiers': self.notenrolled_student.profile.nickname, 'action': 'enroll', 'email_students': False})
         self.assertEqual(response.status_code, 200)
 
         # test the response data
         expected = {
-            "action": "enroll",
-            'auto_enroll': False,
-            "results": [
+            u"action": u"enroll",
+            u'auto_enroll': False,
+            u"results": [
                 {
-                    "identifier": self.notenrolled_student.username,
-                    "before": {
-                        "enrollment": False,
-                        "auto_enroll": False,
-                        "user": True,
-                        "allowed": False,
+                    u"identifier": self.notenrolled_student.profile.nickname,
+                    u"before": {
+                        u"enrollment": False,
+                        u"auto_enroll": False,
+                        u"user": True,
+                        u"allowed": False,
                     },
-                    "after": {
-                        "enrollment": True,
-                        "auto_enroll": False,
-                        "user": True,
-                        "allowed": False,
+                    u"after": {
+                        u"enrollment": True,
+                        u"auto_enroll": False,
+                        u"user": True,
+                        u"allowed": False,
                     }
                 }
             ]
