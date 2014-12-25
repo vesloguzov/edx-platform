@@ -7,7 +7,7 @@ Replace this with more appropriate tests for your application.
 """
 import json
 import datetime
-from unittest import skipIf
+from unittest import skipIf, skipUnless
 from mock import patch
 
 from django.test import TestCase
@@ -15,6 +15,7 @@ from django.contrib.auth.models import User
 from django.test.utils import override_settings
 from django.core.urlresolvers import reverse
 from django.core import mail
+from django.conf import settings
 
 from xmodule.modulestore.tests.factories import CourseFactory
 from rest_framework import mixins
@@ -44,9 +45,6 @@ class UserSerializerTest(TestCase):
     def setUp(self):
         self.user = UserFactory.create(username='test', email='test@example.com')
 
-    def tearDown(self):
-        User.objects.all().delete()
-
     def test_serialization(self):
         serializer = UserSerializer(instance=self.user)
         data = serializer.data
@@ -60,7 +58,6 @@ class UserSerializerTest(TestCase):
         for field_name in self.profile_fields:
             self.assertIn(field_name, data)
             self.assertEquals(getattr(self.user.profile, field_name), data[field_name])
-
 
     def test_repetitive_user_not_valid(self):
         serializer = UserSerializer(data={'uid': self.user.username})
@@ -159,6 +156,7 @@ class UserSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid())
 
 
+@skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @override_settings(EDX_API_KEY=TEST_API_KEY)
 class APITest(TestCase):
     @override_settings(EDX_API_KEY='')
