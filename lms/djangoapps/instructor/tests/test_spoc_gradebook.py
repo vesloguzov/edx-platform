@@ -6,6 +6,7 @@ from django.test.utils import override_settings
 from django.core.urlresolvers import reverse
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from student.tests.factories import UserFactory, CourseEnrollmentFactory, AdminFactory
+from student.models import UserProfile
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from courseware.tests.tests import TEST_DATA_MIXED_MODULESTORE
 from capa.tests.response_xml_factory import StringResponseXMLFactory
@@ -51,6 +52,7 @@ class TestGradebook(ModuleStoreTestCase):
         self.users = [UserFactory.create() for _ in xrange(USER_COUNT)]
 
         for user in self.users:
+            UserProfile.objects.filter(user=user).update(nickname='nick_' + user.username)
             CourseEnrollmentFactory.create(user=user, course_id=self.course.id)
 
         for i in xrange(USER_COUNT - 1):
@@ -87,7 +89,7 @@ class TestDefaultGradingPolicy(TestGradebook):
     """
     def test_all_users_listed(self):
         for user in self.users:
-            self.assertIn(user.username, unicode(self.response.content, 'utf-8'))
+            self.assertIn(user.profile.nickname, unicode(self.response.content, 'utf-8'))
 
     def test_default_policy(self):
         # Default >= 50% passes, so Users 5-10 should be passing for Homework 1 [6]

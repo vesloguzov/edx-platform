@@ -10,7 +10,7 @@ class TestLongUsernameEmail(TestCase):
     def setUp(self):
         self.url = reverse('create_account')
         self.url_params = {
-            'username': 'username',
+            'nickname': 'nickname',
             'email': 'foo_bar' + '@bar.com',
             'name': 'foo bar',
             'password': '123',
@@ -18,12 +18,12 @@ class TestLongUsernameEmail(TestCase):
             'honor_code': 'true',
         }
 
-    def test_long_username(self):
+    def test_long_nickname(self):
         """
         Test username cannot be more than 30 characters long.
         """
 
-        self.url_params['username'] = 'username' * 4
+        self.url_params['nickname'] = 'nickname' * 4
         response = self.client.post(self.url, self.url_params)
 
         # Status code should be 400.
