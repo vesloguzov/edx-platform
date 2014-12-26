@@ -1433,7 +1433,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
                 extended_profile = {}
             extended_profile[field] = post_vars[field]
 
-    # Make sure that password and username fields do not match
+    # Make sure that password and nickname fields do not match
     nickname = post_vars['nickname']
     password = post_vars['password']
     if nickname == password:
