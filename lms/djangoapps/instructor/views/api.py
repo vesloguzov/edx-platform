@@ -1278,7 +1278,7 @@ def send_email(request, course_id):
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
 @require_query_params(
-    unique_student_identifier="email or username of user to change access",
+    student_identifier="email or nickname of user to change access",
     rolename="the forum role",
     action="'allow' or 'revoke'",
 )
@@ -1304,7 +1304,7 @@ def update_forum_role_membership(request, course_id):
         request.user, course_id, FORUM_ROLE_ADMINISTRATOR
     )
 
-    unique_student_identifier = request.GET.get('unique_student_identifier')
+    student_identifier = request.GET.get('student_identifier')
     rolename = request.GET.get('rolename')
     action = request.GET.get('action')
 
@@ -1323,7 +1323,7 @@ def update_forum_role_membership(request, course_id):
             "Unrecognized rolename '{}'.".format(rolename)
         ))
 
-    user = get_student_from_identifier(unique_student_identifier)
+    user = get_student_from_email_or_nickname(student_identifier)
     target_is_instructor = has_access(user, 'instructor', course)
     # cannot revoke instructor
     if target_is_instructor and action == 'revoke' and rolename == FORUM_ROLE_ADMINISTRATOR:
