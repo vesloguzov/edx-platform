@@ -78,7 +78,7 @@ class TestInstructorDashboardForumAdmin(ModuleStoreTestCase, LoginEnrollmentTest
     def test_add_forum_admin_users_for_missing_roles(self):
         course = self.toy
         url = reverse('instructor_dashboard_legacy', kwargs={'course_id': course.id.to_deprecated_string()})
-        username = 'u1'
+        username = 'edx_user_1'
         for action in ['Add', 'Remove']:
             for rolename in FORUM_ROLES:
                 response = self.client.post(url, {'action': action_name(action, rolename), FORUM_ADMIN_USER[rolename]: username})
@@ -88,7 +88,7 @@ class TestInstructorDashboardForumAdmin(ModuleStoreTestCase, LoginEnrollmentTest
         course = self.toy
         self.initialize_roles(course.id)
         url = reverse('instructor_dashboard_legacy', kwargs={'course_id': course.id.to_deprecated_string()})
-        username = 'u1'
+        username = 'edx_user_1'
         action = 'Remove'
         for rolename in FORUM_ROLES:
             response = self.client.post(url, {'action': action_name(action, rolename), FORUM_ADMIN_USER[rolename]: username})
@@ -98,7 +98,7 @@ class TestInstructorDashboardForumAdmin(ModuleStoreTestCase, LoginEnrollmentTest
         course = self.toy
         self.initialize_roles(course.id)
         url = reverse('instructor_dashboard_legacy', kwargs={'course_id': course.id.to_deprecated_string()})
-        username = 'u2'
+        username = 'edx_user_2'
         for rolename in FORUM_ROLES:
             response = self.client.post(url, {'action': action_name('Add', rolename), FORUM_ADMIN_USER[rolename]: username})
             self.assertContains(response, 'Added "{0}" to "{1}" forum role = "{2}"'.format(username, course.id.to_deprecated_string(), rolename))
@@ -111,7 +111,7 @@ class TestInstructorDashboardForumAdmin(ModuleStoreTestCase, LoginEnrollmentTest
         course = self.toy
         self.initialize_roles(course.id)
         url = reverse('instructor_dashboard_legacy', kwargs={'course_id': course.id.to_deprecated_string()})
-        username = 'u2'
+        username = 'edx_user_2'
         for rolename in FORUM_ROLES:
             # perform an add, and follow with a second identical add:
             self.client.post(url, {'action': action_name('Add', rolename), FORUM_ADMIN_USER[rolename]: username})
@@ -123,7 +123,7 @@ class TestInstructorDashboardForumAdmin(ModuleStoreTestCase, LoginEnrollmentTest
         course = self.toy
         self.initialize_roles(course.id)
         url = reverse('instructor_dashboard_legacy', kwargs={'course_id': course.id.to_deprecated_string()})
-        username = 'u1'
+        username = 'edx_user_1'
         rolename = FORUM_ROLE_ADMINISTRATOR
         response = self.client.post(url, {'action': action_name('Add', rolename), FORUM_ADMIN_USER[rolename]: username})
         self.assertTrue(response.content.find('Error: user "{0}" should first be added as staff'.format(username)) >= 0)
@@ -132,7 +132,7 @@ class TestInstructorDashboardForumAdmin(ModuleStoreTestCase, LoginEnrollmentTest
         course = self.toy
         self.initialize_roles(course.id)
         url = reverse('instructor_dashboard_legacy', kwargs={'course_id': course.id.to_deprecated_string()})
-        username = 'u2'
+        username = 'edx_user_2'
         added_roles = [FORUM_ROLE_STUDENT]  # u2 is already added as a student to the discussion forums
         self.assertTrue(has_forum_access(username, course.id, 'Student'))
         for rolename in FORUM_ROLES:

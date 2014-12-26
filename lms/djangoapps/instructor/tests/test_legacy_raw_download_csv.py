@@ -52,7 +52,7 @@ class TestRawGradeCSV(TestSubmittingProblems):
         body = response.content.replace('\r', '')
         msg += "body = '{0}'\n".format(body)
         expected_csv = '''"ID","Username","Full Name","edX email","External email","p3","p2","p1"
-"1","u1","username","view@test.com","","None","None","None"
-"2","u2","username","view2@test.com","","0.0","1.0","0.0"
+"1","edx_user_1","username","view@test.com","","None","None","None"
+"2","edx_user_2","username","view2@test.com","","0.0","1.0","0.0"
 '''
         self.assertEqual(body, expected_csv, msg)
