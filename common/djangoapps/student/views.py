@@ -1388,6 +1388,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
             return JsonResponse(js, status=400)
 
         max_length = 75
+        # TODO: remove limitation if not required since it has no database limitation
         if field_name == 'nickname':
             max_length = 30
 
@@ -1502,8 +1503,8 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
         eamap.user = login_user
         eamap.dtsignup = datetime.datetime.now(UTC)
         eamap.save()
-        AUDIT_LOG.info("User registered with external_auth %s", post_vars['username'])
-        AUDIT_LOG.info('Updated ExternalAuthMap for %s to be %s', post_vars['username'], eamap)
+        AUDIT_LOG.info("User registered with external_auth %s", user.username)
+        AUDIT_LOG.info('Updated ExternalAuthMap for %s to be %s', user.username, eamap)
 
         if settings.FEATURES.get('BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH'):
             log.info('bypassing activation email')
