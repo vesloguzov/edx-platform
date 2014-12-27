@@ -20,9 +20,6 @@ class CASUserCreatorTest(TestCase):
         self.username =  'test'
         self.attrs = {'mail': 'test@example.com'}
 
-    def tearDown(self):
-        User.objects.all().delete()
-
     def test_create_simple(self):
         cas_create_user(self.username, self.attrs)
 
@@ -44,9 +41,10 @@ class CASUserCreatorTest(TestCase):
             'name': 'Test User',
             'nickname': 'Test Nick',
         }
+        self.assertFalse(User.objects.filter(email=attrs['mail']).exists())
         cas_create_user(self.username, attrs)
-        user = User.objects.get(username=self.username)
 
+        user = User.objects.get(username=self.username)
         self.assertTrue(UserProfile.objects.filter(user=user).exists())
         profile = user.profile
         self.assertEqual(profile.name, attrs['name'])
@@ -54,6 +52,7 @@ class CASUserCreatorTest(TestCase):
 
     def test_enroll_pending(self):
         course = CourseFactory.create()
+        self.assertFalse(User.objects.filter(email=self.attrs['mail']).exists())
         enroll_email(course.id, self.attrs['mail'], auto_enroll=True)
 
         cas_create_user(self.username, self.attrs)
