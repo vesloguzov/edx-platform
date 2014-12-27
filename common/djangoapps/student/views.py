@@ -1493,14 +1493,14 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     # TODO: there is no error checking here to see that the user actually logged in successfully,
     # and is not yet an active user.
     if login_user is not None:
-        AUDIT_LOG.info(u"Login success on new account creation - {0}".format(login_user.username))
+        AUDIT_LOG.info(u"Login success on new account creation - {0} ({1})".format(login_user.username, login_user.email))
 
     if DoExternalAuth:
         eamap.user = login_user
         eamap.dtsignup = datetime.datetime.now(UTC)
         eamap.save()
-        AUDIT_LOG.info("User registered with external_auth %s", user.username)
-        AUDIT_LOG.info('Updated ExternalAuthMap for %s to be %s', user.username, eamap)
+        AUDIT_LOG.info("User registered with external_auth %s (%s)", user.username, user.email)
+        AUDIT_LOG.info('Updated ExternalAuthMap for %s (%s) to be %s', user.username, user.email, eamap)
 
         if settings.FEATURES.get('BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH'):
             log.info('bypassing activation email')
