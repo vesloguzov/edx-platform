@@ -22,6 +22,8 @@ from xmodule.modulestore.mongo.draft import DraftModuleStore
 from xblock.fields import Scope
 from xmodule.modulestore.split_mongo.split import SplitMongoModuleStore
 
+from student.models import UserProfile
+
 
 def parse_json(response):
     """Parse response, which is assumed to be json"""
@@ -76,6 +78,8 @@ class CourseTestCase(ModuleStoreTestCase):
         afterwards.
         """
         user_password = super(CourseTestCase, self).setUp()
+        # create profile for user in ModuleStoreTestCase since it cannot create profile itself
+        UserProfile.objects.create(user=self.user)
 
         self.client = AjaxEnabledTestClient()
         self.client.login(username=self.user.username, password=user_password)
@@ -91,6 +95,8 @@ class CourseTestCase(ModuleStoreTestCase):
         Create a non-staff user, log them in (if authenticate=True), and return the client, user to use for testing.
         """
         nonstaff, password = self.create_non_staff_user()
+        # create profile for user in ModuleStoreTestCase since it cannot create profile itself
+        UserProfile.objects.create(user=nonstaff)
 
         client = Client()
         if authenticate:
