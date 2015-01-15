@@ -37,7 +37,7 @@ describe('StaffDebugActions', function() {
             expect($.ajax.mostRecentCall.args[0]['type']).toEqual('GET');
             expect($.ajax.mostRecentCall.args[0]['data']).toEqual({
                 'problem_to_reset': location,
-                'unique_student_identifier': 'userman',
+                'student_identifier': 'userman',
                 'delete_module': false
             });
             expect($.ajax.mostRecentCall.args[0]['url']).toEqual(
@@ -56,7 +56,7 @@ describe('StaffDebugActions', function() {
             expect($.ajax.mostRecentCall.args[0]['type']).toEqual('GET');
             expect($.ajax.mostRecentCall.args[0]['data']).toEqual({
                 'problem_to_reset': location,
-                'unique_student_identifier': 'userman',
+                'student_identifier': 'userman',
                 'delete_module': true
             });
             expect($.ajax.mostRecentCall.args[0]['url']).toEqual(
@@ -76,7 +76,7 @@ describe('StaffDebugActions', function() {
             expect($.ajax.mostRecentCall.args[0]['type']).toEqual('GET');
             expect($.ajax.mostRecentCall.args[0]['data']).toEqual({
                 'problem_to_reset': location,
-                'unique_student_identifier': 'userman',
+                'student_identifier': 'userman',
                 'delete_module': false
             });
             expect($.ajax.mostRecentCall.args[0]['url']).toEqual(
