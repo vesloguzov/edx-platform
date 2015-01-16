@@ -76,3 +76,10 @@ try:
     from .private import *      # pylint: disable=F0401
 except ImportError:
     pass
+
+# Configure language for message comparision
+LANGUAGE_CODE = 'en'  # http://www.i18nguy.com/unicode/language-identifiers.html
+LANGUAGES = (
+    ('en', u'English'),
+    ('eo', u'Dummy Language (Esperanto)'),  # Dummy languaged used for testing
+)
