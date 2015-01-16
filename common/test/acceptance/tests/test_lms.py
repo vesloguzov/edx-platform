@@ -84,7 +84,7 @@ class LanguageTest(UniqueCourseTest):
         # the HTML in this format. Ideally we could just store the raw ÇÜRRÉNT ÇØÜRSÉS string here
         self.current_courses_text = u'\xc7\xdcRR\xc9NT \xc7\xd6\xdcRS\xc9S'
 
-        self.username = "test"
+        self.nickname = "test"
         self.password = "testpass"
         self.email = "test@example.com"
 
@@ -100,7 +100,7 @@ class LanguageTest(UniqueCourseTest):
         self.assertIn(self.current_courses_text, changed_text)
 
     def test_language_persists(self):
-        auto_auth_page = AutoAuthPage(self.browser, username=self.username, password=self.password, email=self.email, course_id=self.course_id)
+        auto_auth_page = AutoAuthPage(self.browser, nickname=self.nickname, password=self.password, email=self.email, course_id=self.course_id)
         auto_auth_page.visit()
 
         self.dashboard_page.visit()
@@ -470,7 +470,7 @@ class VisibleToStaffOnlyTest(UniqueCourseTest):
             And I am logged on with an account marked 'is_staff'
             Then I can see all course content
         """
-        AutoAuthPage(self.browser, username="STAFF_TESTER", email="johndoe_staff@example.com",
+        AutoAuthPage(self.browser, nickname="STAFF_TESTER", email="johndoe_staff@example.com",
                      course_id=self.course_id, staff=True).visit()
 
         self.courseware_page.visit()
@@ -492,7 +492,7 @@ class VisibleToStaffOnlyTest(UniqueCourseTest):
             And I am logged on with an authorized student account
             Then I can only see content without 'visible_to_staff_only' set to True
         """
-        AutoAuthPage(self.browser, username="STUDENT_TESTER", email="johndoe_student@example.com",
+        AutoAuthPage(self.browser, nickname="STUDENT_TESTER", email="johndoe_student@example.com",
                      course_id=self.course_id, staff=False).visit()
 
         self.courseware_page.visit()

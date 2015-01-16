@@ -17,7 +17,7 @@ class MatlabProblemTest(UniqueCourseTest):
     """
     Tests that verify matlab problem "Run Code".
     """
-    USERNAME = "STAFF_TESTER"
+    NICKNAME = "STAFF_TESTER"
     EMAIL = "johndoe@example.com"
 
     def setUp(self):
@@ -72,7 +72,7 @@ class MatlabProblemTest(UniqueCourseTest):
         ).install()
 
         # Auto-auth register for the course.
-        AutoAuthPage(self.browser, username=self.USERNAME, email=self.EMAIL,
+        AutoAuthPage(self.browser, nickname=self.NICKNAME, email=self.EMAIL,
                      course_id=self.course_id, staff=False).visit()
 
     def _goto_matlab_problem_page(self):

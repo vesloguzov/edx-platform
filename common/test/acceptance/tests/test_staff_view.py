@@ -15,7 +15,7 @@ class StaffDebugTest(UniqueCourseTest):
     """
     Tests that verify the staff debug info.
     """
-    USERNAME = "STAFF_TESTER"
+    NICKNAME = "STAFF_TESTER"
     EMAIL = "johndoe@example.com"
 
     def setUp(self):
@@ -51,7 +51,7 @@ class StaffDebugTest(UniqueCourseTest):
 
         # Auto-auth register for the course.
         # Do this as global staff so that you will see the Staff View
-        AutoAuthPage(self.browser, username=self.USERNAME, email=self.EMAIL,
+        AutoAuthPage(self.browser, nickname=self.NICKNAME, email=self.EMAIL,
                      course_id=self.course_id, staff=True).visit()
 
     def _goto_staff_page(self):
@@ -72,7 +72,7 @@ class StaffDebugTest(UniqueCourseTest):
         staff_debug_page.reset_attempts()
         msg = staff_debug_page.idash_msg[0]
         self.assertEqual(u'Successfully reset the attempts '
-                         'for user {}'.format(self.USERNAME), msg)
+                         'for user {}'.format(self.NICKNAME), msg)
 
     def test_delete_state_empty(self):
         """
@@ -82,7 +82,7 @@ class StaffDebugTest(UniqueCourseTest):
         staff_debug_page.delete_state()
         msg = staff_debug_page.idash_msg[0]
         self.assertEqual(u'Successfully deleted student state '
-                         'for user {}'.format(self.USERNAME), msg)
+                         'for user {}'.format(self.NICKNAME), msg)
 
     def test_reset_attempts_state(self):
         """
@@ -95,7 +95,7 @@ class StaffDebugTest(UniqueCourseTest):
         staff_debug_page.reset_attempts()
         msg = staff_debug_page.idash_msg[0]
         self.assertEqual(u'Successfully reset the attempts '
-                         'for user {}'.format(self.USERNAME), msg)
+                         'for user {}'.format(self.NICKNAME), msg)
 
     def test_rescore_state(self):
         """
@@ -123,7 +123,7 @@ class StaffDebugTest(UniqueCourseTest):
         staff_debug_page.delete_state()
         msg = staff_debug_page.idash_msg[0]
         self.assertEqual(u'Successfully deleted student state '
-                         'for user {}'.format(self.USERNAME), msg)
+                         'for user {}'.format(self.NICKNAME), msg)
 
     def test_student_by_email(self):
         """
@@ -163,7 +163,7 @@ class StaffDebugTest(UniqueCourseTest):
         staff_debug_page.reset_attempts()
         msg = staff_debug_page.idash_msg[0]
         self.assertEqual(u'Successfully reset the attempts '
-                         'for user {}'.format(self.USERNAME), msg)
+                         'for user {}'.format(self.NICKNAME), msg)
 
     def test_rescore_state_for_problem_loaded_via_ajax(self):
         """
@@ -193,4 +193,4 @@ class StaffDebugTest(UniqueCourseTest):
         staff_debug_page.delete_state()
         msg = staff_debug_page.idash_msg[0]
         self.assertEqual(u'Successfully deleted student state '
-                         'for user {}'.format(self.USERNAME), msg)
+                         'for user {}'.format(self.NICKNAME), msg)

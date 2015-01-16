@@ -15,13 +15,13 @@ class AutoAuthPage(PageObject):
     this url will create a user and log them in.
     """
 
-    def __init__(self, browser, username=None, email=None, password=None, staff=None, course_id=None, roles=None):
+    def __init__(self, browser, nickname=None, email=None, password=None, staff=None, course_id=None, roles=None):
         """
         Auto-auth is an end-point for HTTP GET requests.
         By default, it will create accounts with random user credentials,
         but you can also specify credentials using querystring parameters.
 
-        `username`, `email`, and `password` are the user's credentials (strings)
+        `nickname`, `email`, and `password` are the user's credentials (strings)
         `staff` is a boolean indicating whether the user is global staff.
         `course_id` is the ID of the course to enroll the student in.
         Currently, this has the form "org/number/run"
@@ -33,8 +33,8 @@ class AutoAuthPage(PageObject):
         # Create query string parameters if provided
         self._params = {}
 
-        if username is not None:
-            self._params['username'] = username
+        if nickname is not None:
+            self._params['nickname'] = nickname
 
         if email is not None:
             self._params['email'] = email
