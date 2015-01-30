@@ -3,7 +3,7 @@ This config file runs the simplest dev environment"""
 
 # We intentionally define lots of variables that aren't used, and
 # want to import all variables from base settings files
-# pylint: disable=W0401, W0614
+# pylint: disable=wildcard-import, unused-wildcard-import
 
 from .common import *
 from logsettings import get_logger_config
@@ -26,6 +26,12 @@ update_module_store_settings(
         'fs_root': GITHUB_REPO_ROOT,
     }
 )
+
+DJFS = {
+    'type': 'osfs',
+    'directory_root': 'cms/static/djpyfs',
+    'url_root': '/static/djpyfs'
+}
 
 # cdodge: This is the specifier for the MongoDB (using GridFS) backed static content store
 # This is for static content for courseware, not system static content (e.g. javascript, css, edX branding, etc)
@@ -128,7 +134,7 @@ PIPELINE_SASS_ARGUMENTS = '--debug-info --require {proj_dir}/static/sass/bourbon
 CELERY_ALWAYS_EAGER = True
 
 ################################ DEBUG TOOLBAR #################################
-INSTALLED_APPS += ('debug_toolbar', 'debug_toolbar_mongo')
+INSTALLED_APPS += ('debug_toolbar', 'debug_toolbar_mongo', 'djpyfs')
 MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
 INTERNAL_IPS = ('127.0.0.1',)
 
@@ -159,6 +165,7 @@ DEBUG_TOOLBAR_MONGO_STACKTRACES = False
 
 # Enable URL that shows information about the status of variuous services
 FEATURES['ENABLE_SERVICE_STATUS'] = True
+FEATURES['ALLOW_COURSE_RERUNS'] = True
 
 ############################# SEGMENT-IO ##################################
 
@@ -173,6 +180,6 @@ if SEGMENT_IO_KEY:
 #####################################################################
 # Lastly, see if the developer has any local overrides.
 try:
-    from .private import *  # pylint: disable=F0401
+    from .private import *  # pylint: disable=import-error
 except ImportError:
     pass

@@ -1,22 +1,25 @@
 define(["jquery", "underscore", "js/views/xblock", "js/utils/module", "gettext", "js/views/feedback_notification",
     "jquery.ui"], // The container view uses sortable, which is provided by jquery.ui.
     function ($, _, XBlockView, ModuleUtils, gettext, NotificationView) {
-        var reorderableClass = '.reorderable-container',
-            sortableInitializedClass = '.ui-sortable',
-            studioXBlockWrapperClass = '.studio-xblock-wrapper';
+        var studioXBlockWrapperClass = '.studio-xblock-wrapper';
 
         var ContainerView = XBlockView.extend({
+            // Store the request token of the first xblock on the page (which we know was rendered by Studio when
+            // the page was generated). Use that request token to filter out user-defined HTML in any
+            // child xblocks within the page.
+            requestToken: "",
+
+            new_child_view: 'reorderable_container_child_preview',
 
             xblockReady: function () {
                 XBlockView.prototype.xblockReady.call(this);
-                var reorderableContainer = this.$(reorderableClass),
-                    alreadySortable = this.$(sortableInitializedClass),
-                    newParent,
-                    oldParent,
-                    self = this;
+                var reorderableClass, reorderableContainer,
+                    newParent, oldParent, self = this;
 
-                alreadySortable.sortable("destroy");
+                this.requestToken = this.$('div.xblock').first().data('request-token');
+                reorderableClass = this.makeRequestSpecificSelector('.reorderable-container');
 
+                reorderableContainer = this.$(reorderableClass);
                 reorderableContainer.sortable({
                     handle: '.drag-handle',
 
@@ -36,7 +39,7 @@ define(["jquery", "underscore", "js/views/xblock", "js/utils/module", "gettext",
                         }
 
                         saving = new NotificationView.Mini({
-                            title: gettext('Saving&hellip;')
+                            title: gettext('Saving')
                         });
                         saving.show();
 
@@ -122,8 +125,17 @@ define(["jquery", "underscore", "js/views/xblock", "js/utils/module", "gettext",
                 });
             },
 
+            acknowledgeXBlockDeletion: function(locator){
+                this.notifyRuntime('deleted-child', locator);
+            },
+
             refresh: function() {
+                var sortableInitializedClass = this.makeRequestSpecificSelector('.reorderable-container.ui-sortable');
                 this.$(sortableInitializedClass).sortable('refresh');
+            },
+
+            makeRequestSpecificSelector: function(selector) {
+                return 'div.xblock[data-request-token="' + this.requestToken + '"] > ' + selector;
             }
         });
 

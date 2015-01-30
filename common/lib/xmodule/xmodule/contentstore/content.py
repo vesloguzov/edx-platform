@@ -40,8 +40,11 @@ class StaticContent(object):
 
     @staticmethod
     def generate_thumbnail_name(original_name):
+        name_root, ext = os.path.splitext(original_name)
+        if not ext == XASSET_THUMBNAIL_TAIL_NAME:
+            name_root = name_root + ext.replace(u'.', u'-')
         return u"{name_root}{extension}".format(
-            name_root=os.path.splitext(original_name)[0],
+            name_root=name_root,
             extension=XASSET_THUMBNAIL_TAIL_NAME,)
 
     @staticmethod
@@ -63,9 +66,6 @@ class StaticContent(object):
 
     def get_id(self):
         return self.location
-
-    def get_url_path(self):
-        return self.location.to_deprecated_string()
 
     @property
     def data(self):
@@ -108,7 +108,9 @@ class StaticContent(object):
         assert(isinstance(course_key, CourseKey))
         placeholder_id = uuid.uuid4().hex
         # create a dummy asset location with a fake but unique name. strip off the name, and return it
-        url_path = unicode(course_key.make_asset_key('asset', placeholder_id).for_branch(None))
+        url_path = StaticContent.serialize_asset_key_with_slash(
+            course_key.make_asset_key('asset', placeholder_id).for_branch(None)
+        )
         return url_path.replace(placeholder_id, '')
 
     @staticmethod
@@ -133,7 +135,7 @@ class StaticContent(object):
         # Generate url of urlparse.path component
         scheme, netloc, orig_path, params, query, fragment = urlparse(path)
         loc = StaticContent.compute_location(course_id, orig_path)
-        loc_url = loc.to_deprecated_string()
+        loc_url = StaticContent.serialize_asset_key_with_slash(loc)
 
         # parse the query params for "^/static/" and replace with the location url
         orig_query = parse_qsl(query)
@@ -144,7 +146,7 @@ class StaticContent(object):
                     course_id,
                     query_value[len('/static/'):],
                 )
-                new_query_url = new_query.to_deprecated_string()
+                new_query_url = StaticContent.serialize_asset_key_with_slash(new_query)
                 new_query_list.append((query_name, new_query_url))
             else:
                 new_query_list.append((query_name, query_value))
@@ -154,6 +156,17 @@ class StaticContent(object):
 
     def stream_data(self):
         yield self._data
+
+    @staticmethod
+    def serialize_asset_key_with_slash(asset_key):
+        """
+        Legacy code expects the serialized asset key to start w/ a slash; so, do that in one place
+        :param asset_key:
+        """
+        url = unicode(asset_key)
+        if not url.startswith('/'):
+            url = '/' + url  # TODO - re-address this once LMS-11198 is tackled.
+        return url
 
 
 class StaticContentStream(StaticContent):
@@ -207,7 +220,7 @@ class ContentStore(object):
     def find(self, filename):
         raise NotImplementedError
 
-    def get_all_content_for_course(self, course_key, start=0, maxresults=-1, sort=None):
+    def get_all_content_for_course(self, course_key, start=0, maxresults=-1, sort=None, filter_params=None):
         '''
         Returns a list of static assets for a course, followed by the total number of assets.
         By default all assets are returned, but start and maxresults can be provided to limit the query.
@@ -277,3 +290,10 @@ class ContentStore(object):
                 logging.exception(u"Failed to generate thumbnail for {0}. Exception: {1}".format(content.location, str(e)))
 
         return thumbnail_content, thumbnail_file_location
+
+    def ensure_indexes(self):
+        """
+        Ensure that all appropriate indexes are created that are needed by this modulestore, or raise
+        an exception if unable to.
+        """
+        pass

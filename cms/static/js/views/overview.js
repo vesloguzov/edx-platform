@@ -1,7 +1,7 @@
 define(["domReady", "jquery", "jquery.ui", "underscore", "gettext", "js/views/feedback_notification",
-    "js/utils/cancel_on_escape", "js/utils/date_utils", "js/utils/module"],
+    "js/utils/cancel_on_escape", "js/utils/date_utils", "js/utils/module", "js/views/utils/view_utils"],
     function (domReady, $, ui, _, gettext, NotificationView, CancelOnEscape,
-              DateUtils, ModuleUtils) {
+              DateUtils, ModuleUtils, ViewUtils) {
 
         var modalSelector = '.edit-section-publish-settings';
 
@@ -10,9 +10,9 @@ define(["domReady", "jquery", "jquery.ui", "underscore", "gettext", "js/views/fe
 
             var $section = $('.courseware-section');
             var $button = $(this);
-            var $labelCollapsed = $('<i class="icon-arrow-up"></i> <span class="label">' +
+            var $labelCollapsed = $('<i class="icon fa fa-arrow-up"></i> <span class="label">' +
                 gettext('Collapse All Sections') + '</span>');
-            var $labelExpanded = $('<i class="icon-arrow-down"></i> <span class="label">' +
+            var $labelExpanded = $('<i class="icon fa fa-arrow-down"></i> <span class="label">' +
                 gettext('Expand All Sections') + '</span>');
 
             var buttonLabel = $button.hasClass('is-activated') ? $labelCollapsed : $labelExpanded;
@@ -75,7 +75,7 @@ define(["domReady", "jquery", "jquery.ui", "underscore", "gettext", "js/views/fe
             });
 
             var saving = new NotificationView.Mini({
-                title: gettext("Saving&hellip;")
+                title: gettext("Saving")
             });
             saving.show();
             // call into server to commit the new order
@@ -102,7 +102,7 @@ define(["domReady", "jquery", "jquery.ui", "underscore", "gettext", "js/views/fe
                             '<strong>' + gettext("Release date:") + '&nbsp;</strong>' +
                             gettext("{month}/{day}/{year} at {hour}:{minute} UTC") +
                             '</span>' +
-                            '<a href="#" class="edit-release-date action" data-date="{month}/{day}/{year}" data-time="{hour}:{minute}" data-locator="{locator}"><i class="icon-time"></i> <span class="sr">' +
+                            '<a href="#" class="edit-release-date action" data-date="{month}/{day}/{year}" data-time="{hour}:{minute}" data-locator="{locator}"><i class="icon fa fa-time"></i> <span class="sr">' +
                             gettext("Edit section release date") +
                             '</span></a>',
                         {year: datetime.getUTCFullYear(), month: pad2(datetime.getUTCMonth() + 1), day: pad2(datetime.getUTCDate()),
@@ -221,6 +221,10 @@ define(["domReady", "jquery", "jquery.ui", "underscore", "gettext", "js/views/fe
             });
             $('.toggle-button-sections').bind('click', toggleSections);
             $('.expand-collapse').bind('click', toggleSubmodules);
+
+            $('.dismiss-button').bind('click', ViewUtils.deleteNotificationHandler(function () {
+                $('.wrapper-alert-announcement').remove();
+            }));
 
             var $body = $('body');
             $body.on('click', '.section-published-date .edit-release-date', editSectionPublishDate);

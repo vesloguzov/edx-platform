@@ -10,7 +10,12 @@ sessions. Assumes structure:
 
 # We intentionally define lots of variables that aren't used, and
 # want to import all variables from base settings files
-# pylint: disable=W0401, W0614
+# pylint: disable=wildcard-import, unused-wildcard-import
+
+# Pylint gets confused by path.py instances, which report themselves as class
+# objects. As a result, pylint applies the wrong regex in validating names,
+# and throws spurious errors. Therefore, we disable invalid-name checking.
+# pylint: disable=invalid-name
 
 from .common import *
 from logsettings import get_logger_config
@@ -44,11 +49,11 @@ FEEDBACK_SUBMISSION_EMAIL = "dummy@example.com"
 
 WIKI_ENABLED = True
 
-LOGGING = get_logger_config(ENV_ROOT / "log",
-                            logging_env="dev",
-                            local_loglevel="DEBUG",
-                            dev_env=True,
-                            debug=True)
+DJFS = {
+    'type': 'osfs',
+    'directory_root': 'lms/static/djpyfs',
+    'url_root': '/static/djpyfs'
+}
 
 # If there is a database called 'read_replica', you can use the use_read_replica_if_available
 # function in util/query.py, which is useful for very large database reads
@@ -171,12 +176,12 @@ EDX_PLATFORM_VERSION_STRING = os.popen('cd %s; git describe' % REPO_ROOT).read()
 ############################ Open ended grading config  #####################
 
 OPEN_ENDED_GRADING_INTERFACE = {
-    'url' : 'http://127.0.0.1:3033/',
-    'username' : 'lms',
-    'password' : 'abcd',
-    'staff_grading' : 'staff_grading',
-    'peer_grading' : 'peer_grading',
-    'grading_controller' : 'grading_controller'
+    'url': 'http://127.0.0.1:3033/',
+    'username': 'lms',
+    'password': 'abcd',
+    'staff_grading': 'staff_grading',
+    'peer_grading': 'peer_grading',
+    'grading_controller': 'grading_controller'
 }
 
 ############################## LMS Migration ##################################
@@ -204,9 +209,16 @@ OPENID_USE_AS_ADMIN_LOGIN = False
 
 OPENID_PROVIDER_TRUSTED_ROOTS = ['*']
 
+############################## OAUTH2 Provider ################################
+FEATURES['ENABLE_OAUTH2_PROVIDER'] = True
+
 ######################## MIT Certificates SSL Auth ############################
 
 FEATURES['AUTH_USE_CERTIFICATES'] = False
+
+########################### External REST APIs #################################
+FEATURES['ENABLE_MOBILE_REST_API'] = True
+FEATURES['ENABLE_VIDEO_ABSTRACTION_LAYER_API'] = True
 
 ################################# CELERY ######################################
 
@@ -215,26 +227,28 @@ CELERY_ALWAYS_EAGER = True
 
 ################################ DEBUG TOOLBAR ################################
 
-INSTALLED_APPS += ('debug_toolbar',)
-MIDDLEWARE_CLASSES += ('django_comment_client.utils.QueryCountDebugMiddleware',
-                       'debug_toolbar.middleware.DebugToolbarMiddleware',)
+INSTALLED_APPS += ('debug_toolbar', 'djpyfs',)
+MIDDLEWARE_CLASSES += (
+    'django_comment_client.utils.QueryCountDebugMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+)
 INTERNAL_IPS = ('127.0.0.1',)
 
 DEBUG_TOOLBAR_PANELS = (
-   'debug_toolbar.panels.version.VersionDebugPanel',
-   'debug_toolbar.panels.timer.TimerDebugPanel',
-   'debug_toolbar.panels.settings_vars.SettingsVarsDebugPanel',
-   'debug_toolbar.panels.headers.HeaderDebugPanel',
-   'debug_toolbar.panels.request_vars.RequestVarsDebugPanel',
-   'debug_toolbar.panels.sql.SQLDebugPanel',
-   'debug_toolbar.panels.signals.SignalDebugPanel',
-   'debug_toolbar.panels.logger.LoggingPanel',
+    'debug_toolbar.panels.version.VersionDebugPanel',
+    'debug_toolbar.panels.timer.TimerDebugPanel',
+    'debug_toolbar.panels.settings_vars.SettingsVarsDebugPanel',
+    'debug_toolbar.panels.headers.HeaderDebugPanel',
+    'debug_toolbar.panels.request_vars.RequestVarsDebugPanel',
+    'debug_toolbar.panels.sql.SQLDebugPanel',
+    'debug_toolbar.panels.signals.SignalDebugPanel',
+    'debug_toolbar.panels.logger.LoggingPanel',
 
-#  Enabling the profiler has a weird bug as of django-debug-toolbar==0.9.4 and
-#  Django=1.3.1/1.4 where requests to views get duplicated (your method gets
-#  hit twice). So you can uncomment when you need to diagnose performance
-#  problems, but you shouldn't leave it on.
-#  'debug_toolbar.panels.profiling.ProfilingDebugPanel',
+    # Enabling the profiler has a weird bug as of django-debug-toolbar==0.9.4 and
+    # Django=1.3.1/1.4 where requests to views get duplicated (your method gets
+    # hit twice). So you can uncomment when you need to diagnose performance
+    # problems, but you shouldn't leave it on.
+    # 'debug_toolbar.panels.profiling.ProfilingDebugPanel',
 )
 
 DEBUG_TOOLBAR_CONFIG = {
@@ -264,10 +278,6 @@ PIPELINE_SASS_ARGUMENTS = '--debug-info --require {proj_dir}/static/sass/bourbon
 
 ANALYTICS_SERVER_URL = "http://127.0.0.1:9000/"
 ANALYTICS_API_KEY = ""
-
-ANALYTICS_DATA_URL = "http://127.0.0.1:8080"
-ANALYTICS_DATA_TOKEN = ""
-FEATURES['ENABLE_ANALYTICS_ACTIVE_COUNT'] = False
 
 ##### Segment.io  ######
 
@@ -303,6 +313,6 @@ REGISTRATION_CODE_LENGTH = 8
 #####################################################################
 # Lastly, see if the developer has any local overrides.
 try:
-    from .private import *      # pylint: disable=F0401
+    from .private import *      # pylint: disable=import-error
 except ImportError:
     pass

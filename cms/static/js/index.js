@@ -1,21 +1,48 @@
-require(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape"],
-    function (domReady, $, _, CancelOnEscape) {
+define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/views/utils/create_course_utils",
+    "js/views/utils/create_library_utils", "js/views/utils/view_utils"],
+    function (domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibraryUtilsFactory, ViewUtils) {
+        "use strict";
+        var CreateCourseUtils = new CreateCourseUtilsFactory({
+            name: '.new-course-name',
+            org: '.new-course-org',
+            number: '.new-course-number',
+            run: '.new-course-run',
+            save: '.new-course-save',
+            errorWrapper: '.create-course .wrap-error',
+            errorMessage: '#course_creation_error',
+            tipError: '.create-course span.tip-error',
+            error: '.create-course .error',
+            allowUnicode: '.allow-unicode-course-id'
+        }, {
+            shown: 'is-shown',
+            showing: 'is-showing',
+            hiding: 'is-hiding',
+            disabled: 'is-disabled',
+            error: 'error'
+        });
+
+        var CreateLibraryUtils = new CreateLibraryUtilsFactory({
+            name: '.new-library-name',
+            org: '.new-library-org',
+            number: '.new-library-number',
+            save: '.new-library-save',
+            errorWrapper: '.create-library .wrap-error',
+            errorMessage: '#library_creation_error',
+            tipError: '.create-library  span.tip-error',
+            error: '.create-library .error',
+            allowUnicode: '.allow-unicode-library-id'
+        }, {
+            shown: 'is-shown',
+            showing: 'is-showing',
+            hiding: 'is-hiding',
+            disabled: 'is-disabled',
+            error: 'error'
+        });
+
         var saveNewCourse = function (e) {
             e.preventDefault();
 
-            // One final check for empty values
-            var errors = _.reduce(
-                ['.new-course-name', '.new-course-org', '.new-course-number', '.new-course-run'],
-                function (acc, ele) {
-                    var $ele = $(ele);
-                    var error = validateRequiredField($ele.val());
-                    setNewCourseFieldInErr($ele.parent('li'), error);
-                    return error ? true : acc;
-                },
-                false
-            );
-
-            if (errors) {
+            if (CreateCourseUtils.hasInvalidRequiredFields()) {
                 return;
             }
 
@@ -25,144 +52,112 @@ require(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape"],
             var number = $newCourseForm.find('.new-course-number').val();
             var run = $newCourseForm.find('.new-course-run').val();
 
-            analytics.track('Created a Course', {
-                'org': org,
-                'number': number,
-                'display_name': display_name,
-                'run': run
-            });
+            var course_info = {
+                org: org,
+                number: number,
+                display_name: display_name,
+                run: run
+            };
 
-            $.postJSON('/course/', {
-                    'org': org,
-                    'number': number,
-                    'display_name': display_name,
-                    'run': run
-                },
-                function (data) {
-                    if (data.url !== undefined) {
-                        window.location = data.url;
-                    } else if (data.ErrMsg !== undefined) {
-                        $('.wrap-error').addClass('is-shown');
-                        $('#course_creation_error').html('<p>' + data.ErrMsg + '</p>');
-                        $('.new-course-save').addClass('is-disabled');
-                    }
-                }
-            );
+            analytics.track('Created a Course', course_info);
+            CreateCourseUtils.create(course_info, function (errorMessage) {
+                $('.create-course .wrap-error').addClass('is-shown');
+                $('#course_creation_error').html('<p>' + errorMessage + '</p>');
+                $('.new-course-save').addClass('is-disabled').attr('aria-disabled', true);
+            });
         };
 
-        var cancelNewCourse = function (e) {
-            e.preventDefault();
-            $('.new-course-button').removeClass('is-disabled');
-            $('.wrapper-create-course').removeClass('is-shown');
-            // Clear out existing fields and errors
-            _.each(
-                ['.new-course-name', '.new-course-org', '.new-course-number', '.new-course-run'],
-                function (field) {
-                    $(field).val('');
-                }
-            );
-            $('#course_creation_error').html('');
-            $('.wrap-error').removeClass('is-shown');
-            $('.new-course-save').off('click');
+        var makeCancelHandler = function (addType) {
+            return function(e) {
+                e.preventDefault();
+                $('.new-'+addType+'-button').removeClass('is-disabled').attr('aria-disabled', false);
+                $('.wrapper-create-'+addType).removeClass('is-shown');
+                // Clear out existing fields and errors
+                $('#create-'+addType+'-form input[type=text]').val('');
+                $('#'+addType+'_creation_error').html('');
+                $('.create-'+addType+' .wrap-error').removeClass('is-shown');
+                $('.new-'+addType+'-save').off('click');
+            };
         };
 
         var addNewCourse = function (e) {
             e.preventDefault();
-            $('.new-course-button').addClass('is-disabled');
-            $('.new-course-save').addClass('is-disabled');
+            $('.new-course-button').addClass('is-disabled').attr('aria-disabled', true);
+            $('.new-course-save').addClass('is-disabled').attr('aria-disabled', true);
             var $newCourse = $('.wrapper-create-course').addClass('is-shown');
             var $cancelButton = $newCourse.find('.new-course-cancel');
             var $courseName = $('.new-course-name');
             $courseName.focus().select();
             $('.new-course-save').on('click', saveNewCourse);
-            $cancelButton.bind('click', cancelNewCourse);
+            $cancelButton.bind('click', makeCancelHandler('course'));
             CancelOnEscape($cancelButton);
 
-            // Check that a course (org, number, run) doesn't use any special characters
-            var validateCourseItemEncoding = function (item) {
-                var required = validateRequiredField(item);
-                if (required) {
-                    return required;
-                }
-                if ($('.allow-unicode-course-id').val() === 'True'){
-                    if (/\s/g.test(item)) {
-                        return gettext('Please do not use any spaces in this field.');
-                    }
-                }
-                else{
-                   if (item !== encodeURIComponent(item)) {
-                       return gettext('Please do not use any spaces or special characters in this field.');
-                   }
-                }
-                return '';
+            CreateCourseUtils.configureHandlers();
+        };
+
+        var saveNewLibrary = function (e) {
+            e.preventDefault();
+
+            if (CreateLibraryUtils.hasInvalidRequiredFields()) {
+                return;
+            }
+
+            var $newLibraryForm = $(this).closest('#create-library-form');
+            var display_name = $newLibraryForm.find('.new-library-name').val();
+            var org = $newLibraryForm.find('.new-library-org').val();
+            var number = $newLibraryForm.find('.new-library-number').val();
+
+            var lib_info = {
+                org: org,
+                number: number,
+                display_name: display_name,
             };
 
-            // Ensure that org/course_num/run < 65 chars.
-            var validateTotalCourseItemsLength = function () {
-                var totalLength = _.reduce(
-                    ['.new-course-org', '.new-course-number', '.new-course-run'],
-                    function (sum, ele) {
-                        return sum + $(ele).val().length;
-                    }, 0
-                );
-                if (totalLength > 65) {
-                    $('.wrap-error').addClass('is-shown');
-                    $('#course_creation_error').html('<p>' + gettext('The combined length of the organization, course number, and course run fields cannot be more than 65 characters.') + '</p>');
-                    $('.new-course-save').addClass('is-disabled');
-                }
-                else {
-                    $('.wrap-error').removeClass('is-shown');
-                }
-            };
-
-            // Handle validation asynchronously
-            _.each(
-                ['.new-course-org', '.new-course-number', '.new-course-run'],
-                function (ele) {
-                    var $ele = $(ele);
-                    $ele.on('keyup', function (event) {
-                        // Don't bother showing "required field" error when
-                        // the user tabs into a new field; this is distracting
-                        // and unnecessary
-                        if (event.keyCode === 9) {
-                            return;
-                        }
-                        var error = validateCourseItemEncoding($ele.val());
-                        setNewCourseFieldInErr($ele.parent('li'), error);
-                        validateTotalCourseItemsLength();
-                    });
-                }
-            );
-            var $name = $('.new-course-name');
-            $name.on('keyup', function () {
-                var error = validateRequiredField($name.val());
-                setNewCourseFieldInErr($name.parent('li'), error);
-                validateTotalCourseItemsLength();
+            analytics.track('Created a Library', lib_info);
+            CreateLibraryUtils.create(lib_info, function (errorMessage) {
+                $('.create-library .wrap-error').addClass('is-shown');
+                $('#library_creation_error').html('<p>' + errorMessage + '</p>');
+                $('.new-library-save').addClass('is-disabled').attr('aria-disabled', true);
             });
         };
 
-        var validateRequiredField = function (msg) {
-            return msg.length === 0 ? gettext('Required field.') : '';
+        var addNewLibrary = function (e) {
+            e.preventDefault();
+            $('.new-library-button').addClass('is-disabled').attr('aria-disabled', true);
+            $('.new-library-save').addClass('is-disabled').attr('aria-disabled', true);
+            var $newLibrary = $('.wrapper-create-library').addClass('is-shown');
+            var $cancelButton = $newLibrary.find('.new-library-cancel');
+            var $libraryName = $('.new-library-name');
+            $libraryName.focus().select();
+            $('.new-library-save').on('click', saveNewLibrary);
+            $cancelButton.bind('click', makeCancelHandler('library'));
+            CancelOnEscape($cancelButton);
+
+            CreateLibraryUtils.configureHandlers();
         };
 
-        var setNewCourseFieldInErr = function (el, msg) {
-            if(msg) {
-                el.addClass('error');
-                el.children('span.tip-error').addClass('is-showing').removeClass('is-hiding').text(msg);
-                $('.new-course-save').addClass('is-disabled');
-            }
-            else {
-                el.removeClass('error');
-                el.children('span.tip-error').addClass('is-hiding').removeClass('is-showing');
-                // One "error" div is always present, but hidden or shown
-                if($('.error').length === 1) {
-                    $('.new-course-save').removeClass('is-disabled');
-                }
-            }
+        var showTab = function(tab) {
+          return function(e) {
+            e.preventDefault();
+            $('.courses-tab').toggleClass('active', tab === 'courses');
+            $('.libraries-tab').toggleClass('active', tab === 'libraries');
+          };
         };
 
-
-        domReady(function () {
+        var onReady = function () {
             $('.new-course-button').bind('click', addNewCourse);
-        });
+            $('.new-library-button').bind('click', addNewLibrary);
+            $('.dismiss-button').bind('click', ViewUtils.deleteNotificationHandler(function () {
+                ViewUtils.reload();
+            }));
+            $('.action-reload').bind('click', ViewUtils.reload);
+            $('#course-index-tabs .courses-tab').bind('click', showTab('courses'));
+            $('#course-index-tabs .libraries-tab').bind('click', showTab('libraries'));
+        };
+
+        domReady(onReady);
+
+        return {
+            onReady: onReady
+        };
     });

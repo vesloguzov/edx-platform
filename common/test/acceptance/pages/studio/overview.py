@@ -8,6 +8,7 @@ from bok_choy.promise import EmptyPromise
 
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 
 from .course_page import CoursePage
 from .container import ContainerPage
@@ -77,7 +78,7 @@ class CourseOutlineItem(object):
 
     @property
     def has_staff_lock_warning(self):
-        """ Returns True iff the 'Contains staff only content' message is visible """
+        """ Returns True if the 'Contains staff only content' message is visible """
         return self.status_message == 'Contains staff only content' if self.has_status_message else False
 
     @property
@@ -148,6 +149,22 @@ class CourseOutlineItem(object):
     def policy(self):
         element = self.q(css=self._bounded_selector(".status-grading-value"))
         return element.first.text[0] if element.present else None
+
+    def publish(self):
+        """
+        Publish the unit.
+        """
+        click_css(self, self._bounded_selector('.action-publish'), require_notification=False)
+        modal = CourseOutlineModal(self)
+        EmptyPromise(lambda: modal.is_shown(), 'Modal is shown.')
+        modal.publish()
+
+    @property
+    def publish_action(self):
+        """
+        Returns the link for publishing a unit.
+        """
+        return self.q(css=self._bounded_selector('.action-publish')).first
 
 
 class CourseOutlineContainer(CourseOutlineItem):
@@ -239,6 +256,9 @@ class CourseOutlineChild(PageObject, CourseOutlineItem):
     """
     A page object that will be used as a child of :class:`CourseOutlineContainer`.
     """
+    url = None
+    BODY_SELECTOR = '.outline-item'
+
     def __init__(self, browser, locator):
         super(CourseOutlineChild, self).__init__(browser)
         self.locator = locator
@@ -252,6 +272,40 @@ class CourseOutlineChild(PageObject, CourseOutlineItem):
         """
         click_css(self, self._bounded_selector('.delete-button'), require_notification=False)
         confirm_prompt(self, cancel)
+
+    def _bounded_selector(self, selector):
+        """
+        Return `selector`, but limited to this particular `CourseOutlineChild` context
+        """
+        return '{}[data-locator="{}"] {}'.format(
+            self.BODY_SELECTOR,
+            self.locator,
+            selector
+        )
+
+    @property
+    def name(self):
+        titles = self.q(css=self._bounded_selector(self.NAME_SELECTOR)).text
+        if titles:
+            return titles[0]
+        else:
+            return None
+
+    @property
+    def children(self):
+        """
+        Will return any first-generation descendant items of this item.
+        """
+        descendants = self.q(css=self._bounded_selector(self.BODY_SELECTOR)).map(
+            lambda el: CourseOutlineChild(self.browser, el.get_attribute('data-locator'))).results
+
+        # Now remove any non-direct descendants.
+        grandkids = []
+        for descendant in descendants:
+            grandkids.extend(descendant.children)
+
+        grand_locators = [grandkid.locator for grandkid in grandkids]
+        return [descendant for descendant in descendants if descendant.locator not in grand_locators]
 
 
 class CourseOutlineUnit(CourseOutlineChild):
@@ -272,8 +326,12 @@ class CourseOutlineUnit(CourseOutlineChild):
     def is_browser_on_page(self):
         return self.q(css=self.BODY_SELECTOR).present
 
+    def children(self):
+        return self.q(css=self._bounded_selector(self.BODY_SELECTOR)).map(
+            lambda el: CourseOutlineUnit(self.browser, el.get_attribute('data-locator'))).results
 
-class CourseOutlineSubsection(CourseOutlineChild, CourseOutlineContainer):
+
+class CourseOutlineSubsection(CourseOutlineContainer, CourseOutlineChild):
     """
     :class`.PageObject` that wraps a subsection block on the Studio Course Outline page.
     """
@@ -309,7 +367,7 @@ class CourseOutlineSubsection(CourseOutlineChild, CourseOutlineContainer):
         self.q(css=self._bounded_selector(self.ADD_BUTTON_SELECTOR)).click()
 
 
-class CourseOutlineSection(CourseOutlineChild, CourseOutlineContainer):
+class CourseOutlineSection(CourseOutlineContainer, CourseOutlineChild):
     """
     :class`.PageObject` that wraps a section block on the Studio Course Outline page.
     """
@@ -431,11 +489,15 @@ class CourseOutlinePage(CoursePage, CourseOutlineContainer):
         """
         click_css(self, '.wrapper-mast nav.nav-actions .button-new')
 
-    def add_section_from_bottom_button(self):
+    def add_section_from_bottom_button(self, click_child_icon=False):
         """
         Clicks the button for adding a section which resides at the bottom of the screen.
         """
-        click_css(self, self.BOTTOM_ADD_SECTION_BUTTON)
+        element_css = self.BOTTOM_ADD_SECTION_BUTTON
+        if click_child_icon:
+            element_css += " .fa-plus"
+
+        click_css(self, element_css)
 
     def toggle_expand_collapse(self):
         """
@@ -456,6 +518,19 @@ class CourseOutlinePage(CoursePage, CourseOutlineContainer):
         Returns true if a message informing the user that the course has no content is visible
         """
         return self.q(css='.outline .no-content').is_present()
+
+    @property
+    def has_rerun_notification(self):
+        """
+        Returns true iff the rerun notification is present on the page.
+        """
+        return self.q(css='.wrapper-alert.is-shown').is_present()
+
+    def dismiss_rerun_notification(self):
+        """
+        Clicks the dismiss button in the rerun notification.
+        """
+        self.q(css='.dismiss-button').click()
 
     @property
     def expand_collapse_link_state(self):
@@ -481,9 +556,16 @@ class CourseOutlinePage(CoursePage, CourseOutlineContainer):
                 if subsection.is_collapsed:
                     subsection.toggle_expand()
 
+    @property
+    def xblocks(self):
+        """
+        Return a list of xblocks loaded on the outline page.
+        """
+        return self.children(CourseOutlineChild)
+
 
 class CourseOutlineModal(object):
-    MODAL_SELECTOR = ".edit-outline-item-modal"
+    MODAL_SELECTOR = ".wrapper-modal-window"
 
     def __init__(self, page):
         self.page = page
@@ -505,6 +587,10 @@ class CourseOutlineModal(object):
 
     def save(self):
         self.click(".action-save")
+        self.page.wait_for_ajax()
+
+    def publish(self):
+        self.click(".action-publish")
         self.page.wait_for_ajax()
 
     def cancel(self):
@@ -534,6 +620,7 @@ class CourseOutlineModal(object):
         for i in xrange(abs(date_diff)):
             self.page.q(css=selector).click()
         self.page.q(css="a.ui-state-default").nth(day - 1).click()  # set day
+        self.page.wait_for_element_invisibility("#ui-datepicker-div", "datepicker should be closed")
         EmptyPromise(
             lambda: getattr(self, property_name) == u'{m}/{d}/{y}'.format(m=month, d=day, y=year),
             "{} is updated in modal.".format(property_name)

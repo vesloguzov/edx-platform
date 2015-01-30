@@ -15,11 +15,9 @@ from xmodule.error_module import ErrorDescriptor
 from xmodule.modulestore.django import modulestore
 
 from courseware.courses import get_course_by_id, get_courses
+from course_modes.models import CourseMode
 from student.models import CourseEnrollment
-from student.views import (
-    enroll_student_with_default_mode, send_enrollment_email,
-    EnrollmentError, EnrollmentModeRequiredException
-)
+from student.views import send_enrollment_email
 
 from api.serializers import UserSerializer, UID_PATTERN, CourseSerializer, CourseEnrollmentSerializer
 
@@ -107,8 +105,14 @@ class EnrollmentViewSet(viewsets.GenericViewSet):
     def enroll(self, request, *args, **kwargs):
         user = self._get_user(*args, **kwargs)
         course = self._get_course(*args, **kwargs)
+        # TODO: enroll if possible
+        if not CourseMode.can_auto_enroll(course.id):
+            return Response({'detail': _("Could not enroll")},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+
         try:
-            enrollment = enroll_student_with_default_mode(user, course, auto_register=False)
+            CourseEnrollment.enroll(user, course.id, check_access=True)
             if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL'):
                 send_enrollment_email(user, course, use_https_for_links=request.is_secure())
         except EnrollmentModeRequiredException:

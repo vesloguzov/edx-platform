@@ -6,18 +6,17 @@ from django.test.utils import override_settings
 from django.test.client import RequestFactory
 from django.core.exceptions import SuspiciousOperation
 from mock import patch
-
+from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from capa.tests.response_xml_factory import OptionResponseXMLFactory
 
-from courseware.tests.modulestore_config import TEST_DATA_MIXED_MODULESTORE
+from courseware.grades import grade, iterate_grades_for
 from courseware.tests.factories import StudentModuleFactory
+from xmodule.modulestore.tests.django_utils import TEST_DATA_MOCK_MODULESTORE
+from courseware.tests.modulestore_config import TEST_DATA_MIXED_MODULESTORE
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.django import modulestore
-from opaque_keys.edx.locations import SlashSeparatedCourseKey
-
-from courseware.grades import grade, iterate_grades_for
 
 
 def _grade_with_errors(student, request, course, keep_raw_scores=False):
@@ -104,7 +103,7 @@ class TestGradingRequest(ModuleStoreTestCase):
         self.assertEqual(_grade['percent'], 0.0)
 
 
-@override_settings(MODULESTORE=TEST_DATA_MIXED_MODULESTORE)
+@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestGradeIteration(ModuleStoreTestCase):
     """
     Test iteration through student gradesets.

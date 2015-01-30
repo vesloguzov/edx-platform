@@ -31,9 +31,4 @@ CAS_INSTANT_LOGIN_EXEMPT = (
 )
 
 USER_DATA_REQUEST_TIMEOUT = datetime.timedelta(hours=24)
-
-ALLOWED_HOSTS = ['.lektorium.tv', '127.0.0.1']
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-
 SYNC_USER_URL = 'https://www.lektorium.tv/uidname/node/25618?api-key={}'

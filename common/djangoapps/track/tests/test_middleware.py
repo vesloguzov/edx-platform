@@ -1,5 +1,3 @@
-import re
-
 from mock import patch
 from mock import sentinel
 
@@ -64,6 +62,7 @@ class TrackMiddlewareTestCase(TestCase):
             'path': '/courses/',
             'org_id': '',
             'course_id': '',
+            'client_id': None,
         })
 
     def get_context_for_path(self, path):
