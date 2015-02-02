@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from contentstore.tests.utils import AjaxEnabledTestClient
+from student.models import UserProfile
 
 
 class InternationalizationTest(ModuleStoreTestCase):
@@ -32,6 +33,7 @@ class InternationalizationTest(ModuleStoreTestCase):
         # Staff has access to view all courses
         self.user.is_staff = True
         self.user.save()
+        UserProfile.objects.create(user=self.user)
 
         self.course_data = {
             'org': 'MITx',

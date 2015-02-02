@@ -11,6 +11,7 @@ from django.views.generic.base import View
 from django.utils.translation import ugettext as _
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.conf import settings
 
 from edxmako.shortcuts import render_to_response
 

@@ -1,6 +1,7 @@
 """
 Tests for the certificates models.
 """
+from unittest import skip
 
 from mock import patch
 from django.conf import settings

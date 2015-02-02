@@ -75,7 +75,6 @@ class TestSortedCountryList(TestCase):
             # testing two option elements to be in alphabetical order
             self.assertLess(options[1].text, options[10].text)
 
-
 class TestExtraRegistrationVariables(TestCase):
     """
     Test that extra registration variables are properly checked according to settings
@@ -85,7 +84,7 @@ class TestExtraRegistrationVariables(TestCase):
         self.url = reverse('create_account')
 
         self.url_params = {
-            'username': 'username',
+            'nickname': 'nickname',
             'name': 'name',
             'email': 'foo_bar@bar.com',
             'password': 'password',

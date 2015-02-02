@@ -23,6 +23,8 @@ from xmodule.modulestore.xml_importer import import_from_xml
 
 TEST_DATA_DIR = settings.COMMON_TEST_DATA_ROOT
 
+from student.models import UserProfile
+
 
 def parse_json(response):
     """Parse response, which is assumed to be json"""
@@ -81,10 +83,12 @@ class CourseTestCase(ModuleStoreTestCase):
         will be cleared out before each test case execution and deleted
         afterwards.
         """
-        self.user_password = super(CourseTestCase, self).setUp()
+        user_password = super(CourseTestCase, self).setUp()
+        # create profile for user in ModuleStoreTestCase since it cannot create profile itself
+        UserProfile.objects.create(user=self.user)
 
         self.client = AjaxEnabledTestClient()
-        self.client.login(username=self.user.username, password=self.user_password)
+        self.client.login(username=self.user.username, password=user_password)
 
         self.course = CourseFactory.create()
 
@@ -93,6 +97,8 @@ class CourseTestCase(ModuleStoreTestCase):
         Create a non-staff user, log them in (if authenticate=True), and return the client, user to use for testing.
         """
         nonstaff, password = self.create_non_staff_user()
+        # create profile for user in ModuleStoreTestCase since it cannot create profile itself
+        UserProfile.objects.create(user=nonstaff)
 
         client = AjaxEnabledTestClient()
         if authenticate:

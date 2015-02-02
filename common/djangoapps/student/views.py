@@ -1429,20 +1429,16 @@ def _do_create_account(post_vars, extended_profile=None):
     # TODO: Rearrange so that if part of the process fails, the whole process fails.
     # Right now, we can have e.g. no registration e-mail sent out and a zombie account
 
-    try:
-        if user.username:
-            user.save()
-        else:
-            save_user_with_auto_username(user)
-    except IntegrityError:
-        # Figure out the cause of the integrity error
-        if len(User.objects.filter(email=post_vars['email'])) > 0:
-            raise AccountValidationError(
-                _("An account with the Email '{email}' already exists.").format(email=post_vars['email']),
-                field="email"
-            )
-        else:
-            raise
+    if User.objects.filter(email=post_vars['email']).exists():
+        raise AccountValidationError(
+            _("An account with the Email '{email}' already exists.").format(email=post_vars['email']),
+            field="email"
+        )
+
+    if user.username:
+        user.save()
+    else:
+        save_user_with_auto_username(user)
 
     # add this account creation to password history
     # NOTE, this will be a NOP unless the feature has been turned on in configuration
@@ -1602,6 +1598,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
             return JsonResponse(js, status=400)
 
         max_length = 75
+        # TODO: remove limitation if not required since it has no database limitation
         if field_name == 'nickname':
             max_length = 30
 
@@ -1647,7 +1644,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
                 extended_profile = {}
             extended_profile[field] = post_vars[field]
 
-    # Make sure that password and username fields do not match
+    # Make sure that password and nickname fields do not match
     nickname = post_vars['nickname']
     password = post_vars['password']
     if nickname == password:
@@ -1748,14 +1745,14 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     # TODO: there is no error checking here to see that the user actually logged in successfully,
     # and is not yet an active user.
     if new_user is not None:
-        AUDIT_LOG.info(u"Login success on new account creation - {0}".format(new_user.username))
+        AUDIT_LOG.info(u"Login success on new account creation - {0} ({1})".format(login_user.username, login_user.email))
 
     if do_external_auth:
         eamap.user = new_user
         eamap.dtsignup = datetime.datetime.now(UTC)
         eamap.save()
-        AUDIT_LOG.info("User registered with external_auth %s", post_vars['username'])
-        AUDIT_LOG.info('Updated ExternalAuthMap for %s to be %s', post_vars['username'], eamap)
+        AUDIT_LOG.info("User registered with external_auth %s (%s)", user.username, user.email)
+        AUDIT_LOG.info('Updated ExternalAuthMap for %s (%s) to be %s', user.username, user.email, eamap)
 
         if settings.FEATURES.get('BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH'):
             log.info('bypassing activation email')

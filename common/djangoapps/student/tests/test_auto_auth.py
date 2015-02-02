@@ -1,9 +1,15 @@
+from unittest import skip
+from mock import patch
+
 from django.test import TestCase
 from django.test.client import Client
 from django.contrib.auth.models import User
 from django_comment_common.models import (
     Role, FORUM_ROLE_ADMINISTRATOR, FORUM_ROLE_MODERATOR, FORUM_ROLE_STUDENT)
 from django_comment_common.utils import seed_permissions_roles
+
+from opaque_keys.edx.locations import SlashSeparatedCourseKey
+
 from student.models import CourseEnrollment, UserProfile
 from util.testing import UrlResetMixin
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
@@ -46,8 +52,8 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
         self.assertTrue(User.objects.all()[0].is_active)
 
     def test_create_same_user(self):
-        self._auto_auth(username='test')
-        self._auto_auth(username='test')
+        self._auto_auth(email='test@example.com')
+        self._auto_auth(email='test@example.com')
         self.assertEqual(User.objects.count(), 1)
 
     def test_create_multiple_users(self):
@@ -63,20 +69,22 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
         Test that the user gets created with the correct attributes
         when they are passed as parameters on the auto-auth page.
         """
-        self._auto_auth(
-            username='robot', password='test',
-            email='robot@edx.org', full_name="Robot Name"
-        )
+        data = {
+            'nickname': 'robot',
+            'password': 'test',
+            'email': 'robot@edx.org',
+            'full_name': "Robot Name"
+        }
+        self._auto_auth(**data)
 
         # Check that the user has the correct info
-        user = User.objects.get(username='robot')
-        self.assertEqual(user.username, 'robot')
+        user = User.objects.get(email=data['email'])
         self.assertTrue(user.check_password('test'))
-        self.assertEqual(user.email, 'robot@edx.org')
 
         # Check that the user has a profile
         user_profile = UserProfile.objects.get(user=user)
         self.assertEqual(user_profile.name, "Robot Name")
+        self.assertEqual(user.profile.nickname, data['nickname'])
 
         # By default, the user should not be global staff
         self.assertFalse(user.is_staff)
@@ -84,13 +92,14 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
     def test_create_staff_user(self):
 
         # Create a staff user
-        self._auto_auth(username='test', staff='true')
-        user = User.objects.get(username='test')
+        email='test@example.com'
+        self._auto_auth(email=email, staff='true')
+        user = User.objects.get(email=email)
         self.assertTrue(user.is_staff)
 
         # Revoke staff privileges
-        self._auto_auth(username='test', staff='false')
-        user = User.objects.get(username='test')
+        self._auto_auth(email=email, staff='false')
+        user = User.objects.get(email=email)
         self.assertFalse(user.is_staff)
 
     @ddt.data(*COURSE_IDS_DDT)
@@ -98,27 +107,28 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
     def test_course_enrollment(self, course_id, course_key):
 
         # Create a user and enroll in a course
-        self._auto_auth(username='test', course_id=course_id)
+        self._auto_auth(nickname='test', course_id=course_id)
 
         # Check that a course enrollment was created for the user
         self.assertEqual(CourseEnrollment.objects.count(), 1)
         enrollment = CourseEnrollment.objects.get(course_id=course_key)
-        self.assertEqual(enrollment.user.username, "test")
+        self.assertEqual(enrollment.user.profile.nickname, "test")
 
     @ddt.data(*COURSE_IDS_DDT)
     @ddt.unpack
     def test_double_enrollment(self, course_id, course_key):
 
         # Create a user and enroll in a course
-        self._auto_auth(username='test', course_id=course_id)
+        email = 'test@example.com'
+        self._auto_auth(email=email, course_id=self.course_id)
 
         # Make the same call again, re-enrolling the student in the same course
-        self._auto_auth(username='test', course_id=course_id)
+        self._auto_auth(email=email, course_id=course_id)
 
         # Check that only one course enrollment was created for the user
         self.assertEqual(CourseEnrollment.objects.count(), 1)
         enrollment = CourseEnrollment.objects.get(course_id=course_key)
-        self.assertEqual(enrollment.user.username, "test")
+        self.assertEqual(enrollment.user.email, email)
 
     @ddt.data(*COURSE_IDS_DDT)
     @ddt.unpack
@@ -128,14 +138,16 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
         self.assertEqual(len(course_roles), 4)  # sanity check
 
         # Student role is assigned by default on course enrollment.
-        self._auto_auth(username='a_student', course_id=course_id)
-        user = User.objects.get(username='a_student')
+        email = 'student@example.com'
+        self._auto_auth(email=email, course_id=self.course_id)
+        user = User.objects.get(email=email)
         user_roles = user.roles.all()
         self.assertEqual(len(user_roles), 1)
         self.assertEqual(user_roles[0], course_roles[FORUM_ROLE_STUDENT])
 
-        self._auto_auth(username='a_moderator', course_id=course_id, roles='Moderator')
-        user = User.objects.get(username='a_moderator')
+        email = 'moderator@example.com'
+        self._auto_auth(email=email, course_id=self.course_id, roles='Moderator')
+        user = User.objects.get(email=email)
         user_roles = user.roles.all()
         self.assertEqual(
             set(user_roles),
@@ -143,9 +155,10 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
                 course_roles[FORUM_ROLE_MODERATOR]]))
 
         # check multiple roles work.
-        self._auto_auth(username='an_admin', course_id=course_id,
+        email = 'admin@example.com'
+        self._auto_auth(email=email, course_id=self.course_id,
                         roles='{},{}'.format(FORUM_ROLE_MODERATOR, FORUM_ROLE_ADMINISTRATOR))
-        user = User.objects.get(username='an_admin')
+        user = User.objects.get(email=email)
         user_roles = user.roles.all()
         self.assertEqual(
             set(user_roles),

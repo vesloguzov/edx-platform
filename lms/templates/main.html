@@ -136,8 +136,7 @@
 </head>
 
 <body class="${dir_rtl} <%block name='bodyclass'/> lang_${LANGUAGE_CODE}">
-  <div class="window-wrap" dir="${dir_rtl}">
-    <div class="sticky-footer-wrapper">
+  <div class="window-wrap" dir="${dir_rtl}" style="height: 100%; min-height: 100%;">
     <a class="nav-skip" href="<%block name="nav_skip">#content</%block>">${_("Skip to this view's content")}</a>
 
     <%include file="mathjax_accessible.html" />
@@ -161,7 +160,6 @@
       %>
       <%include file="${footer_file}" />
     </%block>
-    </div>
 
   </div>
 

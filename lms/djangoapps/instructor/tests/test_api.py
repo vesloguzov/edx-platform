@@ -44,7 +44,7 @@ from shoppingcart.models import (
 )
 from shoppingcart.pdf import PDFInvoice
 from student.models import (
-    CourseEnrollment, CourseEnrollmentAllowed, NonExistentCourseError
+    CourseEnrollment, CourseEnrollmentAllowed, NonExistentCourseError, UserProfile
 )
 from student.tests.factories import UserFactory, CourseModeFactory, UserProfileFactory
 from student.roles import CourseBetaTesterRole, CourseSalesAdminRole, CourseFinanceAdminRole
@@ -54,6 +54,7 @@ from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 
 import instructor_task.api
+from instructor.access import update_forum_role
 import instructor.views.api
 from instructor.tests.utils import FakeContentTask, FakeEmail, FakeEmailInfo
 from instructor.views.api import generate_unique_password
@@ -570,6 +571,9 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
         )
         self.notenrolled_student = UserFactory(username='NotEnrolledStudent', first_name='NotEnrolled',
                                                last_name='Student')
+        profile = self.notenrolled_student.profile
+        profile.nickname = 'not enrolled student'
+        profile.save()
 
         # Create invited, but not registered, user
         cea = CourseEnrollmentAllowed(email='robot-allowed@robot.org', course_id=self.course.id)
@@ -631,7 +635,7 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
         res_json = json.loads(response.content)
         self.assertEqual(res_json, expected)
 
-    def test_invalid_username(self):
+    def test_invalid_nickname(self):
         url = reverse('students_update_enrollment', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.post(url, {'identifiers': 'percivaloctavius', 'action': 'enroll', 'email_students': False})
         self.assertEqual(response.status_code, 200)
@@ -651,29 +655,29 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
         res_json = json.loads(response.content)
         self.assertEqual(res_json, expected)
 
-    def test_enroll_with_username(self):
+    def test_enroll_with_nickname(self):
         url = reverse('students_update_enrollment', kwargs={'course_id': self.course.id.to_deprecated_string()})
-        response = self.client.post(url, {'identifiers': self.notenrolled_student.username, 'action': 'enroll', 'email_students': False})
+        response = self.client.post(url, {'identifiers': self.notenrolled_student.profile.nickname, 'action': 'enroll', 'email_students': False})
         self.assertEqual(response.status_code, 200)
 
         # test the response data
         expected = {
-            "action": "enroll",
-            'auto_enroll': False,
-            "results": [
+            u"action": u"enroll",
+            u'auto_enroll': False,
+            u"results": [
                 {
-                    "identifier": self.notenrolled_student.username,
-                    "before": {
-                        "enrollment": False,
-                        "auto_enroll": False,
-                        "user": True,
-                        "allowed": False,
+                    u"identifier": self.notenrolled_student.profile.nickname,
+                    u"before": {
+                        u"enrollment": False,
+                        u"auto_enroll": False,
+                        u"user": True,
+                        u"allowed": False,
                     },
-                    "after": {
-                        "enrollment": True,
-                        "auto_enroll": False,
-                        "user": True,
-                        "allowed": False,
+                    u"after": {
+                        u"enrollment": True,
+                        u"auto_enroll": False,
+                        u"user": True,
+                        u"allowed": False,
                     }
                 }
             ]
@@ -1153,6 +1157,10 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.assertTrue(CourseBetaTesterRole(self.course.id).has_user(self.beta_tester))
 
         self.notenrolled_student = UserFactory(username='NotEnrolledStudent')
+        # provide nickname to test enrollment by nickname
+        profile = self.notenrolled_student.profile
+        profile.nickname = 'not enrolled student'
+        profile.save()
 
         self.notregistered_email = 'robot-not-an-email-yet@robot.org'
         self.assertEqual(User.objects.filter(email=self.notregistered_email).count(), 0)
@@ -1190,22 +1198,23 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         Test Helper Method (not a test, called by other tests)
 
         Takes a client response from a call to bulk_beta_modify_access with 'email_students': False,
-        and the student identifier (email or username) given as 'identifiers' in the request.
+        and the student identifier (email or nickname) given as 'identifiers' in the request.
 
         Asserts the reponse returns cleanly, that the student was added as a beta tester, and the
-        response properly contains their identifier, 'error': False, and 'userDoesNotExist': False.
-        Additionally asserts no email was sent.
+        response properly contains their identifier, 'error': False, 'userDoesNotExist': False
+        and 'nonuniqueNickname': False. Additionally asserts no email was sent.
         """
         self.assertEqual(response.status_code, 200)
         self.assertTrue(CourseBetaTesterRole(self.course.id).has_user(self.notenrolled_student))
         # test the response data
         expected = {
-            "action": "add",
-            "results": [
+            u"action": u"add",
+            u"results": [
                 {
-                    "identifier": identifier,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": identifier,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -1228,16 +1237,16 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.add_notenrolled(response, self.notenrolled_student.email)
         self.assertTrue(CourseEnrollment.is_enrolled(self.notenrolled_student, self.course.id))
 
-    def test_add_notenrolled_username(self):
+    def test_add_notenrolled_nickname(self):
         url = reverse('bulk_beta_modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
-        response = self.client.post(url, {'identifiers': self.notenrolled_student.username, 'action': 'add', 'email_students': False})
-        self.add_notenrolled(response, self.notenrolled_student.username)
+        response = self.client.post(url, {'identifiers': self.notenrolled_student.profile.nickname, 'action': 'add', 'email_students': False})
+        self.add_notenrolled(response, self.notenrolled_student.profile.nickname)
         self.assertFalse(CourseEnrollment.is_enrolled(self.notenrolled_student, self.course.id))
 
-    def test_add_notenrolled_username_autoenroll(self):
+    def test_add_notenrolled_nickname_autoenroll(self):
         url = reverse('bulk_beta_modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
-        response = self.client.post(url, {'identifiers': self.notenrolled_student.username, 'action': 'add', 'email_students': False, 'auto_enroll': True})
-        self.add_notenrolled(response, self.notenrolled_student.username)
+        response = self.client.post(url, {'identifiers': self.notenrolled_student.profile.nickname, 'action': 'add', 'email_students': False, 'auto_enroll': True})
+        self.add_notenrolled(response, self.notenrolled_student.profile.nickname)
         self.assertTrue(CourseEnrollment.is_enrolled(self.notenrolled_student, self.course.id))
 
     @ddt.data('http', 'https')
@@ -1251,12 +1260,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.assertTrue(CourseBetaTesterRole(self.course.id).has_user(self.notenrolled_student))
         # test the response data
         expected = {
-            "action": "add",
-            "results": [
+            u"action": u"add",
+            u"results": [
                 {
-                    "identifier": self.notenrolled_student.email,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": self.notenrolled_student.email,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -1298,12 +1308,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.assertTrue(CourseBetaTesterRole(self.course.id).has_user(self.notenrolled_student))
         # test the response data
         expected = {
-            "action": "add",
-            "results": [
+            u"action": u"add",
+            u"results": [
                 {
-                    "identifier": self.notenrolled_student.email,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": self.notenrolled_student.email,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -1359,12 +1370,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.assertEqual(response.status_code, 200)
         # test the response data
         expected = {
-            "action": "add",
-            "results": [
+            u"action": u"add",
+            u"results": [
                 {
-                    "identifier": self.notregistered_email,
-                    "error": True,
-                    "userDoesNotExist": True
+                    u"identifier": self.notregistered_email,
+                    u"error": True,
+                    u"userDoesNotExist": True,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -1387,12 +1399,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
 
         # test the response data
         expected = {
-            "action": "remove",
-            "results": [
+            u"action": u"remove",
+            u"results": [
                 {
-                    "identifier": self.beta_tester.email,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": self.beta_tester.email,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -1415,12 +1428,13 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
 
         # test the response data
         expected = {
-            "action": "remove",
-            "results": [
+            u"action": u"remove",
+            u"results": [
                 {
-                    "identifier": self.beta_tester.email,
-                    "error": False,
-                    "userDoesNotExist": False
+                    u"identifier": self.beta_tester.email,
+                    u"error": False,
+                    u"userDoesNotExist": False,
+                    u"nonuniqueNickname": False,
                 }
             ]
         }
@@ -1447,6 +1461,7 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         )
 
 
+@ddt.ddt
 @override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
@@ -1504,14 +1519,17 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         })
         self.assertEqual(response.status_code, 200)
 
-    def test_modify_access_allow_with_uname(self):
+    def test_modify_access_allow_with_nickname(self):
+        UserProfile.objects.filter(user=self.other_instructor).update(nickname='other instructor')
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student_identifier': self.other_instructor.username,
+            'student_identifier': self.other_instructor.profile.nickname,
             'rolename': 'staff',
             'action': 'allow',
         })
         self.assertEqual(response.status_code, 200)
+        res_json = json.loads(response.content)
+        self.assertTrue(res_json.get('success'))
 
     def test_modify_access_revoke(self):
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
@@ -1522,14 +1540,34 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         })
         self.assertEqual(response.status_code, 200)
 
-    def test_modify_access_revoke_with_username(self):
+    def test_modify_access_revoke_with_nickname(self):
+        UserProfile.objects.filter(user=self.other_staff).update(nickname='other staff')
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student_identifier': self.other_staff.username,
+            'student_identifier': self.other_staff.profile.nickname,
             'rolename': 'staff',
             'action': 'revoke',
         })
         self.assertEqual(response.status_code, 200)
+        res_json = json.loads(response.content)
+        self.assertTrue(res_json.get('success'))
+
+    def test_modify_access_with_nonunique_nickname(self):
+        UserProfile.objects.filter(user=self.other_staff).update(nickname='other user')
+        UserProfile.objects.filter(user=self.other_user).update(nickname='other user')
+        url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
+        response = self.client.get(url, {
+            'student_identifier': self.other_user.profile.nickname,
+            'rolename': 'staff',
+            'action': 'revoke',
+        })
+        self.assertEqual(response.status_code, 200)
+        expected = {
+            u'student_identifier': self.other_user.profile.nickname,
+            u'multipleUsers': True,
+        }
+        res_json = json.loads(response.content)
+        self.assertEqual(res_json, expected)
 
     def test_modify_access_with_fake_user(self):
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
@@ -1540,8 +1578,8 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         })
         self.assertEqual(response.status_code, 200)
         expected = {
-            'student_identifier': 'GandalfTheGrey',
-            'userDoesNotExist': True,
+            u'student_identifier': 'GandalfTheGrey',
+            u'userDoesNotExist': True,
         }
         res_json = json.loads(response.content)
         self.assertEqual(res_json, expected)
@@ -1551,14 +1589,14 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         self.other_user.save()  # pylint: disable=no-member
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student_identifier': self.other_user.username,
+            'student_identifier': self.other_user.email,
             'rolename': 'beta',
             'action': 'allow',
         })
         self.assertEqual(response.status_code, 200)
         expected = {
-            'student_identifier': self.other_user.username,
-            'inactiveUser': True,
+            u'student_identifier': self.other_user.email,
+            u'inactiveUser': True,
         }
         res_json = json.loads(response.content)
         self.assertEqual(res_json, expected)
@@ -1586,10 +1624,10 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         self.assertEqual(response.status_code, 200)
         # check response content
         expected = {
-            'student_identifier': self.instructor.username,
-            'rolename': 'instructor',
-            'action': 'revoke',
-            'removingSelfAsInstructor': True,
+            u'student_identifier': self.instructor.email,
+            u'rolename': 'instructor',
+            u'action': 'revoke',
+            u'removingSelfAsInstructor': True,
         }
         res_json = json.loads(response.content)
         self.assertEqual(res_json, expected)
@@ -1617,13 +1655,14 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
 
         # check response content
         expected = {
-            'course_id': self.course.id.to_deprecated_string(),
-            'staff': [
+            u'course_id': self.course.id.to_deprecated_string(),
+            u'staff': [
                 {
-                    'username': self.other_staff.username,
-                    'email': self.other_staff.email,
-                    'first_name': self.other_staff.first_name,
-                    'last_name': self.other_staff.last_name,
+                    u'username': self.other_staff.username,
+                    u'nickname': self.other_staff.profile.nickname_or_default,
+                    u'email': self.other_staff.email,
+                    u'first_name': self.other_staff.first_name,
+                    u'last_name': self.other_staff.last_name,
                 }
             ]
         }
@@ -1639,40 +1678,67 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
 
         # check response content
         expected = {
-            'course_id': self.course.id.to_deprecated_string(),
-            'beta': []
+            u'course_id': self.course.id.to_deprecated_string(),
+            u'beta': []
         }
         res_json = json.loads(response.content)
         self.assertEqual(res_json, expected)
 
-    def test_update_forum_role_membership(self):
+    @ddt.data('Administrator', 'Moderator', 'Community TA')
+    def test_update_forum_role_membership_by_email(self, role_name):
         """
-        Test update forum role membership with user's email and username.
+        Test update forum role membership with user's email.
         """
+        # Seed forum roles for course.
+        seed_permissions_roles(self.course.id)
+
+        # Test add role with email
+        self.assert_update_forum_role_membership(self.other_user.email, role_name, 'allow')
+
+        # Test revoke role with email
+        self.assert_update_forum_role_membership(self.other_user.email, role_name, 'revoke')
+
+    @ddt.data('Administrator', 'Moderator', 'Community TA')
+    def test_update_forum_role_membership_by_nickname(self, role_name):
+        """
+        Test update forum role membership with user's nickname.
+        """
+        # Set unique nickname for other_user
+        UserProfile.objects.filter(user=self.other_user).update(nickname='forum guru')
 
         # Seed forum roles for course.
         seed_permissions_roles(self.course.id)
 
         for user in [self.instructor, self.other_user]:
-            for identifier_attr in [user.email, user.username]:
-                for rolename in ["Administrator", "Moderator", "Community TA"]:
-                    for action in ["allow", "revoke"]:
-                        self.assert_update_forum_role_membership(user, identifier_attr, rolename, action)
+            for identifier_attr in [user.email, user.profile.nickname]:
+                for action in ["allow", "revoke"]:
+                    self.assert_update_forum_role_membership(user, identifier_attr, role_name, action)
+
+    @ddt.data('Administrator', 'Moderator', 'Community TA')
+    def test_update_forum_role_membership_by_nonunique_nickname(self, role_name):
+        """
+        Test update forum role membership fails with nonunique nickname.
+        """
+        # Set unique nickname for other_user
+        UserProfile.objects.filter(user=self.other_user).update(nickname='forum guru')
+        UserProfile.objects.filter(user=self.other_staff).update(nickname='forum guru')
+
+        # Seed forum roles for course.
+        seed_permissions_roles(self.course.id)
+
+        # Test add role with email
+        self.assert_update_forum_role_membership_fail(self.other_user.profile.nickname, role_name, 'allow')
+
+        # Test revoke role with email
+        update_forum_role(self.course.id, self.other_user, role_name, 'allow')
+        self.assert_update_forum_role_membership_fail(self.other_user.profile.nickname, role_name, 'revoke')
 
     def assert_update_forum_role_membership(self, current_user, identifier, rolename, action):
         """
         Test update forum role membership.
         Get unique_student_identifier, rolename and action and update forum role.
         """
-        url = reverse('update_forum_role_membership', kwargs={'course_id': self.course.id.to_deprecated_string()})
-        response = self.client.get(
-            url,
-            {
-                'student_identifier': identifier,
-                'rolename': rolename,
-                'action': action,
-            }
-        )
+        response = self._update_forum_role_membership(student_identifier, rolename, action)
 
         # Status code should be 200.
         self.assertEqual(response.status_code, 200)
@@ -1682,6 +1748,33 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
             self.assertIn(rolename, user_roles)
         elif action == 'revoke':
             self.assertNotIn(rolename, user_roles)
+
+    def assert_update_forum_role_membership_fail(self, student_identifier, rolename, action):
+        """
+        Test update forum role membership.
+        Get unique_student_identifier, rolename and action and update forum role.
+        """
+        response = self._update_forum_role_membership(student_identifier, rolename, action)
+
+        # Status code should be 400.
+        self.assertEqual(response.status_code, 400)
+
+        user_roles = self.other_user.roles.filter(course_id=self.course.id).values_list("name", flat=True)
+        if action == 'allow':
+            self.assertNotIn(rolename, user_roles)
+        elif action == 'revoke':
+            self.assertIn(rolename, user_roles)
+
+    def _update_forum_role_membership(self, student_identifier, rolename, action):
+        url = reverse('update_forum_role_membership', kwargs={'course_id': self.course.id.to_deprecated_string()})
+        return self.client.get(
+            url,
+            {
+                'student_identifier': student_identifier,
+                'rolename': rolename,
+                'action': action,
+            }
+        )
 
 
 @ddt.ddt
@@ -1717,9 +1810,7 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
 
         self.students = [UserFactory() for _ in xrange(6)]
         for student in self.students:
-            profile = UserProfileFactory(user=student)
-            profile.nickname = 'nick_' + student.username
-            profile.save()
+            UserProfile.objects.filter(user=student).update(nickname='nick_'+student.username)
             CourseEnrollment.enroll(student, self.course.id)
 
     def test_invalidate_sale_record(self):
@@ -2117,10 +2208,7 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
         self.client.login(username=self.instructor.username, password='test')
 
         self.student = UserFactory()
-        profile = UserProfileFactory(user=self.student)
-        profile.nickname=self.student.username
-        profile.save()
-
+        UserProfile.objects.filter(user=self.student).update(nickname='nick_'+self.student.username)
         CourseEnrollment.enroll(self.student, self.course.id)
 
         self.problem_location = msk_from_problem_urlname(

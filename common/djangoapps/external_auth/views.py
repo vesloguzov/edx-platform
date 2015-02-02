@@ -291,12 +291,12 @@ def _signup(request, eamap, retfun=None):
     if settings.FEATURES.get('AUTH_USE_CERTIFICATES_IMMEDIATE_SIGNUP', ''):
         # do signin immediately, by calling create_account, instead of asking
         # student to fill in form.  MIT students already have information filed.
-        username = eamap.external_email.split('@', 1)[0]
-        username = username.replace('.', '_')
-        post_vars = dict(username=username,
+        nickname = eamap.external_email.split('@', 1)[0]
+        nickname = nickname.replace('.', '_')
+        post_vars = dict(nickname=nickname,
                          honor_code=u'true',
                          terms_of_service=u'true')
-        log.info(u'doing immediate signup for %s, params=%s', username, post_vars)
+        log.info(u'doing immediate signup for %s, params=%s', nickname, post_vars)
         student.views.create_account(request, post_vars)
         # should check return content for successful completion before
         if retfun is not None:

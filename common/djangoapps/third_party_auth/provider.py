@@ -100,7 +100,9 @@ class BaseProvider(object):
         return {
             'email': cls.get_email(details) or '',
             'name': cls.get_name(details) or '',
-            'username': suggested_username,
+            # Removed in favor of automatic username generation
+            # TODO: check if third party auth works correctly without username
+            # 'username': suggested_username,
         }
 
     @classmethod
