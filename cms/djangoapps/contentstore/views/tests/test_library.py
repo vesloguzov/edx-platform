@@ -12,6 +12,7 @@ from mock import patch
 from opaque_keys.edx.locator import CourseKey, LibraryLocator
 import ddt
 from student.roles import LibraryUserRole
+from student.tests.factories import UserProfileFactory
 
 LIBRARY_REST_URL = '/library/'  # URL for GET/POST requests involving libraries
 
@@ -31,6 +32,7 @@ class UnitTestLibraries(ModuleStoreTestCase):
 
     def setUp(self):
         user_password = super(UnitTestLibraries, self).setUp()
+        self.user.profile = UserProfileFactory(user=self.user)
 
         self.client = AjaxEnabledTestClient()
         self.client.login(username=self.user.username, password=user_password)

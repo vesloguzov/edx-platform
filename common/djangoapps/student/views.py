@@ -1745,7 +1745,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     # TODO: there is no error checking here to see that the user actually logged in successfully,
     # and is not yet an active user.
     if new_user is not None:
-        AUDIT_LOG.info(u"Login success on new account creation - {0} ({1})".format(login_user.username, login_user.email))
+        AUDIT_LOG.info(u"Login success on new account creation - {0} ({1})".format(new_user.username, new_user.email))
 
     if do_external_auth:
         eamap.user = new_user
@@ -1872,7 +1872,7 @@ def auto_auth(request):
 
     # Log in as the user
     if login_when_done:
-        user = authenticate(username=username, password=password)
+        user = authenticate(username=user.username, password=password)
         login(request, user)
 
     create_comments_service_user(user)
@@ -1881,7 +1881,7 @@ def auto_auth(request):
     # then return a 200 response
     success_msg = u"{} user {} ({}) with password {} and user_id {}".format(
         u"Logged in" if login_when_done else "Created",
-        username, email, password, user.id
+        user.username, email, password, user.id
     )
     response = HttpResponse(success_msg)
     response.set_cookie('csrftoken', csrf(request)['csrf_token'])

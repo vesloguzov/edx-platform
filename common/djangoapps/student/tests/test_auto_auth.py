@@ -120,7 +120,7 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
 
         # Create a user and enroll in a course
         email = 'test@example.com'
-        self._auto_auth(email=email, course_id=self.course_id)
+        self._auto_auth(email=email, course_id=course_id)
 
         # Make the same call again, re-enrolling the student in the same course
         self._auto_auth(email=email, course_id=course_id)
@@ -139,14 +139,14 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
 
         # Student role is assigned by default on course enrollment.
         email = 'student@example.com'
-        self._auto_auth(email=email, course_id=self.course_id)
+        self._auto_auth(email=email, course_id=course_id)
         user = User.objects.get(email=email)
         user_roles = user.roles.all()
         self.assertEqual(len(user_roles), 1)
         self.assertEqual(user_roles[0], course_roles[FORUM_ROLE_STUDENT])
 
         email = 'moderator@example.com'
-        self._auto_auth(email=email, course_id=self.course_id, roles='Moderator')
+        self._auto_auth(email=email, course_id=course_id, roles='Moderator')
         user = User.objects.get(email=email)
         user_roles = user.roles.all()
         self.assertEqual(
@@ -156,7 +156,7 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
 
         # check multiple roles work.
         email = 'admin@example.com'
-        self._auto_auth(email=email, course_id=self.course_id,
+        self._auto_auth(email=email, course_id=course_id,
                         roles='{},{}'.format(FORUM_ROLE_MODERATOR, FORUM_ROLE_ADMINISTRATOR))
         user = User.objects.get(email=email)
         user_roles = user.roles.all()
