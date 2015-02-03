@@ -109,19 +109,14 @@ class EnrollmentViewSet(viewsets.GenericViewSet):
         if not CourseMode.can_auto_enroll(course.id):
             return Response({'detail': _("Could not enroll")},
                             status=status.HTTP_400_BAD_REQUEST)
-
-
         try:
-            CourseEnrollment.enroll(user, course.id, check_access=True)
-            if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL'):
-                send_enrollment_email(user, course, use_https_for_links=request.is_secure())
-        except EnrollmentModeRequiredException:
-            return Response({'detail': _('Enrollment mode required')},
-                            status=status.HTTP_400_BAD_REQUEST)
-        except EnrollmentError as e:
+            enrollment = CourseEnrollment.enroll(user, course.id, check_access=True)
+        except Exception as e:
             return Response({'detail': e.message},
                             status=status.HTTP_400_BAD_REQUEST)
         else:
+            if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL'):
+                send_enrollment_email(user, course, use_https_for_links=request.is_secure())
             serializer = CourseEnrollmentSerializer(enrollment)
             return Response(serializer.data)
 

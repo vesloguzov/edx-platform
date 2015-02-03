@@ -108,7 +108,7 @@ class CourseSerializer(serializers.Serializer):
     image = serializers.SerializerMethodField('get_image_url')
     about_url = serializers.SerializerMethodField('get_about_course_url')
     root_url = serializers.SerializerMethodField('get_root_course_url')
-    last_modification = serializers.DateTimeField(source='edited_on')
+    last_modification = serializers.DateTimeField(source='_edit_info.edited_on')
 
     def get_description(self, course):
         key = course.id.make_usage_key('about', 'short_description')

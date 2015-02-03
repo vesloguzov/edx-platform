@@ -186,8 +186,8 @@ class UserViewSetTest(APITest):
 
     def setUp(self):
         self.user = UserFactory.create(username='test', email='test@example.com')
-        self.detail_url = reverse('user-detail', kwargs={'username': self.user.username})
-        self.list_url = reverse('user-list')
+        self.detail_url = reverse('profile-detail', kwargs={'username': self.user.username})
+        self.list_url = reverse('profile-list')
 
     def tearDown(self):
         User.objects.all().delete()
@@ -224,7 +224,7 @@ class UserViewSetTest(APITest):
             'city': 'Capital',
         }
         response = self._request_with_auth('put', data=data,
-                    path=reverse('user-detail', kwargs={'username': data['uid']}))
+                    path=reverse('profile-detail', kwargs={'username': data['uid']}))
         self.assertEquals(response.status_code, 201)
 
         user = User.objects.get(username=data['uid'])
@@ -242,7 +242,7 @@ class UserViewSetTest(APITest):
             'email': self.user.email
         }
         response = self._request_with_auth('put', data=data,
-                    path=reverse('user-detail', kwargs={'username': data['uid']}))
+                    path=reverse('profile-detail', kwargs={'username': data['uid']}))
         self.assertEquals(response.status_code, 400)
 
     # TODO: test various variants of patch data
@@ -256,7 +256,7 @@ class UserViewSetTest(APITest):
             'first_name': 'NewFirstName',
         }
         response = self._request_with_auth('post', data=data,
-                    path=reverse('user-detail', kwargs={'username': data['uid']}),
+                    path=reverse('profile-detail', kwargs={'username': data['uid']}),
                     HTTP_X_HTTP_METHOD_OVERRIDE='PATCH')
         self.assertEquals(response.status_code, 200)
 
@@ -276,7 +276,7 @@ class UserViewSetTest(APITest):
         enroll_email(course.id, data['email'], auto_enroll=True)
 
         response = self._request_with_auth('put', data=data,
-                    path=reverse('user-detail', kwargs={'username': data['uid']}))
+                    path=reverse('profile-detail', kwargs={'username': data['uid']}))
         user = User.objects.get(username=data['uid'])
         self.assertTrue(CourseEnrollment.is_enrolled(user, course.id))
 
@@ -333,7 +333,7 @@ class EnrollmentViewSetTest(APITest):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(
             mail.outbox[0].subject,
-            'You have enrolled in Robot Super Course'
+            'You have enrolled in {}'.format(self.course_other.display_name)
         )
         self.assertIn(
             reverse('course_root', kwargs={'course_id': self.course_other.id.to_deprecated_string()}),
