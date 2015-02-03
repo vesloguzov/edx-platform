@@ -31,7 +31,7 @@ def get_course_enrollments(user_id):
     qset = CourseEnrollment.objects.filter(
         user__username=user_id, is_active=True
     ).order_by('created')
-    return CourseEnrollmentSerializer(qset).data  # pylint: disable=no-member
+    return CourseEnrollmentSerializer(qset, many=True).data  # pylint: disable=no-member
 
 
 def get_course_enrollment(username, course_id):

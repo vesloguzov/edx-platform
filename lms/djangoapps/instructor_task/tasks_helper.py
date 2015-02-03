@@ -601,7 +601,7 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
             # still have 100% for the course.
             row_percents = [percents.get(label, 0.0) for label in header]
             rows.append(
-                [student.id, student.email, student.nickname_or_default, gradeset['percent']] +
+                [student.id, student.email, student.profile.nickname_or_default, gradeset['percent']] +
                 row_percents + cohorts_group_name + group_configs_group_names
             )
         else:

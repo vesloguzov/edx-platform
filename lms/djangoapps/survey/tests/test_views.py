@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 
 from survey.models import SurveyForm
+from student.tests.factories import UserFactory
 
 from xmodule.modulestore.tests.factories import CourseFactory
 
@@ -27,7 +28,7 @@ class SurveyViewsTests(TestCase):
 
         # Create two accounts
         self.password = 'abc'
-        self.student = User.objects.create_user('student', 'student@test.com', self.password)
+        self.student = UserFactory(username='student', email='student@test.com', password=self.password)
 
         self.test_survey_name = 'TestSurvey'
         self.test_form = '<input name="field1" /><input name="field2" /><select name="ddl"><option>1</option></select>'

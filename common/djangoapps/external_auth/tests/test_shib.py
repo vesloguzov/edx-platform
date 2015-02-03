@@ -339,15 +339,15 @@ class ShibSPTest(ModuleStoreTestCase):
         self.assertIn(u'post_nickname', args[0])
         method_name, args, _kwargs = audit_log_calls[1]
         self.assertEquals(method_name, 'info')
-        self.assertEquals(len(args), 2)
+        self.assertEquals(len(args), 3)
         self.assertIn(u'User registered with external_auth', args[0])
         self.assertEquals(u'post_nickname', args[1])
         method_name, args, _kwargs = audit_log_calls[2]
         self.assertEquals(method_name, 'info')
-        self.assertEquals(len(args), 3)
+        self.assertEquals(len(args), 4)
         self.assertIn(u'Updated ExternalAuthMap for ', args[0])
-        self.assertEquals(u'post_username', args[1])
-        self.assertEquals(u'test_user@stanford.edu', args[2].external_id)
+        self.assertEquals(u'post_nickname', args[1])
+        self.assertEquals(u'test_user@stanford.edu', args[3].external_id)
 
         # check that the created user has the right email, either taken from shib or user input
         if mail:

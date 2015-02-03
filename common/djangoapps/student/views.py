@@ -898,6 +898,7 @@ def change_enrollment(request, check_access=True):
                 return HttpResponseBadRequest(_("Could not enroll"))
             else:
                 if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL'):
+                    course = modulestore().get_course(course_id)
                     send_enrollment_email(user, course, use_https_for_links=request.is_secure())
 
         # If we have more than one course mode or professional ed is enabled,
@@ -1670,7 +1671,7 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
         tracking_context = tracker.get_tracker().resolve_context()
         analytics.identify(user.id, {
             'email': email,
-            'username': username,
+            'username': user.username,
         })
 
         # If the user is registering via 3rd party auth, track which provider they use
@@ -1745,14 +1746,14 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     # TODO: there is no error checking here to see that the user actually logged in successfully,
     # and is not yet an active user.
     if new_user is not None:
-        AUDIT_LOG.info(u"Login success on new account creation - {0} ({1})".format(new_user.username, new_user.email))
+        AUDIT_LOG.info(u"Login success on new account creation - {0} ({1})".format(new_user.profile.nickname, new_user.email))
 
     if do_external_auth:
         eamap.user = new_user
         eamap.dtsignup = datetime.datetime.now(UTC)
         eamap.save()
-        AUDIT_LOG.info("User registered with external_auth %s (%s)", user.username, user.email)
-        AUDIT_LOG.info('Updated ExternalAuthMap for %s (%s) to be %s', user.username, user.email, eamap)
+        AUDIT_LOG.info("User registered with external_auth %s (%s)", user.profile.nickname, user.email)
+        AUDIT_LOG.info('Updated ExternalAuthMap for %s (%s) to be %s', user.profile.nickname, user.email, eamap)
 
         if settings.FEATURES.get('BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH'):
             log.info('bypassing activation email')

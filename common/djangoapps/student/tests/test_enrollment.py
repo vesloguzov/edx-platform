@@ -163,7 +163,6 @@ class EnrollmentTest(ModuleStoreTestCase):
         resp = self._change_enrollment('not_an_action')
         self.assertEqual(resp.status_code, 400)
 
-<<<<<<< HEAD
     @patch.dict('django.conf.settings.FEATURES', {'SEND_ENROLLMENT_EMAIL': True})
     def test_email_on_enroll(self):
         self._change_enrollment('enroll')
@@ -171,7 +170,7 @@ class EnrollmentTest(ModuleStoreTestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(
             mail.outbox[0].subject,
-            'You have enrolled in Robot Super Course'
+            'You have enrolled in {}'.format(self.course.display_name)
         )
         self.assertIn(
             reverse('course_root', kwargs={'course_id': self.course.id.to_deprecated_string()}),

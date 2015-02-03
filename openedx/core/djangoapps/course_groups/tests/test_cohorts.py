@@ -683,7 +683,7 @@ class TestCohortsAndPartitionGroups(TestCase):
             self.partition_id,
             self.group1_id,
         )
-        with self.assertRaisesRegexp(IntegrityError, 'not unique'):
+        with self.assertRaisesRegexp(IntegrityError, 'UNIQUE constraint failed'):
             self._link_cohort_partition_group(
                 self.first_cohort,
                 self.partition_id,

@@ -57,36 +57,3 @@ class CertificatesModelTest(ModuleStoreTestCase):
         completed_milestones = milestones_achieved_by_user(student, unicode(pre_requisite_course.id))
         self.assertEqual(len(completed_milestones), 1)
         self.assertEqual(completed_milestones[0]['namespace'], unicode(pre_requisite_course.id))
-
-class CertificateServeTest(ModuleStoreTestCase):
-    """
-    Test for nginx-protected certificates storage
-    """
-    def setUp(self):
-        self.student = UserFactory()
-        self.course = CourseFactory.create(org='edx', number='honor', display_name='Honor Course')
-        self.client.login(username=self.student.username, password="test")
-        self.url = reverse('serve_certificate', kwargs={'course_id': self.course.id.to_deprecated_string()})
-
-    def test_serve_certificate(self):
-        protected_url = certificates.views._certificate_protected_url(self.course, self.student)
-
-        certificate = GeneratedCertificateFactory(
-                user=self.student, course_id=self.course.id,
-                status = CertificateStatuses.downloadable,
-                download_url=protected_url)
-
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.has_header('X-Accel-Redirect'))
-        self.assertEqual(response['X-Accel-Redirect'], protected_url)
-
-    def test_unavailable_certificate(self):
-        certificate = GeneratedCertificateFactory(user=self.student, course_id=self.course.id)
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 404)
-
-    def test_missing_certificate(self):
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 404)

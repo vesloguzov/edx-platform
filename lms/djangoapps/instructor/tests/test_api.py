@@ -1693,10 +1693,10 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         seed_permissions_roles(self.course.id)
 
         # Test add role with email
-        self.assert_update_forum_role_membership(self.other_user.email, role_name, 'allow')
+        self.assert_update_forum_role_membership(self.other_user, self.other_user.email, role_name, 'allow')
 
         # Test revoke role with email
-        self.assert_update_forum_role_membership(self.other_user.email, role_name, 'revoke')
+        self.assert_update_forum_role_membership(self.other_user, self.other_user.email, role_name, 'revoke')
 
     @ddt.data('Administrator', 'Moderator', 'Community TA')
     def test_update_forum_role_membership_by_nickname(self, role_name):
@@ -1705,6 +1705,7 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         """
         # Set unique nickname for other_user
         UserProfile.objects.filter(user=self.other_user).update(nickname='forum guru')
+        UserProfile.objects.filter(user=self.instructor).update(nickname='forum guru 2')
 
         # Seed forum roles for course.
         seed_permissions_roles(self.course.id)
@@ -1733,12 +1734,13 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
         update_forum_role(self.course.id, self.other_user, role_name, 'allow')
         self.assert_update_forum_role_membership_fail(self.other_user.profile.nickname, role_name, 'revoke')
 
-    def assert_update_forum_role_membership(self, current_user, identifier, rolename, action):
+    def assert_update_forum_role_membership(self, current_user, student_identifier, rolename, action):
         """
         Test update forum role membership.
-        Get unique_student_identifier, rolename and action and update forum role.
+        Get student_identifier, rolename and action and update forum role.
         """
         response = self._update_forum_role_membership(student_identifier, rolename, action)
+        print response
 
         # Status code should be 200.
         self.assertEqual(response.status_code, 200)

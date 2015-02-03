@@ -35,7 +35,7 @@ class CourseField(serializers.RelatedField):
 
     def to_native(self, course):
         course_id = unicode(course.id)
-        course_modes = ModeSerializer(CourseMode.modes_for_course(course.id)).data  # pylint: disable=no-member
+        course_modes = ModeSerializer(CourseMode.modes_for_course(course.id), many=True).data  # pylint: disable=no-member
 
         return {
             "course_id": course_id,

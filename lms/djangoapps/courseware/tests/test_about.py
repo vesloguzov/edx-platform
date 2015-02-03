@@ -374,7 +374,7 @@ class AboutWithClosedEnrollment(ModuleStoreTestCase):
         url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertIn("Enrollment is closed", resp.content)
+        self.assertIn("Enrollment is Closed", resp.content)
 
         # Check that registration button is not present
         self.assertNotIn(REG_STR, resp.content)
