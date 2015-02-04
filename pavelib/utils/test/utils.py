@@ -59,7 +59,7 @@ def check_firefox_version():
     """
     Check that firefox is the correct version.
     """
-    expected_firefox_ver = "Mozilla Firefox 28.0"
+    expected_firefox_ver = "Mozilla Firefox 35.0.1"
     firefox_ver = subprocess.check_output("firefox --version", shell=True).strip()
 
     if firefox_ver != expected_firefox_ver:
