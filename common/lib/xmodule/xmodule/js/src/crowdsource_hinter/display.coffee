@@ -18,11 +18,13 @@ class @Hinter
     response = data[1]
     if response.search(/class="correct/) == -1
       # Incorrect.  Get hints.
-      $.postWithPrefix "#{@url}/get_hint", answers, (response) =>
+      # $.postWithPrefix "#{@url}/get_hint", answers, (response) =>
+      $.post "#{@url}/get_hint", answers, (response) =>
         @render(response.contents)
     else
       # Correct.  Get feedback from students.
-      $.postWithPrefix "#{@url}/get_feedback", answers, (response) =>
+      # $.postWithPrefix "#{@url}/get_feedback", answers, (response) =>
+      $.post "#{@url}/get_feedback", answers, (response) =>
         @render(response.contents)
 
   $: (selector) ->
@@ -51,7 +53,8 @@ class @Hinter
     target = @$(eventObj.currentTarget)
     all_pks = @$('#pk-list').attr('data-pk-list')
     post_json = {'answer': target.attr('data-answer'), 'hint': target.data('hintno'), 'pk_list': all_pks}
-    $.postWithPrefix "#{@url}/vote", post_json, (response) =>
+    # $.postWithPrefix "#{@url}/vote", post_json, (response) =>
+    $.post "#{@url}/vote", post_json, (response) =>
       @render(response.contents)
 
   submit_hint: (eventObj) =>
@@ -61,7 +64,8 @@ class @Hinter
       # The user didn't choose an answer, somehow.  Do nothing.
       return
     post_json = {'answer': @answer, 'hint': textarea.val()}
-    $.postWithPrefix "#{@url}/submit_hint",post_json, (response) =>
+    # $.postWithPrefix "#{@url}/submit_hint",post_json, (response) =>
+    $.post "#{@url}/submit_hint",post_json, (response) =>
       @render(response.contents)
 
   clear_default_text: (eventObj) =>

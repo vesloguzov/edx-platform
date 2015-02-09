@@ -102,7 +102,8 @@ class @Problem
     return minlen
 
   poll: =>
-    $.postWithPrefix "#{@url}/problem_get", (response) =>
+    # $.postWithPrefix "#{@url}/problem_get", (response) =>
+    $.post "#{@url}/problem_get", (response) =>
       # If queueing status changed, then render
       @new_queued_items = $(response.html).find(".xqueue")
       if @new_queued_items.length isnt @num_queued_items
@@ -134,7 +135,8 @@ class @Problem
   @inputAjax: (url, input_id, dispatch, data, callback) ->
     data['dispatch'] = dispatch
     data['input_id'] = input_id
-    $.postWithPrefix "#{url}/input_ajax", data, callback
+    # $.postWithPrefix "#{url}/input_ajax", data, callback
+    $.post "#{url}/input_ajax", data, callback
 
 
   render: (content) ->
@@ -147,7 +149,8 @@ class @Problem
         @queueing()
       @el.attr('aria-busy', 'false')
     else
-      $.postWithPrefix "#{@url}/problem_get", (response) =>
+      # $.postWithPrefix "#{@url}/problem_get", (response) =>
+      $.post "#{@url}/problem_get", (response) =>
         @el.html(response.html)
         JavascriptLoader.executeModuleScripts @el, () =>
           @setupInputTypes()
@@ -286,7 +289,8 @@ class @Problem
             @gentle_alert response.success
         Logger.log 'problem_graded', [@answers, response.contents], @id
 
-    $.ajaxWithPrefix("#{@url}/problem_check", settings)
+    # $.ajaxWithPrefix("#{@url}/problem_check", settings)
+    $.ajax("#{@url}/problem_check", settings)
 
   check: =>
     if not @check_save_waitfor(@check_internal)
@@ -305,7 +309,8 @@ class @Problem
       problem_id: @id
       answers: @answers
 
-    $.postWithPrefix("#{@url}/problem_check", @answers, (response) =>
+    # $.postWithPrefix("#{@url}/problem_check", @answers, (response) =>
+    $.post("#{@url}/problem_check", @answers, (response) =>
       switch response.success
         when 'incorrect', 'correct'
           window.SR.readElts($(response.contents).find('.status'))
@@ -321,7 +326,8 @@ class @Problem
 
   reset: =>
     Logger.log 'problem_reset', @answers
-    $.postWithPrefix "#{@url}/problem_reset", id: @id, (response) =>
+    # $.postWithPrefix "#{@url}/problem_reset", id: @id, (response) =>
+    $.post "#{@url}/problem_reset", id: @id, (response) =>
         @render(response.html)
         @updateProgress response
 
@@ -332,7 +338,8 @@ class @Problem
     if !@el.hasClass 'showed'
       Logger.log 'problem_show', problem: @id
       answer_text = []
-      $.postWithPrefix "#{@url}/problem_show", (response) =>
+      # $.postWithPrefix "#{@url}/problem_show", (response) =>
+      $.post "#{@url}/problem_show", (response) =>
         answers = response.answers
         $.each answers, (key, value) =>
           if $.isArray(value)
@@ -410,7 +417,8 @@ class @Problem
 
   save_internal: =>
     Logger.log 'problem_save', @answers
-    $.postWithPrefix "#{@url}/problem_save", @answers, (response) =>
+    # $.postWithPrefix "#{@url}/problem_save", @answers, (response) =>
+    $.post "#{@url}/problem_save", @answers, (response) =>
       saveMessage = response.msg
       @gentle_alert saveMessage
       @updateProgress response

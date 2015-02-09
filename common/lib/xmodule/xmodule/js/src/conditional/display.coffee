@@ -14,7 +14,8 @@ class @Conditional
     @render(element)
 
   render: (element) ->
-      $.postWithPrefix "#{@url}/conditional_get", (response) =>
+      # $.postWithPrefix "#{@url}/conditional_get", (response) =>
+      $.post "#{@url}/conditional_get", (response) =>
         @el.html ''
         @el.append(i) for i in response.html
 

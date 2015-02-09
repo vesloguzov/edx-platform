@@ -103,7 +103,7 @@
 
 <section class="register container">
   <section role="main" class="content">
-    <form role="form" id="register-form" method="post" data-remote="true" action="/create_account" novalidate>
+      <form role="form" id="register-form" method="post" data-remote="true" action="${ reverse('create_account') }" novalidate>
       <input type="hidden" name="csrfmiddlewaretoken" value="${ csrf_token }">
 
       <!-- status messages -->

@@ -110,7 +110,7 @@ site_status_msg = get_site_status_msg(course_id)
           </li>
           % else:
           <li class="nav-global-04">
-            <a class="cta cta-register" href="/register">${_("Register Now")}</a>
+          <a class="cta cta-register" href="${ reverse('register_user') }">${_("Register Now")}</a>
           </li>
           % endif
       % endif

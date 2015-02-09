@@ -10,6 +10,15 @@ from microsite_configuration import microsite
 if settings.DEBUG or settings.FEATURES.get('ENABLE_DJANGO_ADMIN_SITE'):
     admin.autodiscover()
 
+if settings.EDX_ROOT_URL:
+    url_django = url
+    def url(regex, *args, **kwargs):
+        """
+        Built-in url override to insert common url prefix
+        """
+        regex = r'^{}/{}'.format(settings.EDX_ROOT_URL[1:], regex[1:])
+        return url_django(regex, *args, **kwargs)
+
 urlpatterns = ('',  # nopep8
     # certificate view
     url(r'^update_certificate$', 'certificates.views.update_certificate'),
@@ -30,7 +39,7 @@ urlpatterns = ('',  # nopep8
     url(r'^update_required_data$', 'required_student_data.views.update_required_data', name='update_required_data'),
     url(r'^postpone_required_data_update$', 'required_student_data.views.postpone_required_data_update', name='postpone_required_data_update'),
     url(r'^event$', 'track.views.user_track'),
-    url(r'^t/(?P<template>[^/]*)$', 'static_template_view.views.index'),   # TODO: Is this used anymore? What is STATIC_GRAB?
+    url(r'^t/(?P<template>[^/]*)$', 'static_template_view.views.index', name="static_template"),   # TODO: Is this used anymore? What is STATIC_GRAB?
 
     url(r'^accounts/login$', 'student.views.accounts_login', name="accounts_login"),
     url(r'^accounts/manage_user_standing', 'student.views.manage_user_standing',
@@ -73,7 +82,7 @@ urlpatterns = ('',  # nopep8
     url(r'^embargo$', 'student.views.embargo', name="embargo"),
 
     # Feedback Form endpoint
-    url(r'^submit_feedback$', 'util.views.submit_feedback'),
+    url(r'^submit_feedback$', 'util.views.submit_feedback', name='submit_feedback'),
 )
 
 # if settings.FEATURES.get("MULTIPLE_ENROLLMENT_ROLES"):
@@ -91,7 +100,7 @@ js_info_dict = {
 
 urlpatterns += (
     # Serve catalog of localized strings to be rendered by Javascript
-    url(r'^jsi18n/$', 'django.views.i18n.javascript_catalog', js_info_dict),
+    url(r'^jsi18n/$', 'django.views.i18n.javascript_catalog', js_info_dict, name="jsi18n"),
 )
 
 # sysadmin dashboard, to see what courses are loaded, to delete & load courses

@@ -6,10 +6,10 @@
 
 <section class="container about">
   <nav>
-    <a href="/t/about.html">${_("Vision")}</a>
-    <a href="/t/faq.html">${_("Faq")}</a>
-    <a href="/t/press.html">${_("Press")}</a>
-    <a href="/t/contact.html" class="active">${_("Contact")}</a>
+      <a href="${ reverse('static_template', kwargs={'template': 'about.html'}) }">${_("Vision")}</a>
+    <a href="${ reverse('static_template', kwargs={'template': 'faq.html'}) }">${_("Faq")}</a>
+    <a href="${ reverse('static_template', kwargs={'template': 'press.html'}) }">${_("Press")}</a>
+    <a href="${ reverse('static_template', kwargs={'template': 'contact.html'}) }" class="active">${_("Contact")}</a>
   </nav>
 
   <section class="contact">

@@ -9,6 +9,7 @@
 <%! from django.utils.translation import ugettext as _ %>
 <%! from microsite_configuration import microsite %>
 <%! from microsite_configuration import page_title_breadcrumbs %>
+<%! from django.core.urlresolvers import reverse %>
 
 <%namespace name='static' file='static_content.html'/>
 <%! from django.utils import html %>
@@ -50,7 +51,7 @@
     })(this);
   </script>
 
-  <script type="text/javascript" src="/jsi18n/"></script>
+  <script type="text/javascript" src="${ reverse('jsi18n') }"></script>
 
   <link rel="icon" type="image/x-icon" href="${static.url(microsite.get_value('favicon_path', settings.FAVICON_PATH))}" />
 
