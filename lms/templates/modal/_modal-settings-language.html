@@ -26,7 +26,7 @@
       <hr/>
     </header>
     <div id="change_language_body">
-      <form action="/i18n/setlang/" method="post" class="settings-language-form" id="settings-form">
+      <form action="${ reverse('django.views.i18n.set_language') }" method="post" class="settings-language-form" id="settings-form">
       <input type="hidden" name="csrfmiddlewaretoken" value="${csrf_token}">
         <ol class="list-input">
           <li class="field text settings-language-select" id="settings-language-select">

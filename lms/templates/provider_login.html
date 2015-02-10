@@ -1,4 +1,5 @@
 <%! from django.utils.translation import ugettext as _ %>
+<%! from django.core.urlresolvers import reverse %>
 
 <%inherit file="main.html" />
 <%namespace name='static' file='static_content.html'/>
@@ -37,7 +38,7 @@
       <h2>${_("Log In")}</h2>
       <hr>
     </header>
-    <form id="login_form" class="login_form" method="post" action="/openid/provider/login/">
+    <form id="login_form" class="login_form" method="post" action="${ reverse('openid-provider-login') }">
 %if error:
       <div id="login_error" class="modal-form-error" style="display: block;">${_("Email or password is incorrect.")}</div>
 %endif

@@ -1,3 +1,4 @@
+<%namespace name='static' file='../static_content.html'/>
 <%!
     from django.core.urlresolvers import reverse
     from util.date_utils import get_time_display
@@ -36,7 +37,7 @@
               <p class="subtitle">${section['format']} ${due_date}</p>
 
               % if 'graded' in section and section['graded']:
-                  <img src="/static/images/graded.png" alt="Graded Section">
+                <img src="${static.url('images/graded.png')}" alt="Graded Section">
               % endif
             </a>
           </li>

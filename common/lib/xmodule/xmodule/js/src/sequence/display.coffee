@@ -93,7 +93,8 @@ class @Sequence
       if @position != undefined
         @mark_visited @position
         modx_full_url = "#{@ajaxUrl}/goto_position"
-        $.postWithPrefix modx_full_url, position: new_position
+        # $.postWithPrefix modx_full_url, position: new_position
+        $.post modx_full_url, position: new_position
 
       # On Sequence change, fire custom event "sequence:change" on element.
       # Added for aborting video bufferization, see ../video/10_main.js

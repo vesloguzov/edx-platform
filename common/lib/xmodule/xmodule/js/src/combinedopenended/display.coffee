@@ -222,7 +222,8 @@ class @CombinedOpenEnded
 
   show_combined_rubric_current: () =>
     data = {}
-    $.postWithPrefix "#{@ajax_url}/get_combined_rubric", data, (response) =>
+    # $.postWithPrefix "#{@ajax_url}/get_combined_rubric", data, (response) =>
+    $.post "#{@ajax_url}/get_combined_rubric", data, (response) =>
       if response.success
         @combined_rubric_container.after(response.html).remove()
         @combined_rubric_container= @$(@combined_rubric_sel)
@@ -368,7 +369,8 @@ class @CombinedOpenEnded
     if @child_state == 'initial'
       data = {'student_answer' : @answer_area.val()}
       @save_button.attr("disabled",true)
-      $.postWithPrefix "#{@ajax_url}/store_answer", data, (response) =>
+      # $.postWithPrefix "#{@ajax_url}/store_answer", data, (response) =>
+      $.post "#{@ajax_url}/store_answer", data, (response) =>
         if response.success
           @gentle_alert(gettext "Answer saved, but not yet submitted.")
         else
@@ -464,7 +466,8 @@ class @CombinedOpenEnded
       checked_assessment = @rub.get_total_score()
       score_list = @rub.get_score_list()
       data = {'assessment' : checked_assessment, 'score_list' : score_list}
-      $.postWithPrefix "#{@ajax_url}/save_assessment", data, (response) =>
+      # $.postWithPrefix "#{@ajax_url}/save_assessment", data, (response) =>
+      $.post "#{@ajax_url}/save_assessment", data, (response) =>
         if response.success
           @child_state = response.state
 
@@ -485,7 +488,8 @@ class @CombinedOpenEnded
     if @child_state == 'post_assessment'
       data = {'hint' : @hint_area.val()}
 
-      $.postWithPrefix "#{@ajax_url}/save_post_assessment", data, (response) =>
+      # $.postWithPrefix "#{@ajax_url}/save_post_assessment", data, (response) =>
+      $.post "#{@ajax_url}/save_post_assessment", data, (response) =>
         if response.success
           @message_wrapper.html(response.message_html)
           @child_state = 'done'
@@ -498,7 +502,8 @@ class @CombinedOpenEnded
   skip_post_assessment: =>
     if @child_state == 'post_assessment'
 
-      $.postWithPrefix "#{@ajax_url}/skip_post_assessment", {}, (response) =>
+      # $.postWithPrefix "#{@ajax_url}/skip_post_assessment", {}, (response) =>
+      $.post "#{@ajax_url}/skip_post_assessment", {}, (response) =>
         if response.success
           @child_state = 'done'
           @rebind()
@@ -515,7 +520,8 @@ class @CombinedOpenEnded
   reset: (event) =>
     event.preventDefault()
     if @child_state == 'done' or @allow_reset=="True"
-      $.postWithPrefix "#{@ajax_url}/reset", {}, (response) =>
+      # $.postWithPrefix "#{@ajax_url}/reset", {}, (response) =>
+      $.post "#{@ajax_url}/reset", {}, (response) =>
         if response.success
           @answer_area.val('')
           @rubric_wrapper.html('')
@@ -535,7 +541,8 @@ class @CombinedOpenEnded
 
   next_problem: =>
     if @child_state == 'done'
-      $.postWithPrefix "#{@ajax_url}/next_problem", {}, (response) =>
+      # $.postWithPrefix "#{@ajax_url}/next_problem", {}, (response) =>
+      $.post "#{@ajax_url}/next_problem", {}, (response) =>
         if response.success
           @answer_area.val('')
           @rubric_wrapper.html('')
@@ -575,7 +582,8 @@ class @CombinedOpenEnded
       window.queuePollerID = window.setTimeout(@poll, 10000)
 
   poll: =>
-    $.postWithPrefix "#{@ajax_url}/check_for_score", (response) =>
+    # $.postWithPrefix "#{@ajax_url}/check_for_score", (response) =>
+    $.post "#{@ajax_url}/check_for_score", (response) =>
       if response.state == "done" or response.state=="post_assessment"
         delete window.queuePollerID
         @reload()
