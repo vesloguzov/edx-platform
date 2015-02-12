@@ -316,6 +316,7 @@ MODULESTORE_BRANCH = 'draft-preferred'
 DEBUG = False
 TEMPLATE_DEBUG = False
 SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
 # Site info
 SITE_ID = 1
