@@ -42,7 +42,7 @@ var methods = {
         });
 
         item.css({
-            'position' : 'fixed',
+            'position' : 'absolute',
             'opacity' : 0,
             'z-index': parseInt($('#basicmodal-overlay').css('z-index')) + 1 || 101,
             'left' : 50 + '%',
