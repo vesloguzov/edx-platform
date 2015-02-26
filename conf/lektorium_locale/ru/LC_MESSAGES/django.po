@@ -142,6 +142,10 @@ msgstr "Сертификат кодекса чести"
 msgid "Enrollment is closed"
 msgstr "Регистрация закрыта"
 
+#: lms/templates/courseware/course_about.html
+msgid "Enrollment is Closed"
+msgstr "Регистрация закрыта"
+
 #: common/djangoapps/course_modes/views.py
 msgid "Enrollment mode not supported"
 msgstr "Режим записи на курс не поддерживается"
