@@ -100,7 +100,7 @@ def url_class(is_active):
             group_id: selectedOption.data('group-id')
         };
         $.ajax({
-            url: '/courses/${course.id}/masquerade',
+            url: '${reverse('masquerade_update', args=[course.id.to_deprecated_string()])}',
             type: 'POST',
             dataType: 'json',
             contentType: 'application/json',
