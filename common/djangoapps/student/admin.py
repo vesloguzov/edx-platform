@@ -27,11 +27,65 @@ class CourseAccessRoleAdmin(admin.ModelAdmin):
         'id', 'user', 'org', 'course_id', 'role'
     )
 
-admin.site.register(UserProfile)
+
+class CourseEnrollmentAdmin(admin.ModelAdmin):
+    """
+    Admin panel for CourseEnrollment with quick search by username or email
+    """
+    list_select_related = True
+    list_display = (
+        'username',
+        'email',
+        'course_id',
+        'mode',
+        'is_active',
+    )
+    list_filter = (
+        'is_active',
+    )
+    search_fields = (
+        'user__username',
+        'user__email',
+    )
+
+    def username(self, obj):
+        return obj.user.username
+
+    def email(self, obj):
+        return obj.user.email
+
+
+class UserProfileAdmin(admin.ModelAdmin):
+    """
+    Admin panel for UserProfile with quick search by username, email or nickname
+    """
+    list_select_related = True
+    list_display = (
+        'username',
+        'email',
+        'nickname',
+        'name',
+        'birthdate',
+        'city',
+    )
+    search_fields = (
+        'user__username',
+        'user__email',
+        'nickname',
+    )
+
+    def username(self, obj):
+        return obj.user.username
+
+    def email(self, obj):
+        return obj.user.email
+
+
+admin.site.register(UserProfile, UserProfileAdmin)
 
 admin.site.register(UserTestGroup)
 
-admin.site.register(CourseEnrollment)
+admin.site.register(CourseEnrollment, CourseEnrollmentAdmin)
 
 admin.site.register(CourseEnrollmentAllowed)
 
