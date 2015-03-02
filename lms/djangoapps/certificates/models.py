@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
+from django.utils.translation import ugettext_lazy as _
 from datetime import datetime
 from model_utils import Choices
 from xmodule_django.models import CourseKeyField, NoneToEmptyManager
@@ -107,6 +108,8 @@ class GeneratedCertificate(models.Model):
 
     class Meta:
         unique_together = (('user', 'course_id'),)
+        verbose_name = _('certificate')
+        verbose_name_plural = _('certificates')
 
     @classmethod
     def certificate_for_student(cls, student, course_id):

@@ -14335,3 +14335,11 @@ msgid ""
 msgstr ""
 "Вы записались на курс «{course_name}» на {site_name}. "
 "Курс должен теперь появиться в Вашем личном кабинете {site_name}."
+
+#: lms/djangoapps/certificates/models.py
+msgid "certificate"
+msgstr "сертификат"
+
+#: lms/djangoapps/certificates/models.py
+msgid "certificates"
+msgstr "сертификаты"
