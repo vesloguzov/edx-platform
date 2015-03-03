@@ -107,7 +107,7 @@ def theme_context_processor(request):
         'HEADER_EXTRA_FILE': None,
         'GOOGLE_ANALYTICS_FILE': None,
         'STYLE_OVERRIDES_FILE': None,
-        'FOOTER_FILE': 'footer.html',
+        'FOOTER_FILE': None,
     }
     is_microsite = microsite.is_request_in_microsite()
     if settings.FEATURES['USE_CUSTOM_THEME'] and not is_microsite:
@@ -129,6 +129,8 @@ def theme_context_processor(request):
                 'HEADER_FILE': microsite.get_template_path('navigation-edx.html'),
                 'FOOTER_FILE': microsite.get_template_path('footer-edx-new.html')
             })
+        else:
+            context['FOOTER_FILE'] = microsite.get_template_path('footer.html')
     return context
 
 
