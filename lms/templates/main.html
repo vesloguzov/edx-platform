@@ -93,29 +93,8 @@
 
   <%block name="headextra"/>
 
-<%
-  if theme_enabled() and not is_microsite():
-    header_extra_file = 'theme-head-extra.html'
-    header_file = 'theme-header.html'
-    google_analytics_file = 'theme-google-analytics.html'
-
-    style_overrides_file = None
-
-  else:
-    header_extra_file = None
-
-    if settings.FEATURES['IS_EDX_DOMAIN'] and not is_microsite():
-        header_file = microsite.get_template_path('navigation-edx.html')
-    else:
-        header_file = microsite.get_template_path('navigation.html')
-
-    google_analytics_file = microsite.get_template_path('google_analytics.html')
-
-    style_overrides_file = microsite.get_value('css_overrides_file')
-%>
-
-  % if header_extra_file:
-    <%include file="${header_extra_file}" />
+  % if HEADER_EXTRA_FILE:
+    <%include file="${HEADER_EXTRA_FILE}" />
   % endif
 
   <!--[if lt IE 9]>
@@ -128,10 +107,10 @@
   <meta name="path_prefix" content="${EDX_ROOT_URL}">
   <meta name="google-site-verification" content="_mipQ4AtZQDNmbtOkwehQDOgCxUUV2fb_C0b6wbiRHY" />
 
-  <%include file="${google_analytics_file}" />
+  <%include file="${GOOGLE_ANALYTICS_FILE}" />
 
-% if style_overrides_file:
-  <link rel="stylesheet" type="text/css" href="${static.url(style_overrides_file)}" />
+% if STYLE_OVERRIDES_FILE:
+  <link rel="stylesheet" type="text/css" href="${static.url(STYLE_OVERRIDES_FILE)}" />
 % endif
 
 </head>
@@ -143,7 +122,7 @@
     <%include file="mathjax_accessible.html" />
 
     <div class="sticky-footer-wrapper">
-    <%include file="${header_file}" />
+    <%include file="${HEADER_FILE}" />
 
     <div class="content-wrapper" id="content">
       ${self.body()}
@@ -152,16 +131,8 @@
     </div>
 
     <%block name="footer">
-      ## Can be overridden by child templates wanting to hide the footer. 
-      <%
-        if theme_enabled() and not is_microsite():
-          footer_file = 'theme-footer.html'
-        elif settings.FEATURES.get('IS_EDX_DOMAIN', False) and not is_microsite():
-          footer_file = microsite.get_template_path('footer-edx-new.html')
-        else:
-          footer_file = microsite.get_template_path('footer.html')
-      %>
-      <%include file="${footer_file}" />
+      ## Can be overridden by child templates wanting to hide the footer.
+      <%include file="${FOOTER_FILE}" />
     </%block>
 
   </div>
