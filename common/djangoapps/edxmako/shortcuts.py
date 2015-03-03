@@ -98,6 +98,40 @@ def microsite_footer_context_processor(request):
         ]
     )
 
+def theme_context_processor(request):
+    """
+    """
+    context = {
+        # 'THEME_ENABLED': False,
+        'HEADER_FILE': 'navigation.html',
+        'HEADER_EXTRA_FILE': None,
+        'GOOGLE_ANALYTICS_FILE': None,
+        'STYLE_OVERRIDES_FILE': None,
+        'FOOTER_FILE': 'footer.html',
+    }
+    is_microsite = microsite.is_request_in_microsite()
+    if settings.FEATURES['USE_CUSTOM_THEME'] and not is_microsite:
+        context.update({
+            # 'THEME_ENABLED': True,
+            'HEADER_FILE': 'theme-header.html',
+            'HEADER_EXTRA_FILE': 'theme-head-extra.html',
+            'GOOGLE_ANALYTICS_FILE': 'theme-google-analytics.html',
+            'FOOTER_FILE': 'theme-footer.html',
+        })
+    else:
+        context.update({
+            'GOOGLE_ANALYTICS_FILE': microsite.get_template_path('google_analytics.html'),
+            'STYLE_OVERRIDES_FILE': microsite.get_value('css_overrides_file'),
+        })
+
+        if settings.FEATURES['IS_EDX_DOMAIN'] and not is_microsite:
+            context.update({
+                'HEADER_FILE': microsite.get_template_path('navigation-edx.html'),
+                'FOOTER_FILE': microsite.get_template_path('footer-edx-new.html')
+            })
+    return context
+
+
 
 def render_to_string(template_name, dictionary, context=None, namespace='main'):
 

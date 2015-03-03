@@ -449,6 +449,9 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 
     # Allows the open edX footer to be leveraged in Django Templates.
     'edxmako.shortcuts.microsite_footer_context_processor',
+
+    # Provides filenames for include tag if theme or microsite is used
+    'edxmako.shortcuts.theme_context_processor',
 )
 
 # use the ratelimit backend to prevent brute force attacks

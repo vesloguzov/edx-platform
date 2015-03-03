@@ -17,9 +17,15 @@
   {% block main_vendor_js %}
   {% compressed_js 'main_vendor' %}
   {% endblock %}
+
   {% block headextra %}{% endblock %}
+  {% if HEADER_EXTRA_FILE %}
+    {% include HEADER_EXTRA_FILE %}
+  {% endif %}
+
   {% render_block "css" %}
 
+  {% include GOOGLE_ANALYTICS_FILE %}
   {% microsite_css_overrides_file %}
 
   <!--[if lt IE 9]>
@@ -31,24 +37,17 @@
 
 <body class="{% block bodyclass %}{% endblock %} lang_{{LANGUAGE_CODE}}">
   <a class="nav-skip" href="{% block nav_skip %}#content{% endblock %}">{% trans "Skip to this view's content" %}</a>
+
+  <div class="sticky-footer-wrapper">
   {% with course=request.course %}
-    {% if IS_EDX_DOMAIN %}
-      {% include "navigation-edx.html" %}
-    {% else %}
-      {% include "navigation.html" %}
-    {% endif %}
+    {% include HEADER_FILE %}
   {% endwith %}
   <div class="content-wrapper" id="content">
     {% block body %}{% endblock %}
     {% block bodyextra %}{% endblock %}
   </div>
-  {% if IS_REQUEST_IN_MICROSITE %}
-  {# For now we don't support overriden Django templates in microsites. Leave footer blank for now which is better than saying Edx.#}
-  {% elif IS_EDX_DOMAIN %}
-    {% include "footer-edx-new.html" %}
-  {% else %}
-    {% include "footer.html" %}
-  {% endif %}
+  </div>
+  {% include FOOTER_FILE %}
 
   {% compressed_js 'application' %}
   {% compressed_js 'module-js' %}
