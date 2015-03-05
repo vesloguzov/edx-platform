@@ -29,8 +29,6 @@ def sync_user_profile(username):
         'title': username,
         'body': {'und': {"0": {'value': "I cannot hate you, but you owe me a cake"}}},
     }
-    print url
-    print payload
 
     try:
         # response = requests.put(url, headers=headers)
@@ -40,6 +38,10 @@ def sync_user_profile(username):
         raise
     else:
         if response.status_code == requests.codes.ok:
-            log.info('Successfully sent user update signal')
+            log.info(u'Successfully sent user update signal, uid="%s"' % username)
         else:
-            log.error('Sync: unexpected server response: {} {}'.format(response.status_code, response.text))
+            log.error(u'Sync for uid="{}": unexpected server response: {} {}'.format(
+                username,
+                response.status_code,
+                response.text
+            ))
