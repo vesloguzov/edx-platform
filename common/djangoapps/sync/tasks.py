@@ -14,8 +14,33 @@ from celery.utils.log import get_task_logger
 
 log = get_task_logger(__name__)
 
-@task
 def sync_user_profile(username):
+    """
+    Starts async user profile syncronization task
+
+    Additional logging included to track not synced user profiles
+
+    Args:
+        username - uid of the user whose profile to sync; used instead of user
+        since celery requires serializable args
+    """
+    try:
+        _sync_user_profile.apply_async([username])
+    except socket.error as e:
+        log.error(u'Sync for uid="{}": socket error: {} {}'.format(
+            username,
+            e.errno,
+            e.strerror,
+        ))
+    except Exception as e:
+        log.error(u'Sync for uid="{}": unexpected edception: {} {}'.format(
+            username,
+            e.__class__,
+            e.message,
+        ))
+
+@task
+def _sync_user_profile(username):
     url = getattr(settings, 'SYNC_USER_URL', None)
     if not url:
         log.error('Missing sync url')

@@ -40,7 +40,7 @@ def update_required_data(request):
         # add a timeout for next check if user removes some data in future or submitted partial data
         _postpone_student_data_update(request.session)
         # TODO: move to signal receiver
-        sync_user_profile.apply_async([request.user.username])
+        sync_user_profile(request.user.username)
         return JsonResponse({'success': True})
     else:
         return JsonResponse({

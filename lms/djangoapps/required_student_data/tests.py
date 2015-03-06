@@ -4,6 +4,7 @@ Tests for required student data form
 import json
 import ddt
 import datetime
+import mock
 from time import sleep
 
 from django.test import TestCase
@@ -17,7 +18,9 @@ from xmodule.modulestore.tests.factories import CourseFactory
 from student.tests.factories import UserFactory, UserProfileFactory
 from student.roles import CourseStaffRole
 
+
 @ddt.ddt
+@mock.patch('required_student_data.views.sync_user_profile', new=lambda username: None)
 @override_settings(REQUIRE_STUDENT_DATA_FOR_COURSEWARE=True)
 class RequiredStudentDataTest(TestCase):
     """
