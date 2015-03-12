@@ -1,4 +1,5 @@
 <%namespace name='static' file='/static_content.html'/>
+<%! from django.core.urlresolvers import reverse %>
 
 <script type="text/javascript" src="${static.url('js/vendor/jquery.leanModal.min.js')}"></script>
 <script type="text/javascript" src="${static.url('js/staff_debug_actions.js')}"></script>
@@ -13,11 +14,14 @@ function setup_debug(element_id, edit_link, staff_context){
 
     $('#' + element_id + '_history_form').submit(
         function () {
-            var username = $("#" + element_id + "_history_student_username").val();
+            var student_identifier = $("#" + element_id + "_history_student_username").val();
             var location = $("#" + element_id + "_history_location").val();
 
-            $("#" + element_id + "_history_text").load('/courses/' + "${unicode(course.id) | u}" +
-                "/submission_history/" + username + "/" + location);
+            $("#" + element_id + "_history_text").load(
+                '${reverse('submission_history', args=[course.id, "__location_placeholder__"])}'.replace('__location_placeholder__', location),
+                {'student_identifier': student_identifier}
+            );
+
             return false;
         }
     );
