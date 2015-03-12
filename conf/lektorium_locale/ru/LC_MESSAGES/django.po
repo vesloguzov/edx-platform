@@ -6448,7 +6448,7 @@ msgstr ""
 
 #: lms/templates/combinedopenended/openended/open_ended_rubric.html
 msgid "Rubric"
-msgstr "Рубрика"
+msgstr "Оценивание"
 
 #: lms/templates/combinedopenended/openended/open_ended_rubric.html
 msgid ""
@@ -8434,7 +8434,7 @@ msgstr ""
 
 #: lms/templates/instructor/staff_grading.html
 msgid "Prompt"
-msgstr "Подсказка"
+msgstr "Описание"
 
 #: lms/templates/instructor/staff_grading.html
 msgid "(Hide)"
