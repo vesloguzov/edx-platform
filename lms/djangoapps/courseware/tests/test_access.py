@@ -210,6 +210,26 @@ class AccessTestCase(LoginEnrollmentTestCase):
         )
         self.assertFalse(access._has_access_course_desc(user, 'enroll', course))
 
+    def test__see_exists_invitation_only_if_enrolled(self):
+        """
+        Ensure users enrolled from 'Membership' tab of instructor panel can see
+        the course exists before the course starts
+        """
+        yesterday = datetime.datetime.now(pytz.utc) - datetime.timedelta(days=1)
+        tomorrow = datetime.datetime.now(pytz.utc) + datetime.timedelta(days=1)
+
+        user = UserFactory.create()
+        course = Mock(
+            enrollment_start=yesterday, enrollment_end=tomorrow,
+            id=SlashSeparatedCourseKey('edX', 'test', '2012_Fall'),
+            enrollment_domain='', invitation_only=True
+        )
+
+        self.assertFalse(access._has_access_course_desc(user, 'see_exists', course))
+
+        CourseEnrollmentFactory.create(user=user, course_id=course.id)
+        self.assertTrue(access._has_access_course_desc(user, 'see_exists', course))
+
     def test__user_passed_as_none(self):
         """Ensure has_access handles a user being passed as null"""
         access.has_access(None, 'staff', 'global', None)

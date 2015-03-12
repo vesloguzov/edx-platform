@@ -15,7 +15,7 @@ from xmodule.modulestore.tests.django_utils import (
     TEST_DATA_MOCK_MODULESTORE, TEST_DATA_MIXED_CLOSED_MODULESTORE
 )
 from student.models import CourseEnrollment
-from student.tests.factories import UserFactory, CourseEnrollmentAllowedFactory
+from student.tests.factories import UserFactory, CourseEnrollmentFactory, CourseEnrollmentAllowedFactory
 from shoppingcart.models import Order, PaidCourseRegistration
 from xmodule.course_module import CATALOG_VISIBILITY_ABOUT, CATALOG_VISIBILITY_NONE
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
@@ -264,7 +264,7 @@ class AboutWithInvitationOnly(ModuleStoreTestCase):
     This test case will check the About page when a course is invitation only.
     """
     def setUp(self):
-
+        super(AboutWithInvitationOnly, self).setUp()
         self.course = CourseFactory.create(metadata={"invitation_only": True})
 
         self.about = ItemFactory.create(
@@ -302,6 +302,51 @@ class AboutWithInvitationOnly(ModuleStoreTestCase):
 
         # Check that registration button is present
         self.assertIn(REG_STR, resp.content)
+
+    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
+    def test_invitation_only_but_allowed_before_start(self):
+        """
+        Test for user logged in and allowed to enroll in invitation only course.
+        """
+        self._delay_course_start()
+
+        # Course is invitation only, student is allowed to enroll and logged in
+        user = UserFactory.create(username='allowed_student', password='test', email='allowed_student@test.com')
+        CourseEnrollmentAllowedFactory(email=user.email, course_id=self.course.id)
+        self.client.login(username=user.username, password='test')
+
+        url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Register", resp.content)
+
+        # Check that registration button is present
+        self.assertIn(REG_STR, resp.content)
+
+    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
+    def test_invitation_only_enrolled_before_start(self):
+        """
+        Test for user logged in and enrolled in invitation only course before the start date
+        """
+        self._delay_course_start()
+
+        # Course is invitation only, student is enrolled and logged in
+        user = UserFactory.create(username='enrolled_student', password='test', email='enrolled_student@test.com')
+        CourseEnrollmentFactory(user=user, course_id=self.course.id)
+        self.client.login(username=user.username, password='test')
+
+        url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("You are registered for this course", resp.content)
+        self.assertNotIn("View Courseware", resp.content)
+
+    def _delay_course_start(self):
+        # Course is not yet started
+        tomorrow = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=1)
+        self.course.start = tomorrow
+        self.course = self.update_course(self.course, self.user.id)
+
 
 
 @patch.dict(settings.FEATURES, {'RESTRICT_ENROLL_BY_REG_METHOD': True})

@@ -221,8 +221,9 @@ def _has_access_course_desc(user, action, course):
 
     def see_exists():
         """
-        Can see if can enroll, but also if can load it: if user enrolled in a course and now
-        it's past the enrollment period, they should still see it.
+        Can see if can enroll, but also if is enrolled or can load it:
+        if user enrolled in a course and now it's past the enrollment period,
+        they should still see it.
 
         TODO (vshnayder): This means that courses with limited enrollment periods will not appear
         to non-staff visitors after the enrollment period is over.  If this is not what we want, will
@@ -238,6 +239,12 @@ def _has_access_course_desc(user, action, course):
                 debug("Allow: ACCESS_REQUIRE_STAFF_FOR_COURSE and ispublic")
                 return True
             return _has_staff_access_to_descriptor(user, course, course.id)
+
+        # special case found in invitation only courses: already enrolled users
+        # should see the course if they were enrolled without CourseEnrollmentAllowed created
+        if (user is not None and user.is_authenticated()
+            and CourseEnrollment.is_enrolled(user, course.id)):
+            return True
 
         return can_enroll() or can_load()
 
