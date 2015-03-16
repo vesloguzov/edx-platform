@@ -158,4 +158,4 @@ git+https://github.com/mfogel/django-settings-context-processor.git
 
 # edX packages
 # edx-submissions==0.0.8
--e git+ssh://repo:/dat/repo/edx-submissions.git@lektorium
+-e git+https://github.com/lektorium-llc/edx-submissions.git@5edf380a7d605cd5b660535a244f3ef7ee46b3f1#egg=edx-submissions
