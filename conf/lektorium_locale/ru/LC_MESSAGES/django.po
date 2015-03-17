@@ -6755,6 +6755,26 @@ msgid "Search students"
 msgstr "Поиск студентов"
 
 #: lms/templates/courseware/info.html
+msgid ""
+"You need to <a href=\"{login_url}\">log in</a> or "
+"<a href=\"{signup_url}\">sign up</a> to view all course updates."
+msgstr ""
+"Для просмотра новостей курса Вам необходимо <a href=\"{login_url}\">войти</a> "
+"или <a href=\"{signup_url}\">зарегистрироваться</a>."
+
+#: lms/templates/courseware/info.html
+msgid "You are not enrolled yet"
+msgstr "Вы ещё не записаны на курс"
+
+#: lms/templates/courseware/info.html
+msgid ""
+"You are not currently enrolled in this course. Sign up for it "
+"{link_start}here{link_end}!"
+msgstr ""
+"Вы пока не записаны на данный курс. Присоединиться к курсу можно "
+"{link_start}здесь{link_end}."
+
+#: lms/templates/courseware/info.html
 msgid "{course_number} Course Info"
 msgstr "Новости курса {course_number}"
 
@@ -7425,6 +7445,10 @@ msgstr "Заполните форму отзыва об этом курсе"
 #: lms/templates/dashboard/_dashboard_course_listing.html
 msgid "{course_number} {course_name} Cover Image"
 msgstr "{course_number} {course_name} Обложка"
+
+#: lms/templates/dashboard/_dashboard_course_listing.html
+msgid "Are you sure you want to unenroll from"
+msgstr "Вы уверены, что хотите отписаться от курса"
 
 #: lms/templates/dashboard/_dashboard_course_listing.html
 msgid "Enrolled as: "

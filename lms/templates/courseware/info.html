@@ -1,5 +1,6 @@
 <%! from django.utils.translation import ugettext as _ %>
 <%! from courseware.courses import get_course_info_section %>
+<%! from django.core.urlresolvers import reverse %>
 
 <%inherit file="../main.html" />
 <%namespace name='static' file='../static_content.html'/>
@@ -63,6 +64,9 @@ $(document).ready(function(){
     % else:
     <section class="updates">
       <h1>${_("Course Updates &amp; News")}</h1>
+      <p>${_('You need to <a href="{login_url}">log in</a> or <a href="{signup_url}">sign up</a> to view all course updates.').format(
+      login_url=reverse('signin_user'), signup_url=reverse('register_user')
+      )}
       ${get_course_info_section(request, course, 'guest_updates')}
     </section>
     <section aria-label="${_('Handout Navigation')}" class="handouts">
