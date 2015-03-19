@@ -87,7 +87,7 @@
         </article>
         <article class="response">
           <h3>${_("What will the scope of the online courses be? How many? Which faculty?")}</h3>
-          <p>${_('Our goal is to offer a wide variety of courses across disciplines. There are currently {link_start}fifteen{link_end} offered on the {edX} platform.').format(link_start='<a href="/courses">', link_end='</a>', edX="edX")}</p>
+          <p>${_('Our goal is to offer a wide variety of courses across disciplines. There are currently {link_start}fifteen{link_end} offered on the {edX} platform.').format(link_start=u'<a href="{}">'.format(reverse('courses')), link_end='</a>', edX="edX")}</p>
         </article>
         <article class="response">
           <h3>${_("Who is the learner? Domestic or international? Age range?")}</h3>

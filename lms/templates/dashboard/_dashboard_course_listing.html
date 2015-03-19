@@ -190,7 +190,7 @@ from student.helpers import (
             </div>
 
             <div class="wrapper-extended">
-                <p class="message-copy">${_("You can still sign up for an ID verified {cert_name_long} for this course. If you plan to complete the whole course, it is a great way to recognize your achievement. {link_start}Learn more about the verified {cert_name_long}{link_end}.").format(link_start='<a href="{}">'.format(marketing_link('WHAT_IS_VERIFIED_CERT')), link_end="</a>", cert_name_long=cert_name_long)}</p>
+                <p class="message-copy">${_("You can still sign up for an ID verified {cert_name_long} for this course. If you plan to complete the whole course, it is a great way to recognize your achievement. {link_start}Learn more about the verified {cert_name_long}{link_end}.").format(link_start=u'<a href="{}">'.format(marketing_link('WHAT_IS_VERIFIED_CERT')), link_end="</a>", cert_name_long=cert_name_long)}</p>
 
               <ul class="actions message-actions">
                 <li class="action-item">
@@ -219,7 +219,7 @@ from student.helpers import (
             contact_link_start='<a href="#">',
             contact_link_end='</a>',
             unenroll_link_start=(
-              '<a id="unregister_block_course" rel="leanModal" '
+              u'<a id="unregister_block_course" rel="leanModal" '
               'data-course-id="{course_id}" data-course-number="{course_number}" '
               'href="#unenroll-modal">'.format(
                 course_id=escape(course.id),
@@ -329,7 +329,7 @@ from student.helpers import (
   <section class="prerequisites">
     <p class="tip">
       ${_("You must successfully complete {link_start}{prc_display}{link_end} before you begin this course.").format(
-          link_start='<a href="{}">'.format(prc_target),
+          link_start=u'<a href="{}">'.format(prc_target),
           link_end='</a>',
           prc_display=course_requirements['courses'][0]['display'],
         )}
