@@ -8119,7 +8119,8 @@ msgstr "Ваша учетная запись на {platform_name}"
 #: lms/templates/emails/enroll_email_enrolledmessage.txt
 #: lms/templates/emails/remove_beta_tester_email_message.txt
 #: lms/templates/emails/unenroll_email_enrolledmessage.txt
-msgid "Dear {full_name}"
+#: common/templates/emails/enroll_email_message.txt
+msgid "Dear {full_name},"
 msgstr "Здравствуйте, {full_name}!"
 
 #: lms/templates/emails/add_beta_tester_email_message.txt
@@ -8141,6 +8142,7 @@ msgid "When the course starts, you'll get an email with a link to the courseware
 msgstr "Когда курс начнётся, Вам придёт приглашение со ссылкой на онлайн-класс."
 
 #: lms/templates/emails/enroll_email_enrolledmessage.txt
+#: common/templates/emails/enroll_email_message.txt
 msgid "For the description of the course, please visit {course_about_url}."
 msgstr "Подробное описание курса можно найти на странице {course_about_url}."
 
@@ -14359,6 +14361,27 @@ msgid ""
 msgstr ""
 "Вы записались на курс «{course_name}» на {site_name}. "
 "Курс должен теперь появиться в Вашем личном кабинете {site_name}."
+
+#: common/templates/emails/enroll_email_message.txt
+msgid "You have enrolled in {course_name} at {site_name}."
+msgstr "Вы записались на курс «{course_name}» на сайте {site_name}."
+
+#: common/templates/emails/enroll_email_message.txt
+msgid "The course should now appear on your dashboard."
+msgstr "Курс должен теперь появиться в разделе «Мои курсы» в Вашем личном кабинете."
+
+#: common/templates/emails/enroll_email_message.txt
+msgid "To start accessing courseware, please visit {course_url} and login."
+msgstr "Для доступа к материалам курса, пожалуйста, перейдите по ссылке {course_url} и войдите на сайт."
+
+#: common/templates/emails/enroll_email_message.txt
+msgid ""
+"When the course starts, you'll get an email with a reminder and a link to the courseware. "
+"Also, you'll be able to access the courseware from your {site_name} dashboard."
+msgstr ""
+"В день запуска курса Вам придёт письмо с напоминанием о начале обучения "
+"и ссылкой на материалы курса. Также Вам будет открыт доступ к курсу из раздела "
+"«Мои курсы» в Вашем личном кабинете."
 
 #: lms/djangoapps/certificates/models.py
 msgid "certificate"
