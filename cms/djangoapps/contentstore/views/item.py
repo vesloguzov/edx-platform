@@ -248,7 +248,7 @@ def xblock_view_handler(request, usage_key_string, view_name):
             # component-goblins.
             except Exception as exc:                          # pylint: disable=broad-except
                 log.debug("Unable to render %s for %r", view_name, xblock, exc_info=True)
-                fragment = Fragment(render_to_string('html_error.html', {'message': str(exc)}))
+                fragment = Fragment(render_to_string('html_error.html', {'message': unicode(exc)}))
 
         elif view_name in (PREVIEW_VIEWS + container_views):
             is_pages_view = view_name == STUDENT_VIEW   # Only the "Pages" view uses student view in Studio
