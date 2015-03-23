@@ -61,6 +61,9 @@ import json
             'jquery.ui.datepickerDefaults': {
               dateFormatPython: "${get_format('DATE_INPUT_FORMATS')[0]}",
               defaults: <%include file="datepicker_defaults.html" />
+            },
+            'js/views/course_info_update': {
+              dateFormat: "${settings.COURSE_UPDATE_DATE_FORMAT}"
             }
           }
       }

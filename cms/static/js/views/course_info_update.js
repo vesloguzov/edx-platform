@@ -1,6 +1,6 @@
-define(["js/views/baseview", "codemirror", "js/models/course_update",
-    "js/views/feedback_prompt", "js/views/feedback_notification", "js/views/course_info_helper", "js/utils/modal"],
-    function(BaseView, CodeMirror, CourseUpdateModel, PromptView, NotificationView, CourseInfoHelper, ModalUtils) {
+define(["module", "js/views/baseview", "codemirror", "js/models/course_update",
+    "js/views/feedback_prompt", "js/views/feedback_notification", "js/views/course_info_helper", "js/utils/modal", 'jquery.ui.datepickerDefaults'],
+    function(module, BaseView, CodeMirror, CourseUpdateModel, PromptView, NotificationView, CourseInfoHelper, ModalUtils) {
 
     var CourseInfoUpdateView = BaseView.extend({
         // collection is CourseUpdateCollection
@@ -36,7 +36,7 @@ define(["js/views/baseview", "codemirror", "js/models/course_update",
                 }
             });
             this.$el.find(".new-update-form").hide();
-            this.$el.find('.date').datepicker({ 'dateFormat': 'MM d, yy' });
+            this.$el.find('.date').datepicker({ 'dateFormat': module.config().dateFormat });
             return this;
         },
 

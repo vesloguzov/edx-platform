@@ -850,6 +850,9 @@ ADVANCED_PROBLEM_TYPES = [
 #date format the api will be formatting the datetime values
 API_DATE_FORMAT = '%Y-%m-%d'
 
+# date format for course update page (jquery.datepicker format)
+COURSE_UPDATE_DATE_FORMAT = 'MM d, yy'
+
 # Files and Uploads type filter values
 
 FILES_AND_UPLOAD_TYPE_FILTERS = {
