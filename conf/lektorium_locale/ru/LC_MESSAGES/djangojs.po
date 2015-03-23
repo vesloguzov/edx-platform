@@ -1905,3 +1905,11 @@ msgstr ""
 #: cms/static/js/views/video/translations_editor.js
 msgid "Upload translation"
 msgstr "Загрузить перевод"
+
+#: cms/templates/js/release-date-editor.underscore
+msgid "MM/DD/YYYY"
+msgstr "ДД.ММ.ГГГГ"
+
+#: cms/templates/js/release-date-editor.underscore
+msgid "HH:MM"
+msgstr "ЧЧ:ММ"

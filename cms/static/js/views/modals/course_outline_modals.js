@@ -7,7 +7,7 @@
  */
 define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/baseview',
     'js/views/modals/base_modal', 'date', 'js/views/utils/xblock_utils',
-    'js/utils/date_utils'
+    'js/utils/date_utils', 'jquery.ui.datepickerDefaults'
 ], function(
     $, Backbone, _, gettext, BaseView, BaseModal, date, XBlockViewUtils, DateUtils
 ) {
@@ -186,7 +186,7 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/baseview',
 
         afterRender: function () {
             AbstractEditor.prototype.afterRender.call(this);
-            this.$('input.date').datepicker({'dateFormat': 'm/d/yy'});
+            this.$('input.date').datepicker();
             this.$('input.time').timepicker({
                 'timeFormat' : 'H:i',
                 'forceRoundTime': true

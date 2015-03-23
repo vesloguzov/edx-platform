@@ -2,13 +2,13 @@
     <li class="field field-text field-due-date">
         <label for="due_date"><%= gettext('Due Date:') %></label>
         <input type="text" id="due_date" name="due_date" value=""
-            placeholder="MM/DD/YYYY" class="due-date date input input-text" autocomplete="off"/>
+            placeholder="<%= gettext('MM/DD/YYYY') %>" class="due-date date input input-text" autocomplete="off"/>
     </li>
 
     <li class="field field-text field-due-time">
         <label for="due_time"><%= gettext('Due Time in UTC:') %></label>
         <input type="text" id="due_time" name="due_time" value=""
-            placeholder="HH:MM" class="due-time time input input-text" autocomplete="off" />
+            placeholder="<%= gettext('HH:MM') %>" class="due-time time input input-text" autocomplete="off" />
     </li>
 </ul>
 
