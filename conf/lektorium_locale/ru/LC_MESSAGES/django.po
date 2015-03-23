@@ -14390,3 +14390,11 @@ msgstr "сертификат"
 #: lms/djangoapps/certificates/models.py
 msgid "certificates"
 msgstr "сертификаты"
+
+#: cms/templates/settings.html
+msgid "MM/DD/YYYY"
+msgstr "ДД.ММ.ГГГГ"
+
+#: cms/templates/settings.html
+msgid "HH:MM"
+msgstr "ЧЧ:ММ"

@@ -135,13 +135,13 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url}';
             <li class="field-group field-group-course-start" id="course-start">
               <div class="field date" id="field-course-start-date">
                 <label for="course-start-date">${_("Course Start Date")}</label>
-                <input type="text" class="start-date date start datepicker" id="course-start-date" placeholder="MM/DD/YYYY" autocomplete="off" />
+                <input type="text" class="start-date date start datepicker" id="course-start-date" placeholder="${_('MM/DD/YYYY')}" autocomplete="off" />
                 <span class="tip tip-stacked">${_("First day the course begins")}</span>
               </div>
 
               <div class="field time" id="field-course-start-time">
                 <label for="course-start-time">${_("Course Start Time")}</label>
-                <input type="text" class="time start timepicker" id="course-start-time" value="" placeholder="HH:MM" autocomplete="off" />
+                <input type="text" class="time start timepicker" id="course-start-time" value="" placeholder="${_('HH:MM')}" autocomplete="off" />
                 <span class="tip tip-stacked timezone">${_("(UTC)")}</span>
               </div>
             </li>
@@ -149,13 +149,13 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url}';
             <li class="field-group field-group-course-end" id="course-end">
               <div class="field date" id="field-course-end-date">
                 <label for="course-end-date">${_("Course End Date")}</label>
-                <input type="text" class="end-date date end" id="course-end-date" placeholder="MM/DD/YYYY" autocomplete="off" />
+                <input type="text" class="end-date date end" id="course-end-date" placeholder="${_('MM/DD/YYYY')}" autocomplete="off" />
                 <span class="tip tip-stacked">${_("Last day your course is active")}</span>
               </div>
 
               <div class="field time" id="field-course-end-time">
                 <label for="course-end-time">${_("Course End Time")}</label>
-                <input type="text" class="time end" id="course-end-time" value="" placeholder="HH:MM" autocomplete="off" />
+                <input type="text" class="time end" id="course-end-time" value="" placeholder="${_('HH:MM')}" autocomplete="off" />
                 <span class="tip tip-stacked timezone">${_("(UTC)")}</span>
               </div>
             </li>
@@ -165,13 +165,13 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url}';
             <li class="field-group field-group-enrollment-start" id="enrollment-start">
               <div class="field date" id="field-enrollment-start-date">
                 <label for="course-enrollment-start-date">${_("Enrollment Start Date")}</label>
-                <input type="text" class="start-date date start" id="course-enrollment-start-date" placeholder="MM/DD/YYYY" autocomplete="off" />
+                <input type="text" class="start-date date start" id="course-enrollment-start-date" placeholder="${_('MM/DD/YYYY')}" autocomplete="off" />
                 <span class="tip tip-stacked">${_("First day students can enroll")}</span>
               </div>
 
               <div class="field time" id="field-enrollment-start-time">
                 <label for="course-enrollment-start-time">${_("Enrollment Start Time")}</label>
-                <input type="text" class="time start" id="course-enrollment-start-time" value="" placeholder="HH:MM" autocomplete="off" />
+                <input type="text" class="time start" id="course-enrollment-start-time" value="" placeholder="${_('HH:MM')}" autocomplete="off" />
                 <span class="tip tip-stacked timezone">${_("(UTC)")}</span>
               </div>
             </li>
@@ -179,13 +179,13 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url}';
             <li class="field-group field-group-enrollment-end" id="enrollment-end">
               <div class="field date" id="field-enrollment-end-date">
                 <label for="course-enrollment-end-date">${_("Enrollment End Date")}</label>
-                <input type="text" class="end-date date end" id="course-enrollment-end-date" placeholder="MM/DD/YYYY" autocomplete="off" />
+                <input type="text" class="end-date date end" id="course-enrollment-end-date" placeholder="${_('MM/DD/YYYY')}" autocomplete="off" />
                 <span class="tip tip-stacked">${_("Last day students can enroll")}</span>
               </div>
 
               <div class="field time" id="field-enrollment-end-time">
                 <label for="course-enrollment-end-time">${_("Enrollment End Time")}</label>
-                <input type="text" class="time end" id="course-enrollment-end-time" value="" placeholder="HH:MM" autocomplete="off" />
+                <input type="text" class="time end" id="course-enrollment-end-time" value="" placeholder="${_('HH:MM')}" autocomplete="off" />
                 <span class="tip tip-stacked timezone">${_("(UTC)")}</span>
               </div>
             </li>
@@ -304,7 +304,7 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url}';
               <ol class="list-input">
                 <li class="field text" id="field-course-effort">
                   <label for="course-effort">${_("Hours of Effort per Week")}</label>
-                  <input type="text" class="short time" id="course-effort" placeholder="HH:MM" />
+                  <input type="text" class="short time" id="course-effort" placeholder="${_('HH:MM')}" />
                   <span class="tip tip-inline">${_("Time spent on all course work")}</span>
                 </li>
                 % if settings.FEATURES.get('ENABLE_PREREQUISITE_COURSES'):
