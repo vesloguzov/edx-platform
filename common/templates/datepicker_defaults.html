@@ -1,0 +1,20 @@
+<%!
+from django.utils.translation import ugettext as _
+from django.utils.formats import get_format
+%>
+{
+closeText: "${_('Close')}",
+prevText: "&#x3C;${_('Prev')}",
+nextText: "${_('Next')}&#x3E;",
+currentText: "${_('Today')}",
+
+weekHeader: "${_('Wk')}",
+firstDay: "${get_format('FIRST_DAY_OF_WEEK')}",
+
+dayNamesMin: ["${_('Su')}", "${_('Mo')}", "${_('Tu')}", "${_('We')}", "${_('Th')}", "${_('Fr')}", "${_('Sa')}"],
+dayNamesShort: ["${_('Sun')}", "${_('Mon')}", "${_('Tue')}", "${_('Wed')}", "${_('Thu')}", "${_('Fri')}", "${_('Sat')}"],
+dayNames: ["${_('Sunday')}", "${_('Monday')}", "${_('Tuesday')}", "${_('Wednesday')}", "${_('Thursday')}", "${_('Friday')}", "${_('Saturday')}"],
+
+monthNamesShort: ["${_('Jan')}", "${_('Feb')}", "${_('Mar')}", "${_('Apr')}", "${_('May')}", "${_('Jun')}", "${_('Jul')}", "${_('Aug')}", "${_('Sep')}", "${_('Oct')}", "${_('Nov')}", "${_('Dec')}"],
+monthNames: ["${_('January')}", "${_('February')}", "${_('March')}", "${_('April')}", "${_('May')}", "${_('June')}", "${_('July')}", "${_('August')}", "${_('September')}", "${_('October')}", "${_('November')}", "${_('December')}"]
+}

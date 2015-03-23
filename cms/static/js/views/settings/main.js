@@ -1,5 +1,5 @@
 define(["js/views/validation", "codemirror", "underscore", "jquery", "jquery.ui", "js/utils/date_utils", "js/models/uploads",
-    "js/views/uploads", "js/utils/change_on_enter", "jquery.timepicker", "date"],
+    "js/views/uploads", "js/utils/change_on_enter", "jquery.timepicker", "date", "jquery.ui.datepickerDefaults"],
     function(ValidatingView, CodeMirror, _, $, ui, DateUtils, FileUploadModel, FileUploadDialog, TriggerChangeEventOnEnter) {
 
 var DetailsView = ValidatingView.extend({
@@ -26,7 +26,7 @@ var DetailsView = ValidatingView.extend({
         this.$el.find("#course-organization").val(this.model.get('org'));
         this.$el.find("#course-number").val(this.model.get('course_id'));
         this.$el.find("#course-name").val(this.model.get('run'));
-        this.$el.find('.set-date').datepicker({ 'dateFormat': 'm/d/yy' });
+        this.$el.find('.set-date').datepicker();
 
         // Avoid showing broken image on mistyped/nonexistent image
         this.$el.find('img.course-image').error(function() {

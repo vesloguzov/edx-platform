@@ -9,6 +9,7 @@ require.config({
         "codemirror/stex": "js/vendor/CodeMirror/stex",
         "jquery": "js/vendor/jquery.min",
         "jquery.ui": "js/vendor/jquery-ui.min",
+        "jquery.ui.datepickerDefaults": "js/utils/jquery.ui.datepickerDefaults",
         "jquery.form": "js/vendor/jquery.form",
         "jquery.markitup": "js/vendor/markitup/jquery.markitup",
         "jquery.leanModal": "js/vendor/jquery.leanModal.min",
