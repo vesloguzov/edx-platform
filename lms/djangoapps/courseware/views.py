@@ -1056,7 +1056,7 @@ def submission_history(request, course_id, location):
     except User.DoesNotExist:
         return HttpResponse(escape(_(u'User {username} does not exist.').format(username=student_identifier)))
     except User.MultipleObjectsReturned:
-        return HttpResponse(escape(_("Multiple users match nickname: {}; use an email instead".format(identifier))))
+        return HttpResponse(escape(_("Multiple users match nickname: {}; use an email instead".format(student_identifier))))
     except StudentModule.DoesNotExist:
         return HttpResponse(escape(_(u'User {username} has never accessed problem {location}').format(
             username=student_identifier,

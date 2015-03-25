@@ -383,6 +383,25 @@ class ViewsTestCase(TestCase):
         # Tests that we do not get an "Invalid x" response when passing correct arguments to view
         self.assertFalse('Invalid' in response.content)
 
+    def test_submission_history_nonunique_id(self):
+        # log into a staff account
+        admin = AdminFactory()
+        nickname = 'nonunique_test'
+        UserFactory.create(profile__nickname=nickname)
+        UserFactory.create(profile__nickname=nickname)
+
+        self.client.login(username=admin.username, password='test')
+
+        url = reverse('submission_history', kwargs={
+            'course_id': self.course_key.to_deprecated_string(),
+            'location': self.component.location.to_deprecated_string(),
+        }) + '?student_identifier=%s' % nickname
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('Multiple' in response.content)
+        self.assertFalse('Invalid' in response.content)
+
     def test_submission_history_xss(self):
         # log into a staff account
         admin = AdminFactory()
