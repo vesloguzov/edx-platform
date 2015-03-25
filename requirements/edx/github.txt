@@ -28,7 +28,7 @@
 -e git+https://github.com/edx/bok-choy.git@9fd05383dc434e0275c9874fd50ad14e519448bc#egg=bok_choy
 -e git+https://github.com/edx-solutions/django-splash.git@7579d052afcf474ece1239153cffe1c89935bc4f#egg=django-splash
 -e git+https://github.com/edx/acid-block.git@e46f9cda8a03e121a00c7e347084d142d22ebfb7#egg=acid-xblock
--e git+https://github.com/lektorium-llc/edx-ora2.git@9ae827e3f62d4e248295277a1fba2b6483ae5045#egg=edx-ora2
+-e git+https://github.com/lektorium-llc/edx-ora2.git@3d2fccd18be5376c7060ead0434324b3492bf66e#egg=edx-ora2
 -e git+https://github.com/edx/opaque-keys.git@1254ed4d615a428591850656f39f26509b86d30a#egg=opaque-keys
 -e git+https://github.com/lektorium-llc/ease.git@90c0a6d42f3875b9b5be55d05a6cd8ac9589735f#egg=ease
 -e git+https://github.com/edx/i18n-tools.git@56f048af9b6868613c14aeae760548834c495011#egg=i18n-tools
