@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Group Configuration Tests.
 """
@@ -35,7 +36,7 @@ class HelperMethods(object):
     """
     Mixin that provides useful methods for Group Configuration tests.
     """
-    def _create_content_experiment(self, cid=-1, name_suffix=''):
+    def _create_content_experiment(self, cid=-1, name_suffix='', child_name_suffix=''):
         """
         Create content experiment.
 
@@ -44,7 +45,7 @@ class HelperMethods(object):
         vertical = ItemFactory.create(
             category='vertical',
             parent_location=self.course.location,
-            display_name='Test Unit {}'.format(name_suffix)
+            display_name=u'Test Unit {}'.format(name_suffix)
         )
         c0_url = self.course.id.make_usage_key("vertical", "split_test_cond0")
         c1_url = self.course.id.make_usage_key("vertical", "split_test_cond1")
@@ -53,25 +54,25 @@ class HelperMethods(object):
             category='split_test',
             parent_location=vertical.location,
             user_partition_id=cid,
-            display_name='Test Content Experiment {}'.format(name_suffix),
+            display_name=u'Test Content Experiment {}'.format(name_suffix),
             group_id_to_child={"0": c0_url, "1": c1_url, "2": c2_url}
         )
         ItemFactory.create(
             parent_location=split_test.location,
             category="vertical",
-            display_name="Condition 0 vertical",
+            display_name=u"Condition 0 vertical{}".format(child_name_suffix),
             location=c0_url,
         )
         ItemFactory.create(
             parent_location=split_test.location,
             category="vertical",
-            display_name="Condition 1 vertical",
+            display_name=u"Condition 1 vertical{}".format(child_name_suffix),
             location=c1_url,
         )
         ItemFactory.create(
             parent_location=split_test.location,
             category="vertical",
-            display_name="Condition 2 vertical",
+            display_name=u"Condition 2 vertical{}".format(child_name_suffix),
             location=c2_url,
         )
 
@@ -85,13 +86,25 @@ class HelperMethods(object):
         self.save_course()
         return (vertical, split_test)
 
-    def _add_user_partitions(self, count=1):
+    def _add_user_partitions(self, count=1, suffix=''):
         """
         Create user partitions for the course.
         """
+        def _name(*parts):
+            name = u' '.join(parts)
+            if suffix:
+                name += u' ' + suffix
+            return name
+
         partitions = [
             UserPartition(
-                i, 'Name ' + str(i), 'Description ' + str(i), [Group(0, 'Group A'), Group(1, 'Group B'), Group(2, 'Group C')]
+                i,
+                _name('Name', str(i)),
+                _name('Description', str(i)),
+                [
+                    Group(0, _name('Group A')),
+                    Group(1, _name('Group B')),
+                    Group(2, _name('Group C'))]
             ) for i in xrange(0, count)
         ]
 
@@ -543,6 +556,39 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase, HelperMethods):
         self.save_course()
         actual = GroupConfiguration.get_usage_info(self.course, self.store)
         self.assertEqual(actual, {0: []})
+
+    def test_usage_info_nonascii_names(self):
+        """
+        Test if group configurations json updated successfully with usage information.
+        """
+        suffix = u'ηοη-αςκιι'
+        self._add_user_partitions(count=1, suffix=suffix)
+        vertical, __ = self._create_content_experiment(
+            cid=0, name_suffix=suffix, child_name_suffix=suffix
+        )
+
+        actual = GroupConfiguration.get_split_test_partitions_with_usage(self.course, self.store)
+
+        expected = [{
+            'id': 0,
+            'name': u'Name 0 ηοη-αςκιι',
+            'scheme': 'random',
+            'description': u'Description 0 ηοη-αςκιι',
+            'version': UserPartition.VERSION,
+            'groups': [
+                {'id': 0, 'name': u'Group A ηοη-αςκιι', 'version': 1},
+                {'id': 1, 'name': u'Group B ηοη-αςκιι', 'version': 1},
+                {'id': 2, 'name': u'Group C ηοη-αςκιι', 'version': 1},
+            ],
+            'usage': [{
+                'url': #'/container/{}'.format(vertical.location),
+                reverse_usage_url('container_handler', vertical.location),
+                'label': u'Test Unit ηοη-αςκιι / Test Content Experiment ηοη-αςκιι',
+                'validation': None,
+            }],
+        }]
+
+        self.assertEqual(actual, expected)
 
 
 class GroupConfigurationsValidationTestCase(CourseTestCase, HelperMethods):
