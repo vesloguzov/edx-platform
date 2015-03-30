@@ -768,6 +768,9 @@ OPTIONAL_APPS = (
 
     # milestones
     'milestones',
+
+    # staff graded assignments
+    'edx_sga',
 )
 
 
@@ -831,7 +834,7 @@ ADVANCED_COMPONENT_TYPES = [
     'peergrading',
     'notes',
     'schoolyourself_review',
-    'schoolyourself_lesson',
+    'edx_sga',
 ]
 
 # Adding components in this list will disable the creation of new problem for those

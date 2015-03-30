@@ -1954,6 +1954,9 @@ OPTIONAL_APPS = (
 
     # milestones
     'milestones',
+
+    # staff graded assignments
+    'edx_sga',
 )
 
 for app_name in OPTIONAL_APPS:

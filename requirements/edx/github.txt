@@ -36,3 +36,6 @@
 -e git+https://github.com/lektorium-llc/edx-val.git@e18971ddae28cc92fb50fdd12b0688ef3e4089c4#egg=edx-val
 -e git+https://github.com/edx/edx-milestones.git@4dfe78a2aae9559ccc979746d13a9b67f0ec311e#egg=edx-milestones
 -e git+https://github.com/pmitros/RecommenderXBlock.git@a606d00bdf39bd0a4ae9c51773b69b9eb98934ff#egg=recommender-xblock
+
+# Lektorium:
+-e git+https://github.com/lektorium-llc/edx-sga.git@lektorium#egg=edx-sga
