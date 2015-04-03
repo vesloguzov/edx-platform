@@ -5,8 +5,6 @@ from unittest import skip
 
 from mock import patch
 from django.conf import settings
-from django.test import TestCase
-from django.core.urlresolvers import reverse
 
 from xmodule.modulestore.tests.factories import CourseFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase

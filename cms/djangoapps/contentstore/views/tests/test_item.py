@@ -25,7 +25,7 @@ from student.tests.factories import UserFactory
 from xmodule.capa_module import CapaDescriptor
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.django import modulestore
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, TEST_DATA_SPLIT_MODULESTORE
 from xmodule.modulestore.tests.factories import ItemFactory, LibraryFactory, check_mongo_calls
 from xmodule.x_module import STUDIO_VIEW, STUDENT_VIEW
 from xblock.exceptions import NoSuchHandlerError
@@ -558,13 +558,13 @@ class TestDuplicateItem(ItemTest):
         return self.response_usage_key(resp)
 
 
-class TestEditItem(ItemTest):
+class TestEditItemSetup(ItemTest):
     """
-    Test xblock update.
+    Setup for xblock update tests.
     """
     def setUp(self):
         """ Creates the test course structure and a couple problems to 'edit'. """
-        super(TestEditItem, self).setUp()
+        super(TestEditItemSetup, self).setUp()
         # create a chapter
         display_name = 'chapter created'
         resp = self.create_xblock(display_name=display_name, category='chapter')
@@ -587,6 +587,11 @@ class TestEditItem(ItemTest):
 
         self.course_update_url = reverse_usage_url("xblock_handler", self.usage_key)
 
+
+class TestEditItem(TestEditItemSetup):
+    """
+    Test xblock update.
+    """
     def test_delete_field(self):
         """
         Sending null in for a field 'deletes' it
@@ -1004,6 +1009,26 @@ class TestEditItem(ItemTest):
         self.assertIn("Incorrect RelativeTime value", parsed["error"])  # See xmodule/fields.py
 
 
+class TestEditItemSplitMongo(TestEditItemSetup):
+    """
+    Tests for EditItem running on top of the SplitMongoModuleStore.
+    """
+    MODULESTORE = TEST_DATA_SPLIT_MODULESTORE
+
+    def test_editing_view_wrappers(self):
+        """
+        Verify that the editing view only generates a single wrapper, no matter how many times it's loaded
+
+        Exposes: PLAT-417
+        """
+        view_url = reverse_usage_url("xblock_view_handler", self.problem_usage_key, {"view_name": STUDIO_VIEW})
+
+        for __ in xrange(3):
+            resp = self.client.get(view_url, HTTP_ACCEPT='application/json')
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.content.count('xblock-{}'.format(STUDIO_VIEW)), 1)
+
+
 class TestEditSplitModule(ItemTest):
     """
     Tests around editing instances of the split_test module.
@@ -1188,6 +1213,8 @@ class TestEditSplitModule(ItemTest):
 @ddt.ddt
 class TestComponentHandler(TestCase):
     def setUp(self):
+        super(TestComponentHandler, self).setUp()
+
         self.request_factory = RequestFactory()
 
         patcher = patch('contentstore.views.component.modulestore')
@@ -1377,6 +1404,80 @@ class TestXBlockInfo(ItemTest):
         resp = self.client.get(outline_url, HTTP_ACCEPT='application/json')
         json_response = json.loads(resp.content)
         self.validate_course_xblock_info(json_response, course_outline=True)
+
+    def test_entrance_exam_chapter_xblock_info(self):
+        chapter = ItemFactory.create(
+            parent_location=self.course.location, category='chapter', display_name="Entrance Exam",
+            user_id=self.user.id, is_entrance_exam=True
+        )
+        chapter = modulestore().get_item(chapter.location)
+        xblock_info = create_xblock_info(
+            chapter,
+            include_child_info=True,
+            include_children_predicate=ALWAYS,
+        )
+        # entrance exam chapter should not be deletable, draggable and childAddable.
+        actions = xblock_info['actions']
+        self.assertEqual(actions['deletable'], False)
+        self.assertEqual(actions['draggable'], False)
+        self.assertEqual(actions['childAddable'], False)
+        self.assertEqual(xblock_info['display_name'], 'Entrance Exam')
+        self.assertIsNone(xblock_info.get('is_header_visible', None))
+
+    def test_none_entrance_exam_chapter_xblock_info(self):
+        chapter = ItemFactory.create(
+            parent_location=self.course.location, category='chapter', display_name="Test Chapter",
+            user_id=self.user.id
+        )
+        chapter = modulestore().get_item(chapter.location)
+        xblock_info = create_xblock_info(
+            chapter,
+            include_child_info=True,
+            include_children_predicate=ALWAYS,
+        )
+
+        # chapter should be deletable, draggable and childAddable if not an entrance exam.
+        actions = xblock_info['actions']
+        self.assertEqual(actions['deletable'], True)
+        self.assertEqual(actions['draggable'], True)
+        self.assertEqual(actions['childAddable'], True)
+        # chapter xblock info should not contains the key of 'is_header_visible'.
+        self.assertIsNone(xblock_info.get('is_header_visible', None))
+
+    def test_entrance_exam_sequential_xblock_info(self):
+        chapter = ItemFactory.create(
+            parent_location=self.course.location, category='chapter', display_name="Entrance Exam",
+            user_id=self.user.id, is_entrance_exam=True, in_entrance_exam=True
+        )
+
+        subsection = ItemFactory.create(
+            parent_location=chapter.location, category='sequential', display_name="Subsection - Entrance Exam",
+            user_id=self.user.id, in_entrance_exam=True
+        )
+        subsection = modulestore().get_item(subsection.location)
+        xblock_info = create_xblock_info(
+            subsection,
+            include_child_info=True,
+            include_children_predicate=ALWAYS
+        )
+        # in case of entrance exam subsection, header should be hidden.
+        self.assertEqual(xblock_info['is_header_visible'], False)
+        self.assertEqual(xblock_info['display_name'], 'Subsection - Entrance Exam')
+
+    def test_none_entrance_exam_sequential_xblock_info(self):
+        subsection = ItemFactory.create(
+            parent_location=self.chapter.location, category='sequential', display_name="Subsection - Exam",
+            user_id=self.user.id
+        )
+        subsection = modulestore().get_item(subsection.location)
+        xblock_info = create_xblock_info(
+            subsection,
+            include_child_info=True,
+            include_children_predicate=ALWAYS,
+            parent_xblock=self.chapter
+        )
+        # sequential xblock info should not contains the key of 'is_header_visible'.
+        self.assertIsNone(xblock_info.get('is_header_visible', None))
 
     def test_chapter_xblock_info(self):
         chapter = modulestore().get_item(self.chapter.location)

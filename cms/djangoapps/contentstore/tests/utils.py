@@ -7,7 +7,6 @@ import json
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test.client import Client
-from django.test.utils import override_settings
 from opaque_keys.edx.locations import SlashSeparatedCourseKey, AssetLocation
 
 from contentstore.utils import reverse_url
@@ -17,9 +16,8 @@ from xmodule.contentstore.django import contentstore
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.inheritance import own_metadata
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
-from xmodule.modulestore.tests.django_utils import TEST_DATA_MOCK_MODULESTORE
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-from xmodule.modulestore.xml_importer import import_from_xml
+from xmodule.modulestore.xml_importer import import_course_from_xml
 
 TEST_DATA_DIR = settings.COMMON_TEST_DATA_ROOT
 
@@ -69,7 +67,6 @@ class AjaxEnabledTestClient(Client):
         return self.get(path, data or {}, follow, HTTP_ACCEPT="application/json", **extra)
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class CourseTestCase(ModuleStoreTestCase):
     """
     Base class for Studio tests that require a logged in user and a course.
@@ -83,12 +80,12 @@ class CourseTestCase(ModuleStoreTestCase):
         will be cleared out before each test case execution and deleted
         afterwards.
         """
-        user_password = super(CourseTestCase, self).setUp()
+        self.user_password = super(CourseTestCase, self).setUp()
         # create profile for user in ModuleStoreTestCase since it cannot create profile itself
         UserProfile.objects.create(user=self.user)
 
         self.client = AjaxEnabledTestClient()
-        self.client.login(username=self.user.username, password=user_password)
+        self.client.login(username=self.user.username, password=self.user_password)
 
         self.course = CourseFactory.create()
 
@@ -154,7 +151,7 @@ class CourseTestCase(ModuleStoreTestCase):
         Imports the test toy course and populates it with additional test data
         """
         content_store = contentstore()
-        import_from_xml(self.store, self.user.id, TEST_DATA_DIR, ['toy'], static_content_store=content_store)
+        import_course_from_xml(self.store, self.user.id, TEST_DATA_DIR, ['toy'], static_content_store=content_store)
         course_id = SlashSeparatedCourseKey('edX', 'toy', '2012_Fall')
 
         # create an Orphan

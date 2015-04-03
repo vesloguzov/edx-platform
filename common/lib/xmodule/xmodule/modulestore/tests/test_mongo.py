@@ -4,6 +4,7 @@ Unit tests for the Mongo modulestore
 # pylint: disable=no-member
 # pylint: disable=protected-access
 # pylint: disable=no-name-in-module
+# pylint: disable=bad-continuation
 from nose.tools import assert_equals, assert_raises, \
     assert_not_equals, assert_false, assert_true, assert_greater, assert_is_instance, assert_is_none
 # pylint: enable=E0611
@@ -21,7 +22,6 @@ from xblock.core import XBlock
 from xblock.fields import Scope, Reference, ReferenceList, ReferenceValueDict
 from xblock.runtime import KeyValueStore
 from xblock.exceptions import InvalidScopeError
-from xblock.plugin import Plugin
 
 from xmodule.tests import DATA_DIR
 from opaque_keys.edx.locations import Location
@@ -31,8 +31,8 @@ from xmodule.modulestore.draft import DraftModuleStore
 from opaque_keys.edx.locations import SlashSeparatedCourseKey, AssetLocation
 from opaque_keys.edx.locator import LibraryLocator, CourseLocator
 from opaque_keys.edx.keys import UsageKey
-from xmodule.modulestore.xml_exporter import export_to_xml
-from xmodule.modulestore.xml_importer import import_from_xml, perform_xlint
+from xmodule.modulestore.xml_exporter import export_course_to_xml
+from xmodule.modulestore.xml_importer import import_course_from_xml, perform_xlint
 from xmodule.contentstore.mongo import MongoContentStore
 
 from nose.tools import assert_in
@@ -54,7 +54,7 @@ COLLECTION = 'modulestore'
 ASSET_COLLECTION = 'assetstore'
 FS_ROOT = DATA_DIR  # TODO (vshnayder): will need a real fs_root for testing load_item
 DEFAULT_CLASS = 'xmodule.raw_module.RawDescriptor'
-RENDER_TEMPLATE = lambda t_n, d, ctx = None, nsp = 'main': ''
+RENDER_TEMPLATE = lambda t_n, d, ctx=None, nsp='main': ''
 
 
 class ReferenceTestXBlock(XBlock, XModuleMixin):
@@ -127,7 +127,7 @@ class TestMongoModuleStoreBase(unittest.TestCase):
             xblock_mixins=(EditInfoMixin,)
 
         )
-        import_from_xml(
+        import_course_from_xml(
             draft_store,
             999,
             DATA_DIR,
@@ -136,7 +136,7 @@ class TestMongoModuleStoreBase(unittest.TestCase):
         )
 
         # also test a course with no importing of static content
-        import_from_xml(
+        import_course_from_xml(
             draft_store,
             999,
             DATA_DIR,
@@ -146,6 +146,18 @@ class TestMongoModuleStoreBase(unittest.TestCase):
             verbose=True
         )
 
+        # also import a course under a different course_id (especially ORG)
+        import_course_from_xml(
+            draft_store,
+            999,
+            DATA_DIR,
+            ['test_import_course'],
+            static_content_store=content_store,
+            do_import_static=False,
+            verbose=True,
+            target_id=SlashSeparatedCourseKey('guestx', 'foo', 'bar')
+        )
+
         return content_store, draft_store
 
     @staticmethod
@@ -153,13 +165,9 @@ class TestMongoModuleStoreBase(unittest.TestCase):
         # Destroy the test db.
         connection.drop_database(DB)
 
-    @classmethod
-    def setUp(cls):
-        cls.dummy_user = ModuleStoreEnum.UserID.test
-
-    @classmethod
-    def tearDown(cls):
-        pass
+    def setUp(self):
+        super(TestMongoModuleStoreBase, self).setUp()
+        self.dummy_user = ModuleStoreEnum.UserID.test
 
 
 class TestMongoModuleStore(TestMongoModuleStoreBase):
@@ -196,15 +204,29 @@ class TestMongoModuleStore(TestMongoModuleStoreBase):
     def test_get_courses(self):
         '''Make sure the course objects loaded properly'''
         courses = self.draft_store.get_courses()
-        assert_equals(len(courses), 6)
+
+        # note, the number of courses expected is really
+        # 6, but due to a lack of cache flushing between
+        # test case runs, we will get back 7.
+        # When we fix the caching issue, we should reduce this
+        # to 6 and remove the 'treexport_peer_component' course_id
+        # from the list below
+        assert_equals(len(courses), 7)  # pylint: disable=no-value-for-parameter
         course_ids = [course.id for course in courses]
+
         for course_key in [
 
             SlashSeparatedCourseKey(*fields)
             for fields in [
-                ['edX', 'simple', '2012_Fall'], ['edX', 'simple_with_draft', '2012_Fall'],
-                ['edX', 'test_import_course', '2012_Fall'], ['edX', 'test_unicode', '2012_Fall'],
-                ['edX', 'toy', '2012_Fall']
+                ['edX', 'simple', '2012_Fall'],
+                ['edX', 'simple_with_draft', '2012_Fall'],
+                ['edX', 'test_import_course', '2012_Fall'],
+                ['edX', 'test_unicode', '2012_Fall'],
+                ['edX', 'toy', '2012_Fall'],
+                ['guestx', 'foo', 'bar'],
+                # This course below is due to a caching issue in the modulestore
+                # which is not cleared between test runs. This means
+                ['edX', 'treeexport_peer_component', 'export_peer_component'],
             ]
         ]:
             assert_in(course_key, course_ids)
@@ -216,6 +238,48 @@ class TestMongoModuleStore(TestMongoModuleStoreBase):
             )
             assert_false(self.draft_store.has_course(mix_cased))
             assert_true(self.draft_store.has_course(mix_cased, ignore_case=True))
+
+    def test_get_org_courses(self):
+        """
+        Make sure that we can query for a filtered list of courses for a given ORG
+        """
+
+        courses = self.draft_store.get_courses(org='guestx')
+        assert_equals(len(courses), 1)  # pylint: disable=no-value-for-parameter
+        course_ids = [course.id for course in courses]
+
+        for course_key in [
+            SlashSeparatedCourseKey(*fields)
+            for fields in [
+                ['guestx', 'foo', 'bar']
+            ]
+        ]:
+            assert_in(course_key, course_ids)  # pylint: disable=no-value-for-parameter
+
+        courses = self.draft_store.get_courses(org='edX')
+        # note, the number of courses expected is really
+        # 5, but due to a lack of cache flushing between
+        # test case runs, we will get back 6.
+        # When we fix the caching issue, we should reduce this
+        # to 6 and remove the 'treexport_peer_component' course_id
+        # from the list below
+        assert_equals(len(courses), 6)  # pylint: disable=no-value-for-parameter
+        course_ids = [course.id for course in courses]
+
+        for course_key in [
+            SlashSeparatedCourseKey(*fields)
+            for fields in [
+                ['edX', 'simple', '2012_Fall'],
+                ['edX', 'simple_with_draft', '2012_Fall'],
+                ['edX', 'test_import_course', '2012_Fall'],
+                ['edX', 'test_unicode', '2012_Fall'],
+                ['edX', 'toy', '2012_Fall'],
+                # This course below is due to a caching issue in the modulestore
+                # which is not cleared between test runs. This means
+                ['edX', 'treeexport_peer_component', 'export_peer_component'],
+            ]
+        ]:
+            assert_in(course_key, course_ids)  # pylint: disable=no-value-for-parameter
 
     def test_no_such_course(self):
         """
@@ -518,7 +582,7 @@ class TestMongoModuleStore(TestMongoModuleStoreBase):
 
         root_dir = path(mkdtemp())
         try:
-            export_to_xml(self.draft_store, self.content_store, course_key, root_dir, 'test_export')
+            export_course_to_xml(self.draft_store, self.content_store, course_key, root_dir, 'test_export')
             assert_true(path(root_dir / 'test_export/static/images/course_image.jpg').isfile())
             assert_true(path(root_dir / 'test_export/static/images_course_image.jpg').isfile())
         finally:
@@ -534,7 +598,7 @@ class TestMongoModuleStore(TestMongoModuleStoreBase):
 
         root_dir = path(mkdtemp())
         try:
-            export_to_xml(self.draft_store, self.content_store, course.id, root_dir, 'test_export')
+            export_course_to_xml(self.draft_store, self.content_store, course.id, root_dir, 'test_export')
             assert_true(path(root_dir / 'test_export/static/just_a_test.jpg').isfile())
             assert_false(path(root_dir / 'test_export/static/images/course_image.jpg').isfile())
         finally:
@@ -548,7 +612,7 @@ class TestMongoModuleStore(TestMongoModuleStoreBase):
         course = self.draft_store.get_course(SlashSeparatedCourseKey('edX', 'simple_with_draft', '2012_Fall'))
         root_dir = path(mkdtemp())
         try:
-            export_to_xml(self.draft_store, self.content_store, course.id, root_dir, 'test_export')
+            export_course_to_xml(self.draft_store, self.content_store, course.id, root_dir, 'test_export')
             assert_false(path(root_dir / 'test_export/static/images/course_image.jpg').isfile())
             assert_false(path(root_dir / 'test_export/static/images_course_image.jpg').isfile())
         finally:
@@ -674,9 +738,12 @@ class TestMongoModuleStore(TestMongoModuleStoreBase):
 
         root_dir = path(mkdtemp())
 
-        # export_to_xml should work.
+        # export_course_to_xml should work.
         try:
-            export_to_xml(self.draft_store, self.content_store, interface_location.course_key, root_dir, 'test_export')
+            export_course_to_xml(
+                self.draft_store, self.content_store, interface_location.course_key,
+                root_dir, 'test_export'
+            )
         finally:
             shutil.rmtree(root_dir)
 
@@ -742,12 +809,13 @@ class TestMongoModuleStoreWithNoAssetCollection(TestMongoModuleStore):
         self.assertRaises(ItemNotFoundError, lambda: self.draft_store.get_all_asset_metadata(course_key, 'asset')[:1])
 
 
-class TestMongoKeyValueStore(object):
+class TestMongoKeyValueStore(unittest.TestCase):
     """
     Tests for MongoKeyValueStore.
     """
 
     def setUp(self):
+        super(TestMongoKeyValueStore, self).setUp()
         self.data = {'foo': 'foo_value'}
         self.course_id = SlashSeparatedCourseKey('org', 'course', 'run')
         self.parent = self.course_id.make_usage_key('parent', 'p')

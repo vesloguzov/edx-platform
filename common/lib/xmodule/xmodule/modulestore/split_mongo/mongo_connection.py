@@ -10,7 +10,8 @@ from pymongo.errors import DuplicateKeyError  # pylint: disable=unused-import
 
 from contracts import check, new_contract
 from xmodule.exceptions import HeartbeatFailure
-from xmodule.modulestore.split_mongo import BlockKey, BlockData
+from xmodule.modulestore import BlockData
+from xmodule.modulestore.split_mongo import BlockKey
 import datetime
 import pytz
 
@@ -37,7 +38,7 @@ def structure_from_mongo(structure):
     for block in structure['blocks']:
         if 'children' in block['fields']:
             block['fields']['children'] = [BlockKey(*child) for child in block['fields']['children']]
-        new_blocks[BlockKey(block['block_type'], block.pop('block_id'))] = BlockData(block)
+        new_blocks[BlockKey(block['block_type'], block.pop('block_id'))] = BlockData(**block)
     structure['blocks'] = new_blocks
 
     return structure
@@ -54,8 +55,8 @@ def structure_to_mongo(structure):
     check('BlockKey', structure['root'])
     check('dict(BlockKey: BlockData)', structure['blocks'])
     for block in structure['blocks'].itervalues():
-        if 'children' in block['fields']:
-            check('list(BlockKey)', block['fields']['children'])
+        if 'children' in block.fields:
+            check('list(BlockKey)', block.fields['children'])
 
     new_structure = dict(structure)
     new_structure['blocks'] = []
@@ -190,7 +191,7 @@ class MongoConnection(object):
             }
         return self.course_index.find_one(query)
 
-    def find_matching_course_indexes(self, branch=None, search_targets=None):
+    def find_matching_course_indexes(self, branch=None, search_targets=None, org_target=None):
         """
         Find the course_index matching particular conditions.
 
@@ -198,6 +199,8 @@ class MongoConnection(object):
             branch: If specified, this branch must exist in the returned courses
             search_targets: If specified, this must be a dictionary specifying field values
                 that must exist in the search_targets of the returned courses
+            org_target: If specified, this is an ORG filter so that only course_indexs are
+                returned for the specified ORG
         """
         query = {}
         if branch is not None:
@@ -206,6 +209,9 @@ class MongoConnection(object):
         if search_targets:
             for key, value in search_targets.iteritems():
                 query['search_targets.{}'.format(key)] = value
+
+        if org_target:
+            query['org'] = org_target
 
         return self.course_index.find(query)
 

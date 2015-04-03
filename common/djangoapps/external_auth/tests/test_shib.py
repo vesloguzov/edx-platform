@@ -21,7 +21,6 @@ from external_auth.views import (
 )
 from mock import patch
 
-from xmodule.modulestore.tests.django_utils import TEST_DATA_MOCK_MODULESTORE
 from student.views import create_account, change_enrollment
 from student.models import UserProfile, CourseEnrollment
 from student.tests.factories import UserFactory
@@ -73,7 +72,7 @@ def gen_all_identities():
 
 
 @ddt
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE, SESSION_ENGINE='django.contrib.sessions.backends.cache')
+@override_settings(SESSION_ENGINE='django.contrib.sessions.backends.cache')
 class ShibSPTest(ModuleStoreTestCase):
     """
     Tests for the Shibboleth SP, which communicates via request.META

@@ -9,12 +9,10 @@ from abc import ABCMeta
 from courseware.models import StudentModule
 from django.conf import settings
 from django.test import TestCase
-from django.test.utils import override_settings
 from django.utils.translation import get_language
 from django.utils.translation import override as override_language
 from student.tests.factories import UserFactory
 from xmodule.modulestore.tests.factories import CourseFactory
-from xmodule.modulestore.tests.django_utils import TEST_DATA_MOCK_MODULESTORE
 
 from student.models import CourseEnrollment, CourseEnrollmentAllowed
 from instructor.enrollment import (
@@ -36,6 +34,7 @@ from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 class TestSettableEnrollmentState(TestCase):
     """ Test the basis class for enrollment tests. """
     def setUp(self):
+        super(TestSettableEnrollmentState, self).setUp()
         self.course_key = SlashSeparatedCourseKey('Robot', 'fAKE', 'C-%-se-%-ID')
 
     def test_mes_create(self):
@@ -66,6 +65,7 @@ class TestEnrollmentChangeBase(TestCase):
     __metaclass__ = ABCMeta
 
     def setUp(self):
+        super(TestEnrollmentChangeBase, self).setUp()
         self.course_key = SlashSeparatedCourseKey('Robot', 'fAKE', 'C-%-se-%-ID')
 
     def _run_state_change_test(self, before_ideal, after_ideal, action):
@@ -290,10 +290,10 @@ class TestInstructorUnenrollDB(TestEnrollmentChangeBase):
         return self._run_state_change_test(before_ideal, after_ideal, action)
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestInstructorEnrollmentStudentModule(TestCase):
     """ Test student module manipulations. """
     def setUp(self):
+        super(TestInstructorEnrollmentStudentModule, self).setUp()
         self.course_key = SlashSeparatedCourseKey('fake', 'course', 'id')
 
     def test_reset_student_attempts(self):
@@ -425,6 +425,7 @@ class TestSendBetaRoleEmail(TestCase):
     """
 
     def setUp(self):
+        super(TestSendBetaRoleEmail, self).setUp()
         self.user = UserFactory.create()
         self.email_params = {'course': 'Robot Super Course'}
 
@@ -435,13 +436,14 @@ class TestSendBetaRoleEmail(TestCase):
             send_beta_role_email(bad_action, self.user, self.email_params)
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestGetEmailParams(ModuleStoreTestCase):
     """
     Test what URLs the function get_email_params returns under different
     production-like conditions.
     """
     def setUp(self):
+        super(TestGetEmailParams, self).setUp()
+
         self.course = CourseFactory.create()
 
         # Explicitly construct what we expect the course URLs to be
@@ -478,12 +480,13 @@ class TestGetEmailParams(ModuleStoreTestCase):
         self.assertEqual(result['course_url'], self.course_url)
 
 
-class TestRenderMessageToString(TestCase):
+class TestRenderMessageToString(ModuleStoreTestCase):
     """
     Test that email templates can be rendered in a language chosen manually.
     """
 
     def setUp(self):
+        super(TestRenderMessageToString, self).setUp()
         self.subject_template = 'emails/enroll_email_allowedsubject.txt'
         self.message_template = 'emails/enroll_email_allowedmessage.txt'
         self.course = CourseFactory.create()

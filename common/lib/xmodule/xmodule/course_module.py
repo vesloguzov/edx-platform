@@ -183,6 +183,15 @@ class CourseFields(object):
                  default=DEFAULT_START_DATE,
                  scope=Scope.settings)
     end = Date(help="Date that this class ends", scope=Scope.settings)
+    cosmetic_display_price = Integer(
+        display_name=_("Cosmetic Course Display Price"),
+        help=_(
+            "The cost displayed to students for enrolling in the course. If a paid course registration price is "
+            "set by an administrator in the database, that price will be displayed instead of this one."
+        ),
+        default=0,
+        scope=Scope.settings,
+    )
     advertised_start = String(
         display_name=_("Course Advertised Start Date"),
         help=_(
@@ -324,6 +333,15 @@ class CourseFields(object):
     video_upload_pipeline = Dict(
         display_name=_("Video Upload Credentials"),
         help=_("Enter the unique identifier for your course's video files provided by edX."),
+        scope=Scope.settings
+    )
+    facebook_url = String(
+        help=_(
+            "Enter the URL for the official course Facebook group. "
+            "If you provide a URL, the mobile app includes a button that students can tap to access the group."
+        ),
+        default=None,
+        display_name=_("Facebook URL"),
         scope=Scope.settings
     )
     no_grade = Boolean(
@@ -597,8 +615,8 @@ class CourseFields(object):
     due_date_display_format = String(
         display_name=_("Due Date Display Format"),
         help=_(
-            "Enter the format due dates are displayed in. Due dates must be in MM-DD-YYYY, DD-MM-YYYY, YYYY-MM-DD, "
-            "or YYYY-DD-MM format."
+            "Enter the format for due dates. The default is Mon DD, YYYY. Enter \"%m-%d-%Y\" for MM-DD-YYYY, "
+            "\"%d-%m-%Y\" for DD-MM-YYYY, \"%Y-%m-%d\" for YYYY-MM-DD, or \"%Y-%d-%m\" for YYYY-DD-MM."
         ),
         scope=Scope.settings, default=None
     )
@@ -621,10 +639,12 @@ class CourseFields(object):
     certificates_display_behavior = String(
         display_name=_("Certificates Display Behavior"),
         help=_(
-            "Has three possible states: 'end', 'early_with_info', 'early_no_info'. 'end' is the default behavior, "
-            "where certificates will only appear after a course has ended. 'early_with_info' will display all "
-            "certificate information before a course has ended. 'early_no_info' will hide all certificate "
-            "information unless a student has earned a certificate."
+            "Enter end, early_with_info, or early_no_info. After certificate generation, students who passed see a "
+            "link to their certificates on the dashboard and students who did not pass see information about the "
+            "grading configuration. The default is end, which displays this certificate information to all students "
+            "after the course end date. To display this certificate information to all students as soon as "
+            "certificates are generated, enter early_with_info. To display only the links to passing students as "
+            "soon as certificates are generated, enter early_no_info."
         ),
         scope=Scope.settings,
         default="end"
@@ -658,6 +678,13 @@ class CourseFields(object):
         display_name=_("Certificate Name (Long)"),
         scope=Scope.settings,
         default=""
+    )
+    cert_html_view_overrides = Dict(
+        # Translators: This field is the container for course-specific certifcate configuration values
+        display_name=_("Certificate Web/HTML View Overrides"),
+        # Translators: These overrides allow for an alternative configuration of the certificate web view
+        help=_("Enter course-specific overrides for the Web/HTML template parameters here (JSON format)"),
+        scope=Scope.settings,
     )
 
     # An extra property is used rather than the wiki_slug/number because
@@ -781,7 +808,7 @@ class CourseFields(object):
     entrance_exam_enabled = Boolean(
         display_name=_("Entrance Exam Enabled"),
         help=_(
-            "Specify whether students must complete an entrance exam before they can view your course content."
+            "Specify whether students must complete an entrance exam before they can view your course content. "
             "Note, you must enable Entrance Exams for this course setting to take effect."
         ),
         default=False,
@@ -791,7 +818,7 @@ class CourseFields(object):
     entrance_exam_minimum_score_pct = Float(
         display_name=_("Entrance Exam Minimum Score (%)"),
         help=_(
-            "Specify a minimum percentage score for an entrance exam before students can view your course content."
+            "Specify a minimum percentage score for an entrance exam before students can view your course content. "
             "Note, you must enable Entrance Exams for this course setting to take effect."
         ),
         default=65,
@@ -1019,6 +1046,8 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
     def is_cohorted(self):
         """
         Return whether the course is cohorted.
+
+        Note: No longer used. See openedx.core.djangoapps.course_groups.models.CourseCohortSettings.
         """
         config = self.cohort_config
         if config is None:
@@ -1030,6 +1059,8 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
     def auto_cohort(self):
         """
         Return whether the course is auto-cohorted.
+
+        Note: No longer used. See openedx.core.djangoapps.course_groups.models.CourseCohortSettings.
         """
         if not self.is_cohorted:
             return False
@@ -1043,6 +1074,8 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
         Return the list of groups to put students into.  Returns [] if not
         specified. Returns specified list even if is_cohorted and/or auto_cohort are
         false.
+
+        Note: No longer used. See openedx.core.djangoapps.course_groups.models.CourseCohortSettings.
         """
         if self.cohort_config is None:
             return []
@@ -1063,6 +1096,8 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
         Return the set of discussions that is explicitly cohorted.  It may be
         the empty set.  Note that all inline discussions are automatically
         cohorted based on the course's is_cohorted setting.
+
+        Note: No longer used. See openedx.core.djangoapps.course_groups.models.CourseCohortSettings.
         """
         config = self.cohort_config
         if config is None:
@@ -1076,6 +1111,8 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
         This allow to change the default behavior of inline discussions cohorting. By
         setting this to False, all inline discussions are non-cohorted unless their
         ids are specified in cohorted_discussions.
+
+        Note: No longer used. See openedx.core.djangoapps.course_groups.models.CourseCohortSettings.
         """
         config = self.cohort_config
         if config is None:
@@ -1184,23 +1221,23 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
                 for module_descriptor in yield_descriptor_descendents(child):
                     yield module_descriptor
 
-        for c in self.get_children():
-            for s in c.get_children():
-                if s.graded:
-                    xmoduledescriptors = list(yield_descriptor_descendents(s))
-                    xmoduledescriptors.append(s)
+        for chapter in self.get_children():
+            for section in chapter.get_children():
+                if section.graded:
+                    xmoduledescriptors = list(yield_descriptor_descendents(section))
+                    xmoduledescriptors.append(section)
 
                     # The xmoduledescriptors included here are only the ones that have scores.
                     section_description = {
-                        'section_descriptor': s,
-                        'xmoduledescriptors': filter(lambda child: child.has_score, xmoduledescriptors)
+                        'section_descriptor': section,
+                        'xmoduledescriptors': [child for child in xmoduledescriptors if child.has_score]
                     }
 
-                    section_format = s.format if s.format is not None else ''
+                    section_format = section.format if section.format is not None else ''
                     graded_sections[section_format] = graded_sections.get(section_format, []) + [section_description]
 
                     all_descriptors.extend(xmoduledescriptors)
-                    all_descriptors.append(s)
+                    all_descriptors.append(section)
 
         return {'graded_sections': graded_sections,
                 'all_descriptors': all_descriptors, }
@@ -1285,13 +1322,13 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
             blackout_periods = [(date_proxy.from_json(start),
                                  date_proxy.from_json(end))
                                 for start, end
-                                in self.discussion_blackouts]
+                                in filter(None, self.discussion_blackouts)]
             now = datetime.now(UTC())
             for start, end in blackout_periods:
                 if start <= now <= end:
                     return False
         except:
-            log.exception("Error parsing discussion_blackouts for course {0}".format(self.id))
+            log.exception("Error parsing discussion_blackouts %s for course %s", self.discussion_blackouts, self.id)
 
         return True
 

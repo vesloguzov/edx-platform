@@ -42,6 +42,7 @@ class RegisterPage(PageObject):
         Fill in registration info.
         `email`, `password`, `username`, and `full_name` are the user's credentials.
         """
+        self.wait_for_element_visibility('input#email', 'Email field is shown')
         self.q(css='input#email').fill(email)
         self.q(css='input#password').fill(password)
         self.q(css='input#username').fill(username)
@@ -70,7 +71,9 @@ class CombinedLoginAndRegisterPage(PageObject):
     in the bok choy settings.
 
     When enabled, the new page is available from either
-    `/account/login` or `/account/register`.
+    `/login` or `/register`; the new page is also served at
+    `/account/login/` or `/account/register/`, where it was
+    available for a time during an A/B test.
 
     Users can reach this page while attempting to enroll
     in a course, in which case users will be auto-enrolled
@@ -159,6 +162,7 @@ class CombinedLoginAndRegisterPage(PageObject):
 
         """
         # Fill in the form
+        self.wait_for_element_visibility('#register-email', 'Email field is shown')
         self.q(css="#register-email").fill(email)
         self.q(css="#register-name").fill(full_name)
         self.q(css="#register-username").fill(username)
@@ -185,6 +189,7 @@ class CombinedLoginAndRegisterPage(PageObject):
 
         """
         # Fill in the form
+        self.wait_for_element_visibility('#login-email', 'Email field is shown')
         self.q(css="#login-email").fill(email)
         self.q(css="#login-password").fill(password)
 
@@ -212,6 +217,7 @@ class CombinedLoginAndRegisterPage(PageObject):
         ).fulfill()
 
         # Fill in the form
+        self.wait_for_element_visibility('#password-reset-email', 'Email field is shown')
         self.q(css="#password-reset-email").fill(email)
 
         # Submit it

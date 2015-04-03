@@ -79,7 +79,9 @@ def get_user_email_language(user):
     Return the language most appropriate for writing emails to user. Returns
     None if the preference has not been set, or if the user does not exist.
     """
-    return UserPreference.get_preference(user, LANGUAGE_KEY)
+    # Calling UserPreference directly instead of get_user_preference because the user requesting the
+    # information is not "user" and also may not have is_staff access.
+    return UserPreference.get_value(user, LANGUAGE_KEY)
 
 
 def enroll_email(course_id, student_email, auto_enroll=False, email_students=False, email_params=None, language=None):
@@ -260,7 +262,7 @@ def get_email_params(course, auto_enroll, secure=True):
     registration_url = u'{proto}://{site}{path}'.format(
         proto=protocol,
         site=stripped_site_name,
-        path=reverse('student.views.register_user')
+        path=reverse('register_user')
     )
     course_url = u'{proto}://{site}{path}'.format(
         proto=protocol,

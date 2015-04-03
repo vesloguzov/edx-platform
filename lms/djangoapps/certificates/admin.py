@@ -1,6 +1,11 @@
+"""
+django admin pages for certificates models
+"""
 from django.contrib import admin
 
-from certificates.models import GeneratedCertificate
+from config_models.admin import ConfigurationModelAdmin
+from certificates.models import GeneratedCertificate, CertificateGenerationConfiguration, CertificateHtmlViewConfiguration
+
 
 class GeneratedCertificateAdmin(admin.ModelAdmin):
     list_select_related = True
@@ -23,3 +28,5 @@ class GeneratedCertificateAdmin(admin.ModelAdmin):
         return obj.user.email
 
 admin.site.register(GeneratedCertificate, GeneratedCertificateAdmin)
+admin.site.register(CertificateGenerationConfiguration)
+admin.site.register(CertificateHtmlViewConfiguration, ConfigurationModelAdmin)

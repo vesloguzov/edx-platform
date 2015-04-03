@@ -102,7 +102,6 @@ class TestGradingRequest(ModuleStoreTestCase):
         self.assertEqual(_grade['percent'], 0.0)
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestGradeIteration(ModuleStoreTestCase):
     """
     Test iteration through student gradesets.
@@ -114,6 +113,8 @@ class TestGradeIteration(ModuleStoreTestCase):
         """
         Create a course and a handful of users to assign grades
         """
+        super(TestGradeIteration, self).setUp()
+
         self.course = CourseFactory.create(
             display_name=self.COURSE_NAME,
             number=self.COURSE_NUM

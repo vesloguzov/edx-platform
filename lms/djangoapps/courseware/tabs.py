@@ -6,12 +6,10 @@ from django.conf import settings
 from django.utils.translation import ugettext as _
 
 from courseware.access import has_access
-from student.models import CourseEnrollment
+from student.models import CourseEnrollment, EntranceExamConfiguration
 from xmodule.tabs import CourseTabList
 
-if settings.FEATURES.get('MILESTONES_APP', False):
-    from milestones.api import get_course_milestones_fulfillment_paths
-    from util.milestones_helpers import serialize_user
+from util import milestones_helpers
 
 
 def get_course_tab_list(course, user):
@@ -33,14 +31,15 @@ def get_course_tab_list(course, user):
     entrance_exam_mode = False
     if settings.FEATURES.get('ENTRANCE_EXAMS', False):
         if getattr(course, 'entrance_exam_enabled', False):
-            course_milestones_paths = get_course_milestones_fulfillment_paths(
+            course_milestones_paths = milestones_helpers.get_course_milestones_fulfillment_paths(
                 unicode(course.id),
-                serialize_user(user)
+                milestones_helpers.serialize_user(user)
             )
             for __, value in course_milestones_paths.iteritems():
                 if len(value.get('content', [])):
                     for content in value['content']:
-                        if content == course.entrance_exam_id:
+                        if content == course.entrance_exam_id \
+                                and not EntranceExamConfiguration.user_can_skip_entrance_exam(user, course.id):
                             entrance_exam_mode = True
                             break
 

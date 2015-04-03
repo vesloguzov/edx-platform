@@ -8,22 +8,17 @@ import StringIO
 from ddt import ddt, data
 from copy import deepcopy
 
-from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.test.utils import override_settings
 
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, mixed_store_config
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
 from courseware.tests.helpers import LoginEnrollmentTestCase
 from courseware.tests.factories import GlobalStaffFactory
 
 from lms.djangoapps.lms_xblock.runtime import quote_slashes
 
-MODULESTORE_CONFIG = mixed_store_config(settings.COMMON_TEST_DATA_ROOT, {}, include_xml=False)
 
-
-@override_settings(MODULESTORE=MODULESTORE_CONFIG)
 class TestRecommender(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Check that Recommender state is saved properly
@@ -35,6 +30,8 @@ class TestRecommender(ModuleStoreTestCase, LoginEnrollmentTestCase):
     XBLOCK_NAMES = ['recommender', 'recommender_second']
 
     def setUp(self):
+        super(TestRecommender, self).setUp()
+
         self.course = CourseFactory.create(
             display_name='Recommender_Test_Course'
         )

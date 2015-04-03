@@ -16,9 +16,10 @@ class CourseMetadata(object):
     editable metadata.
     '''
     # The list of fields that wouldn't be shown in Advanced Settings.
-    # Should not be used directly. Instead the filtered_list method should be used if the field needs to be filtered
-    # depending on the feature flag.
+    # Should not be used directly. Instead the filtered_list method should
+    # be used if the field needs to be filtered depending on the feature flag.
     FILTERED_LIST = [
+        'cohort_config',
         'xml_attributes',
         'start',
         'end',
@@ -41,6 +42,8 @@ class CourseMetadata(object):
         'entrance_exam_enabled',
         'entrance_exam_minimum_score_pct',
         'entrance_exam_id',
+        'is_entrance_exam',
+        'in_entrance_exam',
     ]
 
     @classmethod
@@ -58,6 +61,14 @@ class CourseMetadata(object):
         # Do not show edxnotes if the feature is disabled.
         if not settings.FEATURES.get('ENABLE_EDXNOTES'):
             filtered_list.append('edxnotes')
+
+        # Do not show video_upload_pipeline if the feature is disabled.
+        if not settings.FEATURES.get('ENABLE_VIDEO_UPLOAD_PIPELINE'):
+            filtered_list.append('video_upload_pipeline')
+
+        # Do not show facebook_url if the feature is disabled.
+        if not settings.FEATURES.get('ENABLE_MOBILE_SOCIAL_FACEBOOK_FEATURES'):
+            filtered_list.append('facebook_url')
 
         return filtered_list
 
@@ -116,8 +127,8 @@ class CourseMetadata(object):
                 if hasattr(descriptor, key) and getattr(descriptor, key) != val:
                     key_values[key] = descriptor.fields[key].from_json(val)
             except (TypeError, ValueError) as err:
-                raise ValueError(_("Incorrect format for field '{name}'. {detailed_message}".format(
-                    name=model['display_name'], detailed_message=err.message)))
+                raise ValueError(_("Incorrect format for field '{name}'. {detailed_message}").format(
+                    name=model['display_name'], detailed_message=err.message))
 
         return cls.update_from_dict(key_values, descriptor, user)
 

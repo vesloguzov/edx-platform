@@ -50,8 +50,6 @@ from ratelimitbackend.exceptions import RateLimitException
 import student.views
 from student.models import CourseEnrollment
 from xmodule.modulestore.django import modulestore
-from xmodule.course_module import CourseDescriptor
-from xmodule.modulestore.exceptions import ItemNotFoundError
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 log = logging.getLogger("edx.external_auth")

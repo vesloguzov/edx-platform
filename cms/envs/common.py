@@ -35,7 +35,7 @@ import sys
 import lms.envs.common
 # Although this module itself may not use these imported variables, other dependent modules may.
 from lms.envs.common import (
-    USE_TZ, TECH_SUPPORT_EMAIL, PLATFORM_NAME, BUGS_EMAIL, DOC_STORE_CONFIG, ALL_LANGUAGES, WIKI_ENABLED, MODULESTORE,
+    USE_TZ, TECH_SUPPORT_EMAIL, PLATFORM_NAME, BUGS_EMAIL, DOC_STORE_CONFIG, DATA_DIR, ALL_LANGUAGES, WIKI_ENABLED,
     update_module_store_settings, ASSET_IGNORE_REGEX, COPYRIGHT_YEAR
 )
 from path import path
@@ -94,11 +94,9 @@ FEATURES = {
     # Hide any Personally Identifiable Information from application logs
     'SQUELCH_PII_IN_LOGS': False,
 
-    # Toggles the embargo functionality, which enable embargoing for particular courses
+    # Toggles the embargo functionality, which blocks users
+    # based on their location.
     'EMBARGO': False,
-
-    # Toggles the embargo site functionality, which enable embargoing for the whole site
-    'SITE_EMBARGOED': False,
 
     # Turn on/off Microsites feature
     'USE_MICROSITES': False,
@@ -111,9 +109,6 @@ FEATURES = {
 
     # Turn off Advanced Security by default
     'ADVANCED_SECURITY': False,
-
-    # Modulestore to use for new courses
-    'DEFAULT_STORE_FOR_NEW_COURSE': None,
 
     # Turn off Video Upload Pipeline through Studio, by default
     'ENABLE_VIDEO_UPLOAD_PIPELINE': False,
@@ -130,10 +125,8 @@ FEATURES = {
     'ENABLE_EDXNOTES': False,
 
     # Enable support for content libraries. Note that content libraries are
-    # only supported in courses using split mongo. Change the setting
-    # DEFAULT_STORE_FOR_NEW_COURSE to be 'split' to have future courses
-    # and libraries created with split.
-    'ENABLE_CONTENT_LIBRARIES': False,
+    # only supported in courses using split mongo.
+    'ENABLE_CONTENT_LIBRARIES': True,
 
     # Milestones application flag
     'MILESTONES_APP': False,
@@ -141,11 +134,14 @@ FEATURES = {
     # Prerequisite courses feature flag
     'ENABLE_PREREQUISITE_COURSES': False,
 
-    # Toggle course milestones app/feature
-    'MILESTONES_APP': False,
-
     # Toggle course entrance exams feature
     'ENTRANCE_EXAMS': False,
+
+    # Enable the courseware search functionality
+    'ENABLE_COURSEWARE_INDEX': False,
+
+    # Enable course reruns, which will always use the split modulestore
+    'ALLOW_COURSE_RERUNS': True,
 }
 
 ENABLE_JASMINE = False
@@ -163,7 +159,6 @@ GITHUB_REPO_ROOT = ENV_ROOT / "data"
 sys.path.append(REPO_ROOT)
 sys.path.append(PROJECT_ROOT / 'djangoapps')
 sys.path.append(COMMON_ROOT / 'djangoapps')
-sys.path.append(COMMON_ROOT / 'lib')
 
 # For geolocation ip database
 GEOIP_PATH = REPO_ROOT / "common/static/data/geoip/GeoIP.dat"
@@ -215,6 +210,13 @@ LMS_BASE = None
 from lms.envs.common import (
     COURSE_KEY_PATTERN, COURSE_ID_PATTERN, USAGE_KEY_PATTERN, ASSET_KEY_PATTERN
 )
+
+
+######################### CSRF #########################################
+
+# Forwards-compatibility with Django 1.7
+CSRF_COOKIE_AGE = 60 * 60 * 24 * 7 * 52
+
 
 #################### CAPA External Code Evaluation #############################
 XQUEUE_INTERFACE = {
@@ -311,6 +313,37 @@ XBLOCK_SELECT_FUNCTION = prefer_xmodules
 ############################ Modulestore Configuration ################################
 MODULESTORE_BRANCH = 'draft-preferred'
 
+MODULESTORE = {
+    'default': {
+        'ENGINE': 'xmodule.modulestore.mixed.MixedModuleStore',
+        'OPTIONS': {
+            'mappings': {},
+            'stores': [
+                {
+                    'NAME': 'split',
+                    'ENGINE': 'xmodule.modulestore.split_mongo.split_draft.DraftVersioningModuleStore',
+                    'DOC_STORE_CONFIG': DOC_STORE_CONFIG,
+                    'OPTIONS': {
+                        'default_class': 'xmodule.hidden_module.HiddenDescriptor',
+                        'fs_root': DATA_DIR,
+                        'render_template': 'edxmako.shortcuts.render_to_string',
+                    }
+                },
+                {
+                    'NAME': 'draft',
+                    'ENGINE': 'xmodule.modulestore.mongo.DraftMongoModuleStore',
+                    'DOC_STORE_CONFIG': DOC_STORE_CONFIG,
+                    'OPTIONS': {
+                        'default_class': 'xmodule.hidden_module.HiddenDescriptor',
+                        'fs_root': DATA_DIR,
+                        'render_template': 'edxmako.shortcuts.render_to_string',
+                    }
+                }
+            ]
+        }
+    }
+}
+
 ############################ DJANGO_BUILTINS ################################
 # Change DEBUG/TEMPLATE_DEBUG in your environment settings files, not here
 DEBUG = False
@@ -383,7 +416,7 @@ EMBARGO_SITE_REDIRECT_URL = None
 ############################### Pipeline #######################################
 STATICFILES_STORAGE = 'cms.lib.django_require.staticstorage.OptimizedCachedRequireJsStorage'
 
-from rooted_paths import rooted_glob
+from openedx.core.lib.rooted_paths import rooted_glob
 
 PIPELINE_CSS = {
     'style-vendor': {
@@ -541,8 +574,13 @@ REQUIRE_EXCLUDE = ("build.txt",)
 REQUIRE_ENVIRONMENT = "node"
 
 # If you want to enable Tender integration (http://tenderapp.com/),
-# put in the domain where Tender hosts tender_widget.js. For example,
-# TENDER_DOMAIN = "example.tenderapp.com"
+# put in the subdomain where Tender hosts tender_widget.js. For example,
+# if you want to use the URL https://example.tenderapp.com/tender_widget.js,
+# you should use "example".
+TENDER_SUBDOMAIN = None
+# If you want to have a vanity domain that points to Tender, put that here.
+# For example, "help.myapp.com". Otherwise, should should be your full
+# tenderapp domain name: for example, "example.tenderapp.com".
 TENDER_DOMAIN = None
 
 ################################# CELERY ######################################
@@ -691,6 +729,8 @@ INSTALLED_APPS = (
 
     # Additional problem types
     'edx_jsme',    # Molecular Structure
+
+    'openedx.core.djangoapps.content.course_structures',
 )
 
 
@@ -754,6 +794,7 @@ MAX_FAILED_LOGIN_ATTEMPTS_LOCKOUT_PERIOD_SECS = 15 * 60
 
 OPTIONAL_APPS = (
     'mentoring',
+    'edx_sga',
 
     # edx-ora2
     'submissions',
@@ -819,6 +860,7 @@ ADVANCED_COMPONENT_TYPES = [
     'graphical_slider_tool',
     'lti',
     'library_content',
+    'edx_sga',
     # XBlocks from pmitros repos are prototypes. They should not be used
     # except for edX Learning Sciences experiments on edge.edx.org without
     # further work to make them robust, maintainable, finalize data formats,
@@ -834,6 +876,13 @@ ADVANCED_COMPONENT_TYPES = [
     'peergrading',
     'notes',
     'schoolyourself_review',
+
+    # Google Drive embedded components. These XBlocks allow one to
+    # embed public google drive documents and calendars within edX units
+    'google-document',
+    'google-calendar',
+
+    # Lektorium-specific components
     'edx_sga',
 ]
 
@@ -874,5 +923,13 @@ FILES_AND_UPLOAD_TYPE_FILTERS = {
         'application/vnd.ms-excel',
         'application/vnd.ms-powerpoint',
     ],
+}
+
+# Default to no Search Engine
+SEARCH_ENGINE = None
+ELASTIC_FIELD_MAPPINGS = {
+    "start_date": {
+        "type": "date"
+    }
 }
 from lektorium import *

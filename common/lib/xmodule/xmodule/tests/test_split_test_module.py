@@ -78,9 +78,10 @@ class SplitTestModuleTest(XModuleXmlImportTest, PartitionTestCase):
         self.course_sequence = self.course.get_children()[0]
         self.module_system = get_test_system()
 
-        self.module_system.descriptor_runtime = self.course.runtime._descriptor_system  # pylint: disable=protected-access
+        self.module_system.descriptor_runtime = self.course._runtime  # pylint: disable=protected-access
         self.course.runtime.export_fs = MemoryFS()
 
+        user = Mock(username='ma', email='ma@edx.org', is_staff=False, is_active=True)
         self.partitions_service = StaticPartitionService(
             [
                 self.user_partition,
@@ -90,14 +91,18 @@ class SplitTestModuleTest(XModuleXmlImportTest, PartitionTestCase):
                     MockUserPartitionScheme()
                 )
             ],
-            user=Mock(username='ma', email='ma@edx.org', is_staff=False, is_active=True),
+            user=user,
             course_id=self.course.id,
             track_function=Mock(name='track_function'),
         )
         self.module_system._services['partitions'] = self.partitions_service  # pylint: disable=protected-access
 
         self.split_test_module = self.course_sequence.get_children()[0]
-        self.split_test_module.bind_for_student(self.module_system, self.split_test_module._field_data)  # pylint: disable=protected-access
+        self.split_test_module.bind_for_student(
+            self.module_system,
+            self.split_test_module._field_data,  # pylint: disable=protected-access
+            user.id
+        )
 
 
 @ddt.ddt

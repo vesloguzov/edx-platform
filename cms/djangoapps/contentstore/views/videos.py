@@ -12,7 +12,7 @@ from django.utils.translation import ugettext as _, ugettext_noop
 from django.views.decorators.http import require_GET, require_http_methods
 import rfc6266
 
-from edxval.api import create_video, get_videos_for_ids
+from edxval.api import create_video, get_videos_for_ids, SortDirection, VideoSortField
 from opaque_keys.edx.keys import CourseKey
 
 from contentstore.models import VideoUploadConfig
@@ -46,12 +46,12 @@ class StatusDisplayStrings(object):
     # Translators: This is the status for a video that the servers are currently processing
     _IN_PROGRESS = ugettext_noop("In Progress")
     # Translators: This is the status for a video that the servers have successfully processed
-    _COMPLETE = ugettext_noop("Complete")
+    _COMPLETE = ugettext_noop("Ready")
     # Translators: This is the status for a video that the servers have failed to process
-    _FAILED = ugettext_noop("Failed"),
+    _FAILED = ugettext_noop("Failed")
     # Translators: This is the status for a video for which an invalid
     # processing token was provided in the course settings
-    _INVALID_TOKEN = ugettext_noop("Invalid Token"),
+    _INVALID_TOKEN = ugettext_noop("Invalid Token")
     # Translators: This is the status for a video that is in an unknown state
     _UNKNOWN = ugettext_noop("Unknown")
 
@@ -222,7 +222,7 @@ def _get_videos(course):
         for v in modulestore().get_all_asset_metadata(course.id, VIDEO_ASSET_TYPE)
     ]
 
-    videos = list(get_videos_for_ids(edx_videos_ids))
+    videos = list(get_videos_for_ids(edx_videos_ids, VideoSortField.created, SortDirection.desc))
 
     # convert VAL's status to studio's Video Upload feature status.
     for video in videos:
@@ -341,6 +341,7 @@ def videos_post(course, request):
             "client_video_id": file_name,
             "duration": 0,
             "encoded_videos": [],
+            "courses": [course.id]
         })
 
         resp_files.append({"file_name": file_name, "upload_url": upload_url})

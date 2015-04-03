@@ -20,6 +20,8 @@ class InternationalizationTest(ModuleStoreTestCase):
         will be cleared out before each test case execution and deleted
         afterwards.
         """
+        super(InternationalizationTest, self).setUp(create_user=False)
+
         self.uname = 'testuser'
         self.email = 'test+courses@edx.org'
         self.password = 'foo'

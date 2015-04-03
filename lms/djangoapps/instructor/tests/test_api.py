@@ -9,7 +9,6 @@ import pytz
 import io
 import json
 import os
-import random
 import requests
 import shutil
 import tempfile
@@ -25,6 +24,7 @@ from django.test import RequestFactory, TestCase
 from django.test.utils import override_settings
 from django.utils.timezone import utc
 from django.contrib.auth.models import User
+from django.utils.translation import ugettext as _
 
 from mock import Mock, patch
 from nose.tools import raises
@@ -33,21 +33,25 @@ from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from course_modes.models import CourseMode
 from courseware.models import StudentModule
 from courseware.tests.factories import StaffFactory, InstructorFactory, BetaTesterFactory
-from xmodule.modulestore.tests.django_utils import TEST_DATA_MOCK_MODULESTORE
 from courseware.tests.helpers import LoginEnrollmentTestCase
 from django_comment_common.models import FORUM_ROLE_COMMUNITY_TA
 from django_comment_common.utils import seed_permissions_roles
 from microsite_configuration import microsite
 from shoppingcart.models import (
     RegistrationCodeRedemption, Order, CouponRedemption,
-    PaidCourseRegistration, Coupon, Invoice, CourseRegistrationCode
+    PaidCourseRegistration, Coupon, Invoice, CourseRegistrationCode, CourseRegistrationCodeInvoiceItem
 )
 from shoppingcart.pdf import PDFInvoice
 from student.models import (
     CourseEnrollment, CourseEnrollmentAllowed, NonExistentCourseError, UserProfile
 )
+<<<<<<< HEAD
 from student.tests.factories import UserFactory, CourseModeFactory, UserProfileFactory
 from student.roles import CourseBetaTesterRole, CourseSalesAdminRole, CourseFinanceAdminRole
+=======
+from student.tests.factories import UserFactory, CourseModeFactory
+from student.roles import CourseBetaTesterRole, CourseSalesAdminRole, CourseFinanceAdminRole, CourseInstructorRole
+>>>>>>> release-2015-03-31
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
@@ -60,6 +64,8 @@ from instructor.tests.utils import FakeContentTask, FakeEmail, FakeEmailInfo
 from instructor.views.api import generate_unique_password
 from instructor.views.api import _split_input_list, common_exceptions_400
 from instructor_task.api_helper import AlreadyRunningError
+
+from openedx.core.djangoapps.course_groups.cohorts import set_course_cohort_settings
 
 from .test_tools import msk_from_problem_urlname
 from ..views.tools import get_extended_due
@@ -111,6 +117,7 @@ class TestCommonExceptions400(TestCase):
     """
 
     def setUp(self):
+        super(TestCommonExceptions400, self).setUp()
         self.request = Mock(spec=HttpRequest)
         self.request.META = {}
 
@@ -145,7 +152,6 @@ class TestCommonExceptions400(TestCase):
         self.assertIn("Task is already running", result["error"])
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 @patch('bulk_email.models.html_to_text', Mock(return_value='Mocking CourseEmail.text_message'))
 @patch.dict(settings.FEATURES, {'ENABLE_INSTRUCTOR_EMAIL': True, 'REQUIRE_COURSE_EMAIL_AUTH': False})
 class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
@@ -154,6 +160,7 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
 
     def setUp(self):
+        super(TestInstructorAPIDenyLevels, self).setUp()
         self.course = CourseFactory.create()
         self.user = UserFactory.create()
         CourseEnrollment.enroll(self.user, self.course.id)
@@ -301,13 +308,14 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
             )
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 @patch.dict(settings.FEATURES, {'ALLOW_AUTOMATED_SIGNUPS': True})
 class TestInstructorAPIBulkAccountCreationAndEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test Bulk account creation and enrollment from csv file
     """
     def setUp(self):
+        super(TestInstructorAPIBulkAccountCreationAndEnrollment, self).setUp()
+
         self.request = RequestFactory().request()
         self.course = CourseFactory.create()
         self.instructor = InstructorFactory(course_key=self.course.id)
@@ -336,7 +344,7 @@ class TestInstructorAPIBulkAccountCreationAndEnrollment(ModuleStoreTestCase, Log
         self.assertEquals(len(data['general_errors']), 0)
 
         # test the log for email that's send to new created user.
-        info_log.assert_called_with('email sent to new created user at test_student@example.com')
+        info_log.assert_called_with('email sent to new created user at %s', 'test_student@example.com')
 
     @patch('instructor.views.api.log.info')
     def test_account_creation_and_enrollment_with_csv_with_blank_lines(self, info_log):
@@ -353,7 +361,7 @@ class TestInstructorAPIBulkAccountCreationAndEnrollment(ModuleStoreTestCase, Log
         self.assertEquals(len(data['general_errors']), 0)
 
         # test the log for email that's send to new created user.
-        info_log.assert_called_with('email sent to new created user at test_student@example.com')
+        info_log.assert_called_with('email sent to new created user at %s', 'test_student@example.com')
 
     @patch('instructor.views.api.log.info')
     def test_email_and_username_already_exist(self, info_log):
@@ -372,7 +380,11 @@ class TestInstructorAPIBulkAccountCreationAndEnrollment(ModuleStoreTestCase, Log
         self.assertEquals(len(data['general_errors']), 0)
 
         # test the log for email that's send to new created user.
-        info_log.assert_called_with("user already exists with username '{username}' and email '{email}'".format(username='test_student_1', email='test_student@example.com'))
+        info_log.assert_called_with(
+            u"user already exists with username '%s' and email '%s'",
+            'test_student_1',
+            'test_student@example.com'
+        )
 
     def test_file_upload_type_not_csv(self):
         """
@@ -436,7 +448,11 @@ class TestInstructorAPIBulkAccountCreationAndEnrollment(ModuleStoreTestCase, Log
         uploaded_file = SimpleUploadedFile("temp.csv", csv_content)
         response = self.client.post(self.url, {'students_list': uploaded_file})
         self.assertEqual(response.status_code, 200)
-        info_log.assert_called_with('user {username} enrolled in the course {course}'.format(username='NotEnrolledStudent', course=self.course.id))
+        info_log.assert_called_with(
+            u'user %s enrolled in the course %s',
+            u'NotEnrolledStudent',
+            self.course.id
+        )
 
     def test_user_with_already_existing_email_in_csv(self):
         """
@@ -549,7 +565,6 @@ class TestInstructorAPIBulkAccountCreationAndEnrollment(ModuleStoreTestCase, Log
 
 
 @ddt.ddt
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test enrollment modification endpoint.
@@ -559,6 +574,8 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
 
     def setUp(self):
+        super(TestInstructorAPIEnrollment, self).setUp()
+
         self.request = RequestFactory().request()
         self.course = CourseFactory.create()
         self.instructor = InstructorFactory(course_key=self.course.id)
@@ -595,12 +612,6 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
         # from failed assertions in the event of a test failure.
         # (comment because pylint C0103(invalid-name))
         # self.maxDiff = None
-
-    def tearDown(self):
-        """
-        Undo all patches.
-        """
-        patch.stopall()
 
     def test_missing_params(self):
         """ Test missing all query parameters. """
@@ -1138,13 +1149,14 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
 
 
 @ddt.ddt
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test bulk beta modify access endpoint.
     """
 
     def setUp(self):
+        super(TestInstructorAPIBulkBetaEnrollment, self).setUp()
+
         self.course = CourseFactory.create()
         self.instructor = InstructorFactory(course_key=self.course.id)
         self.client.login(username=self.instructor.username, password='test')
@@ -1461,8 +1473,11 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         )
 
 
+<<<<<<< HEAD
 @ddt.ddt
 @override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
+=======
+>>>>>>> release-2015-03-31
 class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test endpoints whereby instructors can change permissions
@@ -1476,6 +1491,8 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
     """
 
     def setUp(self):
+        super(TestInstructorAPILevelsAccess, self).setUp()
+
         self.course = CourseFactory.create()
         self.instructor = InstructorFactory(course_key=self.course.id)
         self.client.login(username=self.instructor.username, password='test')
@@ -1780,7 +1797,6 @@ class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase
 
 
 @ddt.ddt
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 @patch.dict('django.conf.settings.FEATURES', {'ENABLE_PAID_COURSE_REGISTRATION': True})
 class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
@@ -1809,6 +1825,12 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
             recipient_name='Testw', recipient_email='test1@test.com', customer_reference_number='2Fwe23S',
             internal_reference="A", course_id=self.course.id, is_valid=True
         )
+        self.invoice_item = CourseRegistrationCodeInvoiceItem.objects.create(
+            invoice=self.sale_invoice_1,
+            qty=1,
+            unit_price=1234.32,
+            course_id=self.course.id
+        )
 
         self.students = [UserFactory() for _ in xrange(6)]
         for student in self.students:
@@ -1821,8 +1843,12 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         """
         for i in range(2):
             course_registration_code = CourseRegistrationCode(
-                code='sale_invoice{}'.format(i), course_id=self.course.id.to_deprecated_string(),
-                created_by=self.instructor, invoice=self.sale_invoice_1, mode_slug='honor'
+                code='sale_invoice{}'.format(i),
+                course_id=self.course.id.to_deprecated_string(),
+                created_by=self.instructor,
+                invoice=self.sale_invoice_1,
+                invoice_item=self.invoice_item,
+                mode_slug='honor'
             )
             course_registration_code.save()
 
@@ -1842,7 +1868,7 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         data['event_type'] = "re_validate"
         self.assert_request_status_code(200, url, method="POST", data=data)
 
-        # Now re_validate the same actove invoice number and expect an Bad request
+        # Now re_validate the same active invoice number and expect an Bad request
         response = self.assert_request_status_code(400, url, method="POST", data=data)
         self.assertIn("This invoice is already active.", response.content)
 
@@ -1941,12 +1967,19 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         """
         for i in range(2):
             course_registration_code = CourseRegistrationCode(
-                code='sale_invoice{}'.format(i), course_id=self.course.id.to_deprecated_string(),
-                created_by=self.instructor, invoice=self.sale_invoice_1, mode_slug='honor'
+                code='sale_invoice{}'.format(i),
+                course_id=self.course.id.to_deprecated_string(),
+                created_by=self.instructor,
+                invoice=self.sale_invoice_1,
+                invoice_item=self.invoice_item,
+                mode_slug='honor'
             )
             course_registration_code.save()
 
-        url = reverse('get_sale_records', kwargs={'course_id': self.course.id.to_deprecated_string()})
+        url = reverse(
+            'get_sale_records',
+            kwargs={'course_id': self.course.id.to_deprecated_string()}
+        )
         response = self.client.get(url + '/csv', {})
         self.assertEqual(response['Content-Type'], 'text/csv')
 
@@ -1956,8 +1989,12 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         """
         for i in range(5):
             course_registration_code = CourseRegistrationCode(
-                code='sale_invoice{}'.format(i), course_id=self.course.id.to_deprecated_string(),
-                created_by=self.instructor, invoice=self.sale_invoice_1, mode_slug='honor'
+                code='sale_invoice{}'.format(i),
+                course_id=self.course.id.to_deprecated_string(),
+                created_by=self.instructor,
+                invoice=self.sale_invoice_1,
+                invoice_item=self.invoice_item,
+                mode_slug='honor'
             )
             course_registration_code.save()
 
@@ -1967,7 +2004,13 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         self.assertIn('sale', res_json)
 
         for res in res_json['sale']:
-            self.validate_sale_records_response(res, course_registration_code, self.sale_invoice_1, 0)
+            self.validate_sale_records_response(
+                res,
+                course_registration_code,
+                self.sale_invoice_1,
+                0,
+                invoice_item=self.invoice_item
+            )
 
     def test_get_sale_records_features_with_multiple_invoices(self):
         """
@@ -1975,8 +2018,12 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         """
         for i in range(5):
             course_registration_code = CourseRegistrationCode(
-                code='qwerty{}'.format(i), course_id=self.course.id.to_deprecated_string(),
-                created_by=self.instructor, invoice=self.sale_invoice_1, mode_slug='honor'
+                code='qwerty{}'.format(i),
+                course_id=self.course.id.to_deprecated_string(),
+                created_by=self.instructor,
+                invoice=self.sale_invoice_1,
+                invoice_item=self.invoice_item,
+                mode_slug='honor'
             )
             course_registration_code.save()
 
@@ -1987,10 +2034,17 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
             internal_reference="B", course_id=self.course.id
         )
 
+        invoice_item_2 = CourseRegistrationCodeInvoiceItem.objects.create(
+            invoice=sale_invoice_2,
+            qty=1,
+            unit_price=1234.32,
+            course_id=self.course.id
+        )
+
         for i in range(5):
             course_registration_code = CourseRegistrationCode(
                 code='xyzmn{}'.format(i), course_id=self.course.id.to_deprecated_string(),
-                created_by=self.instructor, invoice=sale_invoice_2, mode_slug='honor'
+                created_by=self.instructor, invoice=sale_invoice_2, invoice_item=invoice_item_2, mode_slug='honor'
             )
             course_registration_code.save()
 
@@ -1999,10 +2053,22 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         res_json = json.loads(response.content)
         self.assertIn('sale', res_json)
 
-        self.validate_sale_records_response(res_json['sale'][0], course_registration_code, self.sale_invoice_1, 0)
-        self.validate_sale_records_response(res_json['sale'][1], course_registration_code, sale_invoice_2, 0)
+        self.validate_sale_records_response(
+            res_json['sale'][0],
+            course_registration_code,
+            self.sale_invoice_1,
+            0,
+            invoice_item=self.invoice_item
+        )
+        self.validate_sale_records_response(
+            res_json['sale'][1],
+            course_registration_code,
+            sale_invoice_2,
+            0,
+            invoice_item=invoice_item_2
+        )
 
-    def validate_sale_records_response(self, res, course_registration_code, invoice, used_codes):
+    def validate_sale_records_response(self, res, course_registration_code, invoice, used_codes, invoice_item):
         """
         validate sale records attribute values with the response object
         """
@@ -2016,7 +2082,7 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         self.assertEqual(res['customer_reference_number'], invoice.customer_reference_number)
         self.assertEqual(res['invoice_number'], invoice.id)
         self.assertEqual(res['created_by'], course_registration_code.created_by.username)
-        self.assertEqual(res['course_id'], invoice.course_id.to_deprecated_string())
+        self.assertEqual(res['course_id'], invoice_item.course_id.to_deprecated_string())
         self.assertEqual(res['total_used_codes'], used_codes)
         self.assertEqual(res['total_codes'], 5)
 
@@ -2044,8 +2110,7 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         cohorted, and does not when the course is not cohorted.
         """
         url = reverse('get_students_features', kwargs={'course_id': unicode(self.course.id)})
-        self.course.cohort_config = {'cohorted': is_cohorted}
-        self.store.update_item(self.course, self.instructor.id)
+        set_course_cohort_settings(self.course.id, is_cohorted=is_cohorted)
 
         response = self.client.get(url, {})
         res_json = json.loads(response.content)
@@ -2194,7 +2259,6 @@ class TestInstructorAPILevelsDataDump(ModuleStoreTestCase, LoginEnrollmentTestCa
         self.assertEqual(response.status_code, 400)
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test endpoints whereby instructors can change student grades.
@@ -2205,6 +2269,7 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
     """
 
     def setUp(self):
+        super(TestInstructorAPIRegradeTask, self).setUp()
         self.course = CourseFactory.create()
         self.instructor = InstructorFactory(course_key=self.course.id)
         self.client.login(username=self.instructor.username, password='test')
@@ -2217,6 +2282,7 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
             self.course.id,
             'robot-some-problem-urlname'
         )
+
         self.problem_urlname = self.problem_location.to_deprecated_string()
 
         self.module_to_reset = StudentModule.objects.create(
@@ -2334,8 +2400,271 @@ class TestInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(act.called)
 
+    @patch.dict(settings.FEATURES, {'ENTRANCE_EXAMS': True})
+    def test_course_has_entrance_exam_in_student_attempts_reset(self):
+        """ Test course has entrance exam id set while resetting attempts"""
+        url = reverse('reset_student_attempts_for_entrance_exam',
+                      kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'all_students': True,
+            'delete_module': False,
+        })
+        self.assertEqual(response.status_code, 400)
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
+    @patch.dict(settings.FEATURES, {'ENTRANCE_EXAMS': True})
+    def test_rescore_entrance_exam_with_invalid_exam(self):
+        """ Test course has entrance exam id set while re-scoring. """
+        url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+        })
+        self.assertEqual(response.status_code, 400)
+
+
+@patch.dict(settings.FEATURES, {'ENTRANCE_EXAMS': True})
+class TestEntranceExamInstructorAPIRegradeTask(ModuleStoreTestCase, LoginEnrollmentTestCase):
+    """
+    Test endpoints whereby instructors can rescore student grades,
+    reset student attempts and delete state for entrance exam.
+    """
+
+    def setUp(self):
+        super(TestEntranceExamInstructorAPIRegradeTask, self).setUp()
+        self.course = CourseFactory.create(
+            org='test_org',
+            course='test_course',
+            run='test_run',
+            entrance_exam_id='i4x://{}/{}/chapter/Entrance_exam'.format('test_org', 'test_course')
+        )
+        self.course_with_invalid_ee = CourseFactory.create(entrance_exam_id='invalid_exam')
+
+        self.instructor = InstructorFactory(course_key=self.course.id)
+        # Add instructor to invalid ee course
+        CourseInstructorRole(self.course_with_invalid_ee.id).add_users(self.instructor)
+        self.client.login(username=self.instructor.username, password='test')
+
+        self.student = UserFactory()
+        CourseEnrollment.enroll(self.student, self.course.id)
+
+        self.entrance_exam = ItemFactory.create(
+            parent=self.course,
+            category='chapter',
+            display_name='Entrance exam'
+        )
+        subsection = ItemFactory.create(
+            parent=self.entrance_exam,
+            category='sequential',
+            display_name='Subsection 1'
+        )
+        vertical = ItemFactory.create(
+            parent=subsection,
+            category='vertical',
+            display_name='Vertical 1'
+        )
+        self.ee_problem_1 = ItemFactory.create(
+            parent=vertical,
+            category="problem",
+            display_name="Exam Problem - Problem 1"
+        )
+        self.ee_problem_2 = ItemFactory.create(
+            parent=vertical,
+            category="problem",
+            display_name="Exam Problem - Problem 2"
+        )
+
+        ee_module_to_reset1 = StudentModule.objects.create(
+            student=self.student,
+            course_id=self.course.id,
+            module_state_key=self.ee_problem_1.location,
+            state=json.dumps({'attempts': 10, 'done': True}),
+        )
+        ee_module_to_reset2 = StudentModule.objects.create(
+            student=self.student,
+            course_id=self.course.id,
+            module_state_key=self.ee_problem_2.location,
+            state=json.dumps({'attempts': 10, 'done': True}),
+        )
+        self.ee_modules = [ee_module_to_reset1.module_state_key, ee_module_to_reset2.module_state_key]
+
+    def test_reset_entrance_exam_student_attempts_deletall(self):
+        """ Make sure no one can delete all students state on entrance exam. """
+        url = reverse('reset_student_attempts_for_entrance_exam',
+                      kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'all_students': True,
+            'delete_module': True,
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_reset_entrance_exam_student_attempts_single(self):
+        """ Test reset single student attempts for entrance exam. """
+        url = reverse('reset_student_attempts_for_entrance_exam',
+                      kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+        })
+        self.assertEqual(response.status_code, 200)
+        # make sure problem attempts have been reset.
+        changed_modules = StudentModule.objects.filter(module_state_key__in=self.ee_modules)
+        for changed_module in changed_modules:
+            self.assertEqual(
+                json.loads(changed_module.state)['attempts'],
+                0
+            )
+
+    # mock out the function which should be called to execute the action.
+    @patch.object(instructor_task.api, 'submit_reset_problem_attempts_in_entrance_exam')
+    def test_reset_entrance_exam_all_student_attempts(self, act):
+        """ Test reset all student attempts for entrance exam. """
+        url = reverse('reset_student_attempts_for_entrance_exam',
+                      kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'all_students': True,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(act.called)
+
+    def test_reset_student_attempts_invalid_entrance_exam(self):
+        """ Test reset for invalid entrance exam. """
+        url = reverse('reset_student_attempts_for_entrance_exam',
+                      kwargs={'course_id': unicode(self.course_with_invalid_ee.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_entrance_exam_sttudent_delete_state(self):
+        """ Test delete single student entrance exam state. """
+        url = reverse('reset_student_attempts_for_entrance_exam',
+                      kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+            'delete_module': True,
+        })
+        self.assertEqual(response.status_code, 200)
+        # make sure the module has been deleted
+        changed_modules = StudentModule.objects.filter(module_state_key__in=self.ee_modules)
+        self.assertEqual(changed_modules.count(), 0)
+
+    def test_entrance_exam_delete_state_with_staff(self):
+        """ Test entrance exam delete state failure with staff access. """
+        self.client.logout()
+        staff_user = StaffFactory(course_key=self.course.id)
+        self.client.login(username=staff_user.username, password='test')
+        url = reverse('reset_student_attempts_for_entrance_exam',
+                      kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+            'delete_module': True,
+        })
+        self.assertEqual(response.status_code, 403)
+
+    def test_entrance_exam_reset_student_attempts_nonsense(self):
+        """ Test failure with both unique_student_identifier and all_students. """
+        url = reverse('reset_student_attempts_for_entrance_exam',
+                      kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+            'all_students': True,
+        })
+        self.assertEqual(response.status_code, 400)
+
+    @patch.object(instructor_task.api, 'submit_rescore_entrance_exam_for_student')
+    def test_rescore_entrance_exam_single_student(self, act):
+        """ Test re-scoring of entrance exam for single student. """
+        url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(act.called)
+
+    def test_rescore_entrance_exam_all_student(self):
+        """ Test rescoring for all students. """
+        url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'all_students': True,
+        })
+        self.assertEqual(response.status_code, 200)
+
+    def test_rescore_entrance_exam_all_student_and_single(self):
+        """ Test re-scoring with both all students and single student parameters. """
+        url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+            'all_students': True,
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_rescore_entrance_exam_with_invalid_exam(self):
+        """ Test re-scoring of entrance exam with invalid exam. """
+        url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course_with_invalid_ee.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_list_entrance_exam_instructor_tasks_student(self):
+        """ Test list task history for entrance exam AND student. """
+        # create a re-score entrance exam task
+        url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+        })
+        self.assertEqual(response.status_code, 200)
+
+        url = reverse('list_entrance_exam_instructor_tasks', kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+        })
+        self.assertEqual(response.status_code, 200)
+
+        # check response
+        tasks = json.loads(response.content)['tasks']
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(tasks[0]['status'], _('Complete'))
+
+    def test_list_entrance_exam_instructor_tasks_all_student(self):
+        """ Test list task history for entrance exam AND all student. """
+        url = reverse('list_entrance_exam_instructor_tasks', kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.get(url, {})
+        self.assertEqual(response.status_code, 200)
+
+        # check response
+        tasks = json.loads(response.content)['tasks']
+        self.assertEqual(len(tasks), 0)
+
+    def test_list_entrance_exam_instructor_with_invalid_exam_key(self):
+        """ Test list task history for entrance exam failure if course has invalid exam. """
+        url = reverse('list_entrance_exam_instructor_tasks',
+                      kwargs={'course_id': unicode(self.course_with_invalid_ee.id)})
+        response = self.client.get(url, {
+            'unique_student_identifier': self.student.email,
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_skip_entrance_exam_student(self):
+        """ Test skip entrance exam api for student. """
+        # create a re-score entrance exam task
+        url = reverse('mark_student_can_skip_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
+        response = self.client.post(url, {
+            'unique_student_identifier': self.student.email,
+        })
+        self.assertEqual(response.status_code, 200)
+        # check response
+        message = _('This student (%s) will skip the entrance exam.') % self.student.email
+        self.assertContains(response, message)
+
+        # post again with same student
+        response = self.client.post(url, {
+            'unique_student_identifier': self.student.email,
+        })
+
+        # This time response message should be different
+        message = _('This student (%s) is already allowed to skip the entrance exam.') % self.student.email
+        self.assertContains(response, message)
+
+
 @patch('bulk_email.models.html_to_text', Mock(return_value='Mocking CourseEmail.text_message'))
 @patch.dict(settings.FEATURES, {'ENABLE_INSTRUCTOR_EMAIL': True, 'REQUIRE_COURSE_EMAIL_AUTH': False})
 class TestInstructorSendEmail(ModuleStoreTestCase, LoginEnrollmentTestCase):
@@ -2346,6 +2675,8 @@ class TestInstructorSendEmail(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
 
     def setUp(self):
+        super(TestInstructorSendEmail, self).setUp()
+
         self.course = CourseFactory.create()
         self.instructor = InstructorFactory(course_key=self.course.id)
         self.client.login(username=self.instructor.username, password='test')
@@ -2418,7 +2749,6 @@ class MockCompletionInfo(object):
         return False, 'Task Errored In Some Way'
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestInstructorAPITaskLists(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test instructor task list endpoint.
@@ -2468,7 +2798,10 @@ class TestInstructorAPITaskLists(ModuleStoreTestCase, LoginEnrollmentTestCase):
             return attr_dict
 
     def setUp(self):
-        self.course = CourseFactory.create()
+        super(TestInstructorAPITaskLists, self).setUp()
+        self.course = CourseFactory.create(
+            entrance_exam_id='i4x://{}/{}/chapter/Entrance_exam'.format('test_org', 'test_course')
+        )
         self.instructor = InstructorFactory(course_key=self.course.id)
         self.client.login(username=self.instructor.username, password='test')
 
@@ -2490,12 +2823,6 @@ class TestInstructorAPITaskLists(ModuleStoreTestCase, LoginEnrollmentTestCase):
         mock_factory = MockCompletionInfo()
         self.tasks = [self.FakeTask(mock_factory.mock_get_task_completion_info) for _ in xrange(7)]
         self.tasks[-1].make_invalid_output()
-
-    def tearDown(self):
-        """
-        Undo all patches.
-        """
-        patch.stopall()
 
     @patch.object(instructor_task.api, 'get_running_instructor_tasks')
     def test_list_instructor_tasks_running(self, act):
@@ -2580,7 +2907,6 @@ class TestInstructorAPITaskLists(ModuleStoreTestCase, LoginEnrollmentTestCase):
         self.assertEqual(actual_tasks, expected_tasks)
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 @patch.object(instructor_task.api, 'get_instructor_task_history')
 class TestInstructorEmailContentList(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
@@ -2588,18 +2914,14 @@ class TestInstructorEmailContentList(ModuleStoreTestCase, LoginEnrollmentTestCas
     """
 
     def setUp(self):
+        super(TestInstructorEmailContentList, self).setUp()
+
         self.course = CourseFactory.create()
         self.instructor = InstructorFactory(course_key=self.course.id)
         self.client.login(username=self.instructor.username, password='test')
         self.tasks = {}
         self.emails = {}
         self.emails_info = {}
-
-    def tearDown(self):
-        """
-        Undo all patches.
-        """
-        patch.stopall()
 
     def setup_fake_email_info(self, num_emails, with_failures=False):
         """ Initialize the specified number of fake emails """
@@ -2716,7 +3038,6 @@ class TestInstructorEmailContentList(ModuleStoreTestCase, LoginEnrollmentTestCas
 
 
 @ddt.ddt
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 @override_settings(ANALYTICS_SERVER_URL="http://robotanalyticsserver.netbot:900/")
 @override_settings(ANALYTICS_API_KEY="robot_api_key")
 class TestInstructorAPIAnalyticsProxy(ModuleStoreTestCase, LoginEnrollmentTestCase):
@@ -2739,6 +3060,8 @@ class TestInstructorAPIAnalyticsProxy(ModuleStoreTestCase, LoginEnrollmentTestCa
             self.content = '{"test_content": "robot test content"}'
 
     def setUp(self):
+        super(TestInstructorAPIAnalyticsProxy, self).setUp()
+
         self.course = CourseFactory.create()
         self.instructor = InstructorFactory(course_key=self.course.id)
         self.client.login(username=self.instructor.username, password='test')
@@ -2898,7 +3221,6 @@ class TestInstructorAPIHelpers(TestCase):
         msk_from_problem_urlname(*args)
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestDueDateExtensions(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test data dumps for reporting.
@@ -3087,7 +3409,6 @@ class TestDueDateExtensions(ModuleStoreTestCase, LoginEnrollmentTestCase):
                 self.user1.profile.name, self.user1.username)})
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 @override_settings(REGISTRATION_CODE_LENGTH=8)
 class TestCourseRegistrationCodes(ModuleStoreTestCase):
     """
@@ -3098,6 +3419,8 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
         """
         Fixtures.
         """
+        super(TestCourseRegistrationCodes, self).setUp()
+
         self.course = CourseFactory.create()
         CourseModeFactory.create(course_id=self.course.id, min_price=50)
         self.instructor = InstructorFactory(course_key=self.course.id)
@@ -3109,7 +3432,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 12, 'company_name': 'Test Group', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 122.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 122.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street',
             'address_line_2': '', 'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': ''
@@ -3141,7 +3464,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 5, 'company_name': 'Group Alpha', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 121.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 121.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': 'True'
@@ -3163,7 +3486,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 5, 'company_name': 'Group Alpha', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 121.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 121.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': 'True'
@@ -3205,7 +3528,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 15, 'company_name': 'Group Alpha', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 122.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 122.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': ''
@@ -3227,7 +3550,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 15, 'company_name': 'Group Alpha', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 122.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 122.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': ''
@@ -3263,7 +3586,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
         coupon.save()
         data = {
             'total_registration_codes': 3, 'company_name': 'Group Alpha', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 122.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 122.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': ''
@@ -3287,7 +3610,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 2, 'company_name': 'Test Group', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 122.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 122.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': ''
@@ -3323,7 +3646,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 9, 'company_name': 'Group Alpha', 'company_contact_name': 'Test@company.com',
-            'sale_price': 122.45, 'company_contact_email': 'Test@company.com', 'recipient_name': 'Test123',
+            'unit_price': 122.45, 'company_contact_email': 'Test@company.com', 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': ''
@@ -3374,7 +3697,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 9, 'company_name': 'Group Alpha', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 122.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 122.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': ''
@@ -3413,7 +3736,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 9, 'company_name': 'Group Alpha', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 122.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 122.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': ''
@@ -3440,7 +3763,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
         )
         data = {
             'total_registration_codes': 9, 'company_name': 'Group Alpha', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 122.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 122.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': ''
@@ -3459,7 +3782,7 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
 
         data = {
             'total_registration_codes': 5.5, 'company_name': 'Group Invoice', 'company_contact_name': 'Test@company.com',
-            'company_contact_email': 'Test@company.com', 'sale_price': 122.45, 'recipient_name': 'Test123',
+            'company_contact_email': 'Test@company.com', 'unit_price': 122.45, 'recipient_name': 'Test123',
             'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
             'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
             'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': True
@@ -3476,6 +3799,26 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
         self.assertEqual(response['Content-Type'], 'text/csv')
         body = response.content.replace('\r', '')
         self.assertTrue(body.startswith(EXPECTED_CSV_HEADER))
+
+    def test_with_invalid_unit_price(self):
+        """
+        Test to generate a response of all the course registration codes
+        """
+        generate_code_url = reverse(
+            'generate_registration_codes', kwargs={'course_id': self.course.id.to_deprecated_string()}
+        )
+
+        data = {
+            'total_registration_codes': 10, 'company_name': 'Group Invoice', 'company_contact_name': 'Test@company.com',
+            'company_contact_email': 'Test@company.com', 'unit_price': 'invalid', 'recipient_name': 'Test123',
+            'recipient_email': 'test@123.com', 'address_line_1': 'Portland Street', 'address_line_2': '',
+            'address_line_3': '', 'city': '', 'state': '', 'zip': '', 'country': '',
+            'customer_reference_number': '123A23F', 'internal_reference': '', 'invoice': True
+        }
+
+        response = self.client.post(generate_code_url, data, **{'HTTP_HOST': 'localhost'})
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertIn('Could not parse amount as', response.content)
 
     def test_get_historical_coupon_codes(self):
         """
@@ -3517,7 +3860,6 @@ class TestCourseRegistrationCodes(ModuleStoreTestCase):
         self.assertTrue(body.startswith(EXPECTED_COUPON_CSV_HEADER))
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestBulkCohorting(ModuleStoreTestCase):
     """
     Test adding users to cohorts in bulk via CSV upload.
@@ -3528,10 +3870,7 @@ class TestBulkCohorting(ModuleStoreTestCase):
         self.staff_user = StaffFactory(course_key=self.course.id)
         self.non_staff_user = UserFactory.create()
         self.tempdir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        if os.path.exists(self.tempdir):
-            shutil.rmtree(self.tempdir)
+        self.addCleanup(shutil.rmtree, self.tempdir)
 
     def call_add_users_to_cohorts(self, csv_data, suffix='.csv', method='POST'):
         """
