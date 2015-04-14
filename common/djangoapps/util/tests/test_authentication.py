@@ -2,8 +2,8 @@
 
 from mock import patch
 from django.conf import settings
+from django.conf.urls import patterns, url
 from rest_framework import permissions
-from rest_framework.compat import patterns, url
 from rest_framework.tests import test_authentication
 from provider import scope, constants
 from unittest import skipUnless

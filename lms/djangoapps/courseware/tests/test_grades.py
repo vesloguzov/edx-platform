@@ -11,7 +11,7 @@ from capa.tests.response_xml_factory import OptionResponseXMLFactory
 
 from courseware.grades import grade, iterate_grades_for
 from courseware.tests.factories import StudentModuleFactory
-from xmodule.modulestore.tests.django_utils import TEST_DATA_MOCK_MODULESTORE
+# from xmodule.modulestore.tests.django_utils import TEST_DATA_MOCK_MODULESTORE
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
@@ -73,12 +73,13 @@ def _prepare_grading_for_student(course, problem_location, student):
                                 state=None)
 
 
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
+# @override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
 class TestGradingRequest(ModuleStoreTestCase):
     """
     Test correct fake request handling for single student grading
     """
     def setUp(self):
+        super(TestGradingRequest, self).setUp()
         self.student = UserFactory.create()
         course = CourseFactory()
 

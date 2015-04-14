@@ -3,20 +3,21 @@ Unit test for cas-specific authentication details
 """
 from unittest import skip
 
-from django.test import TestCase
 from django.test.utils import override_settings
 from django.contrib.auth.models import User
 from django.db import IntegrityError
 
 from xmodule.modulestore.tests.factories import CourseFactory
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
 from student.tests.factories import UserFactory
 from student.models import UserProfile, CourseEnrollment
 from external_auth.views import cas_create_user
 from instructor.enrollment import enroll_email
 
-class CASUserCreatorTest(TestCase):
+class CASUserCreatorTest(ModuleStoreTestCase):
     def setUp(self):
+        super(CASUserCreatorTest, self).setUp()
         self.username =  'test'
         self.attrs = {'mail': 'test@example.com'}
 

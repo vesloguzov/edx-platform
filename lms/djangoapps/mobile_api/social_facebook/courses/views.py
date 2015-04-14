@@ -61,4 +61,4 @@ class CoursesWithFriends(generics.ListAPIView):
             and is_mobile_available_for_user(self.request.user, enrollment.course)
         ]
 
-        return Response(CourseEnrollmentSerializer(courses, context={'request': request}).data)
+        return Response(CourseEnrollmentSerializer(courses, context={'request': request}, many=True).data)

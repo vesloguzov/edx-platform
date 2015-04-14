@@ -45,13 +45,8 @@ from shoppingcart.pdf import PDFInvoice
 from student.models import (
     CourseEnrollment, CourseEnrollmentAllowed, NonExistentCourseError, UserProfile
 )
-<<<<<<< HEAD
 from student.tests.factories import UserFactory, CourseModeFactory, UserProfileFactory
-from student.roles import CourseBetaTesterRole, CourseSalesAdminRole, CourseFinanceAdminRole
-=======
-from student.tests.factories import UserFactory, CourseModeFactory
 from student.roles import CourseBetaTesterRole, CourseSalesAdminRole, CourseFinanceAdminRole, CourseInstructorRole
->>>>>>> release-2015-03-31
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
@@ -784,7 +779,7 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
         )
         self.assertEqual(
             mail.outbox[0].body,
-            "Dear NotEnrolled Student\n\nYou have been enrolled in {} "
+            "Dear NotEnrolled Student,\n\nYou have been enrolled in {} "
             "at edx.org by a member of the course staff. "
             "The course should now appear on your edx.org dashboard.\n\n"
             "To start accessing course materials, please visit "
@@ -951,7 +946,7 @@ class TestInstructorAPIEnrollment(ModuleStoreTestCase, LoginEnrollmentTestCase):
         )
         self.assertEqual(
             mail.outbox[0].body,
-            "Dear Enrolled Student\n\nYou have been un-enrolled in {display_name} "
+            "Dear Enrolled Student,\n\nYou have been un-enrolled in {display_name} "
             "at edx.org by a member of the course staff. "
             "The course will no longer appear on your edx.org dashboard.\n\n"
             "Your other courses have not been affected.\n\n----\n"
@@ -1294,7 +1289,7 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
 
         self.assertEqual(
             mail.outbox[0].body,
-            u"Dear {student_name}\n\nYou have been invited to be a beta tester "
+            u"Dear {student_name},\n\nYou have been invited to be a beta tester "
             "for {display_name} at edx.org by a member of the course staff.\n\n"
             "Visit {proto}://{site}{about_path} to join "
             "the course and begin the beta test.\n\n----\n"
@@ -1342,7 +1337,7 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
 
         self.assertEqual(
             mail.outbox[0].body,
-            u"Dear {student_name}\n\nYou have been invited to be a beta tester "
+            u"Dear {student_name},\n\nYou have been invited to be a beta tester "
             "for {display_name} at edx.org by a member of the course staff.\n\n"
             "To start accessing course materials, please visit "
             "{proto}://{site}{course_path}\n\n----\n"
@@ -1365,7 +1360,7 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             mail.outbox[0].body,
-            u"Dear {}\n\nYou have been invited to be a beta tester "
+            u"Dear {},\n\nYou have been invited to be a beta tester "
             "for {} at edx.org by a member of the course staff.\n\n"
             "Visit edx.org to enroll in the course and begin the beta test.\n\n----\n"
             "This email was automatically sent from edx.org to {}".format(
@@ -1460,7 +1455,7 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         )
         self.assertEqual(
             mail.outbox[0].body,
-            "Dear {full_name}\n\nYou have been removed as a beta tester for "
+            "Dear {full_name},\n\nYou have been removed as a beta tester for "
             "{display_name} at edx.org by a member of the course staff. "
             "The course will remain on your dashboard, but you will no longer "
             "be part of the beta testing group.\n\n"
@@ -1473,11 +1468,7 @@ class TestInstructorAPIBulkBetaEnrollment(ModuleStoreTestCase, LoginEnrollmentTe
         )
 
 
-<<<<<<< HEAD
 @ddt.ddt
-@override_settings(MODULESTORE=TEST_DATA_MOCK_MODULESTORE)
-=======
->>>>>>> release-2015-03-31
 class TestInstructorAPILevelsAccess(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test endpoints whereby instructors can change permissions

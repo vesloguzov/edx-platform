@@ -8,7 +8,7 @@ from django.views.decorators.cache import cache_control
 from django.http import HttpResponse, HttpResponseForbidden, Http404
 from django.conf import settings
 
-from protected_static import protected_static_response
+from openedx.core.lib.protected_static import protected_static_response
 from instructor_task.models import ReportStore
 from courseware.access import has_access
 from courseware.courses import get_course_by_id

@@ -69,7 +69,7 @@ class PreferencesView(APIView):
         GET /api/user/v0/preferences/{username}/
         """
         try:
-            user_preferences = get_user_preferences(request.user, username=username)
+            user_preferences = get_user_preferences(request, username=username)
         except (UserNotFound, UserNotAuthorized):
             return Response(status=status.HTTP_404_NOT_FOUND)
 

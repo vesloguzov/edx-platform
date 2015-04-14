@@ -18,6 +18,7 @@ from django.core import mail
 from django.conf import settings
 
 from xmodule.modulestore.tests.factories import CourseFactory
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from rest_framework import mixins
 
 from student.models import CourseEnrollment
@@ -158,7 +159,7 @@ class UserSerializerTest(TestCase):
 
 @skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @override_settings(EDX_API_KEY=TEST_API_KEY)
-class APITest(TestCase):
+class APITest(ModuleStoreTestCase):
     @override_settings(EDX_API_KEY='')
     def test_empty_api_key_fail(self):
         if getattr(self, 'list_url', False):
@@ -185,6 +186,7 @@ class UserViewSetTest(APITest):
     profile_fields = API_PROFILE_FIELDS
 
     def setUp(self):
+        super(UserViewSetTest, self).setUp()
         self.user = UserFactory.create(username='test', email='test@example.com')
         self.detail_url = reverse('profile-detail', kwargs={'username': self.user.username})
         self.list_url = reverse('profile-list')
@@ -283,6 +285,7 @@ class UserViewSetTest(APITest):
 
 class CourseViewSetTest(APITest):
     def setUp(self):
+        super(CourseViewSetTest, self).setUp()
         self.course = CourseFactory.create()
         self.list_url = reverse('course-list')
         self.detail_url = reverse('course-detail', kwargs={'course_id': self.course.id.to_deprecated_string()})
@@ -298,6 +301,7 @@ class CourseViewSetTest(APITest):
 
 class EnrollmentViewSetTest(APITest):
     def setUp(self):
+        super(EnrollmentViewSetTest, self).setUp()
         self.user = UserFactory.create(username='test', email='test@example.com')
 
         self.course_enrolled = CourseFactory.create(number='enrolled')

@@ -39,6 +39,7 @@ $sequence--border-color: #C8C8C8;
   margin: -4px 0 ($baseline*1.5);
   position: relative;
   border-bottom: none;
+  box-sizing: content-box;
 
   .left-shadow {
     @extend %ui-depth4;
@@ -74,6 +75,10 @@ $sequence--border-color: #C8C8C8;
     box-shadow: 0 1px 3px $shadow-l1 inset;
   }
 
+  button {
+    box-sizing: border-box;
+  }
+
   ol {
     position: absolute;
     top: 0;
@@ -103,6 +108,7 @@ $sequence--border-color: #C8C8C8;
         background-repeat: no-repeat;
         border: 1px solid transparent;
         display: block;
+        box-sizing: content-box;
         padding: 0;
         position: relative;
         text-align: center;
@@ -149,11 +155,10 @@ $sequence--border-color: #C8C8C8;
         span {
             display: inline-block;
             max-height: 38px;
-            line-height: 1.3;
             vertical-align: middle;
             overflow: hidden;
             font-size: 90%;
-            color: #555;
+            color: #222;
             background-repeat: no-repeat;
             background-position: 4px center;
             text-align: left;

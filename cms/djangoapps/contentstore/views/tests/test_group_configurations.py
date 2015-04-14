@@ -1,6 +1,5 @@
 #-*- coding: utf-8 -*-
 
->>>>>>> release-2015-03-31
 """
 Group Configuration Tests.
 """
@@ -854,12 +853,12 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase, HelperMethods):
             cid=0, name_suffix=suffix, special_characters=suffix
         )
 
-        actual = GroupConfiguration.get_split_test_partitions_with_usage(self.course, self.store)
+        actual = GroupConfiguration.get_split_test_partitions_with_usage(self.store, self.course)
 
         expected = [{
             'id': 0,
             'name': u'Name 0 ηοη-αςκιι',
-            'scheme': 'random',
+            'scheme': u'random',
             'description': u'Description 0 ηοη-αςκιι',
             'version': UserPartition.VERSION,
             'groups': [
@@ -870,7 +869,7 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase, HelperMethods):
             'usage': [{
                 'url': #'/container/{}'.format(vertical.location),
                 reverse_usage_url('container_handler', vertical.location),
-                'label': u'Test Unit ηοη-αςκιι / Test Content Experiment ηοη-αςκιι',
+                'label': u'Test Unit ηοη-αςκιι / Test Content Experiment ηοη-αςκιιηοη-αςκιι',
                 'validation': None,
             }],
         }]

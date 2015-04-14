@@ -20,19 +20,14 @@
            data-page-title="${item['page_title']|h}"
            aria-controls="seq_contents_${idx}"
            id="tab_${idx}"
-<<<<<<< HEAD
-           tabindex="0"
-           role="tab">
-           % if show_titles:
-           <span data-element="${idx+1}">${item['title']}</span>
-           % else:
-            <p aria-hidden="false">${item['title']}</p>
-           %endif
-=======
            tabindex="0">
             <i class="icon fa seq_${item['type']}" aria-hidden="true"></i>
+            % if show_titles:
+            ## <span data-element="${idx+1}">${item['title']}</span>
+            <span class="sr">${item['type']}</span><span>${item['title']}</span>
+            % else:
             <p><span class="sr">${item['type']}</span> ${item['title']}</p>
->>>>>>> release-2015-03-31
+            %endif
           </a>
         </li>
         % endfor

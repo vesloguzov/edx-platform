@@ -47,6 +47,6 @@ class UserSharing(generics.ListCreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request, *args, **kwargs):
-        preferences = get_user_preferences(request.user)
+        preferences = get_user_preferences(request)
         response = {'share_with_facebook_friends': preferences.get('share_with_facebook_friends', 'False')}
         return Response(response)

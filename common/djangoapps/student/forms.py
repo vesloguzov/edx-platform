@@ -106,8 +106,8 @@ class AccountCreationForm(forms.Form):
     nickname = forms.CharField(
         min_length=2,
         error_messages={
-            "required": _NAME_TOO_SHORT_MSG,
-            "min_length": _NAME_TOO_SHORT_MSG,
+            "required": _NICKNAME_TOO_SHORT_MSG,
+            "min_length": _NICKNAME_TOO_SHORT_MSG,
         }
     )
     email = forms.EmailField(

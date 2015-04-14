@@ -179,9 +179,9 @@
             <span class="tip tip-input" id="name-tip">${_("Needed for any certificates you may earn")}</span>
           </li>
           <li class="field required text" id="field-nickname">
-            <label for="nickname">${_('Public Username')}</label>
+            <label for="nickname">${_('Public Nickname')}</label>
             <input id="nickname" type="text" name="nickname" value="${nickname}" placeholder="${_('example: JaneDoe')}" required aria-required="true" aria-describedby="nickname-tip"/>
-            <span class="tip tip-input" id="nickname-tip">${_('Will be shown in any discussions or forums you participate in')} <strong>(${_('cannot be changed later')})</strong></span>
+            <span class="tip tip-input" id="nickname-tip">${_('Will be shown in any discussions or forums you participate in')}</span>
           </li>
 
           % if third_party_auth.is_enabled() and running_pipeline:

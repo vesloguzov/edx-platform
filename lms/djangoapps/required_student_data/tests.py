@@ -7,13 +7,13 @@ import datetime
 import mock
 from time import sleep
 
-from django.test import TestCase
 from django.test.client import Client
 from django.test.utils import override_settings
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 
 from xmodule.modulestore.tests.factories import CourseFactory
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
 from student.tests.factories import UserFactory, UserProfileFactory
 from student.roles import CourseStaffRole
@@ -22,13 +22,12 @@ from student.roles import CourseStaffRole
 @ddt.ddt
 @mock.patch('required_student_data.views.sync_user_profile', new=lambda username: None)
 @override_settings(REQUIRE_STUDENT_DATA_FOR_COURSEWARE=True)
-class RequiredStudentDataTest(TestCase):
+class RequiredStudentDataTest(ModuleStoreTestCase):
     """
     Tests for required student data form
     """
     @classmethod
     def setUpClass(cls):
-        cls.course = CourseFactory.create()
         cls.postpone_url = reverse('postpone_required_data_update')
         cls.update_url = reverse('update_required_data')
         cls.data = {
@@ -39,6 +38,8 @@ class RequiredStudentDataTest(TestCase):
         }
 
     def setUp(self):
+        super(RequiredStudentDataTest, self).setUp()
+        self.course = CourseFactory.create()
         self.user = UserFactory.create(password='test')
         profile = UserProfileFactory.create(
             user=self.user,

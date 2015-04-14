@@ -85,6 +85,7 @@ class StudentAccountUpdateTest(UrlResetMixin, TestCase):
         activation_link = result.group('url')
 
         # Visit the activation link
+        print 'ACTIVATION:', activation_link
         response = self.client.get(activation_link)
         self.assertEqual(response.status_code, 200)
 
