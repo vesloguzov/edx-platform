@@ -182,7 +182,7 @@ def send_beta_role_email(action, user, email_params):
         email_params['full_name'] = user.profile.name
 
     else:
-        raise ValueError("Unexpected action received '{}' - expected 'add' or 'remove'".format(action))
+        raise ValueError(u"Unexpected action received '{}' - expected 'add' or 'remove'".format(action))
 
     send_mail_to_student(user.email, email_params, language=get_user_email_language(user))
 

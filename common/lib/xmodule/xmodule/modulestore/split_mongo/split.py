@@ -212,7 +212,7 @@ class SplitBulkWriteMixin(BulkOperationsMixin):
         Clear the record for this course
         """
         if not isinstance(course_key, (CourseLocator, LibraryLocator)):
-            raise TypeError('{!r} is not a CourseLocator or LibraryLocator'.format(course_key))
+            raise TypeError(u'{!r} is not a CourseLocator or LibraryLocator'.format(course_key))
 
         if course_key.org and course_key.course and course_key.run:
             del self._active_bulk_ops.records[course_key.replace(branch=None, version_guid=None)]
@@ -831,7 +831,7 @@ class SplitMongoModuleStore(SplitBulkWriteMixin, ModuleStoreWriteBase):
 
         entry = self.get_structure(course_key, version_guid)
         if entry is None:
-            raise ItemNotFoundError('Structure: {}'.format(version_guid))
+            raise ItemNotFoundError(u'Structure: {}'.format(version_guid))
 
         # b/c more than one course can use same structure, the 'org', 'course',
         # 'run', and 'branch' are not intrinsic to structure
@@ -1037,7 +1037,7 @@ class SplitMongoModuleStore(SplitBulkWriteMixin, ModuleStoreWriteBase):
             if len(items) == 0:
                 raise ItemNotFoundError(usage_key)
             elif len(items) > 1:
-                log.debug("Found more than one item for '{}'".format(usage_key))
+                log.debug(u"Found more than one item for '{}'".format(usage_key))
             return items[0]
 
     def get_items(self, course_locator, settings=None, content=None, qualifiers=None, **kwargs):
@@ -1603,7 +1603,7 @@ class SplitMongoModuleStore(SplitBulkWriteMixin, ModuleStoreWriteBase):
         """
         source_index = self.get_course_index_info(source_course_id)
         if source_index is None:
-            raise ItemNotFoundError("Cannot find a course at {0}. Aborting".format(source_course_id))
+            raise ItemNotFoundError(u"Cannot find a course at {0}. Aborting".format(source_course_id))
 
         with self.bulk_operations(dest_course_id):
             new_course = self.create_course(
@@ -2778,7 +2778,7 @@ class SplitMongoModuleStore(SplitBulkWriteMixin, ModuleStoreWriteBase):
         :param new_id:
         """
         if not isinstance(new_id, ObjectId):
-            raise TypeError('new_id must be an ObjectId, but is {!r}'.format(new_id))
+            raise TypeError(u'new_id must be an ObjectId, but is {!r}'.format(new_id))
         index_entry['versions'][branch] = new_id
         self.update_course_index(course_key, index_entry)
 

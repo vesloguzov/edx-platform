@@ -165,7 +165,7 @@ class DraftModuleStore(MongoModuleStore):
         """
         # check to see if the source course is actually there
         if not self.has_course(source_course_id):
-            raise ItemNotFoundError("Cannot find a course at {0}. Aborting".format(source_course_id))
+            raise ItemNotFoundError(u"Cannot find a course at {0}. Aborting".format(source_course_id))
 
         with self.bulk_operations(dest_course_id):
             # verify that the dest_location really is an empty course
@@ -175,8 +175,8 @@ class DraftModuleStore(MongoModuleStore):
             if self.collection.find(query).limit(1).count() > 0:
                 raise DuplicateCourseError(
                     dest_course_id,
-                    "Course at destination {0} is not an empty course. "
-                    "You can only clone into an empty course. Aborting...".format(
+                    u"Course at destination {0} is not an empty course. "
+                    u"You can only clone into an empty course. Aborting...".format(
                         dest_course_id
                     )
                 )

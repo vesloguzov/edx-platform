@@ -568,7 +568,7 @@ def students_update_enrollment(request, course_id):
                 )
             else:
                 return HttpResponseBadRequest(strip_tags(
-                    "Unrecognized action '{}'".format(action)
+                    u"Unrecognized action '{}'".format(action)
                 ))
 
         except ValidationError:
@@ -647,7 +647,7 @@ def bulk_beta_modify_access(request, course_id):
                 revoke_access(course, user, rolename)
             else:
                 return HttpResponseBadRequest(strip_tags(
-                    "Unrecognized action '{}'".format(action)
+                    u"Unrecognized action '{}'".format(action)
                 ))
         except User.DoesNotExist:
             error = 'userDoesNotExist'
@@ -741,7 +741,7 @@ def modify_access(request, course_id):
 
     if rolename not in ['instructor', 'staff', 'beta']:
         return HttpResponseBadRequest(strip_tags(
-            "unknown rolename '{}'".format(rolename)
+            u"unknown rolename '{}'".format(rolename)
         ))
 
     # disallow instructors from removing their own instructor access.
@@ -760,7 +760,7 @@ def modify_access(request, course_id):
         revoke_access(course, user, rolename)
     else:
         return HttpResponseBadRequest(strip_tags(
-            "unrecognized action '{}'".format(action)
+            u"unrecognized action '{}'".format(action)
         ))
 
     response_payload = {
@@ -930,7 +930,7 @@ def sale_validation(request, course_id):
         invoice_number = int(invoice_number)
     except ValueError:
         return HttpResponseBadRequest(
-            "invoice_number must be an integer, {value} provided".format(
+            u"invoice_number must be an integer, {value} provided".format(
                 value=invoice_number
             )
         )
@@ -1314,11 +1314,11 @@ def generate_registration_codes(request, course_id):
     site_name = microsite.get_value('SITE_NAME', 'localhost')
     quantity = course_code_number
     discount = (float(quantity * course_price) - float(sale_price))
-    course_url = '{base_url}{course_about}'.format(
+    course_url = u'{base_url}{course_about}'.format(
         base_url=microsite.get_value('SITE_NAME', settings.SITE_NAME),
         course_about=reverse('about_course', kwargs={'course_id': course_id.to_deprecated_string()})
     )
-    dashboard_url = '{base_url}{dashboard}'.format(
+    dashboard_url = u'{base_url}{dashboard}'.format(
         base_url=microsite.get_value('SITE_NAME', settings.SITE_NAME),
         dashboard=reverse('dashboard')
     )
@@ -1359,7 +1359,7 @@ def generate_registration_codes(request, course_id):
     csv_file = StringIO.StringIO()
     csv_writer = csv.writer(csv_file)
     for registration_code in registration_codes:
-        full_redeem_code_url = 'http://{base_url}{redeem_code_url}'.format(
+        full_redeem_code_url = u'http://{base_url}{redeem_code_url}'.format(
             base_url=microsite.get_value('SITE_NAME', settings.SITE_NAME),
             redeem_code_url=reverse('register_code_redemption', kwargs={'registration_code': registration_code.code})
         )
@@ -1508,7 +1508,7 @@ def get_distribution(request, course_id):
     # allow None so that requests for no feature can list available features
     if feature not in available_features + (None,):
         return HttpResponseBadRequest(strip_tags(
-            "feature '{}' not available.".format(feature)
+            u"feature '{}' not available.".format(feature)
         ))
 
     response_payload = {
@@ -1943,7 +1943,7 @@ def list_report_downloads(_request, course_id):
 
     response_payload = {
         'downloads': [
-            dict(name=name, url=url, link='<a href="{}">{}</a>'.format(url, name))
+            dict(name=name, url=url, link=u'<a href="{}">{}</a>'.format(url, name))
             for name, url in report_store.links_for(course_id)
         ]
     }
@@ -2009,7 +2009,7 @@ def list_forum_members(request, course_id):
     # filter out unsupported for roles
     if rolename not in [FORUM_ROLE_ADMINISTRATOR, FORUM_ROLE_MODERATOR, FORUM_ROLE_COMMUNITY_TA]:
         return HttpResponseBadRequest(strip_tags(
-            "Unrecognized rolename '{}'.".format(rolename)
+            u"Unrecognized rolename '{}'.".format(rolename)
         ))
 
     try:
@@ -2133,7 +2133,7 @@ def update_forum_role_membership(request, course_id):
 
     if rolename not in [FORUM_ROLE_ADMINISTRATOR, FORUM_ROLE_MODERATOR, FORUM_ROLE_COMMUNITY_TA]:
         return HttpResponseBadRequest(strip_tags(
-            "Unrecognized rolename '{}'.".format(rolename)
+            u"Unrecognized rolename '{}'.".format(rolename)
         ))
 
     user = get_student_from_email_or_nickname(student_identifier)
@@ -2172,7 +2172,7 @@ def proxy_legacy_analytics(request, course_id):
             settings.ANALYTICS_SERVER_URL and settings.ANALYTICS_API_KEY):
         return HttpResponse("Analytics service not configured.", status=501)
 
-    url = "{}get?aname={}&course_id={}&apikey={}".format(
+    url = u"{}get?aname={}&course_id={}&apikey={}".format(
         settings.ANALYTICS_SERVER_URL,
         analytics_name,
         urllib.quote(unicode(course_id)),
@@ -2201,7 +2201,7 @@ def proxy_legacy_analytics(request, course_id):
             url, res.status_code, res.content
         )
         return HttpResponse(
-            "Error from analytics server ({}).".format(res.status_code),
+            u"Error from analytics server ({}).".format(res.status_code),
             status=500
         )
 

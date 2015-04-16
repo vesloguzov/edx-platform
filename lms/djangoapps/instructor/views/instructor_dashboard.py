@@ -121,8 +121,8 @@ def instructor_dashboard_2(request, course_id):
     analytics_dashboard_message = None
     if settings.ANALYTICS_DASHBOARD_URL:
         # Construct a URL to the external analytics dashboard
-        analytics_dashboard_url = '{0}/courses/{1}'.format(settings.ANALYTICS_DASHBOARD_URL, unicode(course_key))
-        link_start = "<a href=\"{}\" target=\"_blank\">".format(analytics_dashboard_url)
+        analytics_dashboard_url = u'{0}/courses/{1}'.format(settings.ANALYTICS_DASHBOARD_URL, unicode(course_key))
+        link_start = u"<a href=\"{}\" target=\"_blank\">".format(analytics_dashboard_url)
         analytics_dashboard_message = _("To gain insights into student enrollment and participation {link_start}visit {analytics_dashboard_name}, our new course analytics product{link_end}.")
         analytics_dashboard_message = analytics_dashboard_message.format(
             link_start=link_start, link_end="</a>", analytics_dashboard_name=settings.ANALYTICS_DASHBOARD_NAME)
@@ -300,7 +300,7 @@ def _section_course_info(course, access):
         section_data['detailed_gitlogs_url'] = reverse('gitlogs_detail', kwargs={'course_id': unicode(course_key)})
 
     try:
-        advance = lambda memo, (letter, score): "{}: {}, ".format(letter, score) + memo
+        advance = lambda memo, (letter, score): u"{}: {}, ".format(letter, score) + memo
         section_data['grade_cutoffs'] = reduce(advance, course.grade_cutoffs.items(), "")[:-2]
     except Exception:  # pylint: disable=broad-except
         section_data['grade_cutoffs'] = "Not Available"
@@ -476,7 +476,7 @@ def _section_send_email(course, access):
 
 def _get_dashboard_link(course_key):
     """ Construct a URL to the external analytics dashboard """
-    analytics_dashboard_url = '{0}/courses/{1}'.format(settings.ANALYTICS_DASHBOARD_URL, unicode(course_key))
+    analytics_dashboard_url = u'{0}/courses/{1}'.format(settings.ANALYTICS_DASHBOARD_URL, unicode(course_key))
     link = u"<a href=\"{0}\" target=\"_blank\">{1}</a>".format(analytics_dashboard_url,
                                                                settings.ANALYTICS_DASHBOARD_NAME)
     return link

@@ -94,7 +94,7 @@ def profile_distribution(course_id, feature):
 
     if feature not in AVAILABLE_PROFILE_FEATURES:
         raise ValueError(
-            "unsupported feature requested for distribution '{}'".format(
+            u"unsupported feature requested for distribution '{}'".format(
                 feature)
         )
 

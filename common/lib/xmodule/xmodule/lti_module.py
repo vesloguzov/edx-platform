@@ -388,7 +388,7 @@ class LTIModule(LTIFields, LTI20ModuleMixin, XModule):
             except ValueError:
                 _ = self.runtime.service(self, "i18n").ugettext
                 msg = _('Could not parse custom parameter: {custom_parameter}. Should be "x=y" string.').format(
-                    custom_parameter="{0!r}".format(custom_parameter)
+                    custom_parameter=u"{0!r}".format(custom_parameter)
                 )
                 raise LTIError(msg)
 
@@ -505,7 +505,7 @@ class LTIModule(LTIFields, LTI20ModuleMixin, XModule):
         i4x-2-3-lti-31de800015cf4afb973356dbe81496df this part of resource_link_id:
         makes resource_link_id to be unique among courses inside same system.
         """
-        return unicode(urllib.quote("{}-{}".format(self.system.hostname, self.location.html_id())))
+        return unicode(urllib.quote(u"{}-{}".format(self.system.hostname, self.location.html_id())))
 
     def get_lis_result_sourcedid(self):
         """
@@ -689,7 +689,7 @@ oauth_consumer_key="", oauth_signature="frVp4JuvT1mVXlxktiAUjQ7%2F1cw%3D"'}
 
         Example of correct/incorrect answer XML body:: see response_xml_template.
         """
-        response_xml_template = textwrap.dedent("""\
+        response_xml_template = textwrap.dedent(u"""\
             <?xml version="1.0" encoding="UTF-8"?>
             <imsx_POXEnvelopeResponse xmlns = "http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0">
                 <imsx_POXHeader>
@@ -844,8 +844,8 @@ oauth_consumer_key="", oauth_signature="frVp4JuvT1mVXlxktiAUjQ7%2F1cw%3D"'}
         )
         if oauth_body_hash != oauth_headers.get('oauth_body_hash'):
             log.error(
-                "OAuth body hash verification failed, provided: {}, "
-                "calculated: {}, for url: {}, body is: {}".format(
+                u"OAuth body hash verification failed, provided: {}, "
+                u"calculated: {}, for url: {}, body is: {}".format(
                     oauth_headers.get('oauth_body_hash'),
                     oauth_body_hash,
                     self.get_outcome_service_url(),
@@ -856,8 +856,8 @@ oauth_consumer_key="", oauth_signature="frVp4JuvT1mVXlxktiAUjQ7%2F1cw%3D"'}
 
         if (not signature.verify_hmac_sha1(mock_request_lti_1, client_secret) and not
                 signature.verify_hmac_sha1(mock_request_lti_2, client_secret)):
-            log.error("OAuth signature verification failed, for "
-                      "headers:{} url:{} method:{}".format(
+            log.error(u"OAuth signature verification failed, for "
+                      u"headers:{} url:{} method:{}".format(
                           oauth_headers,
                           self.get_outcome_service_url(),
                           unicode(request.method)

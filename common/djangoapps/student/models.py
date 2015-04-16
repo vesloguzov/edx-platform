@@ -678,7 +678,7 @@ class CourseEnrollment(models.Model):
 
     def __unicode__(self):
         return (
-            "[CourseEnrollment] {}: {} ({}); active: ({})"
+            u"[CourseEnrollment] {}: {} ({}); active: ({})"
         ).format(self.user, self.course_id, self.created, self.is_active)
 
     @classmethod
@@ -1268,7 +1268,7 @@ class CourseAccessRole(models.Model):
         return self._key < other._key  # pylint: disable=protected-access
 
     def __unicode__(self):
-        return "[CourseAccessRole] user: {}   role: {}   org: {}   course: {}".format(self.user.username, self.role, self.org, self.course_id)
+        return u"[CourseAccessRole] user: {}   role: {}   org: {}   course: {}".format(self.user.username, self.role, self.org, self.course_id)
 
 
 #### Helper methods for use from python manage.py shell and other classes.
@@ -1511,7 +1511,7 @@ class LinkedInAddToProfileConfiguration(ConfigurationModel):
         """Name of the certification, for display on LinkedIn. """
         return self.MODE_TO_CERT_NAME.get(
             cert_mode,
-            _(u"{platform_name} Certificate for {course_name}")
+            _("{platform_name} Certificate for {course_name}")
         ).format(
             platform_name=settings.PLATFORM_NAME,
             course_name=course_name

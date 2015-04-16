@@ -467,8 +467,8 @@ def _get_processor_decline_html(params):
             "You were not charged. Please try a different form of payment.  "
             "Contact us with payment-related questions at {email}."
         ).format(
-            decision='<span class="decision">{decision}</span>'.format(decision=params['decision']),
-            reason='<span class="reason">{reason_code}:{reason_msg}</span>'.format(
+            decision=u'<span class="decision">{decision}</span>'.format(decision=params['decision']),
+            reason=u'<span class="reason">{reason_code}:{reason_msg}</span>'.format(
                 reason_code=params['reason_code'],
                 reason_msg=REASONCODE_MAP.get(params['reason_code'])
             ),

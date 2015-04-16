@@ -147,7 +147,7 @@ class Attribute(object):
         val = element.get(self.name)
         if self.default == self._sentinel and val is None:
             raise ValueError(
-                'Missing required attribute {0}.'.format(self.name)
+                u'Missing required attribute {0}.'.format(self.name)
             )
 
         if val is None:
@@ -203,7 +203,7 @@ class InputTypeBase(object):
         self.input_id = state.get('id', xml.get('id'))
         if self.input_id is None:
             raise ValueError(
-                "input id state is None. xml is {0}".format(etree.tostring(xml))
+                u"input id state is None. xml is {0}".format(etree.tostring(xml))
             )
 
         self.value = state.get('value', '')
@@ -452,7 +452,7 @@ class ChoiceGroup(InputTypeBase):
         else:
             _ = i18n.ugettext
             # Translators: 'ChoiceGroup' is an input type and should not be translated.
-            msg = _("ChoiceGroup: unexpected tag {tag_name}").format(tag_name=self.tag)
+            msg = _(u"ChoiceGroup: unexpected tag {tag_name}").format(tag_name=self.tag)
             raise Exception(msg)
 
         self.choices = self.extract_choices(self.xml, i18n)
@@ -594,9 +594,9 @@ class JSInput(InputTypeBase):
 
     def _extra_context(self):
         context = {
-            'jschannel_loader': '{static_url}js/capa/src/jschannel.js'.format(
+            'jschannel_loader': u'{static_url}js/capa/src/jschannel.js'.format(
                 static_url=self.capa_system.STATIC_URL),
-            'jsinput_loader': '{static_url}js/capa/src/jsinput.js'.format(
+            'jsinput_loader': u'{static_url}js/capa/src/jsinput.js'.format(
                 static_url=self.capa_system.STATIC_URL),
             'saved_state': self.value
         }
@@ -910,7 +910,7 @@ class MatlabInput(CodeInput):
             'queue_len': str(self.queue_len),
             'queue_msg': queue_msg,
             'button_enabled': self.button_enabled(),
-            'matlab_editor_js': '{static_url}js/vendor/CodeMirror/octave.js'.format(
+            'matlab_editor_js': u'{static_url}js/vendor/CodeMirror/octave.js'.format(
                 static_url=self.capa_system.STATIC_URL),
             'msg': sanitize_html(self.msg)  # sanitize msg before rendering into template
         }
@@ -1147,7 +1147,7 @@ class ChemicalEquationInput(InputTypeBase):
         TODO (vshnayder): Get rid of this once we have a standard way of requiring js to be loaded.
         """
         return {
-            'previewer': '{static_url}js/capa/chemical_equation_preview.js'.format(
+            'previewer': u'{static_url}js/capa/chemical_equation_preview.js'.format(
                 static_url=self.capa_system.STATIC_URL),
         }
 
@@ -1229,7 +1229,7 @@ class FormulaEquationInput(InputTypeBase):
         # `reported_status` is basically `status`, except we say 'unanswered'
 
         return {
-            'previewer': '{static_url}js/capa/src/formula_equation_preview.js'.format(
+            'previewer': u'{static_url}js/capa/src/formula_equation_preview.js'.format(
                 static_url=self.capa_system.STATIC_URL),
         }
 
@@ -1409,7 +1409,7 @@ class EditAMoleculeInput(InputTypeBase):
 
     def _extra_context(self):
         context = {
-            'applet_loader': '{static_url}js/capa/editamolecule.js'.format(
+            'applet_loader': u'{static_url}js/capa/editamolecule.js'.format(
                 static_url=self.capa_system.STATIC_URL),
         }
 
@@ -1443,7 +1443,7 @@ class DesignProtein2dInput(InputTypeBase):
 
     def _extra_context(self):
         context = {
-            'applet_loader': '{static_url}js/capa/design-protein-2d.js'.format(
+            'applet_loader': u'{static_url}js/capa/design-protein-2d.js'.format(
                 static_url=self.capa_system.STATIC_URL),
         }
 
@@ -1477,7 +1477,7 @@ class EditAGeneInput(InputTypeBase):
 
     def _extra_context(self):
         context = {
-            'applet_loader': '{static_url}js/capa/edit-a-gene.js'.format(
+            'applet_loader': u'{static_url}js/capa/edit-a-gene.js'.format(
                 static_url=self.capa_system.STATIC_URL),
         }
 
@@ -1554,7 +1554,7 @@ class AnnotationInput(InputTypeBase):
             if choice is None:
                 raise ValueError('Missing required choice attribute.')
             elif choice not in valid_choices:
-                raise ValueError('Invalid choice attribute: {0}. Must be one of: {1}'.format(
+                raise ValueError(u'Invalid choice attribute: {0}. Must be one of: {1}'.format(
                     choice, ', '.join(valid_choices)))
 
     def _unpack(self, json_value):

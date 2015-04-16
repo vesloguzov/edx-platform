@@ -264,7 +264,7 @@ def xblock_view_handler(request, usage_key_string, view_name):
             except ValueError:
                 # pylint: disable=too-many-format-args
                 return HttpResponse(
-                    content="Couldn't parse paging parameters: enable_paging: "
+                    content=u"Couldn't parse paging parameters: enable_paging: "
                             "{0}, page_number: {1}, page_size: {2}".format(
                                 request.REQUEST.get('enable_paging', 'false'),
                                 request.REQUEST.get('page_number', 0),

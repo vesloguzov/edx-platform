@@ -329,7 +329,7 @@ def get_reg_code_validity(registration_code, request, limiter):
 
     if not reg_code_is_valid:
         # tick the rate limiter counter
-        AUDIT_LOG.info("Redemption of a non existing RegistrationCode {code}".format(code=registration_code))
+        AUDIT_LOG.info(u"Redemption of a non existing RegistrationCode {code}".format(code=registration_code))
         limiter.tick_bad_request_counter(request)
         raise Http404()
 

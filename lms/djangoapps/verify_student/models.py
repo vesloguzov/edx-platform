@@ -810,7 +810,7 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
         secret_key = settings.VERIFY_STUDENT["SOFTWARE_SECURE"]["API_SECRET_KEY"]
 
         scheme = "https" if settings.HTTPS == "on" else "http"
-        callback_url = "{}://{}{}".format(
+        callback_url = u"{}://{}{}".format(
             scheme, settings.SITE_NAME, reverse('verify_student_results_callback')
         )
 
@@ -874,10 +874,10 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
             data=json.dumps(body, indent=2, sort_keys=True, ensure_ascii=False).encode('utf-8'),
             verify=False
         )
-        log.debug("Sent request to Software Secure for {}".format(self.receipt_id))
-        log.debug("Headers:\n{}\n\n".format(headers))
-        log.debug("Body:\n{}\n\n".format(body))
-        log.debug("Return code: {}".format(response.status_code))
-        log.debug("Return message:\n\n{}\n\n".format(response.text))
+        log.debug(u"Sent request to Software Secure for {}".format(self.receipt_id))
+        log.debug(u"Headers:\n{}\n\n".format(headers))
+        log.debug(u"Body:\n{}\n\n".format(body))
+        log.debug(u"Return code: {}".format(response.status_code))
+        log.debug(u"Return message:\n\n{}\n\n".format(response.text))
 
         return response

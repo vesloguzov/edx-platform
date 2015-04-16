@@ -217,7 +217,7 @@ class HtmlDescriptor(HtmlFields, XmlDescriptor, EditingDescriptor):
                     html = file.read().decode('utf-8')
                     # Log a warning if we can't parse the file, but don't error
                     if not check_html(html) and len(html) > 0:
-                        msg = "Couldn't parse html in {0}, content = {1}".format(filepath, html)
+                        msg = u"Couldn't parse html in {0}, content = {1}".format(filepath, html)
                         log.warning(msg)
                         system.error_tracker("Warning: " + msg)
 
@@ -230,7 +230,7 @@ class HtmlDescriptor(HtmlFields, XmlDescriptor, EditingDescriptor):
                     return definition, []
 
             except (ResourceNotFoundError) as err:
-                msg = 'Unable to load file contents at path {0}: {1} '.format(
+                msg = u'Unable to load file contents at path {0}: {1} '.format(
                     filepath, err)
                 # add more info and re-raise
                 raise Exception(msg), None, sys.exc_info()[2]

@@ -2234,7 +2234,7 @@ class ExternalResponse(LoncapaResponse):
             # long time
             req = requests.post(self.url, data=payload)
         except Exception as err:
-            msg = 'Error {0} - cannot connect to external server url={1}'.format(err, self.url)
+            msg = u'Error {0} - cannot connect to external server url={1}'.format(err, self.url)
             log.error(msg)
             raise Exception(msg)
 
@@ -2249,7 +2249,7 @@ class ExternalResponse(LoncapaResponse):
             # response is XML; parse it
             rxml = etree.fromstring(req.text)
         except Exception as err:
-            msg = 'Error {0} - cannot parse response from external server req.text={1}'.format(err, req.text)
+            msg = u'Error {0} - cannot parse response from external server req.text={1}'.format(err, req.text)
             log.error(msg)
             raise Exception(msg)
 
@@ -3182,7 +3182,7 @@ class ChoiceTextResponse(LoncapaResponse):
                 msg = _("Could not interpret '{given_answer}' as a number.").format(
                     given_answer=cgi.escape(answer_value)
                 )
-                msg += " ({0})".format(trace)
+                msg += u" ({0})".format(trace)
                 raise StudentInputError(msg)
 
             # Ignore the results of the comparisons which were just for

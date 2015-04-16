@@ -111,13 +111,13 @@ def _assets_json(request, course_key):
             for all_filter in all_filters:
                 extension_filters = all_filters[all_filter]
                 where.extend(
-                    ["JSON.stringify(this.contentType).toUpperCase() != JSON.stringify('{}').toUpperCase()".format(
+                    [u"JSON.stringify(this.contentType).toUpperCase() != JSON.stringify('{}').toUpperCase()".format(
                         extension_filter) for extension_filter in extension_filters])
             filter_params = {
                 "$where": ' && '.join(where),
             }
         else:
-            where = ["JSON.stringify(this.contentType).toUpperCase() == JSON.stringify('{}').toUpperCase()".format(
+            where = [u"JSON.stringify(this.contentType).toUpperCase() == JSON.stringify('{}').toUpperCase()".format(
                 req_filter) for req_filter in requested_file_types]
             filter_params = {
                 "$where": ' || '.join(where),
@@ -242,10 +242,10 @@ def _upload_asset(request, course_key):
     if size > max_file_size_in_bytes:
         return JsonResponse({
             'error': _(
-                'File {filename} exceeds maximum size of '
-                '{size_mb} MB. Please follow the instructions here '
-                'to upload a file elsewhere and link to it instead: '
-                '{faq_url}'
+                u'File {filename} exceeds maximum size of '
+                u'{size_mb} MB. Please follow the instructions here '
+                u'to upload a file elsewhere and link to it instead: '
+                u'{faq_url}'
             ).format(
                 filename=filename,
                 size_mb=settings.MAX_ASSET_UPLOAD_FILE_SIZE_IN_MB,

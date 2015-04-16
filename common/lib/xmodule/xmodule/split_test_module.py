@@ -660,7 +660,7 @@ class SplitTestDescriptor(SplitTestFields, SequenceDescriptor, StudioEditableDes
         if 'split_test' in course_module.advanced_modules:
             user_partition = self.get_selected_partition()
             if user_partition:
-                group_configuration_url = "{url}#{configuration_id}".format(
+                group_configuration_url = u"{url}#{configuration_id}".format(
                     url='/group_configurations/' + unicode(self.location.course_key),
                     configuration_id=str(user_partition.id)
                 )

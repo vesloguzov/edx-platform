@@ -878,8 +878,8 @@ def check_module_metadata_editability(module):
     if len(illegal_keys) > 0:
         err_cnt = err_cnt + 1
         print(
-            ": found non-editable metadata on {url}. "
-            "These metadata keys are not supported = {keys}".format(
+            u": found non-editable metadata on {url}. "
+            u"These metadata keys are not supported = {keys}".format(
                 url=unicode(module.location), keys=illegal_keys
             )
         )
@@ -977,7 +977,7 @@ def validate_data_source_path_existence(path, is_err=True, extra_msg=None):
     _cnt = 0
     if not os.path.exists(path):
         print(
-            "{type}: Expected folder at {path}. {extra}".format(
+            u"{type}: Expected folder at {path}. {extra}".format(
                 type='ERROR' if is_err else 'WARNING',
                 path=path,
                 extra=extra_msg or "",
@@ -1106,7 +1106,7 @@ def perform_xlint(
 
     print("\n")
     print("------------------------------------------")
-    print("VALIDATION SUMMARY: {err} Errors   {warn} Warnings".format(
+    print(u"VALIDATION SUMMARY: {err} Errors   {warn} Warnings".format(
         err=err_cnt, warn=warn_cnt)
     )
 

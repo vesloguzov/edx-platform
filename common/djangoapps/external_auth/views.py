@@ -111,8 +111,8 @@ def openid_login_complete(request,
         log.debug('openid success, details=%s', details)
 
         url = getattr(settings, 'OPENID_SSO_SERVER_URL', None)
-        external_domain = "{0}{1}".format(OPENID_DOMAIN_PREFIX, url)
-        fullname = '%s %s' % (details.get('first_name', ''),
+        external_domain = u"{0}{1}".format(OPENID_DOMAIN_PREFIX, url)
+        fullname = u'%s %s' % (details.get('first_name', ''),
                               details.get('last_name', ''))
 
         return _external_login_or_signup(
@@ -487,7 +487,7 @@ def cas_create_user(username, attributes):
     try:
         user = User.objects.create(username=username, email=email)
     except IntegrityError:
-        log.error('Failed to create user from CAS response: username="{}" email="{}"'.format(username, email))
+        log.error(u'Failed to create user from CAS response: username="{}" email="{}"'.format(username, email))
         raise
     else:
         # since user profile has no required or unique fields, no exception handling is used
@@ -512,7 +512,7 @@ def _create_profile_from_attributes(user, attributes):
             day_of_birth = _get_date_from_string(day_of_birth)
         except:
             # just ignore invalid date
-            log.warning('Invalid datetime format: {}'.format(day_of_birth))
+            log.warning(u'Invalid datetime format: {}'.format(day_of_birth))
         else:
             profile.year = day_of_birth.year
 
@@ -913,7 +913,7 @@ def provider_login(request):
             if settings.FEATURES['SQUELCH_PII_IN_LOGS']:
                 AUDIT_LOG.warning("OpenID login failed - Unknown user email")
             else:
-                msg = "OpenID login failed - Unknown user email: {0}".format(email)
+                msg = u"OpenID login failed - Unknown user email: {0}".format(email)
                 AUDIT_LOG.warning(msg)
             return HttpResponseRedirect(openid_request_url)
 
@@ -932,7 +932,7 @@ def provider_login(request):
             if settings.FEATURES['SQUELCH_PII_IN_LOGS']:
                 AUDIT_LOG.warning("OpenID login failed - invalid password")
             else:
-                msg = "OpenID login failed - password for {0} is invalid".format(email)
+                msg = u"OpenID login failed - password for {0} is invalid".format(email)
                 AUDIT_LOG.warning(msg)
             return HttpResponseRedirect(openid_request_url)
 
@@ -944,9 +944,9 @@ def provider_login(request):
                 del request.session['openid_error']
 
             if settings.FEATURES['SQUELCH_PII_IN_LOGS']:
-                AUDIT_LOG.info("OpenID login success - user.id: {0}".format(user.id))
+                AUDIT_LOG.info(u"OpenID login success - user.id: {0}".format(user.id))
             else:
-                AUDIT_LOG.info("OpenID login success - {0} ({1})".format(
+                AUDIT_LOG.info(u"OpenID login success - {0} ({1})".format(
                                user.username, user.email))
 
             # redirect user to return_to location
@@ -969,7 +969,7 @@ def provider_login(request):
         if settings.FEATURES['SQUELCH_PII_IN_LOGS']:
             AUDIT_LOG.warning("Login failed - Account not active for user.id {0}".format(user.id))
         else:
-            msg = "Login failed - Account not active for user {0}".format(username)
+            msg = u"Login failed - Account not active for user {0}".format(username)
             AUDIT_LOG.warning(msg)
         return HttpResponseRedirect(openid_request_url)
 

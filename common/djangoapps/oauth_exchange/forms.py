@@ -53,7 +53,7 @@ class AccessTokenExchangeForm(ScopeMixin, OAuthForm):
             raise OAuthValidationError(
                 {
                     "error": "invalid_request",
-                    "error_description": "{} is not a supported provider".format(backend.name),
+                    "error_description": u"{} is not a supported provider".format(backend.name),
                 }
             )
 
@@ -66,7 +66,7 @@ class AccessTokenExchangeForm(ScopeMixin, OAuthForm):
             raise OAuthValidationError(
                 {
                     "error": "invalid_client",
-                    "error_description": "{} is not a valid client_id".format(client_id),
+                    "error_description": u"{} is not a valid client_id".format(client_id),
                 }
             )
         if client.client_type != provider.constants.PUBLIC:
@@ -75,7 +75,7 @@ class AccessTokenExchangeForm(ScopeMixin, OAuthForm):
                     # invalid_client isn't really the right code, but this mirrors
                     # https://github.com/edx/django-oauth2-provider/blob/edx/provider/oauth2/forms.py#L331
                     "error": "invalid_client",
-                    "error_description": "{} is not a public client".format(client_id),
+                    "error_description": u"{} is not a public client".format(client_id),
                 }
             )
         self.cleaned_data["client"] = client

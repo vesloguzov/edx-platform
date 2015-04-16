@@ -90,7 +90,7 @@ def user_groups(user):
         return []
 
     # TODO: Rewrite in Django
-    key = 'user_group_names_{user.id}'.format(user=user)
+    key = u'user_group_names_{user.id}'.format(user=user)
     cache_expiration = 60 * 60  # one hour
 
     # Kill caching on dev machines -- we switch groups a lot
@@ -271,16 +271,16 @@ def chat_settings(course, user):
         'domain': domain,
 
         # Jabber doesn't like slashes, so replace with dashes
-        'room': "{ID}_class".format(ID=course.id.replace('/', '-')),
+        'room': u"{ID}_class".format(ID=course.id.replace('/', '-')),
 
-        'username': "{USER}@{DOMAIN}".format(
+        'username': u"{USER}@{DOMAIN}".format(
             USER=user.username, DOMAIN=domain
         ),
 
         # TODO: clearly this needs to be something other than the username
         #       should also be something that's not necessarily tied to a
         #       particular course
-        'password': "{USER}@{DOMAIN}".format(
+        'password': u"{USER}@{DOMAIN}".format(
             USER=user.username, DOMAIN=domain
         ),
     }
@@ -447,7 +447,7 @@ def _index_bulk_op(request, course_key, chapter, section, position):
         if chapter_descriptor is not None:
             save_child_position(course_module, chapter)
         else:
-            raise Http404('No chapter descriptor found with name {}'.format(chapter))
+            raise Http404(u'No chapter descriptor found with name {}'.format(chapter))
 
         chapter_module = course_module.get_child_by(lambda m: m.location.name == chapter)
         if chapter_module is None:
@@ -501,7 +501,7 @@ def _index_bulk_op(request, course_key, chapter, section, position):
                 try:
                     int(position)
                 except ValueError:
-                    raise Http404("Position {} is not an integer!".format(position))
+                    raise Http404(u"Position {} is not an integer!".format(position))
 
             section_module = get_module_for_descriptor(
                 request.user,
@@ -854,7 +854,7 @@ def course_about(request, course_id):
                 in_cart = shoppingcart.models.PaidCourseRegistration.contained_in_order(cart, course_key) or \
                     shoppingcart.models.CourseRegCodeItem.contained_in_order(cart, course_key)
 
-            reg_then_add_to_cart_link = "{reg_url}?course_id={course_id}&enrollment_action=add_to_cart".format(
+            reg_then_add_to_cart_link = u"{reg_url}?course_id={course_id}&enrollment_action=add_to_cart".format(
                 reg_url=reverse('register_user'), course_id=course.id.to_deprecated_string())
 
         course_price = get_cosmetic_display_price(course, registration_price)
@@ -1125,7 +1125,7 @@ def submission_history(request, course_id, location):
     except User.DoesNotExist:
         return HttpResponse(escape(_(u'User {username} does not exist.').format(username=student_identifier)))
     except User.MultipleObjectsReturned:
-        return HttpResponse(escape(_("Multiple users match nickname: {}; use an email instead".format(student_identifier))))
+        return HttpResponse(escape(_(u"Multiple users match nickname: {}; use an email instead".format(student_identifier))))
     except StudentModule.DoesNotExist:
         return HttpResponse(escape(_(u'User {username} has never accessed problem {location}').format(
             username=student_identifier,

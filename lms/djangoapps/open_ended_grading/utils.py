@@ -151,7 +151,7 @@ class StudentProblemList(object):
             except (ItemNotFoundError, NoPathToItem):
                 # If the problem cannot be found at the location received from the grading controller server,
                 # it has been deleted by the course author. We should not display it.
-                error_message = "Could not find module for course {0} at location {1}".format(self.course_id,
+                error_message = u"Could not find module for course {0} at location {1}".format(self.course_id,
                                                                                               problem['location'])
                 log.error(error_message)
                 continue

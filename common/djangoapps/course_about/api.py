@@ -52,7 +52,7 @@ def get_course_about_details(course_id):
             },
         }
     """
-    cache_key = "{}_{}".format(course_id, COURSE_ABOUT_API_CACHE_PREFIX)
+    cache_key = u"{}_{}".format(course_id, COURSE_ABOUT_API_CACHE_PREFIX)
     cache_course_info = cache.get(cache_key)
 
     if cache_course_info:

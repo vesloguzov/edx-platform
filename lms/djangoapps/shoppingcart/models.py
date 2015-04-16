@@ -186,7 +186,7 @@ class Order(models.Model):
         Removes the item from the cart if the item.order.status == 'cart'.
         """
         if item.order.status == 'cart':
-            log.info("Item {0} removed from the user cart".format(item.id))
+            log.info(u"Item {0} removed from the user cart".format(item.id))
             item.delete()
 
     @property
@@ -339,7 +339,7 @@ class Order(models.Model):
             course_info.append((course.display_name, ' (' + course.start_datetime_text() + '-' + course.end_datetime_text() + ')'))
             for registration_code in registration_codes:
                 redemption_url = reverse('register_code_redemption', args=[registration_code.code])
-                url = '{base_url}{redemption_url}'.format(base_url=site_name, redemption_url=redemption_url)
+                url = u'{base_url}{redemption_url}'.format(base_url=site_name, redemption_url=redemption_url)
                 csv_writer.writerow([unicode(course.display_name).encode("utf-8"), registration_code.code, url])
 
         return csv_file, course_info
@@ -364,7 +364,7 @@ class Order(models.Model):
                 course_name_list=joined_course_names
             )
 
-        dashboard_url = '{base_url}{dashboard}'.format(
+        dashboard_url = u'{base_url}{dashboard}'.format(
             base_url=site_name,
             dashboard=reverse('dashboard')
         )
@@ -386,7 +386,7 @@ class Order(models.Model):
                         'course_names': ", ".join([course_info[0] for course_info in courses_info]),
                         'dashboard_url': dashboard_url,
                         'currency_symbol': settings.PAID_COURSE_REGISTRATION_CURRENCY[1],
-                        'order_placed_by': '{username} ({email})'.format(username=self.user.username, email=getattr(self.user, 'email')),  # pylint: disable=no-member
+                        'order_placed_by': u'{username} ({email})'.format(username=self.user.username, email=getattr(self.user, 'email')),  # pylint: disable=no-member
                         'has_billing_info': settings.FEATURES['STORE_BILLING_INFO'],
                         'platform_name': microsite.get_value('platform_name', settings.PLATFORM_NAME),
                         'payment_support_email': microsite.get_value('payment_support_email', settings.PAYMENT_SUPPORT_EMAIL),
@@ -592,7 +592,7 @@ class Order(models.Model):
 
         if self.status not in ORDER_STATUS_MAP.keys():
             raise InvalidStatusToRetire(
-                "order status {order_status} is not 'paying' or 'cart'".format(
+                u"order status {order_status} is not 'paying' or 'cart'".format(
                     order_status=self.status
                 )
             )
@@ -1214,7 +1214,7 @@ class Coupon(models.Model):
     expiration_date = models.DateTimeField(null=True, blank=True)
 
     def __unicode__(self):
-        return "[Coupon] code: {} course: {}".format(self.code, self.course_id)
+        return u"[Coupon] code: {} course: {}".format(self.code, self.course_id)
 
     objects = SoftDeleteCouponManager()
 
@@ -1334,7 +1334,7 @@ class PaidCourseRegistration(OrderItem):
         # throw errors if it doesn't.
         course = modulestore().get_course(course_id)
         if not course:
-            log.error("User {} tried to add non-existent course {} to cart id {}"
+            log.error(u"User {} tried to add non-existent course {} to cart id {}"
                       .format(order.user.email, course_id, order.id))
             raise CourseDoesNotExistException
 
@@ -1348,7 +1348,7 @@ class PaidCourseRegistration(OrderItem):
             raise ItemAlreadyInCartException
 
         if CourseEnrollment.is_enrolled(user=order.user, course_key=course_id):
-            log.warning("User {} trying to add course {} to cart id {}, already registered"
+            log.warning(u"User {} trying to add course {} to cart id {}, already registered"
                         .format(order.user.email, course_id, order.id))
             raise AlreadyEnrolledInCourseException
 
@@ -1377,7 +1377,7 @@ class PaidCourseRegistration(OrderItem):
         item.report_comments = item.csv_report_comments
         order.save()
         item.save()
-        log.info("User {} added course registration {} to cart: order {}"
+        log.info(u"User {} added course registration {} to cart: order {}"
                  .format(order.user.email, course_id, order.id))
         return item
 
@@ -1397,7 +1397,7 @@ class PaidCourseRegistration(OrderItem):
         self.course_enrollment = CourseEnrollment.enroll(user=self.user, course_key=self.course_id, mode=self.mode)
         self.save()
 
-        log.info("Enrolled {0} in paid course {1}, paid ${2}"
+        log.info(u"Enrolled {0} in paid course {1}, paid ${2}"
                  .format(self.user.email, self.course_id, self.line_cost))  # pylint: disable=no-member
 
     def generate_receipt_instructions(self):
@@ -1492,17 +1492,17 @@ class CourseRegCodeItem(OrderItem):
         # throw errors if it doesn't.
         course = modulestore().get_course(course_id)
         if not course:
-            log.error("User {} tried to add non-existent course {} to cart id {}"
+            log.error(u"User {} tried to add non-existent course {} to cart id {}"
                       .format(order.user.email, course_id, order.id))
             raise CourseDoesNotExistException
 
         if cls.contained_in_order(order, course_id):
-            log.warning("User {} tried to add PaidCourseRegistration for course {}, already in cart id {}"
+            log.warning(u"User {} tried to add PaidCourseRegistration for course {}, already in cart id {}"
                         .format(order.user.email, course_id, order.id))
             raise ItemAlreadyInCartException
 
         if CourseEnrollment.is_enrolled(user=order.user, course_key=course_id):
-            log.warning("User {} trying to add course {} to cart id {}, already registered"
+            log.warning(u"User {} trying to add course {} to cart id {}, already registered"
                         .format(order.user.email, course_id, order.id))
             raise AlreadyEnrolledInCourseException
 
@@ -1531,7 +1531,7 @@ class CourseRegCodeItem(OrderItem):
         item.report_comments = item.csv_report_comments
         order.save()
         item.save()
-        log.info("User {} added course registration {} to cart: order {}"
+        log.info(u"User {} added course registration {} to cart: order {}"
                  .format(order.user.email, course_id, order.id))
         return item
 
@@ -1554,7 +1554,7 @@ class CourseRegCodeItem(OrderItem):
         for i in range(total_registration_codes):  # pylint: disable=unused-variable
             save_registration_code(self.user, self.course_id, self.mode, order=self.order)
 
-        log.info("Enrolled {0} in paid course {1}, paid ${2}"
+        log.info(u"Enrolled {0} in paid course {1}, paid ${2}"
                  .format(self.user.email, self.course_id, self.line_cost))  # pylint: disable=no-member
 
     @property
@@ -1659,7 +1659,7 @@ class CertificateItem(OrderItem):
         order_number = target_cert.order_id
         # send billing an email so they can handle refunding
         subject = _("[Refund] User-Requested Refund")
-        message = "User {user} ({user_email}) has requested a refund on Order #{order_number}.".format(user=course_enrollment.user,
+        message = u"User {user} ({user_email}) has requested a refund on Order #{order_number}.".format(user=course_enrollment.user,
                                                                                                        user_email=course_enrollment.user.email,
                                                                                                        order_number=order_number)
         to_email = [settings.PAYMENT_SUPPORT_EMAIL]
@@ -1667,8 +1667,8 @@ class CertificateItem(OrderItem):
         try:
             send_mail(subject, message, from_email, to_email, fail_silently=False)
         except Exception as exception:  # pylint: disable=broad-except
-            err_str = ('Failed sending email to billing to request a refund for verified certificate'
-                       ' (User {user}, Course {course}, CourseEnrollmentID {ce_id}, Order #{order})\n{exception}')
+            err_str = (u'Failed sending email to billing to request a refund for verified certificate'
+                       u' (User {user}, Course {course}, CourseEnrollmentID {ce_id}, Order #{order})\n{exception}')
             log.error(err_str.format(
                 user=course_enrollment.user,
                 course=course_enrollment.course_id,
@@ -1728,7 +1728,7 @@ class CertificateItem(OrderItem):
         # Translators: In this particular case, mode_name refers to a
         # particular mode (i.e. Honor Code Certificate, Verified Certificate, etc)
         # by which a user could enroll in the given course.
-        item.line_desc = _("{mode_name} for course {course}").format(
+        item.line_desc = _(u"{mode_name} for course {course}").format(
             mode_name=mode_info.name,
             course=course_name
         )
@@ -1752,14 +1752,14 @@ class CertificateItem(OrderItem):
         if is_enrollment_mode_verified:
             domain = microsite.get_value('SITE_NAME', settings.SITE_NAME)
             path = reverse('verify_student_verify_later', kwargs={'course_id': unicode(self.course_id)})
-            verification_url = "http://{domain}{path}".format(domain=domain, path=path)
+            verification_url = u"http://{domain}{path}".format(domain=domain, path=path)
 
             verification_reminder = _(
-                "If you haven't verified your identity yet, please start the verification process ({verification_url})."
+                u"If you haven't verified your identity yet, please start the verification process ({verification_url})."
             ).format(verification_url=verification_url)
 
         refund_reminder = _(
-            "You have up to two weeks into the course to unenroll and receive a full refund."
+            u"You have up to two weeks into the course to unenroll and receive a full refund."
             "To receive your refund, contact {billing_email}. "
             "Please include your order number in your email. "
             "Please do NOT include your credit card information."

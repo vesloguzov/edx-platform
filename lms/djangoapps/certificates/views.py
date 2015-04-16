@@ -121,7 +121,7 @@ def update_certificate(request):
             elif cert.status in [status.deleting]:
                 cert.status = status.deleted
             else:
-                logger.critical('Invalid state for cert update: {0}'.format(
+                logger.critical(u'Invalid state for cert update: {0}'.format(
                     cert.status))
                 return HttpResponse(
                     json.dumps({
@@ -294,15 +294,15 @@ def render_html_view(request):
     context['accomplishment_copy_course_org'] = course.org
     context['accomplishment_copy_course_name'] = course.display_name
     context['certificate_id_number'] = certificate.verify_uuid
-    context['certificate_verify_url'] = "{prefix}{uuid}{suffix}".format(
+    context['certificate_verify_url'] = u"{prefix}{uuid}{suffix}".format(
         prefix=context.get('certificate_verify_url_prefix'),
         uuid=certificate.verify_uuid,
         suffix=context.get('certificate_verify_url_suffix')
     )
     context['logo_alt'] = platform_name
 
-    accd_course_org_html = '<span class="detail--xuniversity">{partner_name}</span>'.format(partner_name=course.org)
-    accd_platform_name_html = '<span class="detail--company">{platform_name}</span>'.format(platform_name=platform_name)
+    accd_course_org_html = u'<span class="detail--xuniversity">{partner_name}</span>'.format(partner_name=course.org)
+    accd_platform_name_html = u'<span class="detail--company">{platform_name}</span>'.format(platform_name=platform_name)
     # Translators: This line appears on the certificate after the name of a course, and provides more
     # information about the organizations providing the course material to platform users
     context['accomplishment_copy_course_description'] = _('a course of study offered by {partner_name}, '

@@ -803,12 +803,12 @@ def results_callback(request):
     try:
         body_dict = json.loads(body)
     except ValueError:
-        log.exception("Invalid JSON received from Software Secure:\n\n{}\n".format(body))
-        return HttpResponseBadRequest("Invalid JSON. Received:\n\n{}".format(body))
+        log.exception(u"Invalid JSON received from Software Secure:\n\n{}\n".format(body))
+        return HttpResponseBadRequest(u"Invalid JSON. Received:\n\n{}".format(body))
 
     if not isinstance(body_dict, dict):
-        log.error("Reply from Software Secure is not a dict:\n\n{}\n".format(body))
-        return HttpResponseBadRequest("JSON should be dict. Received:\n\n{}".format(body))
+        log.error(u"Reply from Software Secure is not a dict:\n\n{}\n".format(body))
+        return HttpResponseBadRequest(u"JSON should be dict. Received:\n\n{}".format(body))
 
     headers = {
         "Authorization": request.META.get("HTTP_AUTHORIZATION", ""),
@@ -842,23 +842,23 @@ def results_callback(request):
     try:
         attempt = SoftwareSecurePhotoVerification.objects.get(receipt_id=receipt_id)
     except SoftwareSecurePhotoVerification.DoesNotExist:
-        log.error("Software Secure posted back for receipt_id {}, but not found".format(receipt_id))
-        return HttpResponseBadRequest("edX ID {} not found".format(receipt_id))
+        log.error(u"Software Secure posted back for receipt_id {}, but not found".format(receipt_id))
+        return HttpResponseBadRequest(u"edX ID {} not found".format(receipt_id))
 
     if result == "PASS":
-        log.debug("Approving verification for {}".format(receipt_id))
+        log.debug(u"Approving verification for {}".format(receipt_id))
         attempt.approve()
     elif result == "FAIL":
-        log.debug("Denying verification for {}".format(receipt_id))
+        log.debug(u"Denying verification for {}".format(receipt_id))
         attempt.deny(json.dumps(reason), error_code=error_code)
     elif result == "SYSTEM FAIL":
-        log.debug("System failure for {} -- resetting to must_retry".format(receipt_id))
+        log.debug(u"System failure for {} -- resetting to must_retry".format(receipt_id))
         attempt.system_error(json.dumps(reason), error_code=error_code)
-        log.error("Software Secure callback attempt for %s failed: %s", receipt_id, reason)
+        log.error(u"Software Secure callback attempt for %s failed: %s", receipt_id, reason)
     else:
-        log.error("Software Secure returned unknown result {}".format(result))
+        log.error(u"Software Secure returned unknown result {}".format(result))
         return HttpResponseBadRequest(
-            "Result {} not understood. Known results: PASS, FAIL, SYSTEM FAIL".format(result)
+            u"Result {} not understood. Known results: PASS, FAIL, SYSTEM FAIL".format(result)
         )
 
     # If this is a reverification, log an event

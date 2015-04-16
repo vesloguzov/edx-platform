@@ -49,7 +49,7 @@ def staff_grading_notifications(course, user):
         notifications = {}
         #This is a dev_facing_error
         log.info(
-            "Problem with getting notifications from staff grading service for course {0} user {1}.".format(course_id,
+            u"Problem with getting notifications from staff grading service for course {0} user {1}.".format(course_id,
                                                                                                             student_id))
 
     if pending_grading:
@@ -84,7 +84,7 @@ def peer_grading_notifications(course, user):
         notifications = {}
         #This is a dev_facing_error
         log.info(
-            "Problem with getting notifications from peer grading service for course {0} user {1}.".format(course_id,
+            u"Problem with getting notifications from peer grading service for course {0} user {1}.".format(course_id,
                                                                                                            student_id))
     if pending_grading:
         img_path = "/static/images/grading_notification.png"

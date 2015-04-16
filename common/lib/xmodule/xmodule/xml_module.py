@@ -260,8 +260,8 @@ class XmlDescriptor(XModuleDescriptor):
                     dog_stats_api.increment(
                         DEPRECATION_VSCOMPAT_EVENT,
                         tags=(
-                            "location:xmlparser_util_mixin_load_metadata",
-                            "metadata:{}".format(attr),
+                            u"location:xmlparser_util_mixin_load_metadata",
+                            u"metadata:{}".format(attr),
                         )
                     )
                 # don't load these

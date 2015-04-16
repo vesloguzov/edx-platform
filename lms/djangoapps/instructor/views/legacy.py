@@ -166,7 +166,7 @@ def instructor_dashboard(request, course_id):
                 track.views.server_track(request, "git-pull", {"directory": data_dir}, page="idashboard")
 
         if 'Reload course' in action:
-            log.debug('reloading {0} ({1})'.format(course_key, course))
+            log.debug(u'reloading {0} ({1})'.format(course_key, course))
             try:
                 data_dir = course.data_dir
                 modulestore().try_load_course(data_dir)
@@ -175,10 +175,10 @@ def instructor_dashboard(request, course_id):
                 course_errors = modulestore().get_course_errors(course.id)
                 msg += '<ul>'
                 for cmsg, cerr in course_errors:
-                    msg += "<li>{0}: <pre>{1}</pre>".format(cmsg, escape(cerr))
+                    msg += u"<li>{0}: <pre>{1}</pre>".format(cmsg, escape(cerr))
                 msg += '</ul>'
             except Exception as err:  # pylint: disable=broad-except
-                msg += '<br/><p>Error: {0}</p>'.format(escape(err))
+                msg += u'<br/><p>Error: {0}</p>'.format(escape(err))
 
     if action == 'Dump list of enrolled students' or action == 'List enrolled students':
         log.debug(action)
@@ -195,12 +195,12 @@ def instructor_dashboard(request, course_id):
 
     elif 'Download CSV of all RAW grades' in action:
         track.views.server_track(request, "dump-grades-csv-raw", {}, page="idashboard")
-        return return_csv('grades_{0}_raw.csv'.format(course_key.to_deprecated_string()),
+        return return_csv(u'grades_{0}_raw.csv'.format(course_key.to_deprecated_string()),
                           get_student_grade_summary_data(request, course, get_raw_scores=True, use_offline=use_offline))
 
     elif 'Download CSV of answer distributions' in action:
         track.views.server_track(request, "dump-answer-dist-csv", {}, page="idashboard")
-        return return_csv('answer_dist_{0}.csv'.format(course_key.to_deprecated_string()), get_answers_distribution(request, course_key))
+        return return_csv(u'answer_dist_{0}.csv'.format(course_key.to_deprecated_string()), get_answers_distribution(request, course_key))
 
     #----------------------------------------
     # export grades to remote gradebook
@@ -239,11 +239,11 @@ def instructor_dashboard(request, course_id):
         datatable = {}
         aname = request.POST.get('assignment_name', '')
         if not aname:
-            msg += "<font color='red'>{text}</font>".format(text=_("Please enter an assignment name"))
+            msg += u"<font color='red'>{text}</font>".format(text=_("Please enter an assignment name"))
         else:
             allgrades = get_student_grade_summary_data(request, course, get_grades=True, use_offline=use_offline)
             if aname not in allgrades['assignments']:
-                msg += "<font color='red'>{text}</font>".format(
+                msg += u"<font color='red'>{text}</font>".format(
                     text=_("Invalid assignment name '{name}'").format(name=aname)
                 )
             else:
@@ -292,7 +292,7 @@ def instructor_dashboard(request, course_id):
             smdat = smdat.order_by('student')
             msg += _("Found {num} records to dump.").format(num=smdat)
         except Exception as err:  # pylint: disable=broad-except
-            msg += "<font color='red'>{text}</font><pre>{err}</pre>".format(
+            msg += u"<font color='red'>{text}</font><pre>{err}</pre>".format(
                 text=_("Couldn't find module with that urlname."),
                 err=escape(err)
             )
@@ -416,7 +416,7 @@ def instructor_dashboard(request, course_id):
     # offline grades?
 
     if use_offline:
-        msg += "<br/><font color='orange'>{text}</font>".format(
+        msg += u"<br/><font color='orange'>{text}</font>".format(
             text=_("Grades from {course_id}").format(
                 course_id=offline_grades_available(course_key)
             )
@@ -512,11 +512,11 @@ def _do_remote_gradebook(user, course, action, args=None, files=None):
     except Exception as err:  # pylint: disable=broad-except
         msg = _("Failed to communicate with gradebook server at {url}").format(url=rgburl) + "<br/>"
         msg += _("Error: {err}").format(err=err)
-        msg += "<br/>resp={resp}".format(resp=resp.content)
-        msg += "<br/>data={data}".format(data=data)
+        msg += u"<br/>resp={resp}".format(resp=resp.content)
+        msg += u"<br/>data={data}".format(data=data)
         return msg, {}
 
-    msg = '<pre>{msg}</pre>'.format(msg=retdict['msg'].replace('\n', '<br/>'))
+    msg = u'<pre>{msg}</pre>'.format(msg=retdict['msg'].replace('\n', '<br/>'))
     retdata = retdict['data']  # a list of dicts
 
     if retdata:
@@ -603,7 +603,7 @@ def add_user_to_role(request, username_or_email, role, group_title, event_name):
     else:
         track.views.server_track(request, "add-instructor", {"instructor": unicode(user)}, page="idashboard")
 
-    return '<font color="green">Added {0} to {1}</font>'.format(user, group_title)
+    return u'<font color="green">Added {0} to {1}</font>'.format(user, group_title)
 
 
 def remove_user_from_role(request, username_or_email, role, group_title, event_name):
@@ -644,7 +644,7 @@ def remove_user_from_role(request, username_or_email, role, group_title, event_n
     else:
         track.views.server_track(request, "remove-instructor", {"instructor": unicode(user)}, page="idashboard")
 
-    return '<font color="green">Removed {0} from {1}</font>'.format(user, group_title)
+    return u'<font color="green">Removed {0} from {1}</font>'.format(user, group_title)
 
 
 class GradeTable(object):
@@ -827,12 +827,12 @@ def _do_enroll_students(course, course_key, students, secure=False, overload=Fal
         )
         # TODO: Use request.build_absolute_uri rather than '{proto}://{site}{path}'.format
         # and check with the Services team that this works well with microsites
-        registration_url = '{proto}://{site}{path}'.format(
+        registration_url = u'{proto}://{site}{path}'.format(
             proto=protocol,
             site=stripped_site_name,
             path=reverse('register_user')
         )
-        course_url = '{proto}://{site}{path}'.format(
+        course_url = u'{proto}://{site}{path}'.format(
             proto=protocol,
             site=stripped_site_name,
             path=reverse('course_root', kwargs={'course_id': course_key.to_deprecated_string()})
@@ -1193,7 +1193,7 @@ def get_background_task_table(course_key, problem_url=None, student=None, task_t
     # just won't find any entries.)
     if (history_entries.count()) == 0:
         if problem_url is None:
-            msg += '<font color="red">Failed to find any background tasks for course "{course}".</font>'.format(
+            msg += u'<font color="red">Failed to find any background tasks for course "{course}".</font>'.format(
                 course=course_key.to_deprecated_string()
             )
         elif student is not None:
@@ -1238,15 +1238,15 @@ def get_background_task_table(course_key, problem_url=None, student=None, task_t
             datatable['data'].append(row)
 
         if problem_url is None:
-            datatable['title'] = "{course_id}".format(course_id=course_key.to_deprecated_string())
+            datatable['title'] = u"{course_id}".format(course_id=course_key.to_deprecated_string())
         elif student is not None:
-            datatable['title'] = "{course_id} > {location} > {student}".format(
+            datatable['title'] = u"{course_id} > {location} > {student}".format(
                 course_id=course_key.to_deprecated_string(),
                 location=problem_url,
                 student=student.username
             )
         else:
-            datatable['title'] = "{course_id} > {location}".format(
+            datatable['title'] = u"{course_id} > {location}".format(
                 course_id=course_key.to_deprecated_string(), location=problem_url
             )
 

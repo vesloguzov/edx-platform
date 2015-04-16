@@ -335,8 +335,8 @@ def get_problem_list(request, course_id):
     except GradingServiceError:
         #This is a dev_facing_error
         log.exception(
-            "Error from staff grading service in open "
-            "ended grading.  server url: {0}".format(staff_grading_service().url)
+            u"Error from staff grading service in open "
+            u"ended grading.  server url: {0}".format(staff_grading_service().url)
         )
         #This is a staff_facing_error
         return HttpResponse(json.dumps({'success': False,
@@ -352,8 +352,8 @@ def _get_next(course_id, grader_id, location):
     except GradingServiceError:
         #This is a dev facing error
         log.exception(
-            "Error from staff grading service in open "
-            "ended grading.  server url: {0}".format(staff_grading_service().url)
+            u"Error from staff grading service in open "
+            u"ended grading.  server url: {0}".format(staff_grading_service().url)
         )
         #This is a staff_facing_error
         return json.dumps({'success': False,
@@ -412,14 +412,14 @@ def save_grade(request, course_id):
     except GradingServiceError:
         #This is a dev_facing_error
         log.exception(
-            "Error saving grade in the staff grading interface in open ended grading.  Request: {0} Course ID: {1}".format(
+            u"Error saving grade in the staff grading interface in open ended grading.  Request: {0} Course ID: {1}".format(
                 request, course_id))
         #This is a staff_facing_error
         return _err_response(STAFF_ERROR_MESSAGE)
     except ValueError:
         #This is a dev_facing_error
         log.exception(
-            "save_grade returned broken json in the staff grading interface in open ended grading: {0}".format(
+            u"save_grade returned broken json in the staff grading interface in open ended grading: {0}".format(
                 result_json))
         #This is a staff_facing_error
         return _err_response(STAFF_ERROR_MESSAGE)
@@ -427,7 +427,7 @@ def save_grade(request, course_id):
     if not result.get('success', False):
         #This is a dev_facing_error
         log.warning(
-            'Got success=False from staff grading service in open ended grading.  Response: {0}'.format(result_json))
+            u'Got success=False from staff grading service in open ended grading.  Response: {0}'.format(result_json))
         return _err_response(STAFF_ERROR_MESSAGE)
 
     # Ok, save_grade seemed to work.  Get the next submission to grade.

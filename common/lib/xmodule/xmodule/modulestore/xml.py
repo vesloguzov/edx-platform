@@ -381,7 +381,7 @@ class XMLModuleStore(ModuleStoreReadBase):
         try:
             course_descriptor = self.load_course(course_dir, course_ids, errorlog.tracker)
         except Exception as exc:  # pylint: disable=broad-except
-            msg = "ERROR: Failed to load courselike '{0}': {1}".format(
+            msg = u"ERROR: Failed to load courselike '{0}': {1}".format(
                 course_dir.encode("utf-8"), unicode(exc)
             )
             log.exception(msg)
@@ -427,7 +427,7 @@ class XMLModuleStore(ModuleStoreReadBase):
             with open(policy_path) as f:
                 return json.load(f)
         except (IOError, ValueError) as err:
-            msg = "ERROR: loading courselike policy from {0}".format(policy_path)
+            msg = u"ERROR: loading courselike policy from {0}".format(policy_path)
             tracker(msg)
             log.warning(msg + " " + str(err))
         return {}
@@ -452,8 +452,8 @@ class XMLModuleStore(ModuleStoreReadBase):
             org = course_data.get('org')
 
             if org is None:
-                msg = ("No 'org' attribute set for courselike in {dir}. "
-                       "Using default 'edx'".format(dir=course_dir))
+                msg = (u"No 'org' attribute set for courselike in {dir}. "
+                       u"Using default 'edx'".format(dir=course_dir))
                 log.warning(msg)
                 tracker(msg)
                 org = 'edx'
@@ -465,8 +465,8 @@ class XMLModuleStore(ModuleStoreReadBase):
 
             if course is None:
                 msg = (
-                    "No '{courselike_label}' attribute set for course in {dir}."
-                    " Using default '{default}'".format(
+                    u"No '{courselike_label}' attribute set for course in {dir}."
+                    u" Using default '{default}'".format(
                         courselike_label=courselike_label,
                         dir=course_dir,
                         default=course_dir

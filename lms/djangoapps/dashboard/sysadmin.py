@@ -169,12 +169,12 @@ class Users(SysadminDashboardView):
         msg = u''
         if settings.FEATURES['AUTH_USE_CERTIFICATES']:
             if '@' not in uname:
-                email = '{0}@{1}'.format(uname, email_domain)
+                email = u'{0}@{1}'.format(uname, email_domain)
             else:
                 email = uname
-            if not email.endswith('@{0}'.format(email_domain)):
+            if not email.endswith(u'@{0}'.format(email_domain)):
                 # Translators: Domain is an email domain, such as "@gmail.com"
-                msg += _('Email address must end in {domain}').format(domain="@{0}".format(email_domain))
+                msg += _('Email address must end in {domain}').format(domain=u"@{0}".format(email_domain))
                 return msg
             mit_domain = 'ssl:MIT'
             if ExternalAuthMap.objects.filter(external_id=email,
@@ -201,7 +201,7 @@ class Users(SysadminDashboardView):
         try:
             user.save()
         except IntegrityError:
-            msg += _('Oops, failed to create user {user}, {error}').format(
+            msg += _(u'Oops, failed to create user {user}, {error}').format(
                 user=user,
                 error="IntegrityError"
             )
@@ -387,7 +387,7 @@ class Courses(SysadminDashboardView):
 
         msg = u''
 
-        log.debug('Adding course using git repo {0}'.format(gitloc))
+        log.debug(u'Adding course using git repo {0}'.format(gitloc))
 
         # Grab logging output for debugging imports
         output = StringIO.StringIO()
@@ -578,7 +578,7 @@ class Courses(SysadminDashboardView):
                 self.def_ms.courses.pop(cdir)
 
                 # now move the directory (don't actually delete it)
-                new_dir = "{course_dir}_deleted_{timestamp}".format(
+                new_dir = u"{course_dir}_deleted_{timestamp}".format(
                     course_dir=cdir,
                     timestamp=int(time.time())
                 )
@@ -723,7 +723,7 @@ class GitLogs(TemplateView):
             try:
                 course = get_course_by_id(course_id)
             except Exception:  # pylint: disable=broad-except
-                log.info('Cannot find course {0}'.format(course_id))
+                log.info(u'Cannot find course {0}'.format(course_id))
                 raise Http404
 
             # Allow only course team, instructors, and staff
@@ -731,7 +731,7 @@ class GitLogs(TemplateView):
                     CourseInstructorRole(course.id).has_user(request.user) or
                     CourseStaffRole(course.id).has_user(request.user)):
                 raise Http404
-            log.debug('course_id={0}'.format(course_id))
+            log.debug(u'course_id={0}'.format(course_id))
             cilset = CourseImportLog.objects.filter(
                 course_id=course_id
             ).order_by('-created')

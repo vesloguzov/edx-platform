@@ -58,7 +58,7 @@ class Date(JSONField):
         elif isinstance(field, datetime.datetime):
             return field
         else:
-            msg = "Field {0} has bad value '{1}'".format(
+            msg = u"Field {0} has bad value '{1}'".format(
                 self.name, field)
             raise TypeError(msg)
 
@@ -78,7 +78,7 @@ class Date(JSONField):
             else:
                 return value.isoformat()
         else:
-            raise TypeError("Cannot convert {!r} to json".format(value))
+            raise TypeError(u"Cannot convert {!r} to json".format(value))
 
     enforce_type = from_json
 
@@ -170,8 +170,8 @@ class RelativeTime(JSONField):
             obj_time = time.strptime(value, '%H:%M:%S')
         except ValueError as e:
             raise ValueError(
-                "Incorrect RelativeTime value {!r} was set in XML or serialized. "
-                "Original parse message is {}".format(value, e.message)
+                u"Incorrect RelativeTime value {!r} was set in XML or serialized. "
+                u"Original parse message is {}".format(value, e.message)
             )
         return datetime.timedelta(
             hours=obj_time.tm_hour,
@@ -199,7 +199,7 @@ class RelativeTime(JSONField):
         if isinstance(value, basestring):
             return self.isotime_to_timedelta(value)
 
-        msg = "RelativeTime Field {0} has bad value '{1!r}'".format(self.name, value)
+        msg = u"RelativeTime Field {0} has bad value '{1!r}'".format(self.name, value)
         raise TypeError(msg)
 
     def to_json(self, value):
@@ -227,7 +227,7 @@ class RelativeTime(JSONField):
                 )
             return self.timedelta_to_string(value)
 
-        raise TypeError("RelativeTime: cannot convert {!r} to json".format(value))
+        raise TypeError(u"RelativeTime: cannot convert {!r} to json".format(value))
 
     def timedelta_to_string(self, value):
         """

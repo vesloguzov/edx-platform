@@ -210,7 +210,7 @@ class CourseListTests(CourseViewTestsMixin, ModuleStoreTestCase):
         """
         The view should return a paginated list of courses.
         """
-        url = "{}?page_size=1".format(reverse(self.view))
+        url = u"{}?page_size=1".format(reverse(self.view))
         response = self.http_get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -222,7 +222,7 @@ class CourseListTests(CourseViewTestsMixin, ModuleStoreTestCase):
         """
         The view should return a list of details for the specified courses.
         """
-        url = "{}?course_id={}".format(reverse(self.view), self.course_id)
+        url = u"{}?course_id={}".format(reverse(self.view), self.course_id)
         response = self.http_get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -256,7 +256,7 @@ class CourseListTests(CourseViewTestsMixin, ModuleStoreTestCase):
         response = self.http_get(reverse(self.view), HTTP_AUTHORIZATION=auth_header)
         self.assertEqual(response.status_code, 200)
 
-        url = "{}?course_id={}".format(reverse(self.view), self.course_id)
+        url = u"{}?course_id={}".format(reverse(self.view), self.course_id)
         response = self.http_get(url, HTTP_AUTHORIZATION=auth_header)
         self.assertEqual(response.status_code, 200)
         data = response.data['results']
@@ -264,7 +264,7 @@ class CourseListTests(CourseViewTestsMixin, ModuleStoreTestCase):
         self.assertEqual(data[0]['name'], self.course.display_name)
 
         # The view should return an empty list if the user cannot access any courses.
-        url = "{}?course_id={}".format(reverse(self.view), unicode(self.empty_course.id))
+        url = u"{}?course_id={}".format(reverse(self.view), unicode(self.empty_course.id))
         response = self.http_get(url, HTTP_AUTHORIZATION=auth_header)
         self.assertEqual(response.status_code, 200)
         self.assertDictContainsSubset({'count': 0, u'results': []}, response.data)

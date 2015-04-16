@@ -274,7 +274,7 @@ def course_registration_features(features, registration_codes, csv_type):
             course_registration_dict['customer_reference_number'] = sale_invoice.customer_reference_number
             course_registration_dict['internal_reference'] = sale_invoice.internal_reference
 
-        course_registration_dict['redeem_code_url'] = 'http://{base_url}{redeem_code_url}'.format(
+        course_registration_dict['redeem_code_url'] = u'http://{base_url}{redeem_code_url}'.format(
             base_url=site_name,
             redeem_code_url=reverse('register_code_redemption',
                                     kwargs={'registration_code': registration_code.code})

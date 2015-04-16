@@ -150,7 +150,7 @@ class TextbookList(List):
             except:
                 # If we can't get to S3 (e.g. on a train with no internet), don't break
                 # the rest of the courseware.
-                log.exception("Couldn't load textbook ({0}, {1})".format(title, book_url))
+                log.exception(u"Couldn't load textbook ({0}, {1})".format(title, book_url))
                 continue
 
         return textbooks
@@ -907,14 +907,14 @@ class CourseDescriptor(CourseFields, SequenceDescriptor):
         for policy_path in paths:
             if not system.resources_fs.exists(policy_path):
                 continue
-            log.debug("Loading grading policy from {0}".format(policy_path))
+            log.debug(u"Loading grading policy from {0}".format(policy_path))
             try:
                 with system.resources_fs.open(policy_path) as grading_policy_file:
                     policy_str = grading_policy_file.read()
                     # if we successfully read the file, stop looking at backups
                     break
             except (IOError):
-                msg = "Unable to load course settings file from '{0}'".format(policy_path)
+                msg = u"Unable to load course settings file from '{0}'".format(policy_path)
                 log.warning(msg)
 
         return policy_str

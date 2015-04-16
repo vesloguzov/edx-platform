@@ -357,7 +357,7 @@ def perform_module_state_update(update_fcn, filter_fcn, _entry_id, course_id, ta
             elif update_status == UPDATE_STATUS_SKIPPED:
                 task_progress.skipped += 1
             else:
-                raise UpdateProblemModuleStateError("Unexpected update_status returned: {}".format(update_status))
+                raise UpdateProblemModuleStateError(u"Unexpected update_status returned: {}".format(update_status))
 
     return task_progress.update_task_state()
 
@@ -453,7 +453,7 @@ def rescore_problem_module_state(xmodule_instance_args, module_descriptor, stude
     if instance is None:
         # Either permissions just changed, or someone is trying to be clever
         # and load something they shouldn't have access to.
-        msg = "No module {loc} for student {student}--access denied?".format(loc=usage_key,
+        msg = u"No module {loc} for student {student}--access denied?".format(loc=usage_key,
                                                                              student=student)
         TASK_LOG.debug(msg)
         raise UpdateProblemModuleStateError(msg)
