@@ -290,7 +290,7 @@ def users_in_cohort(request, course_key_string, cohort_id):
 
     user_info = [{'username': u.username,
                   'email': u.email,
-                  'name': '{0} {1}'.format(u.first_name, u.last_name)}
+                  'name': u.profile.name}
                  for u in users]
 
     return json_http_response({'success': True,
@@ -325,7 +325,7 @@ def add_users_to_cohort(request, course_key_string, cohort_id):
     try:
         cohort = cohorts.get_cohort_by_id(course_key, cohort_id)
     except CourseUserGroup.DoesNotExist:
-        raise Http404("Cohort (ID {cohort_id}) not found for {course_key_string}".format(
+        raise Http404(u"Cohort (ID {cohort_id}) not found for {course_key_string}".format(
             cohort_id=cohort_id,
             course_key_string=course_key_string
         ))
@@ -392,7 +392,7 @@ def remove_user_from_cohort(request, course_key_string, cohort_id):
     except User.DoesNotExist:
         log.debug('no user')
         return json_http_response({'success': False,
-                                   'msg': "No user '{0}'".format(username)})
+                                   'msg': u"No user '{0}'".format(username)})
 
 
 def debug_cohort_mgmt(request, course_key_string):
