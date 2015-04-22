@@ -12,6 +12,8 @@ from student.models import CourseEnrollment
 from util.request import course_id_from_url
 
 
+WIKI_ROOT_URL = u'{}/wiki/'.format(settings.EDX_ROOT_URL)
+
 class WikiAccessMiddleware(object):
     """
     This middleware wraps calls to django-wiki in order to handle authentication and redirection
@@ -30,7 +32,11 @@ class WikiAccessMiddleware(object):
             # See if we are able to view the course. If we are, redirect to it
             try:
                 _course = get_course_with_access(request.user, 'load', course_id)
-                return redirect(u"/courses/{course_id}/wiki/{path}".format(course_id=course_id.to_deprecated_string(), path=wiki_path))
+                return redirect(u"{root_url}/courses/{course_id}/wiki/{path}".format(
+                    root_url=settings.EDX_ROOT_URL,
+                    course_id=course_id.to_deprecated_string(),
+                    path=wiki_path)
+                )
             except Http404:
                 # Even though we came from the course, we can't see it. So don't worry about it.
                 pass
@@ -49,14 +55,14 @@ class WikiAccessMiddleware(object):
             return redirect(reverse('accounts_login'), next=request.path)
 
         course_id = course_id_from_url(request.path)
-        wiki_path = request.path.partition('/wiki/')[2]
+        wiki_path = request.path.partition(WIKI_ROOT_URL)[2]
 
         if course_id:
             # This is a /courses/org/name/run/wiki request
-            course_path = u"/courses/{}".format(course_id.to_deprecated_string())
+            course_path = u"{}/courses/{}".format(settings.EDX_ROOT_URL, course_id.to_deprecated_string())
             # HACK: django-wiki monkeypatches the reverse function to enable
             # urls to be rewritten
-            reverse._transform_url = lambda url: course_path + url  # pylint: disable=protected-access
+            reverse._transform_url = lambda url: url.replace(settings.EDX_ROOT_URL, course_path, 1)
             # Authorization Check
             # Let's see if user is enrolled or the course allows for public access
             try:
@@ -66,7 +72,7 @@ class WikiAccessMiddleware(object):
                 # clearing the referrer will cause process_response not to redirect
                 # back to a non-existent course
                 request.META['HTTP_REFERER'] = ''
-                return redirect(u'/wiki/{}'.format(wiki_path))
+                return redirect(WIKI_ROOT_URL + wiki_path)
 
             if not course.allow_public_wiki_access:
                 is_enrolled = CourseEnrollment.is_enrolled(request.user, course.id)
@@ -92,8 +98,8 @@ class WikiAccessMiddleware(object):
         Modify the redirect from /wiki/123 to /course/foo/bar/wiki/123/
         if the referrer comes from a course page
         """
-        if response.status_code == 302 and response['Location'].startswith('/wiki/'):
-            wiki_path = urlparse(response['Location']).path.split('/wiki/', 1)[1]
+        if response.status_code == 302 and response['Location'].startswith(WIKI_ROOT_URL):
+            wiki_path = urlparse(response['Location']).path.split(WIKI_ROOT_URL, 1)[1]
 
             response = self._redirect_from_referrer(request, wiki_path) or response
 
