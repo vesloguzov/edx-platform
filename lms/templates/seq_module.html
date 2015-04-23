@@ -21,11 +21,13 @@
            aria-controls="seq_contents_${idx}"
            id="tab_${idx}"
            tabindex="0">
-            <i class="icon fa seq_${item['type']}" aria-hidden="true"></i>
             % if show_titles:
-            ## <span data-element="${idx+1}">${item['title']}</span>
-            <span class="sr">${item['type']}</span><span>${item['title']}</span>
+            <div>
+              <i class="icon fa seq_${item['type']}" aria-hidden="true"></i>
+              <span class="sr">${item['type']}</span><span>${item['title']}</span>
+            </div>
             % else:
+            <i class="icon fa seq_${item['type']}" aria-hidden="true"></i>
             <p><span class="sr">${item['type']}</span> ${item['title']}</p>
             %endif
           </a>

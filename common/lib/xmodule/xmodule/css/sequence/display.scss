@@ -122,7 +122,7 @@ $sequence--border-color: #C8C8C8;
 
         &.inactive {
 
-          .icon {
+          .icon, span {
             color: rgb(90, 90, 90);
           }
         }
@@ -131,7 +131,7 @@ $sequence--border-color: #C8C8C8;
           @extend %ui-depth1;
           background-color: $white;
 
-          .icon {
+          .icon, span {
             color: rgb(10, 10, 10);
           }
 
@@ -150,18 +150,27 @@ $sequence--border-color: #C8C8C8;
             line-height: 42px;
             background-image: none !important;
             text-align: center;
+            overflow: hidden;
+
+          div {
+              display: table;
+              margin: 0 auto;
+          }
+          .icon {
+            display: table-cell;
+            padding: 0 5px;
+          }
+          span {
+            display: table-cell;
+            padding-right: 5px;
+          }
         }
 
         span {
-            display: inline-block;
-            max-height: 38px;
-            vertical-align: middle;
-            overflow: hidden;
-            font-size: 90%;
-            color: #222;
-            background-repeat: no-repeat;
-            background-position: 4px center;
-            text-align: left;
+          vertical-align: middle;
+          font-size: 90%;
+          text-align: left;
+          line-height: 1.2;
         }
 
         &:hover, &:focus {
@@ -186,21 +195,8 @@ $sequence--border-color: #C8C8C8;
 
         //vertical & problems
         &.seq_vertical, &.seq_problem {
-
           .icon:before {
             content: "\f00b";  // .fa-tasks
-          }
-
-          &.progress-none {
-
-          }
-
-          &.progress-some, &.progress-in_progress {
-
-          }
-
-          &.progress-done {
-
           }
         }
 
