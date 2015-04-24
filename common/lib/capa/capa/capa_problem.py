@@ -508,7 +508,7 @@ class LoncapaProblem(object):
         Main method called externally to get the HTML to be rendered for this capa Problem.
         """
         self.do_targeted_feedback(self.tree)
-        html = contextualize_text(etree.tostring(self._extract_html(self.tree)), self.context)
+        html = contextualize_text(etree.tounicode(self._extract_html(self.tree)), self.context)
         return html
 
     def handle_input_ajax(self, data):

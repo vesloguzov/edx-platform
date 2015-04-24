@@ -1,4 +1,8 @@
+# -*- coding: utf-8 -*-
 import re
+import urllib
+import textwrap
+from functools import partial
 
 from nose.tools import assert_equals, assert_true, assert_false  # pylint: disable=no-name-in-module
 from static_replace import (
@@ -13,6 +17,9 @@ from mock import patch, Mock
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from xmodule.modulestore.mongo import MongoModuleStore
 from xmodule.modulestore.xml import XMLModuleStore
+from xmodule.tests.test_capa_module import CapaFactory
+
+from edxmako.shortcuts import render_to_string
 
 DATA_DIRECTORY = 'data_dir'
 COURSE_KEY = SlashSeparatedCourseKey('org', 'course', 'run')
@@ -161,3 +168,22 @@ def test_regex():
     for s in no:
         print 'Should not match: {0!r}'.format(s)
         assert_false(re.match(regex, s))
+
+
+@patch('static_replace.modulestore')
+def test_static_url_in_problem(mock_modulestore):
+    """Check static unicode urls in problems are rendered correctly"""
+    mock_modulestore.return_value = Mock(MongoModuleStore)
+
+    filename = u'φιλεναμε'
+    xml = textwrap.dedent(u'<img src="/static/{}" alt="Sample image" />'.format(filename))
+    problem = CapaFactory.create(xml=xml)
+    # undo mocking
+    problem.system.render_template = render_to_string
+    problem.runtime.replace_urls = partial(
+        replace_static_urls, course_id=COURSE_KEY, data_directory=DATA_DIRECTORY
+    )
+
+    html = problem.get_problem_html(encapsulate=False)
+    assert_true(filename in html
+                or urllib.quote(filename) in html)
