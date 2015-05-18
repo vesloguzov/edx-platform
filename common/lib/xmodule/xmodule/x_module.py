@@ -856,6 +856,13 @@ class XModule(XModuleMixin, HTMLSnippet, XBlock):  # pylint: disable=abstract-me
         """
         return Fragment(self.get_html())
 
+    def student_view_json(self, context):
+        """
+        Returns a JSON representation of the student_view of this XModule.
+        The contract of the JSON content is between the caller and the particular XModule.
+        """
+        return self.get_json(context)
+
 
 def policy_key(location):
     """
