@@ -336,6 +336,12 @@ class CourseBlocksAndNavigation(ListAPIView):
 
           Example: graded=True or graded=true
 
+        * responsive_UI: (boolean) Indicates whether to return whether the block is tagged to have responsive UI
+          support.
+          Default is True.
+
+          Example: responsive_UI=True or responsive_UI=true
+
         * children: (boolean) Indicates whether or not to return children information about the blocks.
           Default is True.
 
@@ -534,6 +540,14 @@ class CourseBlocksAndNavigation(ListAPIView):
                     )
                 )
                 block_value["format"] = getattr(block, 'format', None)
+
+            # responsive UI
+            # If responsive UI information is requested, include whether this block is tagged with having
+            # responsive UI support.
+            if responsive_ui_requested:
+                block_value["responsive_UI"] = (
+                    block.has_responsive_ui if hasattr(block, 'has_responsive_ui') else False
+                )
 
             # block count
             # For all the block types that are requested to be counted, include the count of
