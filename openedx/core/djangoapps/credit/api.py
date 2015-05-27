@@ -2,7 +2,6 @@
 import logging
 import uuid
 from django.db import transaction
-
 from student.models import User
 
 from .exceptions import (
@@ -20,7 +19,6 @@ from .models import (
     CreditRequest,
     CreditEligibility,
 )
-
 
 log = logging.getLogger(__name__)
 
@@ -320,6 +318,40 @@ def get_credit_requests_for_user(username):
 
     """
     return CreditRequest.credit_requests_for_user(username)
+
+
+def get_credit_requirement(course_key, namespace, name):
+    """Returns the requirement of a given course, namespace and name.
+
+    Args:
+        course_key(CourseKey): The identifier for course
+        namespace(str): Namespace of requirement
+        name: Name of the requirement
+
+    Returns:
+        'CreditRequirement' object
+
+    """
+    return CreditRequirement.get_course_requirement(course_key, namespace, name)
+
+
+def set_credit_requirement_status(username, requirement, status="satisfied", reason=None):
+    """Update Credit Requirement Status for given username and requirement
+        if exists else add new.
+
+    Args:
+        username(str): Username of the user
+        requirement(CreditRequirement): 'CreditRequirement' object
+        status(str): Status of the requirement
+        reason(dict): Reason of the status
+
+    Returns:
+        'CreditRequirementStatus' object
+
+    """
+    return CreditRequirementStatus.add_or_update_requirement_status(
+        username, requirement, status, reason
+    )
 
 
 def _get_requirements_to_disable(old_requirements, new_requirements):
