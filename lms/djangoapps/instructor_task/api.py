@@ -24,6 +24,7 @@ from instructor_task.tasks import (
     cohort_students,
     enrollment_report_features_csv,
     calculate_may_enroll_csv,
+    exec_summary_report_csv
 )
 
 from instructor_task.api_helper import (
@@ -391,6 +392,19 @@ def submit_calculate_may_enroll_csv(request, course_key, features):
 
     return submit_task(request, task_type, task_class, course_key, task_input, task_key)
 
+
+def submit_executive_summary_report_csv(request, course_key):  # pylint: disable=invalid-name
+    """
+    Submits a task to generate a CSV containing the executive summary report.
+
+    Raises AlreadyRunningError if said CSV is already being updated.
+    """
+    task_type = 'exec_summary_report'
+    task_class = exec_summary_report_csv
+    task_input = {}
+    task_key = ""
+
+    return submit_task(request, task_type, task_class, course_key, task_input, task_key)
 
 def submit_cohort_students(request, course_key, file_name):
     """
