@@ -102,6 +102,12 @@ REPORTS_DATA = (
         'instructor_api_endpoint': 'get_students_who_may_enroll',
         'task_api_endpoint': 'instructor_task.api.submit_calculate_may_enroll_csv',
         'extra_instructor_api_kwargs': {},
+    },
+    {
+        'report_type': 'Executive Summary',
+        'instructor_api_endpoint': 'get_exec_summary_report',
+        'task_api_endpoint': 'instructor_task.api.submit_executive_summary_report_csv',
+        'extra_instructor_api_kwargs': {}
     }
 )
 
@@ -215,6 +221,7 @@ class TestInstructorAPIDenyLevels(ModuleStoreTestCase, LoginEnrollmentTestCase):
             ('get_students_features', {}),
             ('get_enrollment_report', {}),
             ('get_students_who_may_enroll', {}),
+            ('get_exec_summary_report', {}),
         ]
         # Endpoints that only Instructors can access
         self.instructor_level_endpoints = [

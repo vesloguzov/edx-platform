@@ -393,11 +393,11 @@ def submit_calculate_may_enroll_csv(request, course_key, features):
     return submit_task(request, task_type, task_class, course_key, task_input, task_key)
 
 
-def submit_executive_summary_report_csv(request, course_key):  # pylint: disable=invalid-name
+def submit_executive_summary_report(request, course_key):  # pylint: disable=invalid-name
     """
     Submits a task to generate a Html File containing the executive summary report.
 
-    Raises AlreadyRunningError if said Html File is already being updated.
+    Raises AlreadyRunningError if Html File is already being updated.
     """
     task_type = 'exec_summary_report'
     task_class = exec_summary_report_csv
