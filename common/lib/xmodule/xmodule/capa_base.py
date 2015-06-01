@@ -601,6 +601,8 @@ class CapaMixin(CapaFields):
         hint to show.
         """
         try:
+#             import pdb
+#             pdb.set_trace()
             html = self.lcp.get_html()
 
         # If we cannot construct the problem HTML,
@@ -610,6 +612,7 @@ class CapaMixin(CapaFields):
 
         html = self.remove_tags_from_html(html)
 
+        
         # The convention is to pass the name of the check button if we want
         # to show a check button, and False otherwise This works because
         # non-empty strings evaluate to True.  We use the same convention

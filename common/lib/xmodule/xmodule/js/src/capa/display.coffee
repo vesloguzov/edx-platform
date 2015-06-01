@@ -702,6 +702,14 @@ class @Problem
         @enableCheckButton true
     window.setTimeout(enableCheckButton, 750)
 
+  # Save and then unconditionally call the zero-arg callback
+  save_quietly: (callback) =>
+    console.log 'problem_save_hint', @answers
+    $.postWithPrefix "#{@url}/problem_save", @answers, (response) =>
+      @updateProgress response
+      console.log 'call callback'
+      callback()
+
   hint_button: =>
     next_hint_index = -1
     problemId = this.element_id
@@ -715,7 +723,11 @@ class @Problem
                 next_hint_index = hbAttribute.value
                 break
             break
-
-    $.postWithPrefix "#{@url}/hint_button", next_hint_index: next_hint_index, input_id: @id,(response) =>
+    # We need the save to complete, then make the hint request
+    @save_quietly =>
+      console.log 'in callback'
+      $.postWithPrefix "#{@url}/hint_button", next_hint_index: next_hint_index, input_id: @id,(response) =>
+        console.log(response.contents)
         @render(response.contents)
         @$(".hint-button").focus()  # focus on click, like the Check button
+
