@@ -23,7 +23,7 @@ How to use-
         class StudentModule(CallStackMixin, models.Model):
 
 Note -
-1.Format for stack_book
+1.Format for STACK_BOOK
 {
     "modelclass1":
         [[(frame 1),(frame 2)],
@@ -51,33 +51,33 @@ log = logging.getLogger(__name__)
 # Frames - ('FilePath','LineNumber','Context')
 # ex. {"<class 'courseware.models.StudentModule'>" : [[(file,line number,context),(---,---,---)],
 #                                                     [(file,line number,context),(---,---,---)]]}
-stack_book = {}
-stack_book = collections.defaultdict(list)
+STACK_BOOK = {}
+STACK_BOOK = collections.defaultdict(list)
 
 # filter to trickle down call stacks.
-exclude = ['^.*python2.7.*$', '^.*call_stack_manager.*$']
-regular_expressions = [re.compile(x) for x in exclude]
+EXCLUDE = ['^.*python2.7.*$', '^.*call_stack_manager.*$']
+REGULAR_EXPS = [re.compile(x) for x in EXCLUDE]
 
 
 def capture_call_stack(current_model):
-        """
-        stores customised call stacks in global dictionary `stack_book`, and logs it.
+    """
+    stores customised call stacks in global dictionary `STACK_BOOK`, and logs it.
 
-        Arguments:
-        current_model - Name of the model class
-        """
-        # holds temporary callstack
-        temp_call_stack = [(line.split(',')[0].strip().replace("\n", "")[6:-1],
-                            line.split(',')[1].strip().replace("\n", "")[6:],
-                            line.split(',')[2].strip().replace("\n", "")[3:])
-                           for line in traceback.format_stack()
-                           if not any(reg.match(line.replace("\n", "")) for reg in regular_expressions)]
+    Arguments:
+    current_model - Name of the model class
+    """
+    # holds temporary callstack
+    temp_call_stack = [(line.split(',')[0].strip().replace("\n", "")[6:-1],
+                        line.split(',')[1].strip().replace("\n", "")[6:],
+                        line.split(',')[2].strip().replace("\n", "")[3:])
+                       for line in traceback.format_stack()
+                       if not any(reg.match(line.replace("\n", "")) for reg in REGULAR_EXPS)]
 
-        # avoid duplication.
-        if temp_call_stack not in stack_book[current_model]:
-            stack_book[current_model].append(temp_call_stack)
-            log.info("logging new call in global stack book, for %s", current_model)
-            log.info(stack_book)
+    # avoid duplication.
+    if temp_call_stack not in STACK_BOOK[current_model]:
+        STACK_BOOK[current_model].append(temp_call_stack)
+        log.info("logging new call in global stack book, for %s", current_model)
+        log.info(STACK_BOOK)
 
 
 class CallStackManager(Manager):
@@ -92,7 +92,7 @@ class CallStackManager(Manager):
         return super(CallStackManager, self).get_query_set()
 
 
-class CallStackMixin (object):
+class CallStackMixin(object):
     """
     A mixin class for getting call stacks when Save() and Delete() methods are called
     """
