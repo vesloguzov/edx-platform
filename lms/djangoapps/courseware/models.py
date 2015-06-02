@@ -22,12 +22,12 @@ from django.dispatch import receiver
 from model_utils.models import TimeStampedModel
 
 from xmodule_django.models import CourseKeyField, LocationKeyField, BlockTypeKeyField  # pylint: disable=import-error
-from openedx.core.lib.call_stack_manager import CallStackManager
+from openedx.core.lib.call_stack_manager import CallStackManager, CallStackMixin
 
 log = logging.getLogger(__name__)
 
 
-class StudentModule(models.Model):
+class StudentModule(CallStackMixin, models.Model):
     """
     Keeps student state for a particular module in a particular course.
     """
