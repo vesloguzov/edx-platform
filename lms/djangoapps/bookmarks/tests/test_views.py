@@ -164,8 +164,8 @@ class BookmarksViewTestsMixin(ModuleStoreTestCase):
 class BookmarksListViewTests(BookmarksViewTestsMixin):
     """
     This contains the tests for GET & POST methods of bookmark.views.BookmarksListView class
-    GET /api/bookmarks/v0/bookmarks/?course_id={course_id1}
-    POST /api/bookmarks/v0/bookmarks
+    GET /api/bookmarks/v1/bookmarks/?course_id={course_id1}
+    POST /api/bookmarks/v1/bookmarks
     """
     @ddt.data(
         (1, False),
