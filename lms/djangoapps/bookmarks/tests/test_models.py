@@ -10,12 +10,15 @@ import pytz
 
 from opaque_keys.edx.locator import CourseLocator, BlockUsageLocator
 
-from bookmarks.models import Bookmark, XBlockCache
+from bookmarks.models import Bookmark, PathItem, XBlockCache
 from student.tests.factories import UserFactory
 
+from opaque_keys.edx.keys import UsageKey
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
+EXAMPLE_USAGE_KEY_1 = u'i4x://org.15/course_15/chapter/Week_1'
+EXAMPLE_USAGE_KEY_2 = u'i4x://org.15/course_15/chapter/Week_2'
 
 @ddt.ddt
 class BookmarkModelTest(ModuleStoreTestCase):
@@ -44,8 +47,8 @@ class BookmarkModelTest(ModuleStoreTestCase):
         )
 
         self.path = [
-            {'display_name': self.chapter.display_name, 'usage_id': unicode(self.chapter.location)},
-            {'display_name': self.sequential.display_name, 'usage_id': unicode(self.sequential.location)}
+            PathItem(self.chapter.location, self.chapter.display_name),
+            PathItem(self.sequential.location, self.sequential.display_name),
         ]
 
     def get_bookmark_data(self, block):
@@ -97,42 +100,42 @@ class BookmarkModelTest(ModuleStoreTestCase):
 
     @ddt.data(
         (None, 2),
-        ([[{'usage_id': 'usage_id1'}]], 1),
-        ([[{'usage_id': 'usage_id1'}], [{'usage_id': 'usage_id2'}]], 2),
+        ([[PathItem(EXAMPLE_USAGE_KEY_1, '')]], 1),
+        ([[PathItem(EXAMPLE_USAGE_KEY_1, '')], [PathItem(EXAMPLE_USAGE_KEY_2, '')]], 2),
     )
     @ddt.unpack
-    @mock.patch('bookmarks.models.Bookmark.get_path_data')
-    def test_calls_to_get_path_data(self, paths, call_count, mock_get_path_data):
+    @mock.patch('bookmarks.models.Bookmark.get_path')
+    def test_calls_to_get_path(self, paths, call_count, mock_get_path):
 
         path = [
-            {'usage_id': unicode(self.chapter.location), 'display_name': self.chapter.display_name }
+            PathItem(self.chapter.location, self.chapter.display_name)
         ]
-        mock_get_path_data.return_value = path
+        mock_get_path.return_value = path
 
         bookmark_data = self.get_bookmark_data(self.vertical)
         bookmark = Bookmark.create(bookmark_data)
         self.assertIsNotNone(bookmark.xblock_cache)
-        self.assertEqual(mock_get_path_data.call_count, 1)
+        self.assertEqual(mock_get_path.call_count, 1)
 
         bookmark.xblock_cache.paths = paths
         bookmark.xblock_cache.save()
 
         bookmark = Bookmark.create(bookmark_data)
-        self.assertEqual(mock_get_path_data.call_count, call_count)
+        self.assertEqual(mock_get_path.call_count, call_count)
 
     @ddt.data(
-        (-30, [[{'usage_id': 'usage_id'}]], 1),
+        (-30, [[PathItem(EXAMPLE_USAGE_KEY_1, '1')]], 1),
         (30, None, 2),
         (30, [], 2),
-        (30, [[{'usage_id': 'usage_id'}]], 1),
-        (30, [[{'usage_id': 'usage_id'}], [{'usage_id': 'usage_id2'}]], 2),
+        (30, [[PathItem(EXAMPLE_USAGE_KEY_1, '1')]], 1),
+        (30, [[PathItem(EXAMPLE_USAGE_KEY_1, '1')], [PathItem(EXAMPLE_USAGE_KEY_2, '2')]], 2),
     )
     @ddt.unpack
-    @mock.patch('bookmarks.models.Bookmark.get_path_data')
-    def test_updated_path(self, seconds_delta, paths, get_path_data_call_count, mock_get_path_data):
+    @mock.patch('bookmarks.models.Bookmark.get_path')
+    def test_path(self, seconds_delta, paths, get_path_call_count, mock_get_path):
 
-        block_path = [{'usage_id': 'usage_id'}]
-        mock_get_path_data.return_value = block_path
+        block_path = [PathItem(UsageKey.from_string(EXAMPLE_USAGE_KEY_1), '1')]
+        mock_get_path.return_value = block_path
 
         bookmark_data = self.get_bookmark_data(self.vertical)
         bookmark = Bookmark.create(bookmark_data)
@@ -143,8 +146,8 @@ class BookmarkModelTest(ModuleStoreTestCase):
             bookmark.xblock_cache.paths = paths
             bookmark.xblock_cache.save()
 
-        self.assertEqual(bookmark.updated_path, block_path)
-        self.assertEqual(mock_get_path_data.call_count, get_path_data_call_count)
+        self.assertEqual(bookmark.path, block_path)
+        self.assertEqual(mock_get_path.call_count, get_path_call_count)
 
 
 @ddt.ddt

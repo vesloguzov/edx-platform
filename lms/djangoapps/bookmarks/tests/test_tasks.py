@@ -98,7 +98,7 @@ class XBlockCacheTaskTests(ModuleStoreTestCase):
         for usage_key, paths in self.expected_cache_data.items():
             xblock_cache = XBlockCache.objects.get(usage_key=usage_key)
             for path_index, path in enumerate(xblock_cache.paths):
-                for node_index, node in enumerate(path):
+                for path_item_index, path_item in enumerate(path):
                     self.assertEqual(
-                        node['usage_id'], unicode(self.expected_cache_data[usage_key][path_index][node_index])
+                        path_item.usage_key, self.expected_cache_data[usage_key][path_index][path_item_index]
                     )

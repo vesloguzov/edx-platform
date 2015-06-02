@@ -1,6 +1,7 @@
 """
 Models for Bookmarks.
 """
+from collections import namedtuple
 import copy
 import logging
 
@@ -10,12 +11,34 @@ from django.db import models
 from jsonfield.fields import JSONField
 from model_utils.models import TimeStampedModel
 
+from opaque_keys.edx.keys import UsageKey
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError, NoPathToItem
 from xmodule.modulestore.search import path_to_location
 from xmodule_django.models import CourseKeyField, LocationKeyField
 
 log = logging.getLogger(__name__)
+
+
+PathItem = namedtuple('PathItem', ['usage_key', 'display_name'])
+
+
+def prepare_path_for_serialization(path):
+
+    return [(unicode(path_item.usage_key), path_item.display_name) for path_item in path]
+
+
+def parse_path_data(path_data):
+
+    if path_data is None:
+        return None
+
+    path = []
+    for item in path_data:
+        usage_key = UsageKey.from_string(item[0])
+        usage_key = usage_key.replace(course_key=modulestore().fill_in_run(usage_key.course_key))
+        path.append(PathItem(usage_key, item[1]))
+    return path
 
 
 class Bookmark(TimeStampedModel):
@@ -25,7 +48,7 @@ class Bookmark(TimeStampedModel):
     user = models.ForeignKey(User, db_index=True)
     course_key = CourseKeyField(max_length=255, db_index=True)
     usage_key = LocationKeyField(max_length=255, db_index=True)
-    path = JSONField(help_text='Path in course tree to the block')
+    _path = JSONField(db_column='path', help_text='Path in course tree to the block')
 
     xblock_cache = models.ForeignKey('bookmarks.XBlockCache', null=True)
 
@@ -49,7 +72,7 @@ class Bookmark(TimeStampedModel):
         Raises:
             ItemNotFoundError: If no block exists for the usage_key.
         """
-        data = copy.deepcopy(data)
+        data = dict(data)
 
         usage_key = data.pop('usage_key')
         usage_key = usage_key.replace(course_key=modulestore().fill_in_run(usage_key.course_key))
@@ -62,15 +85,8 @@ class Bookmark(TimeStampedModel):
         })
 
         data['course_key'] = usage_key.course_key
+        data['_path'] = prepare_path_for_serialization(Bookmark.updated_path(usage_key, xblock_cache))
         data['xblock_cache'] = xblock_cache
-
-        if xblock_cache.paths and len(xblock_cache.paths) == 1:
-            # If there is only one path to the block, use it.
-            data['path'] = xblock_cache.paths[0]
-        else:
-            # In case of multiple paths, in the future get_path_data()
-            # can be updated to look at which path the user has access to.
-            data['path'] = Bookmark.get_path_data(usage_key)
 
         user = data.pop('user')
 
@@ -88,26 +104,40 @@ class Bookmark(TimeStampedModel):
         return self.xblock_cache.display_name
 
     @property
-    def updated_path(self):
+    def path(self):
         """
-        Return the latest path to this block after checking self.xblock_cache.
+        Return the path to the bookmark's block after checking self.xblock_cache.
 
         Returns:
             List of dicts.
         """
         if self.modified < self.xblock_cache.modified:
-
-            if self.xblock_cache.paths and len(self.xblock_cache.paths) == 1:
-                self.path = self.xblock_cache.paths[0]
-            else:
-                self.path = Bookmark.get_path_data(self.usage_key)
-
+            path = Bookmark.updated_path(self.usage_key, self.xblock_cache)
+            self._path = prepare_path_for_serialization(path)
             self.save()  # Always save so that self.modified is updated.
+            return path
 
-        return self.path
+        return parse_path_data(self._path)
 
     @staticmethod
-    def get_path_data(usage_key):
+    def updated_path(usage_key, xblock_cache):
+        """
+        Return the update-to-date path.
+
+        xblock_cache.paths is the list of all possible paths to a block
+        constructed by doing a DFS of the tree. However, in case of DAGS,
+        which section jump_to_id() takes the user to depends on the
+        modulestore. If xblock_cache.paths has only one item, we can
+        just use it. Otherwise, we use path_to_location() to get the path
+        jump_to_id() will take the user to.
+        """
+        if xblock_cache.paths and len(xblock_cache.paths) == 1:
+            return xblock_cache.paths[0]
+
+        return Bookmark.get_path(usage_key)
+
+    @staticmethod
+    def get_path(usage_key):
         """
         Returns data for the path to the block in the course graph.
 
@@ -140,10 +170,9 @@ class Bookmark(TimeStampedModel):
                 except ItemNotFoundError:
                     return []  # No valid path can be found.
 
-                path_data.append({
-                    'display_name': block.display_name,
-                    'usage_id': unicode(block.location)
-                })
+                path_data.append(
+                    PathItem(usage_key=block.location, display_name=block.display_name)
+                )
 
         return path_data
 
@@ -154,7 +183,29 @@ class XBlockCache(TimeStampedModel):
     usage_key = LocationKeyField(max_length=255, db_index=True, unique=True)
 
     display_name = models.CharField(max_length=255, default='')
-    paths = JSONField(null=True, blank=True)
+    _paths = JSONField(
+        db_column='paths', null=True, blank=True, help_text='All paths in course tree to the corresponding block.'
+    )
+
+    @property
+    def paths(self):
+        """
+        Return paths.
+
+        Returns:
+            list of list of PathItems.
+        """
+        return [parse_path_data(path) for path in self._paths] if self._paths else self._paths
+
+    @paths.setter
+    def paths(self, value):
+        """
+        Set paths.
+
+        Arguments:
+            value (list of list of PathItems): The list of paths to cache.
+        """
+        self._paths = [prepare_path_for_serialization(path) for path in value] if value else value
 
     @classmethod
     def create(cls, data):
@@ -167,7 +218,7 @@ class XBlockCache(TimeStampedModel):
         Returns:
             An XBlockCache object.
         """
-        data = copy.deepcopy(data)
+        data = dict(data)
 
         usage_key = data.pop('usage_key')
         usage_key = usage_key.replace(course_key=modulestore().fill_in_run(usage_key.course_key))

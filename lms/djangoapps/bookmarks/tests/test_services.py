@@ -89,15 +89,14 @@ class BookmarksAPITests(ModuleStoreTestCase):
             self.assertFalse(self.bookmark_service.is_bookmarked(usage_key=self.vertical_1.location))
             self.assertTrue(self.bookmark_service.is_bookmarked(usage_key=self.sequential_2.location))
 
-        # Setting a bookmark should result in the cache being updated on the next request
         self.bookmark_service.set_bookmarked(usage_key=self.chapter.location)
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(0):
             self.assertTrue(self.bookmark_service.is_bookmarked(usage_key=self.chapter.location))
             self.assertFalse(self.bookmark_service.is_bookmarked(usage_key=self.vertical_1.location))
 
         # Removing a bookmark should result in the cache being updated on the next request
         self.bookmark_service.unset_bookmarked(usage_key=self.chapter.location)
-        with self.assertNumQueries(1):
+        with self.assertNumQueries(0):
             self.assertFalse(self.bookmark_service.is_bookmarked(usage_key=self.chapter.location))
             self.assertFalse(self.bookmark_service.is_bookmarked(usage_key=self.vertical_1.location))
 

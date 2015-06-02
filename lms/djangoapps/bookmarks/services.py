@@ -35,19 +35,25 @@ class BookmarksService(object):
         super(BookmarksService, self).__init__(**kwargs)
         self._user = user
 
-    def _clear_bookmarks_cache(self, course_key):
+    def _bookmarks_cache(self, course_key, fetch=False):
         """
-        Clear the user's bookmarks cache for a particular course.
+        Return the user's bookmarks cache for a particular course.
 
         Arguments:
-            course_key (CourseKey): course_key of the course whose bookmarks cache should be cleared.
+            course_key (CourseKey): course_key of the course whose bookmarks cache should be returned.
         """
         course_key = modulestore().fill_in_run(course_key)
         if course_key.run is None:
-            return
-
+            return None
         cache_key = CACHE_KEY_TEMPLATE.format(self._user.id, course_key)
-        RequestCache.get_request_cache().data.pop(cache_key, None)
+
+        bookmarks_cache = RequestCache.get_request_cache().data.get(cache_key, None)
+        if bookmarks_cache is None and fetch is True:
+            bookmarks_cache = api.get_bookmarks(self._user, course_key=course_key, fields=DEFAULT_FIELDS + OPTIONAL_FIELDS)
+            RequestCache.get_request_cache().data[cache_key] = bookmarks_cache
+
+        return bookmarks_cache
+
 
     def bookmarks(self, course_key):
         """
@@ -59,13 +65,7 @@ class BookmarksService(object):
         Returns:
             list of dict:
         """
-        bookmarks = api.get_bookmarks(self._user, course_key=course_key, fields=DEFAULT_FIELDS + OPTIONAL_FIELDS)
-
-        if course_key.run is not None:
-            cache_key = CACHE_KEY_TEMPLATE.format(self._user.id, course_key)
-            RequestCache.get_request_cache().data[cache_key] = bookmarks
-
-        return bookmarks
+        return self._bookmarks_cache(course_key, fetch=True)
 
     def is_bookmarked(self, usage_key):
         """
@@ -77,17 +77,10 @@ class BookmarksService(object):
         Returns:
             Bool
         """
-        course_key = modulestore().fill_in_run(usage_key.course_key)
-        if course_key.run is None:
-            return False
-        cache_key = CACHE_KEY_TEMPLATE.format(self._user.id, course_key)
-        request_cache = RequestCache.get_request_cache()
-
-        if not cache_key in request_cache.data:
-            self.bookmarks(course_key)
-
-        for bookmark in request_cache.data.get(cache_key, []):
-            if bookmark['usage_id'] == unicode(usage_key):
+        usage_id = unicode(usage_key)
+        bookmarks_cache = self._bookmarks_cache(usage_key.course_key, fetch=True)
+        for bookmark in bookmarks_cache:
+            if bookmark['usage_id'] == usage_id:
                 return True
 
         return False
@@ -102,13 +95,15 @@ class BookmarksService(object):
         Returns:
             Bool indicating whether the bookmark was added.
         """
-        self._clear_bookmarks_cache(usage_key.course_key)
-
         try:
-            api.create_bookmark(user=self._user, usage_key=usage_key)
+            bookmark = api.create_bookmark(user=self._user, usage_key=usage_key)
         except ItemNotFoundError:
             log.error(u'Block with usage_id: %s not found.', usage_key)
             return False
+
+        bookmarks_cache = self._bookmarks_cache(usage_key.course_key)
+        if bookmarks_cache is not None:
+            bookmarks_cache.append(bookmark)
 
         return True
 
@@ -122,12 +117,21 @@ class BookmarksService(object):
         Returns:
             Bool indicating whether the bookmark was removed.
         """
-        self._clear_bookmarks_cache(usage_key.course_key)
-
         try:
             api.delete_bookmark(self._user, usage_key=usage_key)
         except ObjectDoesNotExist:
             log.error(u'Bookmark with usage_id: %s does not exist.', usage_key)
             return False
+
+        bookmarks_cache = self._bookmarks_cache(usage_key.course_key)
+        if bookmarks_cache is not None:
+            deleted_bookmark_index = None
+            usage_id = unicode(usage_key)
+            for index, bookmark in enumerate(bookmarks_cache):
+                if bookmark['usage_id'] == usage_id:
+                    deleted_bookmark_index = index
+                    break
+            if deleted_bookmark_index is not None:
+                bookmarks_cache.pop(deleted_bookmark_index)
 
         return True

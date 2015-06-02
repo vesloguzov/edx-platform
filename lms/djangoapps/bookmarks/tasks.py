@@ -6,7 +6,7 @@ from celery.task import task
 from opaque_keys.edx.keys import CourseKey, UsageKey
 from xmodule.modulestore.django import modulestore
 
-from .models import XBlockCache
+from .models import XBlockCache, PathItem
 
 log = logging.getLogger('edx.celery.task')
 
@@ -64,7 +64,7 @@ def _required_paths_data(paths):
     paths_data = []
     for path in paths:
         paths_data.append(
-            [{'usage_id': unicode(node['usage_key']), 'display_name': node['display_name']} for node in path]
+            [PathItem(node['usage_key'], node['display_name']) for node in path]
         )
     return paths_data
 

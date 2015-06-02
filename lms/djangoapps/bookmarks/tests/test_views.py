@@ -271,7 +271,7 @@ class BookmarksListViewTests(BookmarksViewTestsMixin):
         Test that an anonymous client (not logged in) cannot call GET or POST.
         """
         query_parameters = 'course_id={}'.format(self.course_id)
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(1):
             self.send_get(
                 client=self.anonymous_client,
                 url=reverse('bookmarks'),
