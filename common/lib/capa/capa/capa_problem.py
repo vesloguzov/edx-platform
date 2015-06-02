@@ -734,8 +734,6 @@ class LoncapaProblem(object):
 
         Used by get_html.
         """
-        import sys
-        print >>sys.stderr, '_extract_html1:', problemtree.tag
         if not isinstance(problemtree.tag, basestring):
             # Comment and ProcessingInstruction nodes are not Elements,
             # and we're ok leaving those behind.
@@ -753,7 +751,6 @@ class LoncapaProblem(object):
 
         problemid = problemtree.get('id')    # my ID
 
-        print >>sys.stderr, '_extract_html2:', problemtree.tag
         if problemtree.tag in inputtypes.registry.registered_tags():
             
             # If this is an inputtype subtree, let it render itself.
@@ -792,7 +789,6 @@ class LoncapaProblem(object):
                 }
             }
 
-            print >>sys.stderr, '++_extract_html:', problemtree.tag
             input_type_cls = inputtypes.registry.get_class_for_tag(problemtree.tag)
             # save the input type so that we can make ajax calls on it if we need to
             self.inputs[input_id] = input_type_cls(self.capa_system, problemtree, state)

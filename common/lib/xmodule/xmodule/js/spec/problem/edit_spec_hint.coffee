@@ -114,7 +114,7 @@ describe 'Markdown to xml extended hint dropdown', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>q1</legend>
+    <p>q1</p>
     
     <optionresponse>
       <optioninput label="q1">
@@ -143,7 +143,7 @@ describe 'Markdown to xml extended hint dropdown', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>q1</legend>
+    <p>q1</p>
     
     <optionresponse>
       <optioninput label="q1">
@@ -186,7 +186,7 @@ describe 'Markdown to xml extended hint checkbox', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>Select all the fruits from the list</legend>
+    <p>Select all the fruits from the list</p>
     <choiceresponse>
       <checkboxgroup label="Select all the fruits from the list" direction="vertical">
         <choice correct="true">Apple
@@ -207,7 +207,7 @@ describe 'Markdown to xml extended hint checkbox', ->
       </checkboxgroup>
     </choiceresponse>
 
-    <legend>Select all the vegetables from the list</legend>
+    <p>Select all the vegetables from the list</p>
     <choiceresponse>
       <checkboxgroup label="Select all the vegetables from the list" direction="vertical">
         <choice correct="false">Banana
@@ -264,7 +264,7 @@ describe 'Markdown to xml extended hint checkbox', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>Select all the fruits from the list</legend>
+    <p>Select all the fruits from the list</p>
     <choiceresponse>
       <checkboxgroup label="Select all the fruits from the list" direction="vertical">
         <choice correct="true">Apple
@@ -285,7 +285,7 @@ describe 'Markdown to xml extended hint checkbox', ->
       </checkboxgroup>
     </choiceresponse>
 
-    <legend>Select all the vegetables from the list</legend>
+    <p>Select all the vegetables from the list</p>
     <choiceresponse>
       <checkboxgroup label="Select all the vegetables from the list" direction="vertical">
         <choice correct="false">Banana
@@ -330,7 +330,7 @@ describe 'Markdown to xml extended hint multiple choice', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>Select the fruit from the list</legend>
+    <p>Select the fruit from the list</p>
     <multiplechoiceresponse>
       <choicegroup label="Select the fruit from the list" type="MultipleChoice">
         <choice correct="false">Mushroom <choicehint>Mushroom is a fungus, not a fruit.</choicehint></choice>
@@ -339,7 +339,7 @@ describe 'Markdown to xml extended hint multiple choice', ->
       </choicegroup>
     </multiplechoiceresponse>
     
-    <legend>Select the vegetables from the list</legend>
+    <p>Select the vegetables from the list</p>
     <multiplechoiceresponse>
       <choicegroup label="Select the vegetables from the list" type="MultipleChoice">
         <choice correct="false">Mushroom <choicehint>Mushroom is a fungus, not a vegetable.</choicehint></choice>
@@ -378,7 +378,7 @@ describe 'Markdown to xml extended hint multiple choice', ->
       """)
       expect(data).toEqual("""
     <problem>
-    <legend>Select the fruit from the list</legend>
+    <p>Select the fruit from the list</p>
     <multiplechoiceresponse>
       <choicegroup label="Select the fruit from the list" type="MultipleChoice">
         <choice correct="false">Mushroom <choicehint>Mushroom is a fungus, not a fruit.</choicehint></choice>
@@ -387,7 +387,7 @@ describe 'Markdown to xml extended hint multiple choice', ->
       </choicegroup>
     </multiplechoiceresponse>
 
-    <legend>Select the vegetables from the list</legend>
+    <p>Select the vegetables from the list</p>
     <multiplechoiceresponse>
       <choicegroup label="Select the vegetables from the list" type="MultipleChoice">
         <choice correct="false">Mushroom <choicehint>Mushroom is a fungus, not a vegetable.</choicehint></choice>
@@ -414,7 +414,7 @@ describe 'Markdown to xml extended hint text input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>In which country would you find the city of Paris?</legend>
+    <p>In which country would you find the city of Paris?</p>
     <stringresponse answer="France" type="ci" >
       <correcthint label="BRAVO">Viva la France!</correcthint>
       <textline label="In which country would you find the city of Paris?" size="20"/>
@@ -431,7 +431,7 @@ describe 'Markdown to xml extended hint text input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>Where Paris?</legend>
+    <p>Where Paris?</p>
     <stringresponse answer="France" type="ci" >
       <correcthint label="BRAVO">hint1</correcthint>
       <additional_answer answer="USA"><correcthint label="meh">hint2</correcthint></additional_answer>
@@ -449,7 +449,7 @@ describe 'Markdown to xml extended hint text input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>Revenge is a dish best served</legend>
+    <p>Revenge is a dish best served</p>
     <stringresponse answer="cold" type="ci" >
       <correcthint>khaaaaaan!</correcthint>
       <stringequalhint answer="warm">feedback2</stringequalhint>
@@ -466,7 +466,7 @@ describe 'Markdown to xml extended hint text input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>q</legend>
+    <p>q</p>
     <stringresponse answer="2" type="ci" >
       <correcthint>feedback1</correcthint>
       <textline label="q" size="20"/>
@@ -485,7 +485,7 @@ describe 'Markdown to xml extended hint text input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>q</legend>
+    <p>q</p>
     <stringresponse answer="aaa" type="ci" >
       <additional_answer answer="bbb"><correcthint>feedback1</correcthint></additional_answer>
       <stringequalhint answer="no">feedback2</stringequalhint>
@@ -505,7 +505,7 @@ describe 'Markdown to xml extended hint text input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>q</legend>
+    <p>q</p>
     <stringresponse answer="2" type="ci" >
       <correcthint>feedback1</correcthint>
       <additional_answer answer="bbb"><correcthint>feedback2</correcthint></additional_answer>
@@ -525,7 +525,7 @@ describe 'Markdown to xml extended hint text input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>q</legend>
+    <p>q</p>
     <stringresponse answer="aaa" type="ci" >
       <additional_answer answer="bbb"></additional_answer>
       <textline label="q" size="20"/>
@@ -552,7 +552,7 @@ describe 'Markdown to xml extended hint text input', ->
     expect(data).toEqual("""
     <problem>
     <p>paragraph</p>
-    <legend>q</legend>
+    <p>q</p>
     <stringresponse answer="aaa" type="ci" >
       <additional_answer answer="bbb"></additional_answer>
       <textline label="q" size="20"/>
@@ -577,7 +577,7 @@ describe 'Markdown to xml extended hint text input', ->
     expect(data).toEqual("""
     <problem>
     <p>paragraph</p>
-    <legend>q</legend>
+    <p>q</p>
     <p>or= aaa</p>
     <p>paragraph 2</p>
 
@@ -593,7 +593,7 @@ describe 'Markdown to xml extended hint text input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>q</legend>
+    <p>q</p>
     <stringresponse answer="aaa" type="ci" >
       <additional_answer answer="bbb"><correcthint>feedback1</correcthint></additional_answer>
       <textline label="q" size="20"/>
@@ -616,7 +616,7 @@ describe 'Markdown to xml extended hint text input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>Where Paris?</legend>
+    <p>Where Paris?</p>
     <stringresponse answer="France" type="ci" >
       <correcthint label="BRAVO">hint1</correcthint>
       <textline label="Where Paris?" size="20"/>
@@ -645,21 +645,21 @@ describe 'Markdown to xml extended hint numeric input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>Enter the numerical value of Pi:</legend>
+    <p>Enter the numerical value of Pi:</p>
     <numericalresponse answer="3.14159">
       <responseparam type="tolerance" default=".02" />
       <formulaequationinput label="Enter the numerical value of Pi:" />
       <correcthint>Pie for everyone!</correcthint>
     </numericalresponse>
 
-    <legend>Enter the approximate value of 502*9:</legend>
+    <p>Enter the approximate value of 502*9:</p>
     <numericalresponse answer="4518">
       <responseparam type="tolerance" default="15%" />
       <formulaequationinput label="Enter the approximate value of 502*9:" />
       <correcthint label="PIE">No pie for you!</correcthint>
     </numericalresponse>
 
-    <legend>Enter the number of fingers on a human hand</legend>
+    <p>Enter the number of fingers on a human hand</p>
     <numericalresponse answer="5">
       <formulaequationinput label="Enter the number of fingers on a human hand" />
     </numericalresponse>
@@ -683,12 +683,12 @@ describe 'Markdown to xml extended hint numeric input', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>text1</legend>
+    <p>text1</p>
     <numericalresponse answer="1">
       <formulaequationinput label="text1" />
       <correcthint>hint1</correcthint>
     </numericalresponse>
-    <legend>text2</legend>
+    <p>text2</p>
     <numericalresponse answer="2">
       <formulaequationinput label="text2" />
       <correcthint>hint2</correcthint>
@@ -751,7 +751,7 @@ describe 'Markdown to xml extended hint with multiline hints', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>Checkboxes</legend>
+    <p>Checkboxes</p>
     <choiceresponse>
       <checkboxgroup label="Checkboxes" direction="vertical">
         <choice correct="true">A
@@ -764,19 +764,19 @@ describe 'Markdown to xml extended hint with multiline hints', ->
       </checkboxgroup>
     </choiceresponse>
 
-    <legend>What is 1 + 1?</legend>
+    <p>What is 1 + 1?</p>
     <numericalresponse answer="2">
       <formulaequationinput label="What is 1 + 1?" />
       <correcthint>part one, and part two</correcthint>
     </numericalresponse>
 
-    <legend>hello?</legend>
+    <p>hello?</p>
     <stringresponse answer="hello" type="ci" >
       <correcthint>hello hint</correcthint>
       <textline label="hello?" size="20"/>
     </stringresponse>
 
-    <legend>multiple choice</legend>
+    <p>multiple choice</p>
     <multiplechoiceresponse>
       <choicegroup label="multiple choice" type="MultipleChoice">
         <choice correct="true">AA <choicehint>hint1</choicehint></choice>
@@ -785,7 +785,7 @@ describe 'Markdown to xml extended hint with multiline hints', ->
       </choicegroup>
     </multiplechoiceresponse>
 
-    <legend>dropdown</legend>
+    <p>dropdown</p>
 
     <optionresponse>
       <optioninput label="dropdown">
@@ -818,7 +818,7 @@ describe 'Markdown to xml extended hint with tricky syntax cases', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>á and Ø</legend>
+    <p>á and Ø</p>
     <multiplechoiceresponse>
       <choicegroup label="á and Ø" type="MultipleChoice">
         <choice correct="true">Ø <choicehint>Ø</choicehint></choice>
@@ -842,7 +842,7 @@ describe 'Markdown to xml extended hint with tricky syntax cases', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>"quotes" aren't `fun`</legend>
+    <p>"quotes" aren't `fun`</p>
     <multiplechoiceresponse>
       <choicegroup label="&quot;quotes&quot; aren&apos;t `fun`" type="MultipleChoice">
         <choice correct="false">"hello" <choicehint>isn't</choicehint></choice>
@@ -864,7 +864,7 @@ describe 'Markdown to xml extended hint with tricky syntax cases', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>q1</legend>
+    <p>q1</p>
     <p>this (x)</p>
     <multiplechoiceresponse>
       <choicegroup label="q1" type="MultipleChoice">
@@ -888,7 +888,7 @@ describe 'Markdown to xml extended hint with tricky syntax cases', ->
     """)
     expect(data).toEqual("""
     <problem>
-    <legend>q1</legend>
+    <p>q1</p>
     <p>this [x]</p>
     <choiceresponse>
       <checkboxgroup label="q1" direction="vertical">
@@ -921,7 +921,7 @@ describe 'Markdown to xml extended hint with tricky syntax cases', ->
     data = MarkdownEditingDescriptor.markdownToXml(markdown)
     expect(data).toEqual("""
     <problem>
-    <legend>q22</legend>
+    <p>q22</p>
     <optionresponse>
       <optioninput label="q22">
         <option correct="True">x <optionhint>hintx these span</optionhint></option>

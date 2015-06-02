@@ -601,8 +601,6 @@ class CapaMixin(CapaFields):
         hint to show.
         """
         try:
-#             import pdb
-#             pdb.set_trace()
             html = self.lcp.get_html()
 
         # If we cannot construct the problem HTML,

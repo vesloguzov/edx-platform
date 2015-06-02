@@ -227,8 +227,6 @@ class LoncapaResponse(object):
           - response_msg: a message displayed at the end of the Response
         """
         # render ourself as a <span> + our content
-        import sys
-        print >>sys.stderr, 'response_render'
         tree = etree.Element('span')
 
         # problem author can make this span display:inline
@@ -240,16 +238,12 @@ class LoncapaResponse(object):
             item_xhtml = renderer(item)
             if item_xhtml is not None:
                 tree.append(item_xhtml)
-                print >>sys.stderr, 'APPEND', etree.tostring(item_xhtml)
         tree.tail = self.xml.tail
 
         # Add a <div> for the message at the end of the response
         if response_msg:
             tree.append(self._render_response_msg_html(response_msg))
 
-        print >>sys.stderr, '+response_render'
-        #import pdb
-        #pdb.set_trace()
         return tree
 
     def evaluate_answers(self, student_answers, old_cmap):
