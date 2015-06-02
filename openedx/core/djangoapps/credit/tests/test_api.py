@@ -52,6 +52,15 @@ class CreditApiTestBase(TestCase):
 
         return credit_course
 
+    def add_credit_eligible_course(self, credit_course, username):
+        """
+        Mark the user eligible for credit course
+        """
+        credit_eligible_course = CreditEligibility(
+            course=credit_course, username=username, provider=CreditProvider.objects.get(provider_id=self.PROVIDER_ID))
+        credit_eligible_course.save()
+        return credit_eligible_course
+
 
 @ddt.ddt
 class CreditRequirementApiTests(CreditApiTestBase):
@@ -190,6 +199,15 @@ class CreditRequirementApiTests(CreditApiTestBase):
         grade_req = CreditRequirement.objects.filter(namespace="grade", name="grade")
         self.assertEqual(len(grade_req), 1)
         self.assertEqual(grade_req[0].active, False)
+
+    def test_is_user_eligible_for_credit(self):
+        credit_course = self.add_credit_course()
+        self.add_credit_eligible_course(credit_course, 'staff')
+        is_eligible = api.is_user_eligible_for_credit('staff', credit_course.course_key)
+        self.assertTrue(is_eligible)
+
+        is_eligible = api.is_user_eligible_for_credit('abc', credit_course.course_key)
+        self.assertFalse(is_eligible)
 
 
 @ddt.ddt

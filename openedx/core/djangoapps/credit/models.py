@@ -198,8 +198,22 @@ class CreditRequirementStatus(TimeStampedModel):
     # the grade to users later and to send the information to credit providers.
     reason = JSONField(default={})
 
+
     class Meta(object):  # pylint: disable=missing-docstring
         get_latest_by = "created"
+
+    @classmethod
+    def get_statuses(cls, requirement, username):
+        """ Get credit requirement statuses of given requirement and username
+
+        Args:
+            requirement(CreditRequirement): The identifier for a requirement
+            username(str): username of the user
+
+        Returns:
+            CreditRequirementStatus object
+        """
+        return cls.objects.filter(requirement_id__in=requirement, username=username)
 
 
 class CreditEligibility(TimeStampedModel):
@@ -214,6 +228,25 @@ class CreditEligibility(TimeStampedModel):
 
     class Meta(object):  # pylint: disable=missing-docstring
         unique_together = ('username', 'course')
+
+    @classmethod
+    def get_user_eligibility(cls, username):
+        """
+        returns list of all eligible courses
+        """
+        return cls.objects.filter(username=username).select_related('course', 'course__providers')
+
+    @classmethod
+    def is_credit_course(cls, course_key, username):
+        """Check that given course is credit or not.
+
+        Args:
+            course_key(CourseKey): The course identifier
+
+        Returns:
+            Bool True if the course is marked credit else False
+        """
+        return cls.objects.filter(course__course_key=course_key, username=username).exists()
 
 
 class CreditRequest(TimeStampedModel):
@@ -278,6 +311,7 @@ class CreditRequest(TimeStampedModel):
         ]
 
         """
+
         return [
             {
                 "uuid": request.uuid,

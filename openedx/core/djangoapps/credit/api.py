@@ -321,6 +321,92 @@ def get_credit_requests_for_user(username):
     """
     return CreditRequest.credit_requests_for_user(username)
 
+def get_credit_requirement_status(course_key, username):
+    """ Retrieve the user's status for each credit requirement in the course.
+
+    Args:
+        course_key (CourseKey): The identifier for course
+        username (str): The identifier of the user
+
+    Example:
+        >>> get_credit_requirement_status("course-v1-edX-DemoX-1T2015", "john")
+
+                [
+                    {
+                        "namespace": "reverification",
+                        "name": "i4x://edX/DemoX/edx-reverification-block/assessment_uuid",
+                        "criteria": {},
+                        "status": "satisfied",
+                    },
+                    {
+                        "namespace": "reverification",
+                        "name": "i4x://edX/DemoX/edx-reverification-block/assessment_uuid",
+                        "criteria": {},
+                        "status": "Not satisfied",
+                    },
+                    {
+                        "namespace": "proctored_exam",
+                        "name": "i4x://edX/DemoX/proctoring-block/final_uuid",
+                        "criteria": {},
+                        "status": "error",
+                    },
+                    {
+                        "namespace": "grade",
+                        "name": "i4x://edX/DemoX/proctoring-block/final_uuid",
+                        "criteria": {"min_grade": 0.8},
+                        "status": None,
+                    },
+                ]
+
+    Returns:
+        list of requirement statuses
+    """
+    requirements = CreditRequirement.get_course_requirements(course_key)
+    requirement_list = [requirement.id for requirement in requirements]
+    requirement_statuses = CreditRequirementStatus.get_statuses(requirement_list, username)
+    statuses = []
+    for requirement in requirements:
+        status = None
+        status_date = None
+        for requirement_status in requirement_statuses:
+            if requirement_status.requirement == requirement:
+                status = requirement_status.status
+                status_date = requirement_status.modified.strftime('%m/%d/%Y')
+                break
+        statuses.append({
+            "namespace": requirement.namespace,
+            "name": requirement.name,
+            "criteria": requirement.criteria,
+            "status": status,
+            "status_date": status_date,
+        })
+    return statuses
+
+
+def is_user_eligible_for_credit(username, course_key):
+    """Check if the given user is eligible for provided course
+
+    Args:
+        username(str): The identifier for user
+        course_key (CourseKey): The identifier for course
+
+    Returns:
+        True if user is eligible for the course else False
+    """
+    return CreditEligibility.is_credit_course(course_key, username)
+
+
+def is_credit_course(course_key):
+    """Check if the given course is a credit course
+
+    Arg:
+        course_key (CourseKey): The identifier for course
+
+    Returns:
+        True if course is credit course else False
+    """
+    return CreditCourse.is_credit_course(course_key)
+
 
 def _get_requirements_to_disable(old_requirements, new_requirements):
     """
