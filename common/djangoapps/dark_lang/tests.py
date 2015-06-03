@@ -145,9 +145,8 @@ class DarkLangMiddlewareTests(TestCase):
             self.process_request(accept='rel-ter;q=1.0, rel;q=0.5')
         )
 
-    def test_partial_matching_1(self):
+    def test_partial_matching_es_es419(self):
         # If I release 'es-419', 'es' should get 'es-419', not English
-        # If I release 'es-419', 'es-ar' should get 'es-419', not English
         DarkLangConfig(
             released_languages=('es-419, en'),
             changed_by=self.user,
@@ -159,12 +158,20 @@ class DarkLangMiddlewareTests(TestCase):
             self.process_request(accept='es;q=1.0, pt;q=0.5')
         )
 
+    def test_partial_matching_esAR_es419(self):
+        # If I release 'es-419', 'es-ar' should get 'es-419', not English
+        DarkLangConfig(
+            released_languages=('es-419, en'),
+            changed_by=self.user,
+            enabled=True
+        ).save()
+
         self.assertAcceptEquals(
             'es-419;q=1.0',
             self.process_request(accept='es-ar;q=1.0, pt;q=0.5')
         )
 
-    def test_partial_matching_2(self):
+    def test_partial_matching_esAR_es(self):
         # If I release 'es', 'es-ar' should get 'es', not English
         DarkLangConfig(
             released_languages=('es, en'),
@@ -177,7 +184,7 @@ class DarkLangMiddlewareTests(TestCase):
             self.process_request(accept='es-ar;q=1.0, pt;q=0.5')
         )
 
-    def test_partial_matching_3(self):
+    def test_partial_matching_es419_and_es_with_es(self):
         # If I release 'es-419', 'es',
         # 'es' should get 'es'
         DarkLangConfig(
@@ -189,9 +196,8 @@ class DarkLangMiddlewareTests(TestCase):
             'es;q=1.0',
             self.process_request(accept='es;q=1.0, pt;q=0.5')
         )
-        1/0
 
-    def test_partial_matching_4(self):
+    def test_partial_matching_es_and_es419_with_esAR(self):
         # If I release 'es', 'es-419'
         # 'es-ar' should get 'es-419'
         DarkLangConfig(
@@ -203,6 +209,20 @@ class DarkLangMiddlewareTests(TestCase):
         self.assertAcceptEquals(
             'es-419;q=1.0',
             self.process_request(accept='es-ar;q=1.0, pt;q=0.5')
+        )
+
+    def test_partial_matching_es_and_es419_with_es419(self):
+        # If I release 'es', 'es-419'
+        # 'es-419' should get 'es-419'
+        DarkLangConfig(
+            released_languages=('es, es-419'),
+            changed_by=self.user,
+            enabled=True
+        ).save()
+
+        self.assertAcceptEquals(
+            'es-419;q=1.0',
+            self.process_request(accept='es-419;q=1.0, pt;q=0.5')
         )
 
     def assertSessionLangEquals(self, value, request):

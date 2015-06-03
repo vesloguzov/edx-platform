@@ -12,9 +12,41 @@ the SessionMiddleware.
 """
 from django.conf import settings
 
-from django.utils.translation.trans_real import parse_accept_lang_header
+# TODO re-import this once we're on Django 1.5 or greater
+# from django.utils.translation.trans_real import parse_accept_lang_header
+import re
 
 from dark_lang.models import DarkLangConfig
+
+
+# Format of Accept-Language header values. From RFC 2616, section 14.4 and 3.9.
+accept_language_re = re.compile(r'''
+    ([A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*|\*)         # "en", "en-au", "x-y-z", "*"
+    (?:\s*;\s*q=(0(?:\.\d{,3})?|1(?:.0{,3})?))?   # Optional "q=1.00", "q=0.8"
+    (?:\s*,\s*|$)                                 # Multiple accepts per header.
+    ''', re.VERBOSE)
+
+def parse_accept_lang_header(lang_string):
+    """
+    Parses the lang_string, which is the body of an HTTP Accept-Language
+    header, and returns a list of (lang, q-value), ordered by 'q' values.
+
+    Any format errors in lang_string results in an empty list being returned.
+    """
+    # TODO parse_accept_lang_header is broken until we are on Django 1.5 or greater
+    # so this hack can be removed once we upgrade. See https://code.djangoproject.com/ticket/19381
+    result = []
+    pieces = accept_language_re.split(lang_string)
+    if pieces[-1]:
+        return []
+    for i in range(0, len(pieces) - 1, 3):
+        first, lang, priority = pieces[i : i + 3]
+        if first:
+            return []
+        priority = priority and float(priority) or 1.0
+        result.append((lang, priority))
+    result.sort(key=lambda k: k[1], reverse=True)
+    return result
 
 
 def dark_parse_accept_lang_header(accept):
@@ -29,13 +61,16 @@ def dark_parse_accept_lang_header(accept):
     day edX uses django 1.7 or higher, this function can be modified to support the old
     language codes until there are no browsers use them.
     '''
+    print 'accept is:', accept
+    # TODO parse_accept_lang_header is broken until we are on Django 1.5 or greater
+    # so this hack can be removed once we upgrade. See https://code.djangoproject.com/ticket/19381
     browser_langs = parse_accept_lang_header(accept)
     print 'browser langs are: {}'.format(browser_langs)
     django_langs = []
     for lang, priority in browser_langs:
         lang = CHINESE_LANGUAGE_CODE_MAP.get(lang.lower(), lang)
         django_langs.append((lang, priority))
-    print 'django langs are: {}'.format(django_langs)
+
     return django_langs
 
 # If django 1.7 or higher is used, the right-side can be updated with new-style codes.
@@ -88,30 +123,35 @@ class DarkLangMiddleware(object):
         ``True`` iff one of the values in ``self.released_langs`` is a prefix of ``lang_code``.
         """
         for released_lang in self.released_langs:
-            print "Checking if {} starts with {}".format(lang_code.lower(), released_lang.lower())
+            print "_is_released: Checking if {} starts with {}".format(lang_code.lower(), released_lang.lower())
             if lang_code.lower().startswith(released_lang.lower()):
                 print "        (It did!)"
                 return True
-        # Didn't find anything; check if we have any released langs that partially
-        # match the user's requested language
-        for released_lang in self.released_langs:
-            print "Checking if {} starts with {}".format(released_lang.lower(), lang_code.lower())
-            if released_lang.lower().startswith(lang_code.lower()):
-                print "        (It did!)"
-                return True
+
         return False
 #        return any(lang_code.lower().startswith(released_lang.lower()) for released_lang in self.released_langs)
-
     def _format_accept_value(self, lang, priority=1.0):
         """
         Formats lang and priority into a valid accept header fragment.
         """
-        if self._is_released(lang):
-            return "{};q={}".format(lang, priority)
-        # TODO Undo changes to _is_released
-        # _format_accept_value should do the checking of _is_released,
-        # and if not, should check if there's a partial match then alter
+        # Check if language is released: iff one of the values in 
+        # ``self.released_langs`` is a prefix of ``lang_code``
+        print "released langs are: {}".format(self.released_langs)
+        for released_lang in self.released_langs:
+            print "_is_released: Checking if {} starts with {}".format(lang.lower(), released_lang.lower())
+            if lang.lower().startswith(released_lang.lower()):
+                print "        (It did!)"
+                print "returning {};q={}".format(released_lang, priority)
+                return "{};q={}".format(released_lang, priority)
+        # Check if we have any released langs that partially
+        # match the user's requested language, then alter
         # the accept header a bit to give a good-enough match
+        for released_lang in self.released_langs:
+            print "_format_accept_value: Checking if {} starts with {}".format(released_lang.lower(), lang.lower())
+            if released_lang.lower().startswith(lang.lower()):
+                print "        (It did!)"
+                print "returning {};q={}".format(released_lang, priority)
+                return "{};q={}".format(released_lang, priority)
 
     def _clean_accept_headers(self, request):
         """
@@ -124,9 +164,15 @@ class DarkLangMiddleware(object):
 
         new_accept = []
         for lang, priority in dark_parse_accept_lang_header(accept):
-            new_accept.append(self._format_accept_value(lang, priority))
+            cleaned_accept = self._format_accept_value(lang, priority)
+            if cleaned_accept is not None:
+                new_accept.append(cleaned_accept)
 
+        print new_accept
+        new_accept = ", ".join(new_accept)
+        print 'setting meta accept to:', new_accept
         request.META['HTTP_ACCEPT_LANGUAGE'] = new_accept
+        print request.META['HTTP_ACCEPT_LANGUAGE']
 
     def _activate_preview_language(self, request):
         """
