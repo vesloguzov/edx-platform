@@ -106,7 +106,12 @@ class DarkLangMiddleware(object):
         """
         Formats lang and priority into a valid accept header fragment.
         """
-        return "{};q={}".format(lang, priority)
+        if self._is_released(lang):
+            return "{};q={}".format(lang, priority)
+        # TODO Undo changes to _is_released
+        # _format_accept_value should do the checking of _is_released,
+        # and if not, should check if there's a partial match then alter
+        # the accept header a bit to give a good-enough match
 
     def _clean_accept_headers(self, request):
         """
@@ -117,16 +122,9 @@ class DarkLangMiddleware(object):
         if accept is None or accept == '*':
             return
 
-        # TODO Undo changes to _is_released
-        # _format_accept_value should do the checking of _is_released,
-        # and if not, should check if there's a partial match then alter
-        # the accept header a bit to give a good-enough match
-        new_accept = ", ".join(
-            self._format_accept_value(lang, priority)
-            for lang, priority
-            in dark_parse_accept_lang_header(accept)
-            if self._is_released(lang)
-        )
+        new_accept = []
+        for lang, priority in dark_parse_accept_lang_header(accept):
+            new_accept.append(self._format_accept_value(lang, priority))
 
         request.META['HTTP_ACCEPT_LANGUAGE'] = new_accept
 
