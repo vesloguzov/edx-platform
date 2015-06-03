@@ -51,12 +51,13 @@ log = logging.getLogger(__name__)
 # Frames - ('FilePath','LineNumber','Context')
 # ex. {"<class 'courseware.models.StudentModule'>" : [[(file,line number,context),(---,---,---)],
 #                                                     [(file,line number,context),(---,---,---)]]}
-STACK_BOOK = {}
 STACK_BOOK = collections.defaultdict(list)
 
 # filter to trickle down call stacks
-EXCLUDE = ['^.*python2.7.*$', '^.*call_stack_manager.*$', '^.*<exec_function>.*$', '^.*exec_code_object.*$' ]
+EXCLUDE = ['^.*python2.7.*$', '^.*call_stack_manager.*$', '^.*<exec_function>.*$', '^.*exec_code_object.*$']
 REGULAR_EXPS = [re.compile(x) for x in EXCLUDE]
+
+TRACK_FLAG = True
 
 
 def capture_call_stack(current_model):
@@ -67,14 +68,14 @@ def capture_call_stack(current_model):
     current_model - Name of the model class
     """
     # holds temporary callstack
-    temp_call_stack = [(line.split(',')[0].strip().replace("\n", "")[6:-1],
-                        line.split(',')[1].strip().replace("\n", "")[6:],
-                        line.split(',')[2].strip().replace("\n", "")[3:])
-                       for line in traceback.format_stack()
-                       if not any(reg.match(line.replace("\n", "")) for reg in REGULAR_EXPS)]
+    temp_call_stack = [(frame.split(',')[0].strip().replace("\n", "")[6:-1],
+                        frame.split(',')[1].strip().replace("\n", "")[6:],
+                        frame.split(',')[2].strip().replace("\n", "")[3:])
+                       for frame in traceback.format_stack()
+                       if not any(reg.match(frame.replace("\n", "")) for reg in REGULAR_EXPS)]
 
     # avoid duplication.
-    if temp_call_stack not in STACK_BOOK[current_model]:
+    if temp_call_stack not in STACK_BOOK[current_model] and TRACK_FLAG:
         STACK_BOOK[current_model].append(temp_call_stack)
         log.info("logging new call in global stack book, for %s", current_model)
         log.info(STACK_BOOK)
@@ -109,3 +110,19 @@ class CallStackManager(Manager):
         """
         capture_call_stack(str(self.model))
         return super(CallStackManager, self).get_query_set()
+
+
+def donottrack(func):
+    """
+    function decorator which deals with toggling call stacks
+    How to use -
+    1. Just import from openedx.core.lib.call_stack_manager import donottrack
+    :param func: Argument function
+    :return: wrapped function
+    """
+    def wrapper_func(*args, **kwargs):
+        global TRACK_FLAG
+        TRACK_FLAG = False
+        func(*args, **kwargs)
+        TRACK_FLAG = True
+    return wrapper_func
