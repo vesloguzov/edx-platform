@@ -54,8 +54,8 @@ log = logging.getLogger(__name__)
 STACK_BOOK = {}
 STACK_BOOK = collections.defaultdict(list)
 
-# filter to trickle down call stacks.
-EXCLUDE = ['^.*python2.7.*$', '^.*call_stack_manager.*$']
+# filter to trickle down call stacks
+EXCLUDE = ['^.*python2.7.*$', '^.*call_stack_manager.*$', '^.*<exec_function>.*$', '^.*exec_code_object.*$' ]
 REGULAR_EXPS = [re.compile(x) for x in EXCLUDE]
 
 
@@ -80,18 +80,6 @@ def capture_call_stack(current_model):
         log.info(STACK_BOOK)
 
 
-class CallStackManager(Manager):
-    """
-    gets call stacks of model classes
-    """
-    def get_query_set(self):
-        """
-        overriding the default queryset API methods
-        """
-        capture_call_stack(str(self.model))
-        return super(CallStackManager, self).get_query_set()
-
-
 class CallStackMixin(object):
     """
     A mixin class for getting call stacks when Save() and Delete() methods are called
@@ -108,4 +96,16 @@ class CallStackMixin(object):
         Logs before delete and overrides respective model API delete()
         """
         capture_call_stack(str(type(self)))
-        return super(CallStackMixin, self).save(*args, **kwargs)
+        return super(CallStackMixin, self).delete(*args, **kwargs)
+
+
+class CallStackManager(Manager):
+    """
+    gets call stacks of model classes
+    """
+    def get_query_set(self):
+        """
+        overriding the default queryset API methods
+        """
+        capture_call_stack(str(self.model))
+        return super(CallStackManager, self).get_query_set()
