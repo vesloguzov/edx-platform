@@ -92,5 +92,6 @@ class TabNavPage(PageObject):
         # Use the private version of _is_on_tab to skip the page check
         return EmptyPromise(
             lambda: self._is_on_tab(tab_name),
-            "{0} is the current tab".format(tab_name)
+            "{0} is the current tab".format(tab_name),
+            timeout=120
         )
