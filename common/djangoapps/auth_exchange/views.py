@@ -82,4 +82,5 @@ class LoginWithAccessTokenView(APIView):
         if not hasattr(request.user, 'backend'):
             request.user.backend = self._get_path_of_arbitrary_backend_for_user(request.user)
         login(request, request.user)  # login generates and stores the user's cookies in the session
+        request.session.set_expiry(2628000)  # TODO temporarily have it expire in 1 month
         return HttpResponse(status=204)  # cookies stored in the session are returned with the response
