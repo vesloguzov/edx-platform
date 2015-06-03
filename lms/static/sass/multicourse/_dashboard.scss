@@ -511,17 +511,11 @@
       }
 
       .enter-course {
-        @include button(simple, $button-color);
-        @include box-sizing(border-box);
-        border-radius: 3px;
+        @extend %btn-pl-primary-base;
         @include float(right);
-        font: normal 15px/1.6rem $sans-serif;
-        letter-spacing: 0;
-        text-align: center;
 
         &.archived {
-          @include button(simple, $button-archive-color);
-          font: normal 15px/1.6rem $sans-serif;
+          @extend %btn-pl-default-base;
 
           &:hover, &:focus {
             text-decoration: none;

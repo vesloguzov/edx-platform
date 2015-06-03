@@ -285,6 +285,34 @@
   }
 }
 
+// imitating the pattern library
+// starts with overrides
+%btn-pl-default-base {
+  @include box-sizing(border-box);
+  @extend %t-copy-base;
+  letter-spacing: 0;
+  @extend %btn-primary;
+  border: 1px solid darken($button-color,10%);
+  border-radius: 3px;
+  padding: ($baseline/2) $baseline;
+  background-color: $white;
+  color: darken($button-color,10%);
+  text-align: center;
+
+  &:hover,
+  &:focus {
+    border: 1px solid transparent;
+    background-color: $button-color;
+    color: $white;
+  }
+}
+
+%btn-pl-primary-base {
+  @extend %btn-pl-default-base;
+  background-color: darken($button-color,10%);
+  color: $white;
+}
+
 // ====================
 
   // application: canned actions
