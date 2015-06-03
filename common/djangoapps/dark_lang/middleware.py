@@ -30,11 +30,12 @@ def dark_parse_accept_lang_header(accept):
     language codes until there are no browsers use them.
     '''
     browser_langs = parse_accept_lang_header(accept)
+    print 'browser langs are: {}'.format(browser_langs)
     django_langs = []
     for lang, priority in browser_langs:
         lang = CHINESE_LANGUAGE_CODE_MAP.get(lang.lower(), lang)
         django_langs.append((lang, priority))
-
+    print 'django langs are: {}'.format(django_langs)
     return django_langs
 
 # If django 1.7 or higher is used, the right-side can be updated with new-style codes.
@@ -76,6 +77,7 @@ class DarkLangMiddleware(object):
         Prevent user from requesting un-released languages except by using the preview-lang query string.
         """
         if not DarkLangConfig.current().enabled:
+            print "Dark lang config not enabled"
             return
 
         self._clean_accept_headers(request)
@@ -85,7 +87,20 @@ class DarkLangMiddleware(object):
         """
         ``True`` iff one of the values in ``self.released_langs`` is a prefix of ``lang_code``.
         """
-        return any(lang_code.lower().startswith(released_lang.lower()) for released_lang in self.released_langs)
+        for released_lang in self.released_langs:
+            print "Checking if {} starts with {}".format(lang_code.lower(), released_lang.lower())
+            if lang_code.lower().startswith(released_lang.lower()):
+                print "        (It did!)"
+                return True
+        # Didn't find anything; check if we have any released langs that partially
+        # match the user's requested language
+        for released_lang in self.released_langs:
+            print "Checking if {} starts with {}".format(released_lang.lower(), lang_code.lower())
+            if released_lang.lower().startswith(lang_code.lower()):
+                print "        (It did!)"
+                return True
+        return False
+#        return any(lang_code.lower().startswith(released_lang.lower()) for released_lang in self.released_langs)
 
     def _format_accept_value(self, lang, priority=1.0):
         """
@@ -102,6 +117,10 @@ class DarkLangMiddleware(object):
         if accept is None or accept == '*':
             return
 
+        # TODO Undo changes to _is_released
+        # _format_accept_value should do the checking of _is_released,
+        # and if not, should check if there's a partial match then alter
+        # the accept header a bit to give a good-enough match
         new_accept = ", ".join(
             self._format_accept_value(lang, priority)
             for lang, priority
