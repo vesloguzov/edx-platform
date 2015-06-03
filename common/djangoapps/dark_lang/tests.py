@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.http import HttpRequest
 
 from django.test import TestCase
+import ddt
 from mock import Mock
 
 from dark_lang.middleware import DarkLangMiddleware
@@ -23,6 +24,7 @@ def set_if_set(dct, key, value):
         dct[key] = value
 
 
+@ddt.ddt
 class DarkLangMiddlewareTests(TestCase):
     """
     Tests of DarkLangMiddleware
@@ -123,14 +125,17 @@ class DarkLangMiddlewareTests(TestCase):
         )
 
     def test_accept_released_territory(self):
+        # We will munge 'rel-ter' to be 'rel', so the 'rel-ter'
+        # user will actually receive the released language 'rel'
+        # (Otherwise, the user will actually end up getting the server default)
         self.assertAcceptEquals(
-            'rel-ter;q=1.0, rel;q=0.5',
+            'rel;q=1.0, rel;q=0.5',
             self.process_request(accept='rel-ter;q=1.0, rel;q=0.5')
         )
 
     def test_accept_mixed_case(self):
         self.assertAcceptEquals(
-            'rel-TER;q=1.0, REL;q=0.5',
+            'rel;q=1.0, rel;q=0.5',
             self.process_request(accept='rel-TER;q=1.0, REL;q=0.5')
         )
 
@@ -141,7 +146,7 @@ class DarkLangMiddlewareTests(TestCase):
         ).save()
 
         self.assertAcceptEquals(
-            'rel-ter;q=1.0',
+            'rel-ter;q=1.0, rel-ter;q=0.5',
             self.process_request(accept='rel-ter;q=1.0, rel;q=0.5')
         )
 
@@ -159,7 +164,7 @@ class DarkLangMiddlewareTests(TestCase):
         )
 
     def test_partial_matching_esAR_es419(self):
-        # If I release 'es-419', 'es-ar' should get 'es-419', not English
+        # If I release 'es-419', 'es-AR' should get 'es-419', not English
         DarkLangConfig(
             released_languages=('es-419, en'),
             changed_by=self.user,
@@ -168,11 +173,11 @@ class DarkLangMiddlewareTests(TestCase):
 
         self.assertAcceptEquals(
             'es-419;q=1.0',
-            self.process_request(accept='es-ar;q=1.0, pt;q=0.5')
-        )
+            self.process_request(accept='es-AR;q=1.0, pt;q=0.5')
+       )
 
     def test_partial_matching_esAR_es(self):
-        # If I release 'es', 'es-ar' should get 'es', not English
+        # If I release 'es', 'es-AR' should get 'es', not English
         DarkLangConfig(
             released_languages=('es, en'),
             changed_by=self.user,
@@ -181,11 +186,11 @@ class DarkLangMiddlewareTests(TestCase):
 
         self.assertAcceptEquals(
             'es;q=1.0',
-            self.process_request(accept='es-ar;q=1.0, pt;q=0.5')
+            self.process_request(accept='es-AR;q=1.0, pt;q=0.5')
         )
 
     def test_partial_matching_es419_and_es_with_es(self):
-        # If I release 'es-419', 'es',
+        # If I release 'es-419, es'
         # 'es' should get 'es'
         DarkLangConfig(
             released_languages=('es-419, es'),
@@ -197,9 +202,14 @@ class DarkLangMiddlewareTests(TestCase):
             self.process_request(accept='es;q=1.0, pt;q=0.5')
         )
 
-    def test_partial_matching_es_and_es419_with_esAR(self):
-        # If I release 'es', 'es-419'
-        # 'es-ar' should get 'es-419'
+    @ddt.data(
+        'es-AR',  # Argentina
+        'es-PY',  # Paraguay
+        'es-419',  # General Latin American accept code
+    )
+    def test_partial_matching_es_LA(self, latin_america_code):
+        # If I release 'es, es-419'
+        # Latin American codes should get es-419
         DarkLangConfig(
             released_languages=('es, es-419'),
             changed_by=self.user,
@@ -208,21 +218,7 @@ class DarkLangMiddlewareTests(TestCase):
 
         self.assertAcceptEquals(
             'es-419;q=1.0',
-            self.process_request(accept='es-ar;q=1.0, pt;q=0.5')
-        )
-
-    def test_partial_matching_es_and_es419_with_es419(self):
-        # If I release 'es', 'es-419'
-        # 'es-419' should get 'es-419'
-        DarkLangConfig(
-            released_languages=('es, es-419'),
-            changed_by=self.user,
-            enabled=True
-        ).save()
-
-        self.assertAcceptEquals(
-            'es-419;q=1.0',
-            self.process_request(accept='es-419;q=1.0, pt;q=0.5')
+            self.process_request(accept='{};q=1.0, pt;q=0.5'.format(latin_america_code))
         )
 
     def assertSessionLangEquals(self, value, request):
@@ -303,6 +299,6 @@ class DarkLangMiddlewareTests(TestCase):
         ).save()
 
         self.assertAcceptEquals(
-            'zh-CN;q=1.0, zh-TW;q=0.5, zh-HK;q=0.3',
+            'zh-cn;q=1.0, zh-tw;q=0.5, zh-hk;q=0.3',
             self.process_request(accept='zh-Hans;q=1.0, zh-Hant-TW;q=0.5, zh-HK;q=0.3')
         )

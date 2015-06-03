@@ -1,4 +1,9 @@
 """
+WARNING: The dark lang middleware munges the user's language preference accept
+headers; langugages that are listed as a preference but are not released will
+be removed! Thus, apps needing to get at the user's actual language preference
+must run PRIOR to the middleware being run.
+
 Middleware for dark-launching languages. These languages won't be used
 when determining which translation to give a user based on their browser
 header, but can be selected by setting the ``preview-lang`` query parameter
@@ -12,13 +17,16 @@ the SessionMiddleware.
 """
 from django.conf import settings
 
-# TODO re-import this once we're on Django 1.5 or greater
-# from django.utils.translation.trans_real import parse_accept_lang_header
 import re
 
 from dark_lang.models import DarkLangConfig
 
 
+# TODO re-import this once we're on Django 1.5 or greater. Also remove
+# `accept_language_re` and the function `parse_accept_lang_header`.
+# from django.utils.translation.trans_real import parse_accept_lang_header
+
+# ***** Imported from Django 1.5+ ***** #
 # Format of Accept-Language header values. From RFC 2616, section 14.4 and 3.9.
 accept_language_re = re.compile(r'''
     ([A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*|\*)         # "en", "en-au", "x-y-z", "*"
@@ -49,6 +57,7 @@ def parse_accept_lang_header(lang_string):
     return result
 
 
+# ***** Imported from Django 1.7+ ***** #
 def dark_parse_accept_lang_header(accept):
     '''
     The use of 'zh-cn' for 'Simplified Chinese' and 'zh-tw' for 'Traditional Chinese'
@@ -87,6 +96,11 @@ CHINESE_LANGUAGE_CODE_MAP = {
     'zh-mo': 'zh-TW',       # Chinese (Traditional, Macau)
     'zh-sg': 'zh-CN',       # Chinese (Simplified, Singapore)
 }
+# ***** End Django future imports ***** #
+
+# Langugage codes that can fall back to 'es-419', Latin American Spanish.
+LATIN_AMERICAN_LANGUAGE_CODES = [
+]
 
 
 class DarkLangMiddleware(object):
@@ -134,21 +148,31 @@ class DarkLangMiddleware(object):
         """
         Formats lang and priority into a valid accept header fragment.
         """
-        # Check if language is released: iff one of the values in 
-        # ``self.released_langs`` is a prefix of ``lang_code``
+        lang = lang.lower()
         print "released langs are: {}".format(self.released_langs)
+        # Check 1: Check if there is an EXACT match.
         for released_lang in self.released_langs:
-            print "_is_released: Checking if {} starts with {}".format(lang.lower(), released_lang.lower())
-            if lang.lower().startswith(released_lang.lower()):
+            print "Check 1: Checking if {} == {}".format(lang, released_lang)
+            if lang == released_lang:
                 print "        (It did!)"
                 print "returning {};q={}".format(released_lang, priority)
                 return "{};q={}".format(released_lang, priority)
+
+        # Check 2: Check if one of the values in ``self.released_langs`` is a prefix of ``lang_code``
+        for released_lang in self.released_langs:
+            print "Check 2: Checking if {} starts with {}".format(lang, released_lang)
+            if lang.startswith(released_lang):
+                print "        (It did!)"
+                print "returning {};q={}".format(released_lang, priority)
+                return "{};q={}".format(released_lang, priority)
+
+        # Check 3: Check if ``lang_code`` is a prefix of one of the values in ``self.released_langs``
         # Check if we have any released langs that partially
         # match the user's requested language, then alter
         # the accept header a bit to give a good-enough match
         for released_lang in self.released_langs:
-            print "_format_accept_value: Checking if {} starts with {}".format(released_lang.lower(), lang.lower())
-            if released_lang.lower().startswith(lang.lower()):
+            print "Check 3: Checking if {} starts with {}".format(released_lang, lang)
+            if released_lang.startswith(lang):
                 print "        (It did!)"
                 print "returning {};q={}".format(released_lang, priority)
                 return "{};q={}".format(released_lang, priority)
