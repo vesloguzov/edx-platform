@@ -89,7 +89,7 @@ class ProblemClarificationTest(ProblemsTest):
         self.assertNotIn('strong', tooltip_text)
 
 
-class ProblemExtendedHintTest(ProblemsTest):
+class ProblemExtendedHintTest(ProblemsTest, EventsTestMixin):
     """
     Test that extended hint features plumb through to the page html.
     """
@@ -122,6 +122,12 @@ class ProblemExtendedHintTest(ProblemsTest):
         problem_page.fill_answer('B')
         problem_page.click_check()
         self.assertEqual(problem_page.message_text, u'Incorrect: hint')
+        # Now check tracking events
+        events = self.wait_for_events({'event_type': 'edx.problem.hint.demandhint_displayed'})
+        self.assert_events_match(
+            [{'event': {'please': 'print'}}],
+            events
+        )
 
     def test_demand_hint(self):
         """
