@@ -19,7 +19,6 @@ from lang_pref import LANGUAGE_KEY
 from submissions import api as sub_api  # installed from the edx-submissions repository
 from student.models import anonymous_id_for_user
 from openedx.core.djangoapps.user_api.models import UserPreference
-
 from microsite_configuration import microsite
 
 

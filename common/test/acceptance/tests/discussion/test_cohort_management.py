@@ -16,7 +16,7 @@ from ...pages.lms.auto_auth import AutoAuthPage
 from ...pages.lms.instructor_dashboard import InstructorDashboardPage, DataDownloadPage
 from ...pages.studio.settings_advanced import AdvancedSettingsPage
 from ...pages.studio.settings_group_configurations import GroupConfigurationsPage
-from flaky import flaky
+
 
 import uuid
 
@@ -428,8 +428,6 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         message = "There must be one cohort to which students can automatically be assigned."
         self.assertEqual(message, self.cohort_management_page.assignment_settings_message)
 
-
-    @flaky(max_runs=10, min_passes=10)
     def test_cohort_enable_disable(self):
         """
         Scenario: Cohort Enable/Disable checkbox related functionality is working as intended.
