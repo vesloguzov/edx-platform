@@ -292,31 +292,31 @@
   @extend %t-copy-base;
   letter-spacing: 0;
   @extend %btn-primary;
-  border: 1px solid darken($button-color,10%);
+  border: 1px solid darken($action-primary-bg,10%);
   border-radius: 3px;
   padding: ($baseline/2) $baseline;
-  background-color: $white;
-  color: darken($button-color,10%);
+  background-color: $action-primary-fg;
+  color: darken($action-primary-bg,10%);
   text-align: center;
 
   &:hover,
   &:focus {
     border: 1px solid transparent;
-    background-color: $button-color;
-    color: $white;
+    background-color: $action-primary-bg;
+    color: $action-primary-fg;
   }
 }
 
 %btn-pl-primary-base {
   @extend %btn-pl-default-base;
-  background-color: darken($button-color,10%);
-  color: $white;
+  background-color: darken($action-primary-bg,10%);
+  color: $action-primary-fg;
 }
 
 %btn-pl-green-base {
   @extend %btn-pl-default-base;
   background-color: darken($green-d1,10%);
-  color: $white;
+  color: $action-primary-fg;
 
   &:hover,
   &:focus {
