@@ -429,7 +429,7 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         self.assertEqual(message, self.cohort_management_page.assignment_settings_message)
 
 
-    @flaky(max_runs=20, min_passes=20)
+    @flaky(max_runs=10, min_passes=10)
     def test_cohort_enable_disable(self):
         """
         Scenario: Cohort Enable/Disable checkbox related functionality is working as intended.
@@ -443,9 +443,6 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         Then I can see the `Enable Cohorts` checkbox is unchecked.
         And cohort management controls are not visible.
         """
-        from nose.tools import set_trace
-        set_trace()
-        
         self.assertTrue(self.cohort_management_page.is_cohorted)
         self.assertTrue(self.cohort_management_page.cohort_management_controls_visible())
         self.cohort_management_page.is_cohorted = False
