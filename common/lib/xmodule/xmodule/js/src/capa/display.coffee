@@ -706,7 +706,7 @@ class @Problem
   save_quietly: (callback) =>
     console.log 'problem_save_hint', @answers
     $.postWithPrefix "#{@url}/problem_save", @answers, (response) =>
-      @updateProgress response
+      ##@updateProgress response  ## TODO nparlante - this line does not seem to be necessary
       console.log 'call callback'
       callback()
 

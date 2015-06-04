@@ -10,6 +10,7 @@ from ...pages.lms.courseware import CoursewarePage
 from ...pages.lms.problem import ProblemPage
 from ...fixtures.course import CourseFixture, XBlockFixtureDesc
 from textwrap import dedent
+from ..helpers import EventsTestMixin
 
 
 class ProblemsTest(UniqueCourseTest):
