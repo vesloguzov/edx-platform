@@ -12,6 +12,8 @@ CallStackMixin - used for Model save(), and delete() method
 Functions:
 capture_call_stack - global function used to store call stack
 
+Decorators:
+donottrack - mainly for the places where we know the calls. This decorator will let us not to track in specified cases
 How to use-
 1. Import following in the file where class to be tracked resides
     from openedx.core.lib.call_stack_manager import CallStackManager, CallStackMixin
@@ -67,15 +69,16 @@ def capture_call_stack(current_model):
     Arguments:
     current_model - Name of the model class
     """
+
     # holds temporary callstack
-    temp_call_stack = [(frame.split(',')[0].strip().replace("\n", "")[6:-1],
-                        frame.split(',')[1].strip().replace("\n", "")[6:],
-                        frame.split(',')[2].strip().replace("\n", "")[3:])
-                       for frame in traceback.format_stack()
-                       if not any(reg.match(frame.replace("\n", "")) for reg in REGULAR_EXPS)]
+    temp_call_stack = [(frame.split(',')[0].strip()[6:-1],
+                        frame.split(',')[1].strip()[6:],
+                        frame.split(',')[2].strip()[3:])
+                       for frame in [stack.replace("\n", "") for stack in traceback.format_stack()]
+                       if not any(reg.match(frame) for reg in REGULAR_EXPS)]
 
     # avoid duplication.
-    if temp_call_stack not in STACK_BOOK[current_model] and TRACK_FLAG:
+    if temp_call_stack not in STACK_BOOK[current_model]:
         STACK_BOOK[current_model].append(temp_call_stack)
         log.info("logging new call in global stack book, for %s", current_model)
         log.info(STACK_BOOK)
@@ -116,12 +119,16 @@ def donottrack(func):
     """
     function decorator which deals with toggling call stacks
     How to use -
-    1. Just import from openedx.core.lib.call_stack_manager import donottrack
+    1. Just Import following
+        import from openedx.core.lib.call_stack_manager import donottrack
     :param func: Argument function
     :return: wrapped function
     """
     def wrapper_func(*args, **kwargs):
-        global TRACK_FLAG
+        """
+        :return: wrapped function after setting TRACE_FLAG as True
+        """
+        global TRACK_FLAG  # pylint: disable-msg=W0603
         TRACK_FLAG = False
         func(*args, **kwargs)
         TRACK_FLAG = True
