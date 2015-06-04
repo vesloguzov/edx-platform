@@ -313,6 +313,18 @@
   color: $white;
 }
 
+%btn-pl-green-base {
+  @extend %btn-pl-default-base;
+  background-color: darken($green-d1,10%);
+  color: $white;
+
+  &:hover,
+  &:focus {
+    border: 1px solid transparent;
+    background-color: $green-d1;
+  }
+}
+
 // ====================
 
   // application: canned actions

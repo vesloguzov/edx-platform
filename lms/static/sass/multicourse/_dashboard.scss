@@ -892,15 +892,8 @@
             position: relative;
 
             .cta {
-              @include button(simple, $green-d1);
-              @include box-sizing(border-box);
+              @extend %btn-pl-green-base;
               @include float(right);
-              border-radius: 3px;
-              display: block;
-              font: normal 15px/1.6rem $sans-serif;
-              letter-spacing: 0;
-              padding: 6px 32px 7px;
-              text-align: center;
             }
           }
         }
