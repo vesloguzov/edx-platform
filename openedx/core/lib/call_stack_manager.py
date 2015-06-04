@@ -128,7 +128,7 @@ def donottrack(func):
         """
         :return: wrapped function after setting TRACE_FLAG as True
         """
-        global TRACK_FLAG  # pylint: disable-msg=W0603
+        global TRACK_FLAG  # pylint: disable=W0603
         TRACK_FLAG = False
         func(*args, **kwargs)
         TRACK_FLAG = True

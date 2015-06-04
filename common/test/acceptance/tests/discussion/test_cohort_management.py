@@ -16,6 +16,7 @@ from ...pages.lms.auto_auth import AutoAuthPage
 from ...pages.lms.instructor_dashboard import InstructorDashboardPage, DataDownloadPage
 from ...pages.studio.settings_advanced import AdvancedSettingsPage
 from ...pages.studio.settings_group_configurations import GroupConfigurationsPage
+from flaky import flaky
 
 import uuid
 
@@ -427,6 +428,8 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         message = "There must be one cohort to which students can automatically be assigned."
         self.assertEqual(message, self.cohort_management_page.assignment_settings_message)
 
+
+    @flaky(max_runs=20, min_passes=20)
     def test_cohort_enable_disable(self):
         """
         Scenario: Cohort Enable/Disable checkbox related functionality is working as intended.
@@ -440,6 +443,9 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         Then I can see the `Enable Cohorts` checkbox is unchecked.
         And cohort management controls are not visible.
         """
+        from nose.tools import set_trace
+        set_trace()
+        
         self.assertTrue(self.cohort_management_page.is_cohorted)
         self.assertTrue(self.cohort_management_page.cohort_management_controls_visible())
         self.cohort_management_page.is_cohorted = False
