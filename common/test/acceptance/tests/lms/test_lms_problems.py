@@ -122,12 +122,6 @@ class ProblemExtendedHintTest(ProblemsTest, EventsTestMixin):
         problem_page.fill_answer('B')
         problem_page.click_check()
         self.assertEqual(problem_page.message_text, u'Incorrect: hint')
-        # Now check tracking events
-        events = self.wait_for_events({'event_type': 'edx.problem.hint.demandhint_displayed'})
-        self.assert_events_match(
-            [{'event': {'please': 'print'}}],
-            events
-        )
 
     def test_demand_hint(self):
         """
@@ -142,3 +136,12 @@ class ProblemExtendedHintTest(ProblemsTest, EventsTestMixin):
         self.assertEqual(problem_page.hint_text, u'Hint (2 of 2): demand-hint2')
         problem_page.click_hint()
         self.assertEqual(problem_page.hint_text, u'Hint (1 of 2): demand-hint1')
+        # Now check tracking events
+        actual = self.wait_for_events(
+            event_filter={'event_type': 'edx.problem.hint.demandhint_displayed'},
+            number_of_matches=3
+        )
+        self.assert_events_match(
+            [{'event': {'please': 'print'}}],
+            actual
+        )
