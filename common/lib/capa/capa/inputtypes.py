@@ -90,7 +90,14 @@ class Status(object):
             'unsubmitted': _('unanswered'),
             'queued': _('processing'),
         }
-        self.display_name = names.get(status, unicode(status))
+        tooltips = {
+            # Translators: these are tooltips that indicate the state of an assessment question
+            'correct': _('This is correct.'),
+            'incorrect': _('This is incorrect.'),
+            'unanswered': _('This is unanswered.'),
+        }
+        self.display_name = names.get(status, default=unicode(status))
+        self.display_tooltip = tooltips.get(status, default=u'')
         self._status = status or ''
 
     def __str__(self):

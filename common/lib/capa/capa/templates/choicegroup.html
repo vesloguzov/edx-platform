@@ -32,7 +32,7 @@
 
             % if input_type == 'radio' and ( (isinstance(value, basestring) and (choice_id == value))  or  (not isinstance(value, basestring) and choice_id in value) ):
             % if status in ('correct', 'incorrect') and not show_correctness=='never':
-            <span class="sr status">${choice_description|h} - ${status.display_name}</span>
+            <span class="sr status">${choice_description|h} - ${status. }</span>
             % endif
             % endif
         </label>
@@ -43,7 +43,7 @@
         % if input_type == 'checkbox' or not value:
             <span class="status ${status.classname if show_correctness != 'never' else 'unanswered'}"
                 id="status_${id}"
-                aria-describedby="inputtype_${id}" data-tooltip="This is ${status.display_name}.">
+                aria-describedby="inputtype_${id}" data-tooltip="${status.display_tooltip}">
                 <span class="sr">
                     %for choice_id, choice_description in choices:
                         % if choice_id in value:
