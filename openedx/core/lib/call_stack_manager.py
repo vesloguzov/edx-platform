@@ -71,11 +71,14 @@ def capture_call_stack(current_model):
     """
 
     # holds temporary callstack
-    temp_call_stack = [(frame.split(',')[0].strip()[6:-1],
-                        frame.split(',')[1].strip()[6:],
-                        frame.split(',')[2].strip()[3:])
-                       for frame in [stack.replace("\n", "") for stack in traceback.format_stack()]
-                       if not any(reg.match(frame) for reg in REGULAR_EXPS)]
+    # frame[0][6:-1] -> File name along with path
+    # frame[1][6:] -> Line Number
+    # frame[2][3:] -> Context
+    temp_call_stack = [(frame[0][6:-1],
+                        frame[1][6:],
+                        frame[2][3:])
+                       for frame in [stack.replace("\n", "").strip().split(',') for stack in traceback.format_stack()]
+                       if not any(reg.match(frame[0]) for reg in REGULAR_EXPS)]
 
     # avoid duplication.
     if temp_call_stack not in STACK_BOOK[current_model]:
