@@ -134,6 +134,8 @@ def donottrack(*classes_not_to_be_tracked):
     Returns:
         wrapped function
     """
+    donottrack._depth = 0
+
     def real_donottrack(function):
         """takes function to be decorated and returns wrapped function
 
@@ -147,13 +149,21 @@ def donottrack(*classes_not_to_be_tracked):
             """
             if len(classes_not_to_be_tracked) == 0:
                 global TRACK_FLAG  # pylint: disable=W0603
-                TRACK_FLAG = False
+                if donottrack._depth == 0:
+                    TRACK_FLAG = False
+                donottrack._depth += 1
                 function(*args, **kwargs)
-                TRACK_FLAG = True
+                donottrack._depth -= 1
+                if donottrack._depth == 0:
+                    TRACK_FLAG = False
             else:
                 global HALT_TRACKING  # pylint: disable=W0603
-                HALT_TRACKING = list(classes_not_to_be_tracked)
+                if donottrack._depth == 0:
+                    HALT_TRACKING = list(classes_not_to_be_tracked)
+                donottrack._depth += 1
                 function(*args, **kwargs)
-                HALT_TRACKING[:] = []
+                donottrack._depth -= 1
+                if donottrack._depth == 0:
+                    HALT_TRACKING[:] = []
         return wrapper
     return real_donottrack
