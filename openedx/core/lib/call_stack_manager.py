@@ -118,18 +118,17 @@ class CallStackManager(Manager):
     def get_query_set(self):
         """
         overriding the default queryset API methods
+
         """
         capture_call_stack(str(self.model)[str(self.model).find('\''): str(self.model).rfind('\'')])
         return super(CallStackManager, self).get_query_set()
 
 
 def donottrack(*classes_not_to_be_tracked):
-    """function decorator which deals with toggling call stacks
-    
+    """function decorator which deals with toggling call stack
     How to use -
     1. Just Import following
         import from openedx.core.lib.call_stack_manager import donottrack
-    
     Args:
         *classes_not_to_be_tracked: model classes where tracking is undesirable
     Returns:
@@ -147,12 +146,12 @@ def donottrack(*classes_not_to_be_tracked):
                 wrapper function i.e. wrapper
             """
             if len(classes_not_to_be_tracked) == 0:
-                global TRACK_FLAG
+                global TRACK_FLAG  # pylint: disable=W0603
                 TRACK_FLAG = False
                 function(*args, **kwargs)
                 TRACK_FLAG = True
             else:
-                global HALT_TRACKING
+                global HALT_TRACKING  # pylint: disable=W0603
                 HALT_TRACKING = list(classes_not_to_be_tracked)
                 function(*args, **kwargs)
                 HALT_TRACKING[:] = []
