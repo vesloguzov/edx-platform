@@ -14,6 +14,7 @@ capture_call_stack - global function used to store call stack
 
 Decorators:
 donottrack - mainly for the places where we know the calls. This decorator will let us not to track in specified cases
+
 How to use-
 1. Import following in the file where class to be tracked resides
     from openedx.core.lib.call_stack_manager import CallStackManager, CallStackMixin
@@ -59,15 +60,19 @@ STACK_BOOK = collections.defaultdict(list)
 EXCLUDE = ['^.*python2.7.*$', '^.*call_stack_manager.*$', '^.*<exec_function>.*$', '^.*exec_code_object.*$']
 REGULAR_EXPS = [re.compile(x) for x in EXCLUDE]
 
+# Variable which decides whether to track calls in the function or not. Do it by default.
 TRACK_FLAG = True
+
+# List keeping track of Model classes not be tracked for special cases
+# usually cases where we know that the function is calling Model classes.
+HALT_TRACKING = []
 
 
 def capture_call_stack(current_model):
-    """
-    stores customised call stacks in global dictionary `STACK_BOOK`, and logs it.
+    """ logs customised call stacks in global dictionary `STACK_BOOK`, and logs it.
 
-    Arguments:
-    current_model - Name of the model class
+    Args:
+        current_model - Name of the model class
     """
 
     # holds temporary callstack
@@ -81,10 +86,10 @@ def capture_call_stack(current_model):
                        if not any(reg.match(frame[0]) for reg in REGULAR_EXPS)]
 
     # avoid duplication.
-    if temp_call_stack not in STACK_BOOK[current_model]:
+    if temp_call_stack not in STACK_BOOK[current_model] \
+            and TRACK_FLAG and not any(current_model[current_model.rfind(".") + 1:] == cls for cls in HALT_TRACKING):
         STACK_BOOK[current_model].append(temp_call_stack)
-        log.info("logging new call in global stack book, for %s", current_model)
-        log.info(STACK_BOOK)
+        log.info("logging new call stack for %s:\n %s", current_model, temp_call_stack)
 
 
 class CallStackMixin(object):
@@ -95,14 +100,14 @@ class CallStackMixin(object):
         """
         Logs before save and overrides respective model API save()
         """
-        capture_call_stack(str(type(self)))
+        capture_call_stack(str(type(self))[str(type(self)).find('\''): str(type(self)).rfind('\'')])
         return super(CallStackMixin, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         """
         Logs before delete and overrides respective model API delete()
         """
-        capture_call_stack(str(type(self)))
+        capture_call_stack(str(type(self))[str(type(self)).find('\''): str(type(self)).rfind('\'')])
         return super(CallStackMixin, self).delete(*args, **kwargs)
 
 
@@ -114,25 +119,42 @@ class CallStackManager(Manager):
         """
         overriding the default queryset API methods
         """
-        capture_call_stack(str(self.model))
+        capture_call_stack(str(self.model)[str(self.model).find('\''): str(self.model).rfind('\'')])
         return super(CallStackManager, self).get_query_set()
 
 
-def donottrack(func):
-    """
-    function decorator which deals with toggling call stacks
+def donottrack(*classes_not_to_be_tracked):
+    """function decorator which deals with toggling call stacks
+    
     How to use -
     1. Just Import following
         import from openedx.core.lib.call_stack_manager import donottrack
-    :param func: Argument function
-    :return: wrapped function
+    
+    Args:
+        *classes_not_to_be_tracked: model classes where tracking is undesirable
+    Returns:
+        wrapped function
     """
-    def wrapper_func(*args, **kwargs):
+    def real_donottrack(function):
+        """takes function to be decorated and returns wrapped function
+
+        Args:
+            function - wrapped function i.e. real_donottrack
         """
-        :return: wrapped function after setting TRACE_FLAG as True
-        """
-        global TRACK_FLAG  # pylint: disable=W0603
-        TRACK_FLAG = False
-        func(*args, **kwargs)
-        TRACK_FLAG = True
-    return wrapper_func
+        def wrapper(*args, **kwargs):
+            """ wrapper function for decorated function
+            Returns:
+                wrapper function i.e. wrapper
+            """
+            if len(classes_not_to_be_tracked) == 0:
+                global TRACK_FLAG
+                TRACK_FLAG = False
+                function(*args, **kwargs)
+                TRACK_FLAG = True
+            else:
+                global HALT_TRACKING
+                HALT_TRACKING = list(classes_not_to_be_tracked)
+                function(*args, **kwargs)
+                HALT_TRACKING[:] = []
+        return wrapper
+    return real_donottrack
