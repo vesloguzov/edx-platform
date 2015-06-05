@@ -390,7 +390,7 @@ class TextlineTemplateTest(TemplateTestCase):
 
             # Expect that we get a <span> with class="status"
             # (used to by CSS to draw the green check / red x)
-            self.assert_has_text(xml, "//span[@class='status']",
+            self.assert_has_text(xml, "//span[@class='status']/span[@class='sr']",
                                  status_mark, exact=False)
 
     def test_label(self):
