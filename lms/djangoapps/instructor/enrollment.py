@@ -22,6 +22,7 @@ from openedx.core.djangoapps.user_api.models import UserPreference
 from microsite_configuration import microsite
 
 
+
 class EmailEnrollmentState(object):
     """ Store the complete enrollment state of an email in a class """
     def __init__(self, course_id, email):
@@ -224,6 +225,7 @@ def reset_student_attempts(course_id, student, module_state_key, delete_module=F
         module_to_reset.delete()
     else:
         _reset_module_attempts(module_to_reset)
+
 
 
 def _reset_module_attempts(studentmodule):

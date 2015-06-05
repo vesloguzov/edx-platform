@@ -23,7 +23,6 @@ from model_utils.models import TimeStampedModel
 
 from xmodule_django.models import CourseKeyField, LocationKeyField, BlockTypeKeyField  # pylint: disable=import-error
 from openedx.core.lib.call_stack_manager import CallStackManager, CallStackMixin
-
 log = logging.getLogger(__name__)
 
 
@@ -138,7 +137,7 @@ class StudentModuleHistory(models.Model):
             history_entry.save()
 
 
-class XBlockFieldBase(models.Model):
+class XBlockFieldBase(CallStackMixin, models.Model):
     """
     Base class for all XBlock field storage.
     """
