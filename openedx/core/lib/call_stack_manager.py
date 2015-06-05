@@ -104,7 +104,7 @@ class CallStackMixin(object):
         return super(CallStackMixin, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        """
+        """s
         Logs before delete and overrides respective model API delete()
         """
         capture_call_stack(str(type(self))[str(type(self)).find('\''): str(type(self)).rfind('\'')])
@@ -134,7 +134,7 @@ def donottrack(*classes_not_to_be_tracked):
     Returns:
         wrapped function
     """
-    donottrack._depth = 0
+    donottrack.depth = 0
 
     def real_donottrack(function):
         """takes function to be decorated and returns wrapped function
@@ -149,21 +149,21 @@ def donottrack(*classes_not_to_be_tracked):
             """
             if len(classes_not_to_be_tracked) == 0:
                 global TRACK_FLAG  # pylint: disable=W0603
-                if donottrack._depth == 0:
+                if donottrack.depth == 0:
                     TRACK_FLAG = False
-                donottrack._depth += 1
+                donottrack.depth += 1
                 function(*args, **kwargs)
-                donottrack._depth -= 1
-                if donottrack._depth == 0:
+                donottrack.depth -= 1
+                if donottrack.depth == 0:
                     TRACK_FLAG = False
             else:
                 global HALT_TRACKING  # pylint: disable=W0603
-                if donottrack._depth == 0:
+                if donottrack.depth == 0:
                     HALT_TRACKING = list(classes_not_to_be_tracked)
-                donottrack._depth += 1
+                donottrack.depth += 1
                 function(*args, **kwargs)
-                donottrack._depth -= 1
-                if donottrack._depth == 0:
+                donottrack.depth -= 1
+                if donottrack.depth == 0:
                     HALT_TRACKING[:] = []
         return wrapper
     return real_donottrack
