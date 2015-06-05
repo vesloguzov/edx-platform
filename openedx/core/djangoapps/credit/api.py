@@ -377,3 +377,134 @@ def _validate_requirements(requirements):
                 )
             )
     return invalid_requirements
+
+
+def get_credit_requests_status(username, course_key):
+    """
+    Get the credit request status.
+    This function returns the status of credit request of user for given course.
+    The valid status are 'pending', 'approved' or 'rejected'.
+
+    Args:
+        username(str): The username of user
+        course_key(CourseKey): The course locator key
+
+    Returns:
+        A dictionary of credit user has purchased
+
+    """
+    # TODO: Needs Will's work to check the credit user has purchased
+    return {}
+
+
+def _get_duration_and_providers(credit_course):
+    """
+    Returns the credit providers and eligibility durations.
+    The eligibility_duration is the max of the credit duration of
+    all the credit providers of given course.
+
+    Args:
+        credit_course(CreditCourse): The CreditCourse object
+
+    Returns:
+        Tuple of eligibility_duration and credit providers of given course
+    """
+    providers = credit_course.providers.all()
+    seconds_good_for_display = 0
+    providers_list = []
+    for provider in providers:
+        providers_list.append(
+            {
+                "id": provider.provider_id,
+                "display_name": provider.display_name,
+                "eligibility_duration": provider.eligibility_duration,
+                "provider_url": provider.provider_url
+            }
+        )
+        eligibility_duration = int(provider.eligibility_duration) if provider.eligibility_duration else 0
+        seconds_good_for_display = max(eligibility_duration, seconds_good_for_display)
+
+    return seconds_good_for_display, providers_list
+
+def _get_credit_request_status(username, course_key):
+    """
+    Returns the credit request status
+
+    Args:
+        username(str): The username of a user
+        course_key(CourseKey): The CourseKey
+
+    Returns:
+        The tuple of status and provider\
+
+    """
+    status = None
+    provider = None
+    credit_request = get_credit_requests_status(username, course_key)
+    if credit_request:
+        status = credit_request["status"]
+        provider = credit_request["provider"]
+    return status, provider
+
+
+def get_credit_eligibility(username):
+    """
+    Returns the all the eligibility the user has meet.
+
+    Args:
+        username(str): The username of user
+
+    Example:
+        >> get_credit_eligibility('Aamir'):
+            {
+                "edX/DemoX/Demo_Course": {
+                    "created_at": "2015-12-21",
+                    "providers": [
+                        "id": 12,
+                        "display_name": "Arizona State University",
+                        "eligibility_duration": 60,
+                        "provider_url": "http://arizona/provideere/link"
+                    ],
+                    "seconds_good_for_display": 90
+                }
+            }
+
+    Returns:
+        A dict of eligibilities
+    """
+    eligibilities = CreditEligibility.get_user_eligibility(username)
+    user_eligibilities = {}
+    for eligibility in eligibilities:
+        course_key = eligibility.course.course_key
+        duration, providers_list = _get_duration_and_providers(eligibility.course)
+        user_eligibilities[unicode(course_key)] = {
+            "is_eligible": True,
+            "created_at": eligibility.created,
+            "seconds_good_for_display": duration,
+            "providers": providers_list,
+        }
+
+        # Default status is requirements_meet
+        user_eligibilities[unicode(course_key)]["status"] = "requirements_meet"
+
+        credit_request_status, provider = _get_credit_request_status(username, course_key)
+        if credit_request_status:
+            user_eligibilities[unicode(course_key)]["status"] = credit_request_status
+            user_eligibilities[unicode(course_key)]["provider"] = provider
+
+    return user_eligibilities
+
+
+def get_purchased_credit_courses(username):
+    """
+    Returns the purchased credit courses.
+
+    Args:
+        username(str): Username of the student
+
+    Returns:
+        A dict of courses user has purchased from the credit provider after completion
+
+    """
+    # TODO: How to track the purchased courses. It requires Will's work for credit provider integration
+    return {}

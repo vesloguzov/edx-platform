@@ -210,10 +210,13 @@ class CreditEligibility(TimeStampedModel):
 
     username = models.CharField(max_length=255, db_index=True)
     course = models.ForeignKey(CreditCourse, related_name="eligibilities")
-    provider = models.ForeignKey(CreditProvider, related_name="eligibilities")
 
     class Meta(object):  # pylint: disable=missing-docstring
         unique_together = ('username', 'course')
+    
+    @classmethod
+    def get_user_eligibility(cls, username):
+        return cls.objects.filter(username=username).select_related('course').prefetch_related('course__providers')
 
 
 class CreditRequest(TimeStampedModel):

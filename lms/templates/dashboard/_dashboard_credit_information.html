@@ -1,0 +1,49 @@
+<%page args="credit_message, course" />
+
+<%!
+from django.utils.translation import ugettext as _
+from course_modes.models import CourseMode
+%>
+<%namespace name='static' file='../static_content.html'/>
+
+<div class="message message-status is-shown">
+    <p>
+        % if credit_message["status"] == "requirements_meet":
+            <span>
+            % if credit_message["urgent"]:
+                ${_("{username}, your eligibility for credit expires on {expiry}. Don't miss out!").format(
+                        username=credit_message["user_full_name"],
+                        expiry=credit_message["expiry"]
+                    )
+                }
+            % else:
+                ${_("{congrats} {username}, You have meet requirements for credit.").format(
+                        congrats="<b>Congratulations</b>",
+                        username=credit_message["user_full_name"]
+                    )
+                }
+            % endif
+            </span>
+            <span style="float: right"> <a class="btn" href="" target="_blank">Purchase Credit</a> </span>
+
+        % elif credit_message["status"] == "pending":
+            ${_("Thank you, your payment is complete, your credit is processing. Please see {provider_link} for more information.").format(
+                    provider_link='<a href="#" target="_blank">{}</a>'.format(credit_message["provider"])
+                )
+            }
+        % elif credit_message["status"] == "approved":
+            ${_("Thank you, your credit is approved. Please see {provider_link} for more information.").format(
+                    provider_link='<a href="#" target="_blank">{}</a>'.format(credit_message["provider"])
+                )
+            }
+        % elif credit_message["status"] == "rejected":
+            ${_("Your credit has been denied. Please contact {provider_link} for more information.").format(
+                    provider_link='<a href="#" target="_blank">{}</a>'.format(credit_message["provider"])
+                )
+            }
+        % endif
+
+    </p>
+
+
+</div>
