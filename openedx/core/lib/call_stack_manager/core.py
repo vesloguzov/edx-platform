@@ -118,7 +118,7 @@ class CallStackManager(Manager):
     """
     def get_query_set(self):
         """
-        overriding the default queryset API methods
+        overriding the default queryset API method
 
         """
         capture_call_stack(str(self.model)[str(self.model).find('\'') + 1: str(self.model).rfind('\'')])
@@ -161,4 +161,3 @@ def donottrack(*classes_not_to_be_tracked):
                 HALT_TRACKING = current_halt_track
         return wrapper
     return real_donottrack
-
