@@ -724,9 +724,9 @@ class @Problem
                 break
             break
     # We need the save to complete, then make the hint request
-    @save_quietly =>
-      console.log 'in callback'
-      $.postWithPrefix "#{@url}/hint_button", next_hint_index: next_hint_index, input_id: @id,(response) =>
+    ##@save_quietly =>
+    ## console.log 'in callback'
+    $.postWithPrefix "#{@url}/hint_button", next_hint_index: next_hint_index, input_id: @id,(response) =>
         console.log(response.contents)
         @render(response.contents)
         @$(".hint-button").focus()  # focus on click, like the Check button

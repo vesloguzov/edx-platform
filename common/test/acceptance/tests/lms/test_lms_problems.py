@@ -142,6 +142,6 @@ class ProblemExtendedHintTest(ProblemsTest, EventsTestMixin):
             number_of_matches=3
         )
         self.assert_events_match(
-            [{'event': {'please': 'print'}}],
+            [{'event': {u'hint_index': 0, u'hint_len': 2, u'hint_text': u'demand-hint1'}}],
             actual
         )
