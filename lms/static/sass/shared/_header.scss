@@ -31,7 +31,7 @@ header.global {
   nav {
     @include clearfix();
     margin: 0 auto;
-    padding: 18px ($baseline/2) 0 12px;
+    padding: 18px ($baseline/2) 12px;
     max-width: grid-width(12);
   }
 
