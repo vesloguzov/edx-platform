@@ -702,13 +702,14 @@ class @Problem
         @enableCheckButton true
     window.setTimeout(enableCheckButton, 750)
 
-  # Save and then unconditionally call the zero-arg callback
-  save_quietly: (callback) =>
-    console.log 'problem_save_hint', @answers
-    $.postWithPrefix "#{@url}/problem_save", @answers, (response) =>
-      ##@updateProgress response  ## TODO nparlante - this line does not seem to be necessary
-      console.log 'call callback'
-      callback()
+## TODO Call this when TNL-2404 is fixed
+##  # Save and then unconditionally call the zero-arg callback
+##  save_quietly: (callback) =>
+##    #console.log 'problem_save_hint', @answers
+##    $.postWithPrefix "#{@url}/problem_save", @answers, (response) =>
+##      ##@updateProgress response  ## this line does not seem to be necessary
+##      #console.log 'call callback'
+##      callback()
 
   hint_button: =>
     next_hint_index = -1
@@ -723,11 +724,10 @@ class @Problem
                 next_hint_index = hbAttribute.value
                 break
             break
-    # We need the save to complete, then make the hint request
+    ## TODO the the post-hint_button code goes in a save_quietly callback when TNL-2404 is fixed
     ##@save_quietly =>
-    ## console.log 'in callback'
     $.postWithPrefix "#{@url}/hint_button", next_hint_index: next_hint_index, input_id: @id,(response) =>
-        console.log(response.contents)
+        #console.log(response.contents)
         @render(response.contents)
         @$(".hint-button").focus()  # focus on click, like the Check button
 
