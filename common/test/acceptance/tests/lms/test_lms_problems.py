@@ -91,7 +91,7 @@ class ProblemClarificationTest(ProblemsTest):
 
 class ProblemExtendedHintTest(ProblemsTest, EventsTestMixin):
     """
-    Test that extended hint features plumb through to the page html.
+    Test that extended hint features plumb through to the page html and tracking log.
     """
     def get_problem(self):
         """
@@ -122,13 +122,13 @@ class ProblemExtendedHintTest(ProblemsTest, EventsTestMixin):
         problem_page.fill_answer('B')
         problem_page.click_check()
         self.assertEqual(problem_page.message_text, u'Incorrect: hint')
-        # Now check tracking events
+        # Check for corresponding tracking event
         actual_events = self.wait_for_events(
             event_filter={'event_type': 'edx.problem.hint.feedback_displayed'},
             number_of_matches=1
         )
         self.assert_events_match([
-            {'event':{
+            {'event': {
                 'hint_label': u'Incorrect',
                 'trigger_type': 'single',
                 'student_answer': [u'B'],
@@ -152,7 +152,7 @@ class ProblemExtendedHintTest(ProblemsTest, EventsTestMixin):
         self.assertEqual(problem_page.hint_text, u'Hint (2 of 2): demand-hint2')
         problem_page.click_hint()
         self.assertEqual(problem_page.hint_text, u'Hint (1 of 2): demand-hint1')
-        # Now check tracking events
+        # Check corresponding tracking events
         actual_events = self.wait_for_events(
             event_filter={'event_type': 'edx.problem.hint.demandhint_displayed'},
             number_of_matches=3

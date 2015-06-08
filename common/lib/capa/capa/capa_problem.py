@@ -752,7 +752,6 @@ class LoncapaProblem(object):
         problemid = problemtree.get('id')    # my ID
 
         if problemtree.tag in inputtypes.registry.registered_tags():
-            
             # If this is an inputtype subtree, let it render itself.
             status = "unsubmitted"
             msg = ''
