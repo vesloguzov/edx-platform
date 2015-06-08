@@ -3,49 +3,51 @@ metadata:
     display_name: Dropdown with Hints and Feedback
     tab: hint
     markdown: |
-        The primary difference between multiple choice and dropdown questions is that since the dropdown options are not presented until the student clicks on the menu, students have time to think of possible solutions before reviewing the answer choices.
 
-        As with multiple choice, targeted feedback for dropdown questions is an opportunity to address common student misconceptions in the distractors, or incorrect answer choices. The feedback for the incorrect answers can be written to target the misconceptions that are appropriate for the level of the student (e.g., elementary, middle, high school, college) and should be based on the common mistakes students make. Also, feedback should provide some guidance to the student about how to arrive at the correct answer. 
+        You can provide feedback for each available option in a dropdown problem.
 
-        In addition, feedback for the correct answer, is an opportunity to reinforce why the answer is correct rather than simply state "Correct." Since students are able to guess, feedback should provide a reason why that selection is correct for students who may have selected that answer by chance.
+        You can also add hints for learners.
 
-        The feedback is provided immediately below the question after the student clicks the "Check" button.  Hints can also be available for students to request when they are struggling.
+        Be sure to select Settings to specify a Display Name and other values that apply.
 
-        >>A/an ________ is an example of a vegetable.<<
+        Use the following example problem as a model.
+
+        >> A/an ________ is a vegetable.<<
 
         [[
-            apple {{An apple is the fertilized ovary that comes from an apple tree and contains seeds classifying it as a fruit.}}
-            pumpkin {{A pumpkin is the fertilized ovary of a squash plant and contains seeds classifying it as a fruit.}}
-            (potato) {{A potato is an edible part of a plant in tuber form and is classified as a vegetable}}
-            tomato {{Many people mistakenly think a tomato is a vegetable. However, because a tomato is the fertilized ovary of a tomato plant and contains seeds it is classified as a fruit.}}
+            apple {{An apple is the fertilized ovary that comes from an apple tree and contains seeds, meaning it is a fruit.}}
+            pumpkin {{A pumpkin is the fertilized ovary of a squash plant and contains seeds, meaning it is a fruit.}}
+            (potato) {{A potato is an edible part of a plant in tuber form and is a vegetable.}}
+            tomato {{Many people mistakenly think a tomato is a vegetable. However, because a tomato is the fertilized ovary of a tomato plant and contains seeds, it is a fruit.}}
         ]]
 
-        ||A fruit is the fertizied ovary from a flower.||
+        ||A fruit is the fertilized ovary from a flower.||
         ||A fruit contains seeds of the plant.||
 
 data: |
     <problem>
-    <p>The primary difference between multiple choice and dropdown questions is that since the dropdown options are not presented until the student clicks on the menu, students have time to think of possible solutions before reviewing the answer choices.</p>
 
-    <p>As with multiple choice, targeted feedback for dropdown questions is an opportunity to address common student misconceptions in the distractors, or incorrect answer choices. The feedback for the incorrect answers can be written to target the misconceptions that are appropriate for the level of the student (e.g., elementary, middle, high school, college) and should be based on the common mistakes students make. Also, feedback should provide some guidance to the student about how to arrive at the correct answer. </p>
+    <p>You can provide feedback for each available option in a dropdown problem.</p>
 
-    <p>In addition, feedback for the correct answer, is an opportunity to reinforce why the answer is correct rather than simply state "Correct." Since students are able to guess, feedback should provide a reason why that selection is correct for students who may have selected that answer by chance.</p>
+    <p>You can also add hints for learners.</p>
 
-    <p>The feedback is provided immediately below the question after the student clicks the "Check" button.  Hints can also be available for students to request when they are struggling.</p>
+    <p>Use the following example problem as a model.</p>
 
-    <p>A/an ________ is an example of a vegetable.</p>
-    <optionresponse>
-      <optioninput label="A/an ________ is an example of a vegetable.">
-        <option correct="False">apple <optionhint>An apple is the fertilized ovary that comes from an apple tree and contains seeds classifying it as a fruit.</optionhint></option>
-        <option correct="False">pumpkin <optionhint>A pumpkin is the fertilized ovary of a squash plant and contains seeds classifying it as a fruit.</optionhint></option>
-        <option correct="True">potato <optionhint>A potato is an edible part of a plant in tuber form and is classified as a vegetable</optionhint></option>
-        <option correct="False">tomato <optionhint>Many people mistakenly think a tomato is a vegetable. However, because a tomato is the fertilized ovary of a tomato plant and contains seeds it is classified as a fruit.</optionhint></option>
-      </optioninput>
-    </optionresponse>
+    <fieldset>
+      <legend> A/an ________ is a vegetable.</legend>
+      <br/>
+      <optionresponse>
+        <optioninput label=" ________ is a vegetable.">
+          <option correct="False">apple <optionhint>An apple is the fertilized ovary that comes from an apple tree and contains seeds, meaning it is a fruit.</optionhint></option>
+          <option correct="False">pumpkin <optionhint>A pumpkin is the fertilized ovary of a squash plant and contains seeds, meaning it is a fruit.</optionhint></option>
+          <option correct="True">potato <optionhint>A potato is an edible part of a plant in tuber form and is a vegetable.</optionhint></option>
+          <option correct="False">tomato <optionhint>Many people mistakenly think a tomato is a vegetable. However, because a tomato is the fertilized ovary of a tomato plant and contains seeds, it is a fruit.</optionhint></option>
+        </optioninput>
+      </optionresponse>
+    </fieldset>
 
     <demandhint>
-      <hint>A fruit is the fertizied ovary from a flower.</hint>
+      <hint>A fruit is the fertilized ovary from a flower.</hint>
       <hint>A fruit contains seeds of the plant.</hint>
     </demandhint>
     </problem>
-
