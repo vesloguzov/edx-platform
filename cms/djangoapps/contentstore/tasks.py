@@ -18,6 +18,8 @@ from xmodule.course_module import CourseFields
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import DuplicateCourseError, ItemNotFoundError
 
+import signals
+
 LOGGER = get_task_logger(__name__)
 FULL_COURSE_REINDEX_THRESHOLD = 1
 
@@ -43,7 +45,8 @@ def rerun_course(source_course_key_string, destination_course_key_string, user_i
             store.clone_course(source_course_key, destination_course_key, user_id, fields=fields)
 
         # set initial permissions for the user to access the course.
-        initialize_permissions(destination_course_key, User.objects.get(id=user_id))
+        user = User.objects.get(id=user_id)
+        initialize_permissions(destination_course_key, user)
 
         # update state: Succeeded
         CourseRerunState.objects.succeeded(course_key=destination_course_key)
@@ -51,6 +54,12 @@ def rerun_course(source_course_key_string, destination_course_key_string, user_i
         # call edxval to attach videos to the rerun
         copy_course_videos(source_course_key, destination_course_key)
 
+        signals.course_rerun_created.send(
+            store,
+            src_course_id=source_course_key,
+            dst_course_id=destination_course_key,
+            user=user
+        )
         return "succeeded"
 
     except DuplicateCourseError as exc:

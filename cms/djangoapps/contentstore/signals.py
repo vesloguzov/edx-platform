@@ -2,10 +2,12 @@
 from datetime import datetime
 from pytz import UTC
 
-from django.dispatch import receiver
+from django.dispatch import receiver, Signal
 
 from xmodule.modulestore.django import SignalHandler
 from contentstore.courseware_index import CoursewareSearchIndexer, LibrarySearchIndexer
+
+import course_owners.models
 
 
 @receiver(SignalHandler.course_published)
@@ -28,3 +30,10 @@ def listen_for_library_update(sender, library_key, **kwargs):  # pylint: disable
     from .tasks import update_library_index
     if LibrarySearchIndexer.indexing_is_enabled():
         update_library_index.delay(unicode(library_key), datetime.now(UTC).isoformat())
+
+
+new_course_created = Signal(providing_args=['course_id', 'user'])
+course_rerun_created = Signal(providing_args=['src_course', 'dst_course', 'user'])
+
+new_course_created.connect(course_owners.models.create_new_course_ownership)
+course_rerun_created.connect(course_owners.models.create_rerun_ownership)
