@@ -165,6 +165,7 @@
       @include text-align(right);
 
       a {
+        @include float(right);
         display: inline-block;
 
         &:hover {
