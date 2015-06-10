@@ -1285,24 +1285,28 @@ class CapaModuleTest(unittest.TestCase):
         # HTML generation is mocked out to be meaningless here, so instead we check
         # the context dict passed into HTML generation.
         module = CapaFactory.create(xml=self.demand_xml)
-        module.get_problem_html(hint_index=0)  # ignoring html result
+        module.get_problem_html()  # ignoring html result
         context = module.system.render_template.call_args[0][1]
-        self.assertEqual(context['demand_hint'], u'Hint (1 of 2): Demand 1')
-        self.assertEqual(context['next_hint_index'], 1)
         self.assertEqual(context['demand_hint_possible'], True)
 
-        module.get_problem_html(hint_index=1)
-        context = module.system.render_template.call_args[0][1]
-        self.assertEqual(context['demand_hint'], u'Hint (2 of 2): Demand 2')
-        self.assertEqual(context['next_hint_index'], 0)
-        self.assertEqual(context['demand_hint_possible'], True)
+        # Check the AJAX call that gets the hint by index
+        result = module.get_demand_hint(0)
+        self.assertEqual(result['contents'], u'Hint (1 of 2): Demand 1')
+        self.assertEqual(result['hint_index'], 0)
+        result = module.get_demand_hint(1)
+        self.assertEqual(result['contents'], u'Hint (2 of 2): Demand 2')
+        self.assertEqual(result['hint_index'], 1)
+        result = module.get_demand_hint(2)  # here the server wraps around to index 0
+        self.assertEqual(result['contents'], u'Hint (1 of 2): Demand 1')
+        self.assertEqual(result['hint_index'], 0)
 
     def test_demand_hint_logging(self):
         module = CapaFactory.create(xml=self.demand_xml)
         # Re-mock the module_id to a fixed string, so we can check the logging
         module.location = Mock(module.location)
         module.location.to_deprecated_string.return_value = 'i4x://edX/capa_test/problem/meh'
-        module.get_problem_html(hint_index=0)
+        module.get_problem_html()
+        module.get_demand_hint(0)
         module.runtime.track_function.assert_called_with(
             'edx.problem.hint.demandhint_displayed',
             {'hint_index': 0, 'module_id': u'i4x://edX/capa_test/problem/meh',

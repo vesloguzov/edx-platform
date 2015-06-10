@@ -702,32 +702,16 @@ class @Problem
         @enableCheckButton true
     window.setTimeout(enableCheckButton, 750)
 
-## TODO Call this when TNL-2404 is fixed
-##  # Save and then unconditionally call the zero-arg callback
-##  save_quietly: (callback) =>
-##    #console.log 'problem_save_hint', @answers
-##    $.postWithPrefix "#{@url}/problem_save", @answers, (response) =>
-##      ##@updateProgress response  ## this line does not seem to be necessary
-##      #console.log 'call callback'
-##      callback()
-
   hint_button: =>
-    next_hint_index = -1
-    problemId = this.element_id
-    for problemElement in document.getElementsByClassName('problems-wrapper')
-      for pAttribute in problemElement.attributes
-        if pAttribute.name == 'id'
-          if pAttribute.value == problemId
-            hintButtonElements = problemElement.getElementsByClassName("hint-button")
-            for hbAttribute in hintButtonElements[0].attributes
-              if hbAttribute.name == 'next_hint_index'
-                next_hint_index = hbAttribute.value
-                break
-            break
-    ## TODO the the post-hint_button code goes in a save_quietly callback when TNL-2404 is fixed
-    ##@save_quietly =>
-    $.postWithPrefix "#{@url}/hint_button", next_hint_index: next_hint_index, input_id: @id,(response) =>
-        #console.log(response.contents)
-        @render(response.contents)
-        @$(".hint-button").focus()  # focus on click, like the Check button
+    # Store the index of the currently shown hint as an attribute.
+    # Use that to compute the next hint number when the button is clicked.
+    hint_index = @$('.problem-hint').attr('hint_index')
+    if hint_index == undefined
+      next_index = 0
+    else
+      next_index = parseInt(hint_index) + 1
+    $.postWithPrefix "#{@url}/hint_button", hint_index: next_index, input_id: @id, (response) =>
+      @$('.problem-hint').html(response.contents)
+      @$('.problem-hint').attr('hint_index', response.hint_index)
+      @$('.hint-button').focus()  # a11y focus on click, like the Check button
 

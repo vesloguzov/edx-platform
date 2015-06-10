@@ -590,7 +590,7 @@ class CapaMixin(CapaFields):
 
         return html
 
-    def get_problem_html(self, encapsulate=True, hint_index=None):
+    def get_demand_hint(self, hint_index):
         """
         Return html for the problem.
 
@@ -599,6 +599,42 @@ class CapaMixin(CapaFields):
         encapsulate: if True (the default) embed the html in a problem <div>
         hint_index: (None is the default) if not None, this is the index of the next demand
         hint to show.
+        """
+        demand_hints = self.lcp.tree.xpath("//problem/demandhint/hint")
+        hint_index = hint_index % len(demand_hints)
+
+        _ = self.runtime.service(self, "i18n").ugettext  # pylint: disable=redefined-outer-name
+        hint_element = demand_hints[hint_index]
+        hint_text = hint_element.text.strip()
+        if len(demand_hints) == 1:
+            prefix = _('Hint: ')
+        else:
+            # Translators: e.g. "Hint 1 of 3" meaning we are showing the first of three hints.
+            prefix = _('Hint ({hint_num} of {hints_count}): ').format(hint_num=hint_index + 1,
+                                                                      hints_count=len(demand_hints))
+
+        # Log this demand-hint request
+        event_info = dict()
+        event_info['module_id'] = self.location.to_deprecated_string()
+        event_info['hint_index'] = hint_index
+        event_info['hint_len'] = len(demand_hints)
+        event_info['hint_text'] = hint_text
+        self.runtime.track_function('edx.problem.hint.demandhint_displayed', event_info)
+
+        # We report the index of this hint, the client works out what index to use to get the next hint
+        return {
+            'success': True,
+            'contents': prefix + hint_text,
+            'hint_index': hint_index
+        }
+
+    def get_problem_html(self, encapsulate=True):
+        """
+        Return html for the problem.
+
+        Adds check, reset, save, and hint buttons as necessary based on the problem config
+        and state.
+        encapsulate: if True (the default) embed the html in a problem <div>
         """
         try:
             html = self.lcp.get_html()
@@ -627,34 +663,9 @@ class CapaMixin(CapaFields):
             'weight': self.weight,
         }
 
-        # Handle demand hints
+        # If demand hints are available, emit hint button and div.
         demand_hints = self.lcp.tree.xpath("//problem/demandhint/hint")
         demand_hint_possible = len(demand_hints) > 0
-        demand_hint = ''
-        if hint_index is None:
-            hint_index = 0  # seed the client with 0 = the hint they will ask for
-        elif demand_hint_possible:
-            # Requested to show hint_index
-            _ = self.runtime.service(self, "i18n").ugettext  # pylint: disable=redefined-outer-name
-            hint_element = demand_hints[hint_index]
-            hint_text = hint_element.text.strip()
-            if len(demand_hints) == 1:
-                prefix = _('Hint: ')
-            else:
-                # Translators: e.g. "Hint 1 of 3" meaning we are showing the first of three hints.
-                prefix = _('Hint ({hint_num} of {hints_count}): ').format(hint_num=hint_index + 1,
-                                                                          hints_count=len(demand_hints))
-            demand_hint = prefix + hint_text
-
-            # Log this demand-hint request
-            event_info = dict()
-            event_info['module_id'] = self.location.to_deprecated_string()
-            event_info['hint_index'] = hint_index
-            event_info['hint_len'] = len(demand_hints)
-            event_info['hint_text'] = hint_text
-            self.runtime.track_function('edx.problem.hint.demandhint_displayed', event_info)
-
-            hint_index = (hint_index + 1) % len(demand_hints)  # *next* hint index for client
 
         context = {
             'problem': content,
@@ -666,9 +677,7 @@ class CapaMixin(CapaFields):
             'answer_available': self.answer_available(),
             'attempts_used': self.attempts,
             'attempts_allowed': self.max_attempts,
-            'demand_hint_possible': demand_hint_possible,
-            'next_hint_index': hint_index,
-            'demand_hint': demand_hint,
+            'demand_hint_possible': demand_hint_possible
         }
 
         html = self.runtime.render_template('problem.html', context)
@@ -706,14 +715,10 @@ class CapaMixin(CapaFields):
 
     def hint_button(self, data):
         """
-        Hint button handler, returns new html using the next_hint_index from the client.
+        Hint button handler, returns new html using hint_index from the client.
         """
-        hint_index = int(data['next_hint_index'])
-        html = self.get_problem_html(encapsulate=False, hint_index=hint_index)
-        return {
-            'success': True,
-            'contents': html,
-        }
+        hint_index = int(data['hint_index'])
+        return self.get_demand_hint(hint_index)
 
     def is_past_due(self):
         """
