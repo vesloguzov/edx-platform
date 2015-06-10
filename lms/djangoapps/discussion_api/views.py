@@ -17,6 +17,7 @@ from discussion_api.api import (
     delete_thread,
     delete_comment,
     get_comment_list,
+    get_course,
     get_course_topics,
     get_thread_list,
     update_comment,
@@ -35,6 +36,38 @@ class _ViewMixin(object):
     permission_classes = (IsAuthenticated,)
 
 
+class CourseView(_ViewMixin, DeveloperErrorViewMixin, APIView):
+    """
+    **Use Cases**
+
+        Retrieve general discussion metadata for a course.
+
+    **Example Requests**:
+
+        GET /api/discussion/v1/courses/course-v1:ExampleX+Subject101+2015
+
+    **Response Values**:
+
+        * id: The identifier of the course
+
+        * blackouts: A list of objects representing blackout periods (during
+            which discussions are read-only except for privileged users). Each
+            item in the list includes:
+
+            * start: The ISO 8601 timestamp for the start of the blackout period
+
+            * end: The ISO 8601 timestamp for the end of the blackout period
+
+        * thread_list_url: The URL of the list of all threads in the course.
+
+        * topics_url: The URL of the topic listing for the course.
+    """
+    def get(self, request, course_id):
+        """Implements the GET method as described in the class docstring."""
+        course_key = CourseLocator.from_string(course_id)  # TODO: which class is right?
+        return Response(get_course(request, course_key))
+
+
 class CourseTopicsView(_ViewMixin, DeveloperErrorViewMixin, APIView):
     """
     **Use Cases**
@@ -44,7 +77,7 @@ class CourseTopicsView(_ViewMixin, DeveloperErrorViewMixin, APIView):
 
     **Example Requests**:
 
-        GET /api/discussion/v1/course_topics/{course_id}
+        GET /api/discussion/v1/course_topics/course-v1:ExampleX+Subject101+2015
 
     **Response Values**:
 
