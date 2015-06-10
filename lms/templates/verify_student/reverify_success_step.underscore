@@ -1,0 +1,13 @@
+<div id="wrapper-reverify-success" tab-index="0" class="wrapper-view reverify-success-step">
+    <h3 class="title"><%- gettext( "Your Credentials Have Been Updated" ) %></h3>
+
+    <div class="instruction">
+        <p><%- gettext( "We've captured your re-submitted information and will review it to verify your identity shortly. You should receive an update to your veriication status within 1-2 days. In the meantime, you still have access to all of your course content." ) %></p>
+    </div>
+
+    <ol class="list-nav">
+        <li class="nav-item">
+            <a class="action action-primary" href="/dashboard"><%- gettext( "Return to Your Dashboard" ) %></a>
+        </li>
+    </ol>
+</div>

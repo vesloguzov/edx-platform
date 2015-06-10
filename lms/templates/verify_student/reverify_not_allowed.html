@@ -1,0 +1,24 @@
+<%!
+    from django.utils.translation import ugettext as _
+    from django.core.urlresolvers import reverse
+%>
+
+<%inherit file="../main.html" />
+<%block name="pagetitle">${_("Re-Verification")}</%block>
+
+<%block name="content">
+<div id="reverify-blocked" class="container">
+    <section class="outside-app">
+        % if status == "pending":
+        <p>${_("You have already submitted a verification attempt, so you don't need to reverify.")}</p>
+        % elif status == "approved":
+        <p>${_("You have verification attempt has already been approved, so you don't need to reverify.")}</p>
+        % else:
+        <p>${_("You cannot reverify at this time.")}</p>
+        % endif
+
+        <p><a class="action action-primary" href="${ reverse("dashboard") }">${_("Return to Your Dashboard")}</a></p>
+    </section>
+</div>
+
+</%block>
