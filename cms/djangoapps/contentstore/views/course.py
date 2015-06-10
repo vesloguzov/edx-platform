@@ -14,6 +14,7 @@ from django.views.decorators.http import require_http_methods, require_GET
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseBadRequest, HttpResponseNotFound, HttpResponse, Http404
+from util.cache import cache
 from util.json_request import JsonResponse, JsonResponseBadRequest
 from util.date_utils import get_default_time_display
 from edxmako.shortcuts import render_to_response
@@ -24,6 +25,7 @@ from xmodule.modulestore.django import modulestore
 from xmodule.contentstore.content import StaticContent
 from xmodule.tabs import CourseTab
 from openedx.core.lib.course_tabs import CourseTabPluginManager
+from openedx.core.djangoapps.content.course_structures.models import CourseStructure
 from xmodule.modulestore import EdxJSONEncoder
 from xmodule.modulestore.exceptions import ItemNotFoundError, DuplicateCourseError
 from opaque_keys import InvalidKeyError
@@ -45,6 +47,7 @@ from contentstore.utils import (
     get_lms_link_for_item,
     reverse_course_url,
     reverse_library_url,
+    reverse_usage_url,
     reverse_url,
     remove_all_instructors,
 )
@@ -467,6 +470,54 @@ def _get_rerun_link_for_item(course_key):
     return reverse_course_url('course_rerun_handler', course_key)
 
 
+def _ora1_deprecation_info(course_id, advanced_modules):
+    """
+    Returns information about ORA1
+        * Modules presence in the Advanced Module List.
+        * Components presence in the course outline.
+
+    Arguments:
+        course_id: course id
+        advanced_modules: advance module list
+
+    Returns:
+        Dict with following keys:
+
+        ora1_enabled (bool): True if "peergrading" and/or "combinedopenended" are in the Advanced Module List else False
+        ora1_components (list): List of ora1 components and their parent's url
+        advance_settings_url (str): URL to advance settings page
+    """
+    modified_timestamp = CourseStructure.objects.filter(course_id=course_id).values('modified')
+    if modified_timestamp.exists():
+       cache_key = 'ora1.components.{course}.{modified}'.format(
+           course=course_id,
+           modified=modified_timestamp[0]['modified']
+       )
+    else:
+        return {}
+
+    ora1_components = cache.get(cache_key)
+    if not ora1_components:
+        try:
+            course_structure = CourseStructure.objects.get(course_id=course_id)
+            ordered_blocks = course_structure.ordered_blocks
+        except CourseStructure.DoesNotExist:
+            return {}
+
+        ora1_components = []
+        for __, block in ordered_blocks.items():
+            if block['block_type'] in ['peergrading', 'combinedopenended']:
+                ora1_components.append([reverse_usage_url('container_handler', block['parent']), block['display_name']])
+
+        cache.set(cache_key, ora1_components, 60 * 5)  # set expiry time to 5 minutes
+
+    return {
+        'ora1_enabled': 'peergrading' in advanced_modules or 'combinedopenended' in advanced_modules,
+        'ora1_components': ora1_components,
+        'advance_settings_url': reverse_course_url('advanced_settings_handler', course_id)
+    }
+
+
 @login_required
 @ensure_csrf_cookie
 def course_index(request, course_key):
@@ -507,6 +558,7 @@ def course_index(request, course_key):
             'course_release_date': course_release_date,
             'settings_url': settings_url,
             'reindex_link': reindex_link,
+            'ora1_deprecation_info': _ora1_deprecation_info(course_key, course_module.advanced_modules),
             'notification_dismiss_url': reverse_course_url(
                 'course_notifications_handler',
                 current_action.course_key,
