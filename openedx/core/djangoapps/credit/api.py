@@ -383,6 +383,7 @@ def get_credit_requests_status(username, course_key):
     """
     Get the credit request status.
     This function returns the status of credit request of user for given course.
+    It returns the latest request status for the any credit provider.
     The valid status are 'pending', 'approved' or 'rejected'.
 
     Args:
@@ -390,11 +391,24 @@ def get_credit_requests_status(username, course_key):
         course_key(CourseKey): The course locator key
 
     Returns:
-        A dictionary of credit user has purchased
+        A dictionary of credit request user has made in any
 
     """
-    # TODO: Needs Will's work to check the credit user has purchased
-    return {}
+    credit_request = CreditRequest.get_user_request_status(username, course_key)
+    if credit_request:
+        credit_status = {
+            "uuid": credit_request.uuid,
+            "timestamp": credit_request.modified,
+            "course_key": credit_request.course.course_key,
+            "provider": {
+                "id": credit_request.provider.provider_id,
+                "display_name": credit_request.provider.display_name
+            },
+            "status": credit_request.status
+        }
+    else:
+        credit_status = {}
+    return credit_status
 
 
 def _get_duration_and_providers(credit_course):
@@ -478,7 +492,6 @@ def get_credit_eligibility(username):
         course_key = eligibility.course.course_key
         duration, providers_list = _get_duration_and_providers(eligibility.course)
         user_eligibilities[unicode(course_key)] = {
-            "is_eligible": True,
             "created_at": eligibility.created,
             "seconds_good_for_display": duration,
             "providers": providers_list,

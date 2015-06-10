@@ -255,6 +255,12 @@ class CreditRequest(TimeStampedModel):
 
     history = HistoricalRecords()
 
+    class Meta(object):  # pylint: disable=missing-docstring
+        # Enforce the constraint that each user can have exactly one outstanding
+        # request to a given provider.  Multiple requests use the same UUID.
+        unique_together = ('username', 'course', 'provider')
+        get_latest_by = 'timestamp'
+
     @classmethod
     def credit_requests_for_user(cls, username):
         """
@@ -295,7 +301,19 @@ class CreditRequest(TimeStampedModel):
             for request in cls.objects.select_related('course', 'provider').filter(username=username)
         ]
 
-    class Meta(object):  # pylint: disable=missing-docstring
-        # Enforce the constraint that each user can have exactly one outstanding
-        # request to a given provider.  Multiple requests use the same UUID.
-        unique_together = ('username', 'course', 'provider')
+    @classmethod
+    def get_user_request_status(cls, username, course_key):
+        """
+        Returns the latest credit request made by given user against the given course
+
+        Args:
+            username(str): The username of requesting user
+            course_key():
+        :return:
+        """
+        try:
+            return cls.objects.filter(
+                username=username, course__course_key=course_key
+            ).select_related('course', 'provider').latest()
+        except cls.DoesNotExist:
+            return None

@@ -28,17 +28,17 @@ from course_modes.models import CourseMode
 
         % elif credit_message["status"] == "pending":
             ${_("Thank you, your payment is complete, your credit is processing. Please see {provider_link} for more information.").format(
-                    provider_link='<a href="#" target="_blank">{}</a>'.format(credit_message["provider"])
+                    provider_link='<a href="#" target="_blank">{}</a>'.format(credit_message["provider"]["display_name"])
                 )
             }
         % elif credit_message["status"] == "approved":
             ${_("Thank you, your credit is approved. Please see {provider_link} for more information.").format(
-                    provider_link='<a href="#" target="_blank">{}</a>'.format(credit_message["provider"])
+                    provider_link='<a href="#" target="_blank">{}</a>'.format(credit_message["provider"]["display_name"])
                 )
             }
         % elif credit_message["status"] == "rejected":
             ${_("Your credit has been denied. Please contact {provider_link} for more information.").format(
-                    provider_link='<a href="#" target="_blank">{}</a>'.format(credit_message["provider"])
+                    provider_link='<a href="#" target="_blank">{}</a>'.format(credit_message["provider"]["display_name"])
                 )
             }
         % endif
