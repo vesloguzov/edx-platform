@@ -521,6 +521,8 @@ function (HTML5Video, Resizer) {
         if (this.videoPlayer.isPlaying()) {
             this.videoPlayer.runTimer();
         }
+        // Update the the current time when user seek. (YoutubePlayer)
+        this.videoPlayer.currentTime = time;
     }
 
     function runTimer() {
