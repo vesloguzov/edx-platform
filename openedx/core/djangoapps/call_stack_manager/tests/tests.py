@@ -116,7 +116,7 @@ class TestingCallStackManager(TestCase):
 @donottrack('Shire')
 def denethor():
     # should not be tracked
-    shire_obj = Shire.objects.filter(id_field=1)
+    Shire.objects.filter(id_field=1)
     
     # should be tracked
     rohan_obj = Rohan.objects.filter(id_field=1)
