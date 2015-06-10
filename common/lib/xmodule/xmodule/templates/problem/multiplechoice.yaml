@@ -35,7 +35,7 @@ data: |
       <multiplechoiceresponse>
        <choicegroup type="MultipleChoice">
           <choice correct="false" name="brazil">Brazil
-            <choicehint>timely feedback -- explain why an almost answer is not correct</choicehint>
+            <choicehint>timely feedback -- explain why an almost correct answer is wrong</choicehint>
           </choice>
           <choice correct="false" name="germany">Germany</choice>
           <choice correct="true" name="indonesia">Indonesia</choice>
