@@ -14,6 +14,14 @@ class TestingCallStackManager(TestCase):
     def setUp(self):
         super(TestingCallStackManager, self).setUp()
 
+    def tearDown(self):
+        """ Deleting all databases after tests
+        """
+        Gondor.objects.all().delete()
+        Rohan.objects.all().delete()
+        Mordor.objects.all().delete()
+        Shire.objects.all().delete()
+
     def test_save(self):
         """ tests save functionality of call stack manager
         1. classes without CallStackMixin should not participate in logging.
@@ -22,7 +30,7 @@ class TestingCallStackManager(TestCase):
             gondor_obj1 = Gondor(id_field=1, text_field="Gondor1", float_field=12.34)
             gondor_obj1.save()
 
-            Mordor_obj1 = Mordor(id_field=1, name_field="sauron")
+            Mordor_obj1 = Mordor(id_field=1, name_field="Sauron")
             Mordor_obj1.save()
 
             # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.Gondor
@@ -50,10 +58,10 @@ class TestingCallStackManager(TestCase):
             rohan_obj1.save()
             rohan_obj2.save()
 
-            rohan_obj = Rohan.objects.all()
+            Rohan.objects.all()
 
             # class not using Manager, should not get logged
-            gondor_obj = Gondor.objects.all()
+            Gondor.objects.all()
 
             # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.Gondor
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
@@ -109,41 +117,47 @@ class TestingCallStackManager(TestCase):
 
             actual_sequence = [latest_class2, latest_class1]
             desired_sequence = ["Shire", "Rohan"]
-
             self.assertEqual(actual_sequence, desired_sequence, msg=str(l))
-
 
 @donottrack('Shire')
 def denethor():
+    """ Function for decorator @donottrack
+    """
     # should not be tracked
     Shire.objects.filter(id_field=1)
     
     # should be tracked
-    rohan_obj = Rohan.objects.filter(id_field=1)
+    Rohan.objects.filter(id_field=1)
 
 
 @donottrack('Rohan')
 def faramir():
+    """ Function for decorator @donottrack
+    """
     # should not  be tracked
-    rohan_obj = Rohan.objects.filter(id_field=1)
+    Rohan.objects.filter(id_field=1)
 
     # should be tracked
-    shire_obj2 = Shire.objects.filter(id_field=1)
+    Shire.objects.filter(id_field=1)
 
     denethor()
 
 
 @donottrack()
 def bombadil():
-    gondor_obj = Gondor.objects.all()
+    """ Function for decorator @donottrack
+    """
+    Gondor.objects.all()
     child_bombadil()
-    gondor_obj2 = Gondor.objects.filter(id_field=1)
+    Gondor.objects.filter(id_field=1)
 
 
 @donottrack()
 def child_bombadil():
+    """ Function for decorator @donottrack
+    """
     # Should not be tracked
-    gondor_obj = Gondor.objects.all()
+    Gondor.objects.all()
 
 
 

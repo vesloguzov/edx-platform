@@ -41,4 +41,3 @@ class Shire(models.Model):
     id_field = models.IntegerField()
     name_field = models.CharField(max_length=20)
 
-
