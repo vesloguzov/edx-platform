@@ -636,7 +636,7 @@
 
     .requirements {
       margin-bottom: 10px;
-      @include container;
+      @include container();
 
       .title {
         @extend %hd-lv3;
@@ -1158,7 +1158,7 @@
 
   .content-supplementary {
     @include box-sizing(border-box);
-    @include container;
+    @include container();
     @include span(12);
 
     .list-help {

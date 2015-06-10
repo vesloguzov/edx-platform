@@ -4,7 +4,7 @@
 $learn-more-horizontal-position: calc(50% - 100px); // calculate the left position for "LEARN MORE" content
 
 .courses-container {
-  @include container;
+  @include container();
   padding: ($baseline*0.9) ($baseline/2) 0 ($baseline/2);
 
   .courses {

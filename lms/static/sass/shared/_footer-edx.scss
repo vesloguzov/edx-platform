@@ -1,8 +1,9 @@
 // edX theme: LMS Footer
 // ====================
+@import '../base/grid-settings';
+
 $edx-footer-link-color: $link-color;
 $edx-footer-bg-color: rgb(252,252,252);
-
 
 // Aggressively scoped for Drupal
 // ==============================
@@ -17,7 +18,7 @@ footer#footer-edx-v3 {
   border-top: 1px solid $courseware-button-border-color;
 
   .footer-content-wrapper {
-    @include outer-container;
+    @include container();
     @include box-sizing(border-box);
   }
 

@@ -1,5 +1,6 @@
 // Open edX: LMS footer
 // ====================
+@import '../base/grid-settings';
 
 .wrapper-footer {
   box-shadow: 0 -1px 5px 0 $shadow-l1;
@@ -455,8 +456,8 @@ $edx-footer-bg-color: rgb(252,252,252);
   }
 
   &.rwd {
+    @include container();
     @include box-sizing(border-box);
-    @include container;
 
     &.wrapper-footer footer {
       min-width: 0;
@@ -473,12 +474,12 @@ $edx-footer-bg-color: rgb(252,252,252);
 
     @include susy-breakpoint($edx-bp-large, $susy) {
       .footer-about {
-        @include span(6);
+        @include span(6 of 12);
       }
 
       .footer-nav,
       .footer-follow {
-        @include span(3);
+        @include span(3 of 12);
       }
     }
   }
