@@ -117,11 +117,11 @@ div.problem {
       @include box-sizing(border-box);
       display: inline-block;
       clear: both;
-      width: 100%;
+      margin-bottom: ($baseline/2);
       border: 2px solid $gray-l4;
       border-radius: 3px;
-      margin-bottom: ($baseline/2);
       padding: ($baseline/2);
+      width: 100%;
 
       &.choicegroup_correct {
         @include status-icon($correct, "\f00c");
@@ -178,8 +178,8 @@ div.problem {
   .indicator_container {
 
     .status {
-      width: 20px;
-      height: 20px;
+      width: $baseline;
+      height: $baseline;
 
       // CASE: correct answer
       &.correct {
@@ -198,8 +198,6 @@ div.problem {
 
       // CASE: processing
       &.processing {
-        // add once spinner is rotated through animations
-        //@include status-icon($gray-d1, "\f110", 0);
       }
     }
   }
@@ -263,7 +261,7 @@ div.problem {
       }
 
       &.status {
-        @include margin(8px, 0, 0, $baseline/2);
+        @include margin(8px, 0, 0, ($baseline/2));
         text-indent: 100%;
         white-space: nowrap;
         overflow: hidden;
@@ -295,7 +293,7 @@ div.problem {
       }
 
       input {
-        border-color: green;
+        border-color: $correct;
       }
     }
 
@@ -321,7 +319,7 @@ div.problem {
       }
 
       input {
-        border-color: red;
+        border-color: $incorrect;
       }
     }
 
@@ -335,7 +333,7 @@ div.problem {
       }
 
       input {
-        border-color: red;
+        border-color: $incorrect;
       }
     }
 
@@ -672,16 +670,16 @@ div.problem {
       @include box-sizing(border-box);
       border: 2px solid $gray-l4;
       border-radius: 3px;
-      height: 46px;
       min-width: 160px;
+      height: 46px;
     }
 
     > .incorrect, .correct, .unanswered {
 
       .status {
         display: inline-block;
-        background: none;
         margin-top: ($baseline/2);
+        background: none;
       }
     }
 
@@ -810,8 +808,8 @@ div.problem .action {
     margin-bottom: ($baseline/2);
     height: ($baseline*2);
     vertical-align: middle;
-    font-weight: 600;
     text-transform: uppercase;
+    font-weight: 600;
   }
 
   .save {
@@ -832,9 +830,9 @@ div.problem .action {
     // border-radius: 3px;
     // padding: 8px 12px;
     // margin-top: ($baseline/2);
+    @include margin-left($baseline/2);
     display: inline-block;
     margin-top: 8px;
-    @include margin-left($baseline/2);
     color: $gray-d1;
     font-style: italic;
     -webkit-font-smoothing: antialiased;
@@ -887,7 +885,7 @@ div.problem {
 
   .detailed-targeted-feedback {
     > p:first-child {
-      color: red;
+      color: $incorrect;
       text-transform: uppercase;
       font-weight: bold;
       font-style: normal;
@@ -901,7 +899,7 @@ div.problem {
 
   .detailed-targeted-feedback-correct {
     > p:first-child {
-      color: green;
+      color: $correct;
       text-transform: uppercase;
       font-weight: bold;
       font-style: normal;
@@ -1294,7 +1292,7 @@ div.problem {
       @extend label.choicegroup_correct;
 
       input[type="text"] {
-        border-color: green;
+        border-color: $correct;
       }
     }
 
