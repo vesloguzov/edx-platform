@@ -40,4 +40,3 @@ class Shire(models.Model):
     objects = CallStackManager()
     id_field = models.IntegerField()
     name_field = models.CharField(max_length=20)
-

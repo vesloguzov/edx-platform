@@ -40,7 +40,7 @@ class TestingCallStackManager(TestCase):
             # desired latest class here
             desired_class = "Gondor"
 
-            self.assertEqual(latest_class, desired_class,  msg="Latest logged event should belong to " + desired_class)
+            self.assertEqual(latest_class, desired_class, msg="Latest logged event should belong to " + desired_class)
 
     def test_queryset(self):
         """ Tests for Overriding QuerySet API
@@ -48,13 +48,13 @@ class TestingCallStackManager(TestCase):
         """
         with LogCapture() as l:
             # create and save objects of class not overriding queryset API
-            gondor_obj3 = Gondor(id_field=1, float_field = 12.89)
-            gondor_obj4 = Gondor(id_field=1, float_field = 23.56)
+            gondor_obj3 = Gondor(id_field=1, float_field=12.89)
+            gondor_obj4 = Gondor(id_field=1, float_field=23.56)
             gondor_obj3.save()
             gondor_obj4.save()
 
-            rohan_obj1 = Rohan(id_field=1, string_field = "Thou shall not pass")
-            rohan_obj2 = Rohan(id_field=1, string_field = "Not all those who wonder are lost")
+            rohan_obj1 = Rohan(id_field=1, string_field="Thou shall not pass")
+            rohan_obj2 = Rohan(id_field=1, string_field="Not all those who wonder are lost")
             rohan_obj1.save()
             rohan_obj2.save()
 
@@ -70,7 +70,7 @@ class TestingCallStackManager(TestCase):
             # desired latest class here
             desired_class = "Rohan"
 
-            self.assertEqual(latest_class, desired_class,  msg="Latest logged event should belong to " + desired_class)
+            self.assertEqual(latest_class, desired_class, msg="Latest logged event should belong to " + desired_class)
 
     def test_donottrack(self):
         """ Test for @donottrack
@@ -95,7 +95,7 @@ class TestingCallStackManager(TestCase):
             desired_class = "Rohan"
 
             self.assertEqual(latest_class, desired_class,
-                             msg="The latest log should be of the class"+ desired_class + "not" + latest_class)
+                             msg="The latest log should be of the class" + desired_class + "not" + latest_class)
 
     def test_nested_parameterized_donottrack(self):
         """ Tests parameterized nested @donottrack
@@ -119,13 +119,14 @@ class TestingCallStackManager(TestCase):
             desired_sequence = ["Shire", "Rohan"]
             self.assertEqual(actual_sequence, desired_sequence, msg=str(l))
 
+
 @donottrack('Shire')
 def denethor():
     """ Function for decorator @donottrack
     """
     # should not be tracked
     Shire.objects.filter(id_field=1)
-    
+
     # should be tracked
     Rohan.objects.filter(id_field=1)
 
@@ -158,16 +159,3 @@ def child_bombadil():
     """
     # Should not be tracked
     Gondor.objects.all()
-
-
-
-
-
-
-
-
-
-
-
-
-
