@@ -148,6 +148,86 @@
     @extend %t-weight4;
   }
 
+  .card {
+    @extend .clearfix;
+    display: inline-block;
+    width: 30%;
+    margin: ($baseline/2) ($baseline/4);
+    border: 1px solid $gray-l3;
+    border-radius: 3px;
+
+    .card-core-wrapper {
+      @extend .clearfix;
+      padding: ($baseline/2) ($baseline/4);
+
+      &.has-actons {
+
+        .card-core {
+          display: inline-block;
+          width: 65%;
+        }
+
+        .card-actions {
+          display: inline-block;
+          width: 30%;
+        }
+      }
+    }
+
+    .card-title {
+      @extend %t-title5;
+    }
+
+    .card-description {
+      @extend %t-copy-sub1;
+      height: ($baseline*5);
+      overflow: hidden;
+      color: $gray;
+    }
+
+    .card-actions {
+      float: right;
+
+      .action-view {
+        @extend %btn-secondary-blue-outline;
+        float: right;
+      }
+    }
+
+    .card-meta-wrapper {
+      @extend .clearfix;
+      @extend %t-copy-sub1;
+      border-top: 1px solid $gray-l3;
+      padding: ($baseline/2) ($baseline*.75);
+      background-color: $gray-l5;
+      color: $gray;
+
+      p {
+        color: $gray; // override
+      }
+
+      &.has-actions {
+        .card-meta-details,
+        .card-actions {
+          display: inline-block;
+          max-width: 45%;
+          vertical-align: middle;
+        }
+      }
+    }
+
+    .meta-detail {
+      display: inline-block;
+      margin-right: ($baseline*.75);
+    }
+
+    &.list-card {
+      width: auto;
+      display: block;
+    }
+
+  }
+
   .create-team {
 
     legend {
