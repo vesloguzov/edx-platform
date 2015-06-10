@@ -213,7 +213,7 @@
           padding: lh();
           > .requirement{
             border-bottom: 1px solid $lightGrey;
-            padding: 10px;
+            padding: lh(0.5);
             > .requirement-name {
               width: bi-app-invert-percentage(30%);
               display: inline-block;
