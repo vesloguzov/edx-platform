@@ -450,7 +450,7 @@ MONGODB_LOG = {
 FEATURES['ENABLE_EDXNOTES'] = True
 
 # Add milestones to Installed apps for testing
-INSTALLED_APPS += ('milestones', )
+INSTALLED_APPS += ('milestones', 'openedx.core.djangoapps.call_stack_manager.tests')
 
 # MILESTONES
 FEATURES['MILESTONES_APP'] = True

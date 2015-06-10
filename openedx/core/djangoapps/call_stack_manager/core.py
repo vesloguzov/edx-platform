@@ -46,7 +46,6 @@ import re
 import collections
 from django.db.models import Manager
 
-
 log = logging.getLogger(__name__)
 
 # Module Level variables
@@ -54,11 +53,11 @@ log = logging.getLogger(__name__)
 # { "ModelClasses" : [ListOfFrames]}
 # Frames - ('FilePath','LineNumber','Context')
 # ex. {"<class 'courseware.models.StudentModule'>" : [[(file,line number,context),(---,---,---)],
-#                                                     [(file,line number,context),(---,---,---)]]}
+#                                                     [(file,line number,context),(---,---,---)]]}'^.*call_stack_manager.*$',
 STACK_BOOK = collections.defaultdict(list)
 
 # filter to trickle down call stacks
-EXCLUDE = ['^.*python2.7.*$', '^.*call_stack_manager.*$', '^.*<exec_function>.*$', '^.*exec_code_object.*$']
+EXCLUDE = ['^.*python2.7.*$',  '^.*<exec_function>.*$', '^.*exec_code_object.*$']
 REGULAR_EXPS = [re.compile(x) for x in EXCLUDE]
 
 # Variable which decides whether to track calls in the function or not. Do it by default.
@@ -97,18 +96,19 @@ class CallStackMixin(object):
     """
     A mixin class for getting call stacks when Save() and Delete() methods are called
     """
+
     def save(self, *args, **kwargs):
         """
         Logs before save and overrides respective model API save()
         """
-        capture_call_stack(str(type(self))[str(type(self)).find('\''): str(type(self)).rfind('\'')])
+        capture_call_stack(str(type(self))[str(type(self)).find('\'') + 1: str(type(self)).rfind('\'')])
         return super(CallStackMixin, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        """s
+        """
         Logs before delete and overrides respective model API delete()
         """
-        capture_call_stack(str(type(self))[str(type(self)).find('\''): str(type(self)).rfind('\'')])
+        capture_call_stack(str(type(self))[str(type(self)).find('\'') + 1: str(type(self)).rfind('\'')])
         return super(CallStackMixin, self).delete(*args, **kwargs)
 
 
@@ -118,10 +118,10 @@ class CallStackManager(Manager):
     """
     def get_query_set(self):
         """
-        overriding the default queryset API methods
+        overriding the default queryset API method
 
         """
-        capture_call_stack(str(self.model)[str(self.model).find('\''): str(self.model).rfind('\'')])
+        capture_call_stack(str(self.model)[str(self.model).find('\'') + 1: str(self.model).rfind('\'')])
         return super(CallStackManager, self).get_query_set()
 
 
@@ -135,7 +135,6 @@ def donottrack(*classes_not_to_be_tracked):
     Returns:
         wrapped function
     """
-    donottrack.depth = 0
 
     def real_donottrack(function):
         """takes function to be decorated and returns wrapped function
@@ -150,21 +149,15 @@ def donottrack(*classes_not_to_be_tracked):
             """
             if len(classes_not_to_be_tracked) == 0:
                 global TRACK_FLAG  # pylint: disable=W0603
-                if donottrack.depth == 0:
-                    TRACK_FLAG = False
-                donottrack.depth += 1
+                current_flag = TRACK_FLAG
+                TRACK_FLAG = False
                 function(*args, **kwargs)
-                donottrack.depth -= 1
-                if donottrack.depth == 0:
-                    TRACK_FLAG = False
+                TRACK_FLAG = current_flag
             else:
                 global HALT_TRACKING  # pylint: disable=W0603
-                if donottrack.depth == 0:
-                    HALT_TRACKING = list(classes_not_to_be_tracked)
-                donottrack.depth += 1
+                current_halt_track = HALT_TRACKING
+                HALT_TRACKING = classes_not_to_be_tracked
                 function(*args, **kwargs)
-                donottrack.depth -= 1
-                if donottrack.depth == 0:
-                    HALT_TRACKING[:] = []
+                HALT_TRACKING = current_halt_track
         return wrapper
     return real_donottrack
