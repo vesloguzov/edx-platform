@@ -198,7 +198,6 @@ class CreditRequirementStatus(TimeStampedModel):
     # the grade to users later and to send the information to credit providers.
     reason = JSONField(default={})
 
-
     class Meta(object):  # pylint: disable=missing-docstring
         get_latest_by = "created"
 

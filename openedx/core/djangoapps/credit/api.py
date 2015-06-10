@@ -321,6 +321,7 @@ def get_credit_requests_for_user(username):
     """
     return CreditRequest.credit_requests_for_user(username)
 
+
 def get_credit_requirement_status(course_key, username):
     """ Retrieve the user's status for each credit requirement in the course.
 
