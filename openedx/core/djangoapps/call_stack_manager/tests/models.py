@@ -42,7 +42,7 @@ class ModelWithCSM(models.Model):
     Test Model Classes
     """
     objects = CallStackManager()
-    x = models.IntegerField()
+    id_field = models.IntegerField()
 
 
 class ModelWithCSMChild(ModelWithCSM):
@@ -50,4 +50,4 @@ class ModelWithCSMChild(ModelWithCSM):
 
     """
     objects = CallStackManager()
-    y = models.IntegerField()
+    id1_field = models.IntegerField()

@@ -34,7 +34,7 @@ class TestingCallStackManager(TestCase):
         with LogCapture() as l:
             ModelAnotherCSM(id_field=1).save()
 
-            self.assertEqual(len(l.records), 0, msg="Classes not using ")
+            self.assertEqual(len(l.records), 0)
 
     def test_queryset(self):
         """ Tests for Overriding QuerySet API
@@ -112,7 +112,6 @@ class TestingCallStackManager(TestCase):
             desired_sequence = [str(ModelAnotherCSM), str(ModelMixinCSM)]
             self.assertEqual(actual_sequence, desired_sequence)
 
-
     def test_nested_parameterized_donottrack_after(self):
         """ Tests parameterized nested @donottrack
         1. should not track call of classes specified in decorated with scope bounded to the respective class
@@ -137,9 +136,7 @@ class TestingCallStackManager(TestCase):
             self.assertEqual(actual_sequence, desired_sequence)
 
     def test_donottrack_called_in_func(self):
-        """
-
-        :return:
+        """ test for function which calls decorated function.
         """
         with LogCapture() as l:
             ModelAnotherCSM(id_field=1).save()
@@ -147,15 +144,6 @@ class TestingCallStackManager(TestCase):
 
             track_it()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
-            latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
-            latest_class1 = latest_log[latest_log.rfind('.') + 1:]
-
-            latest_log = l.records[-2].getMessage()[:l.records[-2].getMessage().find(':')]
-            latest_class2 = latest_log[latest_log.rfind('.') + 1:]
-
-            actual_sequence = [latest_class2, latest_class1]
-            desired_sequence = [ModelAnotherCSM, ModelMixinCSM]
             self.assertEqual(len(l.records), 4)
 
     def test_donottrack_child_too(self):
@@ -163,8 +151,8 @@ class TestingCallStackManager(TestCase):
         1. subclass should be tracked when superclass is called in a @donottrack decorated function
         """
         with LogCapture() as l:
-            ModelWithCSM(x=1).save()
-            ModelWithCSMChild(x=1, y=1).save()
+            ModelWithCSM(id_field=1).save()
+            ModelWithCSMChild(id_field=1, id1_field=1).save()
 
             abstract_do_not_track()
 
@@ -175,8 +163,8 @@ class TestingCallStackManager(TestCase):
         1. subclass should be tracked when superclass is called in a @donottrack decorated function
         """
         with LogCapture() as l:
-            ModelWithCSM(x=1).save()
-            ModelWithCSMChild(x=1, y=1).save()
+            ModelWithCSM(id_field=1).save()
+            ModelWithCSMChild(id_field=1, id1_field=1).save()
 
             abstract_do_track()
 
@@ -193,17 +181,23 @@ class TestingCallStackManager(TestCase):
 
 @donottrack(ModelWithCSMChild)
 def abstract_do_track():
-    ModelWithCSM.objects.filter(x=1)
-    ModelWithCSMChild.objects.filter(y=1)
+    """ Function for inheritence
+    """
+    ModelWithCSM.objects.filter(id_field=1)
+    ModelWithCSMChild.objects.filter(id1_field1=1)
 
 
 @donottrack(ModelWithCSM)
 def abstract_do_not_track():
-    ModelWithCSM.objects.filter(x=1)
-    ModelWithCSMChild.objects.filter(y=1)
+    """ Function for inheritence
+    """
+    ModelWithCSM.objects.filter(id_field=1)
+    ModelWithCSMChild.objects.filter(id1_field=1)
 
 
 def track_it():
+    """ Function for inheritence
+    """
     ModelAnotherCSM.objects.filter(id_field=1)
     donottrack_child_func()
     ModelAnotherCSM.objects.filter(id_field=1)
