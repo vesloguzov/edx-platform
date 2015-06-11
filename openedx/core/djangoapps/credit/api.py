@@ -363,29 +363,24 @@ def get_credit_requirement_status(course_key, username):
         list of requirement statuses
     """
     requirements = CreditRequirement.get_course_requirements(course_key)
-    requirement_list = [requirement.id for requirement in requirements]
-    requirement_statuses = CreditRequirementStatus.get_statuses(requirement_list, username)
+    requirement_statuses = CreditRequirementStatus.get_statuses(requirements, username)
+    requirement_statuses = dict((o.requirement, o) for o in requirement_statuses)
     statuses = []
     for requirement in requirements:
-        status = None
-        status_date = None
-        for requirement_status in requirement_statuses:
-            if requirement_status.requirement == requirement:
-                status = requirement_status.status
-                status_date = requirement_status.modified.strftime('%m/%d/%Y')
-                break
+        requirement_status = requirement_statuses.get(requirement)
         statuses.append({
             "namespace": requirement.namespace,
             "name": requirement.name,
             "criteria": requirement.criteria,
-            "status": status,
-            "status_date": status_date,
+            "status": requirement_status.status if requirement_status else None,
+            "status_date": requirement_status.modified if requirement_status else None,
         })
     return statuses
 
 
 def is_user_eligible_for_credit(username, course_key):
-    """Check if the given user is eligible for provided course
+    """Returns a boolean indicating if the user is eligible for credit for
+    the given course
 
     Args:
         username(str): The identifier for user
@@ -394,7 +389,7 @@ def is_user_eligible_for_credit(username, course_key):
     Returns:
         True if user is eligible for the course else False
     """
-    return CreditEligibility.is_credit_course(course_key, username)
+    return CreditEligibility.is_user_eligible_for_credit(course_key, username)
 
 
 def is_credit_course(course_key):

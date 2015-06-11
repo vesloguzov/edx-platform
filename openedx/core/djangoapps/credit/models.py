@@ -202,7 +202,7 @@ class CreditRequirementStatus(TimeStampedModel):
         get_latest_by = "created"
 
     @classmethod
-    def get_statuses(cls, requirement, username):
+    def get_statuses(cls, requirements, username):
         """ Get credit requirement statuses of given requirement and username
 
         Args:
@@ -210,9 +210,9 @@ class CreditRequirementStatus(TimeStampedModel):
             username(str): username of the user
 
         Returns:
-            CreditRequirementStatus object
+            Queryset 'CreditRequirementStatus' objects
         """
-        return cls.objects.filter(requirement_id__in=requirement, username=username)
+        return cls.objects.filter(requirement__in=requirements, username=username)
 
 
 class CreditEligibility(TimeStampedModel):
@@ -229,21 +229,15 @@ class CreditEligibility(TimeStampedModel):
         unique_together = ('username', 'course')
 
     @classmethod
-    def get_user_eligibility(cls, username):
-        """
-        returns list of all eligible courses
-        """
-        return cls.objects.filter(username=username).select_related('course', 'course__providers')
-
-    @classmethod
-    def is_credit_course(cls, course_key, username):
-        """Check that given course is credit or not.
+    def is_user_eligible_for_credit(cls, course_key, username):
+        """Check if the given user is eligible for the provided credit course
 
         Args:
             course_key(CourseKey): The course identifier
+            username(str): The username of the user
 
         Returns:
-            Bool True if the course is marked credit else False
+            Bool True if the user eligible for credit course else False
         """
         return cls.objects.filter(course__course_key=course_key, username=username).exists()
 
