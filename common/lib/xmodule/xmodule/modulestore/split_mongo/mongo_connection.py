@@ -10,6 +10,7 @@ import pymongo
 # Import this just to export it
 from pymongo.errors import DuplicateKeyError  # pylint: disable=unused-import
 from django.core.cache import get_cache
+import dogstats_wrapper as dog_stats_api
 
 from contracts import check, new_contract
 from xmodule.exceptions import HeartbeatFailure
@@ -93,6 +94,13 @@ class CourseStructureCache(object):
         pickled_data = pickle.dumps(structure, pickle.HIGHEST_PROTOCOL)
         # 1 = Fastest (slightly larger results)
         compressed_pickled_data = zlib.compress(pickled_data, 1)
+
+        # record compressed course structure sizes
+        dog_stats_api.histogram(
+            'compressed_course_structure.size',
+            len(compressed_pickled_data),
+            tags=[structure_cache_key]
+        )
         # Stuctures are immutable, so we set a timeout of "never"
         self.cache.set(structure_cache_key, compressed_pickled_data, None)
 
