@@ -11,6 +11,7 @@
 
   .icon {
     font-family: "FontAwesome";
+    color: inherit;
   }
 
   %button-reset {
@@ -159,19 +160,6 @@
     .card-core-wrapper {
       @extend .clearfix;
       padding: ($baseline*.75);
-
-      &.has-actons {
-
-        .card-core {
-          display: inline-block;
-          width: 65%;
-        }
-
-        .card-actions {
-          display: inline-block;
-          width: 30%;
-        }
-      }
     }
 
     .card-title {
@@ -202,19 +190,11 @@
       p {
         color: $gray; // override
       }
-
-      &.has-actions {
-        .card-meta-details,
-        .card-actions {
-          display: inline-block;
-          max-width: 45%;
-          vertical-align: middle;
-        }
-      }
     }
 
     .meta-detail {
       display: inline-block;
+      margin-top: ($baseline/4);
       margin-right: ($baseline*.75);
     }
 
@@ -224,6 +204,18 @@
         height: ($baseline*5);
         overflow: hidden;
       }
+
+      .card-meta-wrapper {
+
+        &.has-actions {
+          .card-meta-details,
+          .card-actions {
+            display: inline-block;
+            width: 49%;
+            vertical-align: middle;
+          }
+        }
+      }
     }
 
     &.list-card {
@@ -232,12 +224,26 @@
 
       .card-core-wrapper {
         @extend %vertical-aligner;
+
+        &.has-actons {
+
+          .card-core {
+            display: inline-block;
+            width: 65%;
+          }
+
+          .card-actions {
+            display: inline-block;
+            float: right;
+            width: 30%;
+          }
+        }
       }
 
       .card-core {
         display: inline-block;
         vertical-align: middle;
-        width: 80%;
+        width: 84%;
       }
 
       .card-actions {
