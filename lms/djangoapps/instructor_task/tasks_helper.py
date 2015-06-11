@@ -1118,7 +1118,7 @@ def upload_exec_summary_report(_xmodule_instance_args, _entry_id, course_id, _ta
 
     unused_registration_codes = 0
     for registration_code in bulk_purchased_codes:
-        if not RegistrationCodeRedemption.is_registration_code_redeemed(registration_code):
+        if not RegistrationCodeRedemption.is_registration_code_redeemed(registration_code.code):
             unused_registration_codes += 1
 
     self_purchased_seat_count = PaidCourseRegistration.get_self_purchased_seat_count(course_id)
