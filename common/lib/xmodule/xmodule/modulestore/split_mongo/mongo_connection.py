@@ -9,7 +9,7 @@ import pymongo
 
 # Import this just to export it
 from pymongo.errors import DuplicateKeyError  # pylint: disable=unused-import
-from django.core.cache import cache
+from django.core.cache import get_cache
 
 from contracts import check, new_contract
 from xmodule.exceptions import HeartbeatFailure
@@ -128,6 +128,7 @@ class MongoConnection(object):
         This method will use a cached version of the structure if it is availble.
         """
         structure_cache_key = "modulestore.split_mongo.mongo_connection.get_structure.{}".format(key)
+        cache = get_cache('course_structure_cache')
 
         def _fetch_from_cache():
             """Pull the compressed, pickled struct data from cache and deserialize."""
