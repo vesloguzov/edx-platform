@@ -1,22 +1,28 @@
 ;(function (define) {
     'use strict';
-    define(['backbone', 'js/components/card/views/card'],
-        function (Backbone, CardView) {
+    define(['backbone', 'gettext', 'js/components/card/views/card'],
+        function (Backbone, gettext, CardView) {
             var TopicCardView = CardView.extend({
-                action: function () {
-                    console.log("Navigating to topic_id " + this.model.get('topic_id'));
+                action: function (event) {
+                    event.preventDefault();
+                    console.log("Navigating to topic " + this.model.get('id'));
                 },
 
-                render: function () {
-                    this.$el.html(this.template({
-                        name: this.model.get('name'),
-                        description: this.model.get('description'),
-                        action_text: 'View',
-                        items: [this.model.get('team_count') + ' Teams'],
-                        right_item: ''
-                    }));
-                    return this;
-                }
+                getCardClass: function () { return 'topic-card'; },
+                getTitle: function () { return this.model.get('name'); },
+                getDescription: function () { return this.model.get('description'); },
+                getDetails: function () {
+                    return [{
+                        tag: 'p',
+                        detail_class: 'team-count',
+                        content: interpolate(
+                            gettext('%(team_count)s Teams'),
+                            { team_count: this.model.get('team_count') },
+                            true
+                        )
+                    }]
+                },
+                getActionContent: function () { return gettext('View') + ' <span class="icon fa-arrow-right"></span>'; }
             });
 
             return TopicCardView;

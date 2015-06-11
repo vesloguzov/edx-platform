@@ -1,0 +1,18 @@
+<div class="card list-card <%= card_class %>">
+    <div class="card-core-wrapper">
+        <div class="card-core">
+            <h3 class="card-title"><%- title %></h3>
+            <p class="card-description"><%- description %></p>
+        </div>
+        <div class="card-actions">
+            <a class="action action-view" href="<%= action_url %>"><%= action_content %></a>
+        </div>
+    </div>
+    <div class="card-meta-wrapper">
+        <div class="card-meta-details">
+            <% _.each(details, function (detail) { %>
+                <<%= detail.tag %> class="meta-detail <%= detail.detail_class %>"><%= detail.content %></<%= detail.tag %>>
+            <% }) %>
+        </div>
+    </div>
+</div>

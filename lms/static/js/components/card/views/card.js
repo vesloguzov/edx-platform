@@ -6,25 +6,40 @@
  */
 ;(function (define) {
     'use strict';
-    define(['backbone', 'text!templates/components/card/card.underscore', 'text!templates/components/card/list-item.underscore'],
-        function (Backbone, cardTemplate, listItemTemplate) {
+    define(['backbone',
+            'text!templates/components/card/square-card.underscore',
+            'text!templates/components/card/list-card.underscore'],
+        function (Backbone, squareCardTemplate, listCardTemplate) {
             var CardView = Backbone.View.extend({
                 events: {
                     'click .action' : 'action'
                 },
 
                 initialize: function (options) {
-                    var configuration = options.configuration || 'card';
-                    this.template = configuration == 'card' ? _.template(cardTemplate) : _.template(listItemTemplate);
-                    this.listenTo(this.model, 'change', this.render);
+                    var configuration = options.configuration || 'square_card';
+                    this.template = configuration == 'square_card' ?
+                        _.template(squareCardTemplate) : _.template(listCardTemplate);
                     this.render();
                 },
 
                 render: function () {
-                    var json = this.model.attributes;
-                    this.$el.html(this.template(_.defaults(json, {right_item: ''})));
+                    this.$el.html(this.template({
+                        card_class: this.getCardClass(),
+                        title: this.getTitle(),
+                        description: this.getDescription(),
+                        details: this.getDetails(),
+                        action_url: this.getActionUrl(),
+                        action_content: this.getActionContent()
+                    }));
                     return this;
-                }
+                },
+
+                getCardClass: function () { return ''; },
+                getTitle: function () { return ''; },
+                getDescription: function () { return ''; },
+                getDetails: function () { return []; },
+                getActionUrl: function () { return ''; },
+                getActionContent: function () { return ''; }
             });
 
             return CardView;
