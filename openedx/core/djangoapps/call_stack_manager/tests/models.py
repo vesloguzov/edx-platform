@@ -13,7 +13,6 @@ class ModelMixinCSM(CallStackMixin, models.Model):
     objects = CallStackManager()
 
     id_field = models.IntegerField()
-    string_field = models.TextField()
 
 
 class ModelMixin(CallStackMixin, models.Model):
@@ -21,8 +20,6 @@ class ModelMixin(CallStackMixin, models.Model):
     Test Model that uses CallStackMixin but does not use CallStackManager
     """
     id_field = models.IntegerField()
-    text_field = models.CharField(max_length=10)
-    float_field = models.FloatField()
 
 
 class ModelNothing(models.Model):
@@ -30,7 +27,6 @@ class ModelNothing(models.Model):
     Test Model class that neither uses CallStackMixin nor CallStackManager
     """
     id_field = models.IntegerField()
-    name_field = models.CharField(max_length=20)
 
 
 class ModelAnotherCSM(models.Model):
@@ -39,4 +35,19 @@ class ModelAnotherCSM(models.Model):
     """
     objects = CallStackManager()
     id_field = models.IntegerField()
-    name_field = models.CharField(max_length=20)
+
+
+class ModelWithCSM(models.Model):
+    """
+    Test Model Classes
+    """
+    objects = CallStackManager()
+    x = models.IntegerField()
+
+
+class ModelWithCSMChild(ModelWithCSM):
+    """child class of ModelWithCSM
+
+    """
+    objects = CallStackManager()
+    y = models.IntegerField()

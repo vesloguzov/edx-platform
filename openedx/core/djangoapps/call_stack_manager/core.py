@@ -24,20 +24,6 @@ How to use-
     Use mixin called "CallStackMixin"
     For ex.
         class StudentModule(CallStackMixin, models.Model):
-
-Note -
-1.Format for STACK_BOOK
-{
-    "modelclass1":
-        [[(frame 1),(frame 2)],
-         [(frame 11),(frame21)]]
-    "modelclass2":
-        [[(frame 3),(frame 4)],
-         [(frame 6),(frame 5)]]
-
-}
-where frame is a tuple of
-(file path, Line Number, Context)
 """
 
 import logging
@@ -74,7 +60,6 @@ def capture_call_stack(current_model):
     Args:
         current_model - Name of the model class
     """
-
     # holds temporary callstack
     # frame[0][6:-1] -> File name along with path
     # frame[1][6:] -> Line Number
@@ -86,8 +71,8 @@ def capture_call_stack(current_model):
                        if not any(reg.match(frame[0]) for reg in REGULAR_EXPS)]
 
     # avoid duplication.
-    if temp_call_stack not in STACK_BOOK[current_model] \
-            and TRACK_FLAG and not any(current_model[current_model.rfind(".") + 1:] == cls for cls in HALT_TRACKING):
+    if temp_call_stack not in STACK_BOOK[current_model] and TRACK_FLAG \
+            and not any(issubclass(current_model, cls) for cls in HALT_TRACKING):
         STACK_BOOK[current_model].append(temp_call_stack)
         log.info("logging new call stack for %s:\n %s", current_model, temp_call_stack)
 
@@ -101,14 +86,14 @@ class CallStackMixin(object):
         """
         Logs before save and overrides respective model API save()
         """
-        capture_call_stack(str(type(self))[str(type(self)).find('\'') + 1: str(type(self)).rfind('\'')])
+        capture_call_stack(type(self))
         return super(CallStackMixin, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         """
         Logs before delete and overrides respective model API delete()
         """
-        capture_call_stack(str(type(self))[str(type(self)).find('\'') + 1: str(type(self)).rfind('\'')])
+        capture_call_stack(type(self))
         return super(CallStackMixin, self).delete(*args, **kwargs)
 
 
@@ -121,7 +106,8 @@ class CallStackManager(Manager):
         overriding the default queryset API method
 
         """
-        capture_call_stack(str(self.model)[str(self.model).find('\'') + 1: str(self.model).rfind('\'')])
+        #print self.model
+        capture_call_stack(self.model)
         return super(CallStackManager, self).get_query_set()
 
 

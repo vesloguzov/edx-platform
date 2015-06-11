@@ -1,7 +1,7 @@
 """
 Test cases for Call Stack Manager
 """
-from .models import ModelMixin, ModelNothing, ModelMixinCSM, ModelAnotherCSM
+from .models import ModelMixin, ModelNothing, ModelMixinCSM, ModelAnotherCSM, ModelWithCSM, ModelWithCSMChild
 from django.test import TestCase
 from testfixtures import LogCapture
 from openedx.core.djangoapps.call_stack_manager import donottrack
@@ -11,67 +11,61 @@ class TestingCallStackManager(TestCase):
     """
     Tests for call_stack_manager package
     """
-    def setUp(self):
-        super(TestingCallStackManager, self).setUp()
-
-    def tearDown(self):
-        """ Deleting all databases after tests
-        """
-        super(TestingCallStackManager, self).tearDown()
-        ModelMixin.objects.all().delete()
-        ModelMixinCSM.objects.all().delete()
-        ModelNothing.objects.all().delete()
-        ModelAnotherCSM.objects.all().delete()
-
     def test_save(self):
-        """ tests save functionality of call stack manager
-        1. classes without CallStackMixin should not participate in logging.
+        """ tests save functionality of call stack manager/ applies same for delete()
+        1. classes with CallStackMixin should participate in logging.
         """
         with LogCapture() as l:
-            modelMixin_obj1 = ModelMixin(id_field=1, text_field="modelmixin1", float_field=12.34)
-            modelMixin_obj1.save()
-
-            modelNothing_obj1 = ModelNothing(id_field=1, name_field="ModelNothing")
-            modelNothing_obj1.save()
+            ModelMixin(id_field=1).save()
 
             # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
-            latest_class = latest_log[latest_log.rfind('.') + 1:]
+            latest_class = latest_log[latest_log.find('<'):]
 
             # desired latest class here
-            desired_class = "ModelMixin"
+            desired_class = str(ModelMixin)
 
-            self.assertEqual(latest_class, desired_class, msg="Latest logged event should belong to " + desired_class)
+            self.assertEqual(latest_class, desired_class)
+
+    def test_withoutmixin_save(self):
+        """tests save functionality of call stack manager / applies same for delete()
+        1. classes without CallStackMixin should not participate in logging
+        """
+        with LogCapture() as l:
+            ModelAnotherCSM(id_field=1).save()
+
+            self.assertEqual(len(l.records), 0, msg="Classes not using ")
 
     def test_queryset(self):
         """ Tests for Overriding QuerySet API
         1. Tests if classes with CallStackManager gets logged.
         """
         with LogCapture() as l:
-            # create and save objects of class not overriding queryset API
-            modelmixin_obj3 = ModelMixin(id_field=1, float_field=12.89)
-            modelmixin_obj4 = ModelMixin(id_field=1, float_field=23.56)
-            modelmixin_obj3.save()
-            modelmixin_obj4.save()
-
-            modelmixinCSM_obj1 = ModelMixinCSM(id_field=1, string_field="Thou shall not pass")
-            modelmixinCSM_obj2 = ModelMixinCSM(id_field=1, string_field="Not all those who wonder are lost")
-            modelmixinCSM_obj1.save()
-            modelmixinCSM_obj2.save()
+            ModelMixinCSM(id_field=1).save()
 
             ModelMixinCSM.objects.all()
 
-            # class not using Manager, should not get logged
-            ModelMixin.objects.all()
-
             # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
-            latest_class = latest_log[latest_log.rfind('.') + 1:]
+            latest_class = latest_log[latest_log.find('<'):]
 
             # desired latest class here
-            desired_class = "ModelMixinCSM"
+            desired_class = str(ModelMixinCSM)
 
-            self.assertEqual(latest_class, desired_class, msg="Latest logged event should belong to " + desired_class)
+            self.assertEqual(latest_class, desired_class)
+
+    def test_withoutqueryset(self):
+        """ Tests for Overriding QuerySet API
+        1. Tests if classes without CallStackManager does not log
+        """
+        with LogCapture() as l:
+            # create and save objects of class not overriding queryset API
+            ModelNothing(id_field=1).save()
+
+            # class not using Manager, should not get logged
+            ModelNothing.objects.all()
+
+            self.assertEqual(len(l.records), 0, msg="class does not override Manager, hence should not log anything")
 
     def test_donottrack(self):
         """ Test for @donottrack
@@ -90,13 +84,12 @@ class TestingCallStackManager(TestCase):
 
             # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
-            latest_class = latest_log[latest_log.rfind('.') + 1:]
+            latest_class = latest_log[latest_log.find('<'):]
 
             # desired latest class here
-            desired_class = "ModelMixinCSM"
+            desired_class = str(ModelMixinCSM)
 
-            self.assertEqual(latest_class, desired_class,
-                             msg="The latest log should be of the class" + desired_class + "not" + latest_class)
+            self.assertEqual(latest_class, desired_class)
 
     def test_nested_parameterized_donottrack(self):
         """ Tests parameterized nested @donottrack
@@ -104,10 +97,55 @@ class TestingCallStackManager(TestCase):
         """
         with LogCapture() as l:
             #  class with CallStackManager as Manager
-            modelAnotherCSM_obj = ModelAnotherCSM(id_field=1, name_field="The Crownless again shall be king")
-            modelAnotherCSM_obj.save()
+            ModelAnotherCSM(id_field=1).save()
 
             donottrack_parent_func()
+
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
+            latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
+            latest_class1 = latest_log[latest_log.find('<'):]
+
+            latest_log = l.records[-2].getMessage()[:l.records[-2].getMessage().find(':')]
+            latest_class2 = latest_log[latest_log.find('<'):]
+
+            actual_sequence = [latest_class2, latest_class1]
+            desired_sequence = [str(ModelAnotherCSM), str(ModelMixinCSM)]
+            self.assertEqual(actual_sequence, desired_sequence)
+
+
+    def test_nested_parameterized_donottrack_after(self):
+        """ Tests parameterized nested @donottrack
+        1. should not track call of classes specified in decorated with scope bounded to the respective class
+        """
+        with LogCapture() as l:
+
+            donottrack_child_func()
+
+            #  class with CallStackManager as Manager
+            ModelAnotherCSM(id_field=1).save()
+            ModelAnotherCSM.objects.filter(id_field=1)
+
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
+            latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
+            latest_class1 = latest_log[latest_log.find('<'):]
+
+            latest_log = l.records[-2].getMessage()[:l.records[-2].getMessage().find(':')]
+            latest_class2 = latest_log[latest_log.find('<'):]
+
+            actual_sequence = [latest_class2, latest_class1]
+            desired_sequence = [str(ModelMixinCSM), str(ModelAnotherCSM)]
+            self.assertEqual(actual_sequence, desired_sequence)
+
+    def test_donottrack_called_in_func(self):
+        """
+
+        :return:
+        """
+        with LogCapture() as l:
+            ModelAnotherCSM(id_field=1).save()
+            ModelMixinCSM(id_field=1).save()
+
+            track_it()
 
             # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
@@ -117,11 +155,61 @@ class TestingCallStackManager(TestCase):
             latest_class2 = latest_log[latest_log.rfind('.') + 1:]
 
             actual_sequence = [latest_class2, latest_class1]
-            desired_sequence = ["ModelAnotherCSM", "ModelMixinCSM"]
-            self.assertEqual(actual_sequence, desired_sequence, msg=str(l))
+            desired_sequence = [ModelAnotherCSM, ModelMixinCSM]
+            self.assertEqual(len(l.records), 4)
+
+    def test_donottrack_child_too(self):
+        """
+        1. subclass should be tracked when superclass is called in a @donottrack decorated function
+        """
+        with LogCapture() as l:
+            ModelWithCSM(x=1).save()
+            ModelWithCSMChild(x=1, y=1).save()
+
+            abstract_do_not_track()
+
+            self.assertEqual(len(l.records), 0)
+
+    def test_dotrack_parent(self):
+        """
+        1. subclass should be tracked when superclass is called in a @donottrack decorated function
+        """
+        with LogCapture() as l:
+            ModelWithCSM(x=1).save()
+            ModelWithCSMChild(x=1, y=1).save()
+
+            abstract_do_track()
 
 
-@donottrack('ModelAnotherCSM')
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
+            latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
+            latest_class = latest_log[latest_log.find('<'):]
+
+            # desired latest class here
+            desired_class = str(ModelWithCSM)
+
+            self.assertEqual(latest_class, desired_class)
+
+
+@donottrack(ModelWithCSMChild)
+def abstract_do_track():
+    ModelWithCSM.objects.filter(x=1)
+    ModelWithCSMChild.objects.filter(y=1)
+
+
+@donottrack(ModelWithCSM)
+def abstract_do_not_track():
+    ModelWithCSM.objects.filter(x=1)
+    ModelWithCSMChild.objects.filter(y=1)
+
+
+def track_it():
+    ModelAnotherCSM.objects.filter(id_field=1)
+    donottrack_child_func()
+    ModelAnotherCSM.objects.filter(id_field=1)
+
+
+@donottrack(ModelAnotherCSM)
 def donottrack_child_func():
     """ Function for decorator @donottrack
     """
@@ -132,7 +220,7 @@ def donottrack_child_func():
     ModelMixinCSM.objects.filter(id_field=1)
 
 
-@donottrack('ModelMixinCSM')
+@donottrack(ModelMixinCSM)
 def donottrack_parent_func():
     """ Function for decorator @donottrack
     """
