@@ -10,7 +10,7 @@ metadata:
        _____________________________________________________________________________
 
        >>Which of the following countries has the largest population?<<
-       ( ) Brazil {{ item-specific feedback -- explain why an "almost" answer is not correct }}
+       ( ) Brazil {{ timely feedback -- explain why an almost correct answer is wrong }}
        ( ) Germany
        (x) Indonesia
        ( ) Russia

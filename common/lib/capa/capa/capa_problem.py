@@ -140,7 +140,6 @@ class LoncapaProblem(object):
         self.do_reset()
         self.problem_id = id
         self.capa_system = capa_system
-        self.question_label = ""  # TODO nparlante - delete this line?
         self.capa_module = capa_module
 
         state = state or {}
