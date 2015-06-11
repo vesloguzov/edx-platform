@@ -73,6 +73,30 @@ def structure_to_mongo(structure):
     return new_structure
 
 
+class CourseStructureCache(object):
+    """
+    Wrapper around django cache object to cache course structure objects.
+    The course structures are pickled and compressed when cached.
+    """
+    def __init__(self):
+        self.cache = get_cache('course_structure_cache')
+
+    def get(self, structure_cache_key):
+        """Pull the compressed, pickled struct data from cache and deserialize."""
+        compressed_pickled_data = self.cache.get(structure_cache_key)
+        if compressed_pickled_data is None:
+            return None
+        return pickle.loads(zlib.decompress(compressed_pickled_data))
+
+    def set(self, structure_cache_key, structure):
+        """Given a structure, will pickle, compress, and write to cache."""
+        pickled_data = pickle.dumps(structure, pickle.HIGHEST_PROTOCOL)
+        # 1 = Fastest (slightly larger results)
+        compressed_pickled_data = zlib.compress(pickled_data, 1)
+        # Stuctures are immutable, so we set a timeout of "never"
+        self.cache.set(structure_cache_key, compressed_pickled_data, None)
+
+
 class MongoConnection(object):
     """
     Segregation of pymongo functions from the data modeling mechanisms for split modulestore.
@@ -128,27 +152,12 @@ class MongoConnection(object):
         This method will use a cached version of the structure if it is availble.
         """
         structure_cache_key = "modulestore.split_mongo.mongo_connection.get_structure.{}".format(key)
-        cache = get_cache('course_structure_cache')
+        cache = CourseStructureCache()
 
-        def _fetch_from_cache():
-            """Pull the compressed, pickled struct data from cache and deserialize."""
-            compressed_pickled_data = cache.get(structure_cache_key)
-            if compressed_pickled_data is None:
-                return None
-            return pickle.loads(zlib.decompress(compressed_pickled_data))
-
-        def _write_to_cache(structure):
-            """Given a structure, will pickle, compress, and write to cache."""
-            pickled_data = pickle.dumps(structure, pickle.HIGHEST_PROTOCOL)
-            # 1 = Fastest (slightly larger results)
-            compressed_pickled_data = zlib.compress(pickled_data, 1)
-            # Stuctures are immutable, so we set a timeout of "never"
-            cache.set(structure_cache_key, compressed_pickled_data, None)
-
-        structure = _fetch_from_cache()
+        structure = cache.get(structure_cache_key)
         if not structure:
             structure = structure_from_mongo(self.structures.find_one({'_id': key}))
-            _write_to_cache(structure)
+            cache.set(structure_cache_key, structure)
 
         return structure
 
