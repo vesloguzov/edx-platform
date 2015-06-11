@@ -49,34 +49,31 @@ from django.utils.http import urlquote_plus
         %if show_generate_cert_btn:
         <div class="wrapper-msg wrapper-auto-cert">
             <div id="errors-info" class="errors-info"></div>
-
             <div class="auto-cert-message" id="course-success">
                 <div class="has-actions">
                 %if passed:
-
-                    % if is_downloadable and download_url:
-
+                    %if is_downloadable:
                     <% post_url = reverse('generate_user_cert', args=[unicode(course.id)]) %>
                     <div class="msg-content">
                         <h2 class="title">${_("Your certificate is available")}</h2>
-                        %if show_cert_web_view:
-                        <p class="copy">${_("You can now view your certificate.")}</p>
-                        %else:
                         <p class="copy">${_(
-                            "You can now download your certificate as a PDF. If you keep working and receive a higher grade,you can request an {link_start} updated certificate {link_end}.").format(
+                            "You can now access your certificate. If you keep working and receive a higher grade,you can request an {link_start} updated certificate {link_end}.").format(
                             link_start=u"<a class='generate_certs' href='#' data-endpoint={}>".format(post_url) ,link_end=u"</a>")}
                         </p>
-                        %endif
                     </div>
                     <div class="msg-actions">
-                        %if show_cert_web_view:
+                        %if show_cert_web_view and cert_web_view_url:
                         <a class="btn" href="${cert_web_view_url}" target="_blank" title="${_('View certificate in a new browser window or tab.')}">
                             ${_("View Certificate")}
                         </a>
-                        %else:
+                        %elif download_url:
                         <a class="btn" href="${download_url}" target="_blank" title="${_('PDF will open in a new browser window or tab.')}">
                             ${_("Download Your Certificate")}
                         </a>
+                        %else:
+                        <div class="msg-actions">
+                          <button class="btn generate_certs" data-endpoint="${reverse('generate_user_cert', args=[unicode(course.id)])}" id="btn_generate_cert">${_('Request Certificate')}</button>
+                        </div>
                         %endif
                     </div>
                     %elif is_generating:

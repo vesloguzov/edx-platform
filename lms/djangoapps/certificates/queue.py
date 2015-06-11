@@ -3,6 +3,8 @@ import json
 import random
 import logging
 import lxml.html
+import uuid
+
 from lxml.etree import XMLSyntaxError, ParserError  # pylint:disable=no-name-in-module
 
 from django.test.client import RequestFactory
@@ -373,6 +375,11 @@ class XQueueCertInterface(object):
                                 new_status,
                                 key
                             )
+                    # If we're not generating a PDF, we're not pushing to XQueue, so we'll need to fill in the gaps
+                    else:
+                        cert.download_uuid = uuid.uuid4()
+                        cert.verify_uuid = uuid.uuid4()
+                        cert.save()
             else:
                 new_status = status.notpassing
                 cert.status = new_status
