@@ -30,8 +30,8 @@ class TestingCallStackManager(TestCase):
             gondor_obj1 = Gondor(id_field=1, text_field="Gondor1", float_field=12.34)
             gondor_obj1.save()
 
-            Mordor_obj1 = Mordor(id_field=1, name_field="Sauron")
-            Mordor_obj1.save()
+            mordor_obj1 = Mordor(id_field=1, name_field="Sauron")
+            mordor_obj1.save()
 
             # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.Gondor
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
