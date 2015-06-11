@@ -1,7 +1,7 @@
 """
 Test cases for Call Stack Manager
 """
-from .models import Gondor, Mordor, Rohan, Shire
+from .models import ModelMixin, ModelNothing, ModelMixinCSM, ModelAnotherCSM
 from django.test import TestCase
 from testfixtures import LogCapture
 from openedx.core.djangoapps.call_stack_manager import donottrack
@@ -17,28 +17,29 @@ class TestingCallStackManager(TestCase):
     def tearDown(self):
         """ Deleting all databases after tests
         """
-        Gondor.objects.all().delete()
-        Rohan.objects.all().delete()
-        Mordor.objects.all().delete()
-        Shire.objects.all().delete()
+        super(TestingCallStackManager, self).setUp()
+        ModelMixin.objects.all().delete()
+        ModelMixinCSM.objects.all().delete()
+        ModelNothing.objects.all().delete()
+        ModelAnotherCSM.objects.all().delete()
 
     def test_save(self):
         """ tests save functionality of call stack manager
         1. classes without CallStackMixin should not participate in logging.
         """
         with LogCapture() as l:
-            gondor_obj1 = Gondor(id_field=1, text_field="Gondor1", float_field=12.34)
-            gondor_obj1.save()
+            ModelMixin_obj1 = ModelMixin(id_field=1, text_field="ModelMixin1", float_field=12.34)
+            ModelMixin_obj1.save()
 
-            mordor_obj1 = Mordor(id_field=1, name_field="Sauron")
-            mordor_obj1.save()
+            ModelNothing_obj1 = ModelNothing(id_field=1, name_field="Sauron")
+            ModelNothing_obj1.save()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.Gondor
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.ModelMixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.rfind('.') + 1:]
 
             # desired latest class here
-            desired_class = "Gondor"
+            desired_class = "ModelMixin"
 
             self.assertEqual(latest_class, desired_class, msg="Latest logged event should belong to " + desired_class)
 
@@ -48,27 +49,27 @@ class TestingCallStackManager(TestCase):
         """
         with LogCapture() as l:
             # create and save objects of class not overriding queryset API
-            gondor_obj3 = Gondor(id_field=1, float_field=12.89)
-            gondor_obj4 = Gondor(id_field=1, float_field=23.56)
-            gondor_obj3.save()
-            gondor_obj4.save()
+            ModelMixin_obj3 = ModelMixin(id_field=1, float_field=12.89)
+            ModelMixin_obj4 = ModelMixin(id_field=1, float_field=23.56)
+            ModelMixin_obj3.save()
+            ModelMixin_obj4.save()
 
-            rohan_obj1 = Rohan(id_field=1, string_field="Thou shall not pass")
-            rohan_obj2 = Rohan(id_field=1, string_field="Not all those who wonder are lost")
-            rohan_obj1.save()
-            rohan_obj2.save()
+            ModelMixinCSM_obj1 = ModelMixinCSM(id_field=1, string_field="Thou shall not pass")
+            ModelMixinCSM_obj2 = ModelMixinCSM(id_field=1, string_field="Not all those who wonder are lost")
+            ModelMixinCSM_obj1.save()
+            ModelMixinCSM_obj2.save()
 
-            Rohan.objects.all()
+            ModelMixinCSM.objects.all()
 
             # class not using Manager, should not get logged
-            Gondor.objects.all()
+            ModelMixin.objects.all()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.Gondor
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.ModelMixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.rfind('.') + 1:]
 
             # desired latest class here
-            desired_class = "Rohan"
+            desired_class = "ModelMixinCSM"
 
             self.assertEqual(latest_class, desired_class, msg="Latest logged event should belong to " + desired_class)
 
@@ -77,7 +78,7 @@ class TestingCallStackManager(TestCase):
         1. calls in decorated function should not get tracked
         """
         with LogCapture() as l:
-            bombadil()
+            donottrack_func()
             self.assertEqual(len(l.records), 0, msg="Check @donottrack. should not log anything here!")
 
     def test_parameterized_donottrack(self):
@@ -85,14 +86,14 @@ class TestingCallStackManager(TestCase):
         1. Should not log calls of classes specified in the decorator @donotrack
         """
         with LogCapture() as l:
-            faramir()
+            donottrack_parent_func()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.Gondor
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.ModelMixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.rfind('.') + 1:]
 
             # desired latest class here
-            desired_class = "Rohan"
+            desired_class = "ModelMixinCSM"
 
             self.assertEqual(latest_class, desired_class,
                              msg="The latest log should be of the class" + desired_class + "not" + latest_class)
@@ -103,12 +104,12 @@ class TestingCallStackManager(TestCase):
         """
         with LogCapture() as l:
             #  class with CallStackManager as Manager
-            shire_obj = Shire(id_field=1, name_field="The Crownless again shall be king")
-            shire_obj.save()
+            ModelAnotherCSM_obj = ModelAnotherCSM(id_field=1, name_field="The Crownless again shall be king")
+            ModelAnotherCSM_obj.save()
 
-            faramir()
+            donottrack_parent_func()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.Gondor
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.ModelMixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
             latest_class1 = latest_log[latest_log.rfind('.') + 1:]
 
@@ -116,46 +117,46 @@ class TestingCallStackManager(TestCase):
             latest_class2 = latest_log[latest_log.rfind('.') + 1:]
 
             actual_sequence = [latest_class2, latest_class1]
-            desired_sequence = ["Shire", "Rohan"]
+            desired_sequence = ["ModelAnotherCSM", "ModelMixinCSM"]
             self.assertEqual(actual_sequence, desired_sequence, msg=str(l))
 
 
-@donottrack('Shire')
-def denethor():
+@donottrack('ModelAnotherCSM')
+def donottrack_child_func():
     """ Function for decorator @donottrack
     """
     # should not be tracked
-    Shire.objects.filter(id_field=1)
+    ModelAnotherCSM.objects.filter(id_field=1)
 
     # should be tracked
-    Rohan.objects.filter(id_field=1)
+    ModelMixinCSM.objects.filter(id_field=1)
 
 
-@donottrack('Rohan')
-def faramir():
+@donottrack('ModelMixinCSM')
+def donottrack_parent_func():
     """ Function for decorator @donottrack
     """
     # should not  be tracked
-    Rohan.objects.filter(id_field=1)
+    ModelMixinCSM.objects.filter(id_field=1)
 
     # should be tracked
-    Shire.objects.filter(id_field=1)
+    ModelAnotherCSM.objects.filter(id_field=1)
 
-    denethor()
+    donottrack_child_func()
 
 
 @donottrack()
-def bombadil():
+def donottrack_func():
     """ Function for decorator @donottrack
     """
-    Gondor.objects.all()
-    child_bombadil()
-    Gondor.objects.filter(id_field=1)
+    ModelMixin.objects.all()
+    donottrack_func_child()
+    ModelMixin.objects.filter(id_field=1)
 
 
 @donottrack()
-def child_bombadil():
+def donottrack_func_child():
     """ Function for decorator @donottrack
     """
     # Should not be tracked
-    Gondor.objects.all()
+    ModelMixin.objects.all()
