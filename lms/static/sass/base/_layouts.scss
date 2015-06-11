@@ -1,13 +1,17 @@
 // base layout styles to support early responsive lms
 // may be discarded later once sass breakpoints are wired in
 
+// overriding existing styles on the body element
+// .view-incourse scopes these rules to be specific to student being in a course
 body.view-incourse {
   background-color: $body-bg;
 
+  // keep application of widths to window-wrap
   .window-wrap {
     min-width: 760px;
   }
 
+  // courseware header
   header.global,
   header.global.slim {
     width: auto;
@@ -19,6 +23,7 @@ body.view-incourse {
     }
   }
 
+  // courseware tabs and staff preview bar
   .wrapper-course-material,
   .wrapper-preview-menu {
     padding: 0;
@@ -26,14 +31,15 @@ body.view-incourse {
 
   .wrapper-course-material .course-material,
   .wrapper-preview-menu .preview-menu  {
-    padding: 15px 2%;
     width: auto;
+    padding: 15px 2%;
   }
 
   .wrapper-course-material .course-material .course-tabs {
     padding: 0;
   }
 
+  // content area wrapper
   .container {
     max-width: none;
     min-width: initial;
@@ -41,13 +47,21 @@ body.view-incourse {
     padding: 0 2%;
   }
 
+  // course info page
+  .info-wrapper {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  // courseware and progress page
   .course-wrapper,
   .profile-wrapper {
     max-width: 1180px;
-    margin: 0 auto 40px auto;
+    margin: 0 auto ($baseline*2) auto;
     padding: 0;
   }
 
+  // post-container footer (creative commons)
   .container-footer {
     max-width: none;
     min-width: none;
@@ -61,44 +75,13 @@ body.view-incourse {
     padding-left: 2%;
   }
 
+  // site footer
   .wrapper-footer {
     padding-right: 2%;
     padding-left: 2%;
 
-    footer#footer-openedx {
+    footer#footer-openedx { // TODO check edX footer when it launches
       min-width: auto;
     }
   }
-
-  .info-wrapper {
-    max-width: 1180px;
-    margin: 0 auto;
-  }
-}
-
-
-// large screen and up
-@media only screen and (min-width: 1200px) {
-
-}
-
-// mid-screen and up
-@media only screen and (min-width: 800px) {
-
-}
-
-// small screen and below
-@media only screen and (max-width: 759px) {
-
-}
-
-
-// x-small screen and below
-@media only screen and (max-width: 479px) {
-
-}
-
-// high pixel density - retina screens
-@media only screen and (-webkit-min-device-pixel-ratio: 2) {
-
 }
