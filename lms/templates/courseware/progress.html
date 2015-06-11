@@ -56,15 +56,13 @@ from django.utils.http import urlquote_plus
 
                     % if is_downloadable and download_url:
 
-                    <% post_url = reverse('generate_user_cert', args=[unicode(course.id)]) %>
                     <div class="msg-content">
                         <h2 class="title">${_("Your certificate is available")}</h2>
                         %if show_cert_web_view:
                         <p class="copy">${_("You can now view your certificate.")}</p>
                         %else:
                         <p class="copy">${_(
-                            "You can now download your certificate as a PDF. If you keep working and receive a higher grade,you can request an {link_start} updated certificate {link_end}.").format(
-                            link_start=u"<a class='generate_certs' href='#' data-endpoint={}>".format(post_url) ,link_end=u"</a>")}
+                            "You can now download your certificate as a PDF. If you keep working and receive a higher grade, you can request an updated certificate.")}
                         </p>
                         %endif
                     </div>
