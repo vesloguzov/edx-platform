@@ -158,7 +158,7 @@
 
     .card-core-wrapper {
       @extend .clearfix;
-      padding: ($baseline/2) ($baseline/4);
+      padding: ($baseline*.75);
 
       &.has-actons {
 
@@ -180,13 +180,10 @@
 
     .card-description {
       @extend %t-copy-sub1;
-      height: ($baseline*5);
-      overflow: hidden;
       color: $gray;
     }
 
     .card-actions {
-      float: right;
 
       .action-view {
         @extend %btn-secondary-blue-outline;
@@ -221,9 +218,33 @@
       margin-right: ($baseline*.75);
     }
 
+    &.square-card {
+
+      .card-description {
+        height: ($baseline*5);
+        overflow: hidden;
+      }
+    }
+
     &.list-card {
       width: auto;
       display: block;
+
+      .card-core-wrapper {
+        @extend %vertical-aligner;
+      }
+
+      .card-core {
+        display: inline-block;
+        vertical-align: middle;
+        width: 80%;
+      }
+
+      .card-actions {
+        display: inline-block;
+        vertical-align: middle;
+        width: 15%;
+      }
     }
 
   }
