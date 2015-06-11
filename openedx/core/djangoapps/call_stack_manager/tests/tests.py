@@ -17,7 +17,7 @@ class TestingCallStackManager(TestCase):
     def tearDown(self):
         """ Deleting all databases after tests
         """
-        super(TestingCallStackManager, self).setUp()
+        super(TestingCallStackManager, self).tearDown()
         ModelMixin.objects.all().delete()
         ModelMixinCSM.objects.all().delete()
         ModelNothing.objects.all().delete()
@@ -28,13 +28,13 @@ class TestingCallStackManager(TestCase):
         1. classes without CallStackMixin should not participate in logging.
         """
         with LogCapture() as l:
-            ModelMixin_obj1 = ModelMixin(id_field=1, text_field="ModelMixin1", float_field=12.34)
-            ModelMixin_obj1.save()
+            modelMixin_obj1 = ModelMixin(id_field=1, text_field="modelmixin1", float_field=12.34)
+            modelMixin_obj1.save()
 
-            ModelNothing_obj1 = ModelNothing(id_field=1, name_field="Sauron")
-            ModelNothing_obj1.save()
+            modelNothing_obj1 = ModelNothing(id_field=1, name_field="ModelNothing")
+            modelNothing_obj1.save()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.ModelMixin
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.rfind('.') + 1:]
 
@@ -49,22 +49,22 @@ class TestingCallStackManager(TestCase):
         """
         with LogCapture() as l:
             # create and save objects of class not overriding queryset API
-            ModelMixin_obj3 = ModelMixin(id_field=1, float_field=12.89)
-            ModelMixin_obj4 = ModelMixin(id_field=1, float_field=23.56)
-            ModelMixin_obj3.save()
-            ModelMixin_obj4.save()
+            modelmixin_obj3 = ModelMixin(id_field=1, float_field=12.89)
+            modelmixin_obj4 = ModelMixin(id_field=1, float_field=23.56)
+            modelmixin_obj3.save()
+            modelmixin_obj4.save()
 
-            ModelMixinCSM_obj1 = ModelMixinCSM(id_field=1, string_field="Thou shall not pass")
-            ModelMixinCSM_obj2 = ModelMixinCSM(id_field=1, string_field="Not all those who wonder are lost")
-            ModelMixinCSM_obj1.save()
-            ModelMixinCSM_obj2.save()
+            modelmixinCSM_obj1 = ModelMixinCSM(id_field=1, string_field="Thou shall not pass")
+            modelmixinCSM_obj2 = ModelMixinCSM(id_field=1, string_field="Not all those who wonder are lost")
+            modelmixinCSM_obj1.save()
+            modelmixinCSM_obj2.save()
 
             ModelMixinCSM.objects.all()
 
             # class not using Manager, should not get logged
             ModelMixin.objects.all()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.ModelMixin
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.rfind('.') + 1:]
 
@@ -88,7 +88,7 @@ class TestingCallStackManager(TestCase):
         with LogCapture() as l:
             donottrack_parent_func()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.ModelMixin
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.rfind('.') + 1:]
 
@@ -104,12 +104,12 @@ class TestingCallStackManager(TestCase):
         """
         with LogCapture() as l:
             #  class with CallStackManager as Manager
-            ModelAnotherCSM_obj = ModelAnotherCSM(id_field=1, name_field="The Crownless again shall be king")
-            ModelAnotherCSM_obj.save()
+            modelAnotherCSM_obj = ModelAnotherCSM(id_field=1, name_field="The Crownless again shall be king")
+            modelAnotherCSM_obj.save()
 
             donottrack_parent_func()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.ModelMixin
+            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
             latest_class1 = latest_log[latest_log.rfind('.') + 1:]
 
