@@ -117,6 +117,9 @@ class TestingCallStackManager(TestCase):
 
     @patch('openedx.core.djangoapps.call_stack_manager.core.log.info')
     def test_duplication(self, log_capt):
+        """ Test for duplication of call stacks
+        1. no duplication of call stacks
+        """
         for i in range(1, 5):
             ModelMixinCSM(id_field=1).save()
         self.assertEqual(len(log_capt.call_args_list), 1)
@@ -163,10 +166,8 @@ def donottrack_parent_func():
     """
     # should not  be tracked
     ModelMixinCSM.objects.filter(id_field=1)
-
     # should be tracked
     ModelAnotherCSM.objects.filter(id_field=1)
-
     donottrack_child_func()
 
 
