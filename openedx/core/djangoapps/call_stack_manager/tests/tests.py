@@ -1,6 +1,7 @@
 """
 Test cases for Call Stack Manager
 """
+import unittest
 from .models import ModelMixin, ModelNothing, ModelMixinCSM, ModelAnotherCSM, ModelWithCSM, ModelWithCSMChild
 from django.test import TestCase
 from testfixtures import LogCapture
@@ -17,14 +18,9 @@ class TestingCallStackManager(TestCase):
         """
         with LogCapture() as log_capt:
             ModelMixin(id_field=1).save()
-
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = log_capt.records[-1].getMessage()[:log_capt.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.find('<'):]
-
-            # desired latest class here
             desired_class = str(ModelMixin)
-
             self.assertEqual(latest_class, desired_class)
 
     def test_withoutmixin_save(self):
@@ -33,7 +29,6 @@ class TestingCallStackManager(TestCase):
         """
         with LogCapture() as log_capt:
             ModelAnotherCSM(id_field=1).save()
-
             self.assertEqual(len(log_capt.records), 0)
 
     def test_queryset(self):
@@ -45,7 +40,6 @@ class TestingCallStackManager(TestCase):
 
             ModelMixinCSM.objects.all()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = log_capt.records[-1].getMessage()[:log_capt.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.find('<'):]
 
@@ -65,7 +59,7 @@ class TestingCallStackManager(TestCase):
             # class not using Manager, should not get logged
             ModelNothing.objects.all()
 
-            self.assertEqual(len(log_capt.records), 0, msg="class does not override Manager, hence should not log anything")
+            self.assertEqual(len(log_capt.records), 0)
 
     def test_donottrack(self):
         """ Test for @donottrack
@@ -73,7 +67,7 @@ class TestingCallStackManager(TestCase):
         """
         with LogCapture() as log_capt:
             donottrack_func()
-            self.assertEqual(len(log_capt.records), 0, msg="Check @donottrack. should not log anything here!")
+            self.assertEqual(len(log_capt.records), 0)
 
     def test_parameterized_donottrack(self):
         """ Test for parameterized @donottrack
@@ -82,7 +76,6 @@ class TestingCallStackManager(TestCase):
         with LogCapture() as log_capt:
             donottrack_parent_func()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = log_capt.records[-1].getMessage()[:log_capt.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.find('<'):]
 
@@ -101,7 +94,6 @@ class TestingCallStackManager(TestCase):
 
             donottrack_parent_func()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = log_capt.records[-1].getMessage()[:log_capt.records[-1].getMessage().find(':')]
             latest_class1 = latest_log[latest_log.find('<'):]
 
@@ -124,7 +116,6 @@ class TestingCallStackManager(TestCase):
             ModelAnotherCSM(id_field=1).save()
             ModelAnotherCSM.objects.filter(id_field=1)
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = log_capt.records[-1].getMessage()[:log_capt.records[-1].getMessage().find(':')]
             latest_class1 = latest_log[latest_log.find('<'):]
 
@@ -168,7 +159,6 @@ class TestingCallStackManager(TestCase):
 
             abstract_do_track()
 
-            # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = log_capt.records[-1].getMessage()[:log_capt.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.find('<'):]
 
