@@ -120,7 +120,7 @@ class TestingCallStackManager(TestCase):
         """ Test for duplication of call stacks
         1. no duplication of call stacks
         """
-        for i in range(1, 5):
+        for dummy in range(1, 5):
             ModelMixinCSM(id_field=1).save()
         self.assertEqual(len(log_capt.call_args_list), 1)
 
