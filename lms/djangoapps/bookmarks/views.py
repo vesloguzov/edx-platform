@@ -72,7 +72,8 @@ class BookmarksListView(ListCreateAPIView, BookmarksViewMixin):
 
         * Get a paginated list of bookmarks for a user.
 
-            The bookmarks are always sorted in descending order by creation date.
+            Users can only get a list of their own bookmarks. The bookmarks
+            are always sorted in descending order by creation date.
 
             To include only bookmarks from a particular course, pass the 
             "course_id=<course_id>" parameter. 
@@ -88,7 +89,8 @@ class BookmarksListView(ListCreateAPIView, BookmarksViewMixin):
 
         * Create a new bookmark for a user.
 
-            The POST request only needs to contain the "usage_id" parameter.
+            The POST request must contain the "usage_id" parameter. It can
+            also include other parameters.
 
     **Example Requests**
 
@@ -132,7 +134,7 @@ class BookmarksListView(ListCreateAPIView, BookmarksViewMixin):
             * path (optional): List. List of dicts containing {"usage_id": <usage-id>, display_name:<display-name>}
                 for the XBlocks from the top of the course tree to the parent of the bookmarked XBlock.
 
-            * created: ISO 8601 string. The timestamp of bookmark's creation.
+            * created: ISO 8601 String. The timestamp of the bookmark's creation.
 
     """
     authentication_classes = (OAuth2Authentication, SessionAuthentication)
@@ -260,7 +262,7 @@ class BookmarksDetailView(APIView, BookmarksViewMixin):
         * path (optional): List of dicts containing {"usage_id": <usage-id>, display_name: <display-name>}
             for the XBlocks from the top of the course tree to the parent of the bookmarked XBlock.
 
-        * created: ISO 8601 string. The timestamp of bookmark's creation.
+        * created: ISO 8601 String. The timestamp of the bookmark's creation.
 
     **Response for DELETE**
 

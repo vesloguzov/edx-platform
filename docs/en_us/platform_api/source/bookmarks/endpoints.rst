@@ -16,10 +16,10 @@ The following tasks and endpoints are currently supported.
    * - To:
      - Use this endpoint:
    * - :ref:`Get a list of bookmarks in reverse chronological order <Get List or Create Bookmarks>`
-     - GET /api/bookmarks/v0/bookmarks/{course_id}
+     - GET /api/bookmarks/v1/bookmarks/?course_id={course_id1}&fields=display_name,path
    * - :ref:`Create a new bookmark <Get List or Create Bookmarks>`
-     - POST /api/bookmarks/v0/bookmarks/{course_id}
+     - POST /api/bookmarks/v1/bookmarks/
    * - :ref:`Retrieve a bookmark <Retrieve or Delete a Bookmark>`
-     - GET /api/bookmarks/v0/bookmarks/{username},{usage_id}/
+     - GET /api/bookmarks/v1/bookmarks/{username},{usage_id}/?fields=display_name,path
    * - :ref:`Delete a bookmark <Retrieve or Delete a Bookmark>`
-     - DELETE /api/bookmarks/v0/bookmarks/{username},{usage_id}/
+     - DELETE /api/bookmarks/v1/bookmarks/{username},{usage_id}/

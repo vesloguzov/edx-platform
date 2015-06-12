@@ -5,16 +5,16 @@
 Bookmarks API Overview
 ################################################
  
-You use the Bookmarks API to add a bookmark to an XBlock, get a bookmark or
-list of bookmarks for a course, or delete a bookmark. You can use the
-Bookmarks API for web, desktop, and mobile applications.
+You can use the Bookmarks API to add a bookmark to an XBlock, get a single
+bookmark from a course or a list of bookmarks for a course, or delete a
+bookmark. You can use the Bookmarks API for web, desktop, and mobile
+applications.
  
 ****************************************
 Bookmarks API Version 1.0
 ****************************************
 
-The Bookmarks API is currently at version 1.0. We plan on making
-significant enhancements to this API.
+The Bookmarks API is currently at version 1.0. 
  
 ********************************************
 Bookmarks API Capabilities
