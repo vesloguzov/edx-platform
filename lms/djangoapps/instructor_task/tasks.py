@@ -207,7 +207,7 @@ def exec_summary_report_csv(entry_id, xmodule_instance_args):
     Html generated report to an S3 bucket for download.
     """
     # Translators: This is a past-tense verb that is inserted into task progress messages as {action}.
-    action_name = ugettext_noop('generating_exec_summary_report')
+    action_name = 'generating_exec_summary_report'
     task_fn = partial(upload_exec_summary_report, xmodule_instance_args)
     return run_main_task(entry_id, task_fn, action_name)
 
