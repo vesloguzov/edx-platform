@@ -1,6 +1,6 @@
 ;(function (define) {
     'use strict';
-    define(['backbone', 'text!templates/teams/team_count_detail.underscore'], function (Backbone, template) {
+    define(['backbone', 'text!teams/templates/team_count_detail.underscore'], function (Backbone, template) {
         var TeamCountDetailView = Backbone.View.extend({
             tagName: 'p',
             className: 'team-count',

@@ -18,7 +18,6 @@
                             'description': 'Explore how changes in renewable energy will affect our lives.',
                             'team_count': 34
                         }),
-                        configuration: 'square_card'
                     });
                 });
 

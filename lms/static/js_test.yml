@@ -98,6 +98,7 @@ fixture_paths:
     - js/fixtures/search
     - templates/search
     - templates/discovery
+    - teams/templates
 
 requirejs:
   paths:
