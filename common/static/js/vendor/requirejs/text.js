@@ -210,7 +210,7 @@ namespaced_define(['module'], function (module) {
             if (buildMap.hasOwnProperty(moduleName)) {
                 var content = text.jsEscape(buildMap[moduleName]);
                 write.asModule(pluginName + "!" + moduleName,
-                               "namespaced_define(function () { return '" +
+                               "define(function () { return '" +
                                    content +
                                "';});\n");
             }
