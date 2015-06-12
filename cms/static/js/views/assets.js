@@ -91,7 +91,6 @@ define(["jquery", "underscore", "gettext", "js/views/baseview", "js/models/asset
                 var pagingView = new this.PagingAssetView({
                         collection: this.collection
                     });
-                this.$el.append(pagingView.render().el);
                 pagingView.registerSortableColumn('js-asset-name-col', gettext('Name'), 'display_name', 'asc');
                 pagingView.registerSortableColumn('js-asset-date-col', gettext('Date Added'), 'date_added', 'desc');
                 pagingView.registerFilterableColumn('js-asset-type-col', gettext('Type'), 'asset_type');
@@ -102,7 +101,7 @@ define(["jquery", "underscore", "gettext", "js/views/baseview", "js/models/asset
             },
 
             render: function() {
-                // Wait until the content is loaded the first time to render
+                this.$el.append(this.pagingView.render().el);
                 return this;
             },
 
