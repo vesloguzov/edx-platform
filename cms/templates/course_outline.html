@@ -61,12 +61,11 @@ from microsite_configuration import microsite
       <i class="feedback-symbol fa fa-warning"></i>
 
       <div class="copy">
-          <h2 class="title title-3">${_("This course contains ORA1 assignments. {platform_name} no longer supports ORA1.").format(platform_name=platform_name)}</h2>
-
-          <p>${_("Learners cannot see ORA1 assignments. If you want to use ORA in your course, you must replace the following ORA1 assignments with ORA2 assignments.")}</p>
+          <h2 class="title title-3 warning-heading-text">${_("This course has ORA1 enabled. {platform_name} no longer supports ORA1.").format(platform_name=platform_name)}</h2>
 
           %if ora1_deprecation_info.get('ora1_components'):
-              <div>
+              <div class="components-list">
+                  <p class="components-list-heading-text">${_("Learners cannot see ORA1 assignments. If you want to use ORA in your course, you must replace the following ORA1 assignments with ORA2 assignments.")}</p>
                   <nav class="nav-related" aria-label="${_('ORA 1 Components')}">
                       <ul>
                           % for component_parent_url, component_display_name in ora1_deprecation_info['ora1_components']:
@@ -78,7 +77,7 @@ from microsite_configuration import microsite
           %endif
 
           % if ora1_deprecation_info.get('ora1_enabled'):
-              <p class="advance-modules-remove-message">
+              <p class="advance-modules-remove-text">
                 ${_("To avoid errors, {platform_name} strongly recommends that you remove ORA1 from the course advanced settings. To do this, go to the {link_start}Advanced Settings page{link_end}, locate the \"Advanced Module List\" setting, and then delete \"peergrading\" and \"combinedopenended\" from the list.").format(
                   platform_name=platform_name,
                   link_start='<a href="{advance_settings_url}">'.format(advance_settings_url=ora1_deprecation_info['advance_settings_url']), link_end="</a>"

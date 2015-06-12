@@ -489,14 +489,14 @@ def _ora1_deprecation_info(course_id, advanced_modules):
     """
     modified_timestamp = CourseStructure.objects.filter(course_id=course_id).values('modified')
     if modified_timestamp.exists():
-       cache_key = 'ora1.components.{course}.{modified}'.format(
-           course=course_id,
-           modified=modified_timestamp[0]['modified']
-       )
+        cache_key = 'ora1.components.{course}.{modified}'.format(
+            course=course_id,
+            modified=modified_timestamp[0]['modified']
+        )
     else:
         return {}
 
-    ora1_components = cache.get(cache_key)
+    ora1_components = cache.get(cache_key)  # pylint: disable=maybe-no-member
     if not ora1_components:
         try:
             course_structure = CourseStructure.objects.get(course_id=course_id)
@@ -509,7 +509,7 @@ def _ora1_deprecation_info(course_id, advanced_modules):
             if block['block_type'] in ['peergrading', 'combinedopenended']:
                 ora1_components.append([reverse_usage_url('container_handler', block['parent']), block['display_name']])
 
-        cache.set(cache_key, ora1_components, 60 * 5)  # set expiry time to 5 minutes
+        cache.set(cache_key, ora1_components, 60 * 5)  # pylint: disable=maybe-no-member
 
     return {
         'ora1_enabled': 'peergrading' in advanced_modules or 'combinedopenended' in advanced_modules,

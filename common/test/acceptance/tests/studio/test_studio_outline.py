@@ -1,12 +1,14 @@
 """
 Acceptance tests for studio related to the outline page.
 """
+import json
 from datetime import datetime, timedelta
 import itertools
 from pytz import UTC
 from bok_choy.promise import EmptyPromise
 from nose.plugins.attrib import attr
 
+from ...pages.studio.settings_advanced import AdvancedSettingsPage
 from ...pages.studio.overview import CourseOutlinePage, ContainerPage, ExpandCollapseLinkState
 from ...pages.studio.utils import add_discussion, drag, verify_ordering
 from ...pages.lms.courseware import CoursewarePage
@@ -35,6 +37,9 @@ class CourseOutlineTest(StudioCourseTest):
         """
         super(CourseOutlineTest, self).setUp()
         self.course_outline_page = CourseOutlinePage(
+            self.browser, self.course_info['org'], self.course_info['number'], self.course_info['run']
+        )
+        self.advanced_settings = AdvancedSettingsPage(
             self.browser, self.course_info['org'], self.course_info['number'], self.course_info['run']
         )
 
@@ -1578,3 +1583,127 @@ class PublishSectionTest(CourseOutlineTest):
         unit = subsection.expand_subsection().unit(UNIT_NAME)
 
         return (section, subsection, unit)
+
+
+@attr('shard_3')
+class ORA1DeprecationWarningMessageTest(CourseOutlineTest):
+    """
+    Feature: Verify ORA1 deprecation warning message.
+    """
+    HEADING_TEXT = 'This course has ORA1 enabled. edX no longer supports ORA1.'
+    COMPONENT_LIST_HEADING = ('Learners cannot see ORA1 assignments. If you want to use ORA in your course, '
+                              'you must replace the following ORA1 assignments with ORA2 assignments.')
+    ADVANCE_MODULES_REMOVE_TEXT = ('To avoid errors, edX strongly recommends that you remove '
+                                   'ORA1 from the course advanced settings. To do this, go to the Advanced Settings '
+                                   'page, locate the "Advanced Module List" setting, and then delete "peergrading" '
+                                   'and "combinedopenended" from the list.')
+
+    def _add_ora1_advance_modules(self):
+        """
+        Add `peergrading` and `combinedopenended` into `Advanced Module List`
+        """
+        self.advanced_settings.visit()
+        self.advanced_settings.set_values({"Advanced Module List": json.dumps(['peergrading', 'combinedopenended'])})
+
+    def _install_ora1_components(self):
+        """
+        Install ora1 compoents
+        """
+        parent_vertical = self.course_fixture.get_nested_xblocks(category="vertical")[0]
+
+        self.course_fixture.create_xblock(
+            parent_vertical.locator,
+            XBlockFixtureDesc('combinedopenended', "Open", data=load_data_str('ora_peer_problem.xml'))
+        )
+        self.course_fixture.create_xblock(parent_vertical.locator, XBlockFixtureDesc('peergrading', 'Peer'))
+
+    def _verify_warning_info(self, remove_text_state, components_state, components_display_name_list=None):
+        """
+        Verify ORA1 deprecation warning
+
+        Arguments:
+            remove_text_state (bool): advance modules remove text is visible if True else False
+            components_state (bool): components list is visible if True else False
+            components_display_name_list (list): list of components display name
+        """
+        self.assertTrue(self.course_outline_page.ora1_deprecated_warning_visible)
+        self.assertEqual(self.course_outline_page.ora1_warning_heading_text, self.HEADING_TEXT)
+        self.assertEqual(self.course_outline_page.ora1_modules_remove_text_shown, remove_text_state)
+        if remove_text_state:
+            self.assertEqual(self.course_outline_page.ora1_modules_remove_text, self.ADVANCE_MODULES_REMOVE_TEXT)
+
+        self.assertEqual(self.course_outline_page.ora1_components_visible, components_state)
+        if components_state:
+            self.assertEqual(self.course_outline_page.ora1_components_list_heading, self.COMPONENT_LIST_HEADING)
+            self.assertEqual(self.course_outline_page.ora1_components_display_names, components_display_name_list)
+
+    def test_no_warning(self):
+        """
+        Scenario: Verify that ORA1 deprecation warning message is not shown if ORA1 advance modules are not present and
+                  also no ORA1 component exist in course outline.
+
+        When I goto course outline
+        Then I don't see ORA1 deprecated warning
+        """
+        self.course_outline_page.visit()
+        self.assertFalse(self.course_outline_page.ora1_deprecated_warning_visible)
+
+    def test_warning(self):
+        """
+        Scenario: Verify ORA1 deprecation warning message if ORA1 advance modules and ORA1 components are present.
+
+        Given I have ORA1 advance modules present in `Advanced Module List`
+        And I have created 2 ORA1 components
+        When I goto course outline
+        Then I see ORA1 deprecated warning
+        And I see correct ORA1 deprecated warning heading text
+        And I see correct ORA1 deprecated warning advance modules remove text
+        And I see list of ORA1 components with correct display names
+        """
+        self._add_ora1_advance_modules()
+        self._install_ora1_components()
+        self.course_outline_page.visit()
+        self._verify_warning_info(
+            remove_text_state=True,
+            components_state=True,
+            components_display_name_list=['Open', 'Peer']
+        )
+
+    def test_warning_with_ora1_advance_modules_only(self):
+        """
+        Scenario: Verify that ORA1 deprecation warning message is shown if only ORA1 advance modules are present and no
+                  ORA1 component exist.
+
+        Given I have ORA1 advance modules present in `Advanced Module List`
+        When I goto course outline
+        Then I see ORA1 deprecated warning
+        And I see correct ORA1 deprecated warning heading text
+        And I see correct ORA1 deprecated warning advance modules remove text
+        And I don't see list of ORA1 components
+        """
+        self._add_ora1_advance_modules()
+        self.course_outline_page.visit()
+        self._verify_warning_info(
+            remove_text_state=True,
+            components_state=False
+        )
+
+    def test_warning_with_ora1_components_only(self):
+        """
+        Scenario: Verify that ORA1 deprecation warning message is shown if only ORA1 component exist and no ORA1
+                  advance modules are present.
+
+        Given I have created two ORA1 components
+        When I goto course outline
+        Then I see ORA1 deprecated warning
+        And I see correct ORA1 deprecated warning heading text
+        And I don't ORA1 deprecated warning advance modules remove text
+        And I see list of ORA1 components with correct display names
+        """
+        self._install_ora1_components()
+        self.course_outline_page.visit()
+        self._verify_warning_info(
+            remove_text_state=False,
+            components_state=True,
+            components_display_name_list=['Open', 'Peer']
+        )

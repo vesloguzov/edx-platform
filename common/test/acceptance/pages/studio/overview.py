@@ -586,6 +586,55 @@ class CourseOutlinePage(CoursePage, CourseOutlineContainer):
         """
         return self.q(css=".license-value").first.text[0]
 
+    @property
+    def ora1_deprecated_warning_visible(self):
+        """
+        Returns true if the ORA1 deprecated warning is visible.
+        """
+        return self.q(css='.wrapper-alert-error.is-shown').is_present()
+
+    @property
+    def ora1_warning_heading_text(self):
+        """
+        Returns ORA1 deprecated warning heading text.
+        """
+        return self.q(css='.warning-heading-text').text[0]
+
+    @property
+    def ora1_components_list_heading(self):
+        """
+        Returns ORA1 deprecated warning component list heading text.
+        """
+        return self.q(css='.components-list-heading-text').text[0]
+
+    @property
+    def ora1_modules_remove_text_shown(self):
+        """
+        Returns True if ORA1 deprecated warning advance modules remove text is visible.
+        """
+        return self.q(css='.advance-modules-remove-text').visible
+
+    @property
+    def ora1_modules_remove_text(self):
+        """
+        Returns ORA1 deprecated warning advance modules remove text.
+        """
+        return self.q(css='.advance-modules-remove-text').text[0]
+
+    @property
+    def ora1_components_visible(self):
+        """
+        Returns True if ORA1 components list visible.
+        """
+        return self.q(css='.components-list').visible
+
+    @property
+    def ora1_components_display_names(self):
+        """
+        Returns ORA1 deprecated warning components display name list.
+        """
+        return self.q(css='.components-list li>a').text
+
 
 class CourseOutlineModal(object):
     MODAL_SELECTOR = ".wrapper-modal-window"
