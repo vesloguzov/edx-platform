@@ -3,16 +3,16 @@
 
     define(['jquery',
             'underscore',
-            'backbone',
-            'teams/js/views/topic_card'],
-        function ($, _, Backbone, TopicCardView) {
+            'teams/js/views/topic_card',
+            'teams/js/models/topic_card'],
+        function ($, _, TopicCardView, TopicCardModel) {
 
             describe('topic card view', function () {
                 var view;
 
                 beforeEach(function () {
                     view = new TopicCardView({
-                        model: new Backbone.Model({
+                        model: new TopicCardModel({
                             'id': 'renewables',
                             'name': 'Renewable Energy',
                             'description': 'Explore how changes in renewable energy will affect our lives.',

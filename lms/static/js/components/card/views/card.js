@@ -27,13 +27,12 @@
                     'click .action' : 'action'
                 },
 
-                switchOnConfiguration: function (configuration, square_result, list_result) {
-                    return (configuration || 'square_card') == 'square_card' ? square_result : list_result;
+                switchOnConfiguration: function (square_result, list_result) {
+                    return (this.configuration() || 'square_card') === 'square_card' ? square_result : list_result;
                 },
 
-                initialize: function (options) {
+                initialize: function () {
                     this.template = this.switchOnConfiguration(
-                        options.configuration,
                         _.template(squareCardTemplate),
                         _.template(listCardTemplate)
                     );
@@ -42,8 +41,12 @@
 
                 className: function () {
                     return 'card ' +
-                        this.switchOnConfiguration(this.options.configuration, 'square-card', 'list-card') +
+                        this.switchOnConfiguration('square-card', 'list-card') +
                         ' ' + this.getCardClass();
+                },
+
+                configuration: function () {
+                    return this.options.configuration;
                 },
 
                 render: function () {

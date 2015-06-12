@@ -3,6 +3,7 @@
     define(['backbone', 'gettext', 'js/components/card/views/card'],
         function (Backbone, gettext, CardView) {
             var TopicCardView = CardView.extend({
+                configuration: function() { return 'square_card'; },
                 action: function (event) {
                     event.preventDefault();
                     console.log("Navigating to topic " + this.model.get('id'));

@@ -44,10 +44,20 @@
                 });
                 var card2 = new TopicCardView({
                     model: new TopicCardModel({
-                        name: 'Renewable Energy Production',
-                        description: 'Teams in this topic will be exploring how changes in renewable energy production will change our day to day lives.',
+                        name: 'Solar Power Cells',
+                        description: 'Discuss the current technology trajectory of solar power cells.',
                         team_count: Math.floor(Math.random() * 1000),
-                        id: 'renewable_energy'
+                        id: 'solar_power_cells'
+                    }),
+
+                    configuration: 'square_card'
+                });
+                var card4 = new TopicCardView({
+                    model: new TopicCardModel({
+                        name: 'Wind Energy',
+                        description: 'Explore how we can harness wind energy, either through large turbine farms, mid-ocean wind farms, and other types of wind energy that would be cut off from this listing because it is so long.',
+                        team_count: Math.floor(Math.random() * 1000),
+                        id: 'solar_power_cells'
                     }),
 
                     configuration: 'square_card'
@@ -62,7 +72,7 @@
 
                     configuration: 'list_card'
                 });
-                $('.teams-content').append(card1.el).append(card2.el).append(card3.el);
+                $('.teams-content').append(card1.el).append(card2.el).append(card4.el).append(card3.el);
         });
     }).call(this, require || RequireJS.require);
 </script>
