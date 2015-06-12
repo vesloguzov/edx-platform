@@ -1308,6 +1308,19 @@ class CourseEnrollment(models.Model):
     def course(self):
         return modulestore().get_course(self.course_id)
 
+    @property
+    def course_overview(self):
+        """
+        Return a CourseOverview of this enrollment's course.
+        """
+        from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+        if not hasattr(self, '_course_overview'):
+            # Save the value that we get from CourseOverview.get_from_id in a private
+            # variable so we only have to load the course overview once per instance
+            # of this class.
+            self._course_overview = CourseOverview.get_from_id(self.course_id)
+        return self._course_overview
+
     def is_verified_enrollment(self):
         """
         Check the course enrollment mode is verified or not
