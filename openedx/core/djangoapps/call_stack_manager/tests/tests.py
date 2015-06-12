@@ -168,7 +168,6 @@ class TestingCallStackManager(TestCase):
 
             abstract_do_track()
 
-
             # Example - logging new call stack for openedx.core.djangoapps.call_stack_manager.tests.models.modelmixin
             latest_log = l.records[-1].getMessage()[:l.records[-1].getMessage().find(':')]
             latest_class = latest_log[latest_log.find('<'):]
