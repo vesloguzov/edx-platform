@@ -1,30 +1,23 @@
 ;(function (define) {
     'use strict';
-    define(['backbone', 'gettext', 'js/components/card/views/card'],
-        function (Backbone, gettext, CardView) {
+    define(['backbone', 'gettext', 'js/components/card/views/card', 'teams/js/views/team_count_detail'],
+        function (Backbone, gettext, CardView, TeamCountDetailView) {
             var TopicCardView = CardView.extend({
-                configuration: function() { return 'square_card'; },
+                configuration: 'square_card',
+
                 action: function (event) {
                     event.preventDefault();
                     console.log("Navigating to topic " + this.model.get('id'));
                 },
 
-                getCardClass: function () { return 'topic-card'; },
-                getTitle: function () { return this.model.get('name'); },
-                getDescription: function () { return this.model.get('description'); },
-                getDetails: function () {
-                    return [{
-                        tag: 'p',
-                        detail_class: 'team-count',
-                        content: interpolate(
-                            gettext('%(team_count)s Teams'),
-                            { team_count: this.model.get('team_count') },
-                            true
-                        )
-                    }]
+                cardClass: 'topic-card',
+                title: function () { return this.model.get('name'); },
+                description: function () { return this.model.get('description'); },
+                details: function () {
+                    return [new TeamCountDetailView({ model: this.model })]
                 },
-                getActionClass: function () { return 'action-view'; },
-                getActionContent: function () { return gettext('View') + ' <span class="icon fa-arrow-right"></span>'; }
+                actionClass: 'action-view',
+                actionContent: gettext('View') + ' <span class="icon fa-arrow-right"></span>'
             });
 
             return TopicCardView;

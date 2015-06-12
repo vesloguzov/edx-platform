@@ -9,8 +9,5 @@
 </div>
 <div class="card-meta-wrapper">
     <div class="card-meta-details">
-        <% _.each(details, function (detail) { %>
-            <<%= detail.tag %> class="meta-detail <%= detail.detail_class %>"><%= detail.content %></<%= detail.tag %>>
-        <% }) %>
     </div>
 </div>

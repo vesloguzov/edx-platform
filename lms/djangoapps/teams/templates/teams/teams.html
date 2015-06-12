@@ -30,27 +30,25 @@
     (function (require) {
         require(['jquery',
                  'teams/js/views/topic_card',
-                 'teams/js/models/topic_card'],
-            function ($, TopicCardView, TopicCardModel) {
+                 'teams/js/models/topic_card',
+                 'teams/js/views/team_count_detail'],
+            function ($, TopicCardView, TopicCardModel, TeamCountDetailView) {
+                var cardModel = new TopicCardModel({
+                    name: 'Renewable Energy Production',
+                    description: 'Teams in this topic will be exploring how changes in renewable energy production will change our day to day lives.',
+                    team_count: Math.floor(Math.random() * 1000),
+                    id: 'renewable_energy'
+                });
                 var card1 = new TopicCardView({
                     model: new TopicCardModel({
                         name: 'Renewable Energy Production',
                         description: 'Teams in this topic will be exploring how changes in renewable energy production will change our day to day lives.',
                         team_count: Math.floor(Math.random() * 50),
                         id: 'renewable_energy'
-                    }),
-
-                    configuration: 'square_card'
+                    })
                 });
                 var card2 = new TopicCardView({
-                    model: new TopicCardModel({
-                        name: 'Solar Power Cells',
-                        description: 'Discuss the current technology trajectory of solar power cells.',
-                        team_count: Math.floor(Math.random() * 1000),
-                        id: 'solar_power_cells'
-                    }),
-
-                    configuration: 'square_card'
+                    model: cardModel
                 });
                 var card4 = new TopicCardView({
                     model: new TopicCardModel({
@@ -58,9 +56,7 @@
                         description: 'Explore how we can harness wind energy, either through large turbine farms, mid-ocean wind farms, and other types of wind energy that would be cut off from this listing because it is so long.',
                         team_count: Math.floor(Math.random() * 1000),
                         id: 'solar_power_cells'
-                    }),
-
-                    configuration: 'square_card'
+                    })
                 });
                 var card3 = new TopicCardView({
                     model: new TopicCardModel({
@@ -68,9 +64,7 @@
                         description: 'Teams in this topic will be exploring how changes in renewable energy production will change our day to day lives.',
                         team_count: Math.floor(Math.random() * 10000),
                         id: 'renewable_energy'
-                    }),
-
-                    configuration: 'list_card'
+                    })
                 });
                 $('.teams-content').append(card1.el).append(card2.el).append(card4.el).append(card3.el);
         });

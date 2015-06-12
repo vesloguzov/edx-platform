@@ -6,9 +6,6 @@
 </div>
 <div class="card-meta-wrapper has-actions">
     <div class="card-meta-details">
-        <% _.each(details, function (detail) { %>
-            <<%= detail.tag %> class="meta-detail <%= detail.detail_class %>"><%= detail.content %></<%= detail.tag %>>
-        <% }) %>
     </div>
     <div class="card-actions">
         <a class="action <%= action_class %>" href="<%= action_url %>"><%= action_content %></a>

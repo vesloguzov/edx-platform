@@ -1,0 +1,1 @@
+<%- interpolate('%(team_count)s Teams', {team_count: team_count}, true) %>

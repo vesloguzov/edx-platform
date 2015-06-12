@@ -19,17 +19,27 @@
  */
 ;(function (define) {
     'use strict';
-    define(['backbone',
+    define(['jquery',
+            'backbone',
             'text!templates/components/card/square-card.underscore',
             'text!templates/components/card/list-card.underscore'],
-        function (Backbone, squareCardTemplate, listCardTemplate) {
+        function ($, Backbone, squareCardTemplate, listCardTemplate) {
             var CardView = Backbone.View.extend({
                 events: {
                     'click .action' : 'action'
                 },
 
                 switchOnConfiguration: function (square_result, list_result) {
-                    return (this.configuration() || 'square_card') === 'square_card' ? square_result : list_result;
+                    return (this.callIfFunction(this.configuration) || 'square_card') === 'square_card' ?
+                        square_result : list_result;
+                },
+
+                callIfFunction: function (value) {
+                    if ($.isFunction(value)) {
+                        return value.call(this);
+                    } else {
+                        return value;
+                    }
                 },
 
                 initialize: function () {
@@ -43,7 +53,7 @@
                 className: function () {
                     return 'card ' +
                         this.switchOnConfiguration('square-card', 'list-card') +
-                        ' ' + this.getCardClass();
+                        ' ' + this.callIfFunction(this.cardClass);
                 },
 
                 configuration: function () {
@@ -52,25 +62,30 @@
 
                 render: function () {
                     this.$el.html(this.template({
-                        card_class: this.getCardClass(),
-                        title: this.getTitle(),
-                        description: this.getDescription(),
-                        details: this.getDetails(),
-                        action_class: this.getActionClass(),
-                        action_url: this.getActionUrl(),
-                        action_content: this.getActionContent()
+                        card_class: this.callIfFunction(this.cardClass),
+                        title: this.callIfFunction(this.title),
+                        description: this.callIfFunction(this.description),
+                        action_class: this.callIfFunction(this.actionClass),
+                        action_url: this.callIfFunction(this.actionUrl),
+                        action_content: this.callIfFunction(this.actionContent)
                     }));
+                    var detailsEl = this.$el.find('.card-meta-details');
+                    _.each(this.callIfFunction(this.details), function (detail) {
+                        detail.render();
+                        detail.$el.addClass('meta-detail');
+                        detailsEl.append(detail.el);
+                    });
                     return this;
                 },
 
                 action: function () { },
-                getCardClass: function () { return ''; },
-                getTitle: function () { return ''; },
-                getDescription: function () { return ''; },
-                getDetails: function () { return []; },
-                getActionClass: function () { return ''; },
-                getActionUrl: function () { return ''; },
-                getActionContent: function () { return ''; }
+                cardClass: '',
+                title: '',
+                description: '',
+                details: function () { return []; },
+                actionClass: '',
+                actionUrl: '',
+                actionContent: ''
             });
 
             return CardView;
