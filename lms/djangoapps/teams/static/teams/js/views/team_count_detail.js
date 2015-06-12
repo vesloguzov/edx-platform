@@ -1,3 +1,6 @@
+/**
+ * View for displaying the number of teams in a topic.
+ */
 ;(function (define) {
     'use strict';
     define(['backbone', 'text!teams/templates/team_count_detail.underscore'], function (Backbone, template) {

@@ -1,3 +1,6 @@
+/**
+ * View for a topic card. Displays a TopicCardModel.
+ */
 ;(function (define) {
     'use strict';
     define(['backbone', 'gettext', 'js/components/card/views/card', 'teams/js/views/team_count_detail'],

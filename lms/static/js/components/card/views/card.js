@@ -1,21 +1,18 @@
 /**
  * A generic card view class.
  *
- * Subclasses can implement any of the following functions:
- * - action: Action to take when the action button is clicked. Defaults to a no-op.
- * - getCardClass: Returns class name for this card's DOM element.
- * - getTitle: Returns the title of the card.
- * - getDescription: Returns the description of the card.
- * - getDetails: Returns an array of detail hashes with this structure:
- *      - tag: string of the HTML tag name for this detail
- *      - detail_class: class for the detail DOM element
- *      - content: Detail content. This may include HTML.
- * - getActionClass: Returns class name for the action DOM element.
- * - getActionUrl: Returns the URL to navigate to when the action button is clicked.
- * - getActionContent: Returns the content of the action button. This may include HTML.
- *
- * To configure the card as a square card or list card, pass "square_card" or "list_card", respectively, as
- * "configuration" in the constructor. Default is square card.
+ * Subclasses can override any of the following:
+ * - configuration (string or function): Sets the display style of the card as square or list. Can take values of
+ *      "square_card" or "list_card". Defaults to "square_card".
+ * - action (function): Action to take when the action button is clicked. Defaults to a no-op.
+ * - cardClass (string or function): Class name for this card's DOM element. Defaults to the empty string.
+ * - title (string or function): Title of the card. Defaults to the empty string.
+ * - description (string or function): Description of the card. Defaults to the empty string.
+ * - details (function): Returns an array of child views to be rendered as details of this card. The class "meta-detail"
+ *      is automatically added to each rendered child view to ensure appropriate styling. Defaults to an empty list.
+ * - actionClass (string or function): Class name for the action DOM element. Defaults to the empty string.
+ * - actionUrl (string or function): URL to navigate to when the action button is clicked. Defaults to the empty string.
+ * - actionContent: Content of the action button. This may include HTML. Default to the empty string.
  */
 ;(function (define) {
     'use strict';
