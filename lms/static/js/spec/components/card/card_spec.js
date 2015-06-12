@@ -11,23 +11,24 @@
                 var view;
 
                 beforeEach(function () {
-                    view = new (CardView.extend({
-                        action: function (event) {
-                            event.preventDefault();
-                            view.$el.toggleClass('clicked');
-                        }
-                    }))({
+                    spyOn(CardView.prototype, "action");
+                    view = new CardView({
                         configuration: 'square_card'
                     });
                 });
 
-                it('can render itself', function () {
-                    expect(view.$el.find('.card')).toHaveClass('square-card');
+                it('can render itself as a square card', function () {
+                    expect(view.$el).toHaveClass('square-card');
                 });
 
-                it('changes when clicked', function () {
+                it('can render itself as a list card', function () {
+                    view = new CardView({ configuration: 'list_card' });
+                    expect(view.$el).toHaveClass('list-card');
+                });
+
+                it('calls action when clicked', function () {
                     view.$el.find('.action').trigger('click');
-                    expect(view.$el).toHaveClass('clicked');
+                    expect(view.action).toHaveBeenCalled();
                 });
             });
         });

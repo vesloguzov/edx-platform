@@ -26,8 +26,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.1a\n"
 "Report-Msgid-Bugs-To: openedx-translation@googlegroups.com\n"
-"POT-Creation-Date: 2015-06-11 16:09+0000\n"
-"PO-Revision-Date: 2015-06-11 16:10:47.116569\n"
+"POT-Creation-Date: 2015-06-05 17:44+0000\n"
+"PO-Revision-Date: 2015-06-05 17:46:20.007078\n"
 "Last-Translator: \n"
 "Language-Team: openedx-translation <openedx-translation@googlegroups.com>\n"
 "MIME-Version: 1.0\n"
@@ -1543,7 +1543,6 @@ msgstr "دثقفهذشم سحشذث"
 #. Translators: this is a message from the raw HTML editor displayed in the
 #. browser when a user needs to edit HTML
 #: common/lib/xmodule/xmodule/js/src/html/edit.js
-#: lms/djangoapps/teams/static/teams/js/views/topic_card.js
 #: lms/templates/search/course_search_item.underscore
 #: lms/templates/search/dashboard_search_item.underscore
 msgid "View"
@@ -2301,18 +2300,6 @@ msgstr ""
 #: lms/djangoapps/teams/static/teams/js/views/teams_tab.js
 msgid "Teams"
 msgstr "فثشوس"
-
-#: lms/djangoapps/teams/static/teams/js/views/teams_tab.js
-msgid "My Teams"
-msgstr "وغ فثشوس"
-
-#: lms/djangoapps/teams/static/teams/js/views/teams_tab.js
-msgid "Browse"
-msgstr "زقخصسث"
-
-#: lms/djangoapps/teams/static/teams/js/views/topic_card.js
-msgid "%(team_count)s Teams"
-msgstr "%(team_count)s فثشوس"
 
 #: lms/static/coffee/src/calculator.js
 msgid "Open Calculator"
@@ -3148,6 +3135,11 @@ msgstr "سعذذثسسبعممغ قثسذخقثي حقخزمثو بخق عسثق
 msgid "Failed to rescore problem."
 msgstr "بشهمثي فخ قثسذخقث حقخزمثو."
 
+#: lms/static/js/ccx/schedule.js lms/static/js/student_account/account.js
+#: lms/static/js/student_profile/profile.js
+msgid "The data could not be saved."
+msgstr "فاث يشفش ذخعمي رخف زث سشدثي."
+
 #: lms/static/js/ccx/schedule.js
 msgid "All subsections"
 msgstr "شمم سعزسثذفهخرس"
@@ -3423,11 +3415,6 @@ msgstr "ثققخق يثمثفهرل ثرفقشرذث ثطشو سفشفث بخق 
 #: lms/static/js/spec/instructor_dashboard/student_admin_spec.js
 msgid "Error getting entrance exam task history for student '{student_id}'. "
 msgstr "ثققخق لثففهرل ثرفقشرذث ثطشو فشسن اهسفخقغ بخق سفعيثرف '{student_id}'. "
-
-#: lms/static/js/student_account/account.js
-#: lms/static/js/student_profile/profile.js
-msgid "The data could not be saved."
-msgstr "فاث يشفش ذخعمي رخف زث سشدثي."
 
 #: lms/static/js/student_account/account.js
 msgid "Please enter a valid email address"
@@ -3707,18 +3694,18 @@ msgid "Verified Certificate"
 msgstr "دثقهبهثي ذثقفهبهذشفث"
 
 #: lms/static/js/verify_student/views/make_payment_step_view.js
-msgid "Checkout"
-msgstr "ذاثذنخعف"
+msgid "Pay with Credit Card"
+msgstr "حشغ صهفا ذقثيهف ذشقي"
 
 #: lms/static/js/verify_student/views/make_payment_step_view.js
-msgid "Checkout with PayPal"
-msgstr "ذاثذنخعف صهفا حشغحشم"
+msgid "Pay with PayPal"
+msgstr "حشغ صهفا حشغحشم"
 
 #. Translators: 'processor' is the name of a third-party payment processing
 #. vendor (example: "PayPal")
 #: lms/static/js/verify_student/views/make_payment_step_view.js
-msgid "Checkout with {processor}"
-msgstr "ذاثذنخعف صهفا {processor}"
+msgid "Pay with {processor}"
+msgstr "حشغ صهفا {processor}"
 
 #: lms/static/js/verify_student/views/make_payment_step_view.js
 msgid "An error has occurred. Please try again."

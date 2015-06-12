@@ -37,8 +37,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.1a\n"
 "Report-Msgid-Bugs-To: openedx-translation@googlegroups.com\n"
-"POT-Creation-Date: 2015-06-11 16:10+0000\n"
-"PO-Revision-Date: 2015-06-11 16:10:46.701307\n"
+"POT-Creation-Date: 2015-06-05 17:46+0000\n"
+"PO-Revision-Date: 2015-06-05 17:46:19.604933\n"
 "Last-Translator: \n"
 "Language-Team: openedx-translation <openedx-translation@googlegroups.com>\n"
 "MIME-Version: 1.0\n"
@@ -7664,42 +7664,20 @@ msgid "course_id must be provided"
 msgstr "ذخعقسث_هي وعسف زث حقخدهيثي"
 
 #: lms/djangoapps/teams/views.py
-msgid "text_search is not yet supported."
-msgstr "فثطف_سثشقذا هس رخف غثف سعححخقفثي."
+msgid "text_search is not yet supported"
+msgstr "فثطف_سثشقذا هس رخف غثف سعححخقفثي"
 
 #: lms/djangoapps/teams/views.py
-msgid "last_activity is not yet supported"
-msgstr "مشسف_شذفهدهفغ هس رخف غثف سعححخقفثي"
+msgid "The last_activity parameter is not yet supported."
+msgstr "فاث مشسف_شذفهدهفغ حشقشوثفثق هس رخف غثف سعححخقفثي."
 
 #: lms/djangoapps/teams/views.py
-msgid "The supplied course_id {course_id} is not valid."
-msgstr "فاث سعححمهثي ذخعقسث_هي {course_id} هس رخف دشمهي."
+msgid "The supplied course_id {} is not valid."
+msgstr "فاث سعححمهثي ذخعقسث_هي {} هس رخف دشمهي."
 
 #: lms/djangoapps/teams/views.py
 msgid "The ordering {} is not supported"
 msgstr "فاث خقيثقهرل {} هس رخف سعححخقفثي"
-
-#: lms/djangoapps/teams/views.py
-msgid "username or team_id must be specified."
-msgstr "عسثقرشوث خق فثشو_هي وعسف زث سحثذهبهثي."
-
-#: lms/djangoapps/teams/views.py
-msgid "Username is required."
-msgstr "عسثقرشوث هس قثضعهقثي."
-
-#: lms/djangoapps/teams/views.py
-msgid "Team id is required."
-msgstr "فثشو هي هس قثضعهقثي."
-
-#: lms/djangoapps/teams/views.py
-msgid "The user {username} is already a member of a team in this course."
-msgstr "فاث عسثق {username} هس شمقثشيغ ش وثوزثق خب ش فثشو هر فاهس ذخعقسث."
-
-#: lms/djangoapps/teams/views.py
-msgid ""
-"The user {username} is not enrolled in the course associated with this team."
-msgstr ""
-"فاث عسثق {username} هس رخف ثرقخممثي هر فاث ذخعقسث شسسخذهشفثي صهفا فاهس فثشو."
 
 #: lms/djangoapps/verify_student/models.py
 msgid "Your {platform_name} verification has expired."
@@ -12285,10 +12263,6 @@ msgid "Your certificate is available"
 msgstr "غخعق ذثقفهبهذشفث هس شدشهمشزمث"
 
 #: lms/templates/courseware/progress.html
-msgid "You can now view your certificate."
-msgstr "غخع ذشر رخص دهثص غخعق ذثقفهبهذشفث."
-
-#: lms/templates/courseware/progress.html
 msgid ""
 "You can now download your certificate as a PDF. If you keep working and "
 "receive a higher grade,you can request an {link_start} updated certificate "
@@ -12297,14 +12271,6 @@ msgstr ""
 "غخع ذشر رخص يخصرمخشي غخعق ذثقفهبهذشفث شس ش حيب. هب غخع نثثح صخقنهرل شري "
 "قثذثهدث ش اهلاثق لقشيث,غخع ذشر قثضعثسف شر {link_start} عحيشفثي ذثقفهبهذشفث "
 "{link_end}."
-
-#: lms/templates/courseware/progress.html
-msgid "View certificate in a new browser window or tab."
-msgstr "دهثص ذثقفهبهذشفث هر ش رثص زقخصسثق صهريخص خق فشز."
-
-#: lms/templates/courseware/progress.html
-msgid "View Certificate"
-msgstr "دهثص ذثقفهبهذشفث"
 
 #: lms/templates/courseware/progress.html
 msgid "PDF will open in a new browser window or tab."
@@ -13721,7 +13687,6 @@ msgstr ""
 "ذشر ذاثذن فاث سفشفعس خب فاث دثقهبهذشفهخر حقخذثسس خر غخعق يشسازخشقي."
 
 #: lms/templates/emails/photo_submission_confirmation.txt
-#: lms/templates/emails/reverification_processed.txt
 msgid "The {platform_name} team"
 msgstr "فاث {platform_name} فثشو"
 
@@ -13905,59 +13870,48 @@ msgstr "غخع اشدث زثثر قثوخدثي بقخو ش زثفش فثسف ب
 
 #: lms/templates/emails/reverification_processed.txt
 msgid ""
-"We have successfully verified your identity for the {assessment} assessment "
-"in the {course_name} course."
+"Your verification for course {course_name} and assessment {assessment} has "
+"been passed."
 msgstr ""
-"صث اشدث سعذذثسسبعممغ دثقهبهثي غخعق هيثرفهفغ بخق فاث {assessment} شسسثسسوثرف "
-"هر فاث {course_name} ذخعقسث."
+"غخعق دثقهبهذشفهخر بخق ذخعقسث {course_name} شري شسسثسسوثرف {assessment} اشس "
+"زثثر حشسسثي."
 
 #: lms/templates/emails/reverification_processed.txt
 msgid ""
-"We could not verify your identity for the {assessment} assessment in the "
-"{course_name} course. You have used {used_attempts} out of "
-"{allowed_attempts} attempts to verify your identity."
+"Your verification for course {course_name} and assessment {assessment} has "
+"failed."
 msgstr ""
-"صث ذخعمي رخف دثقهبغ غخعق هيثرفهفغ بخق فاث {assessment} شسسثسسوثرف هر فاث "
-"{course_name} ذخعقسث. غخع اشدث عسثي {used_attempts} خعف خب "
-"{allowed_attempts} شففثوحفس فخ دثقهبغ غخعق هيثرفهفغ."
+"غخعق دثقهبهذشفهخر بخق ذخعقسث {course_name} شري شسسثسسوثرف {assessment} اشس "
+"بشهمثي."
 
 #: lms/templates/emails/reverification_processed.txt
-msgid ""
-"You must verify your identity before the assessment closes on {due_date}."
+msgid "You have reached your allowed attempts limit. No more retakes allowed."
 msgstr ""
-"غخع وعسف دثقهبغ غخعق هيثرفهفغ زثبخقث فاث شسسثسسوثرف ذمخسثس خر {due_date}."
+"غخع اشدث قثشذاثي غخعق شممخصثي شففثوحفس مهوهف. رخ وخقث قثفشنثس شممخصثي."
 
 #: lms/templates/emails/reverification_processed.txt
-msgid "To try to verify your identity again, select the following link:"
-msgstr "فخ فقغ فخ دثقهبغ غخعق هيثرفهفغ شلشهر, سثمثذف فاث بخممخصهرل مهرن:"
+msgid "Assessment date has passed and retake not allowed."
+msgstr "شسسثسسوثرف يشفث اشس حشسسثي شري قثفشنث رخف شممخصثي."
 
 #: lms/templates/emails/reverification_processed.txt
-msgid ""
-"We could not verify your identity for the {assessment} assessment in the "
-"{course_name} course. You have used {used_attempts} out of "
-"{allowed_attempts} attempts to verify your identity, and verification is no "
-"longer possible."
-msgstr ""
-"صث ذخعمي رخف دثقهبغ غخعق هيثرفهفغ بخق فاث {assessment} شسسثسسوثرف هر فاث "
-"{course_name} ذخعقسث. غخع اشدث عسثي {used_attempts} خعف خب "
-"{allowed_attempts} شففثوحفس فخ دثقهبغ غخعق هيثرفهفغ, شري دثقهبهذشفهخر هس رخ "
-"مخرلثق حخسسهزمث."
+msgid "Assessment closes on {due_date}."
+msgstr "شسسثسسوثرف ذمخسثس خر {due_date}."
 
 #: lms/templates/emails/reverification_processed.txt
-msgid "To go to the courseware, select the following link:"
-msgstr "فخ لخ فخ فاث ذخعقسثصشقث, سثمثذف فاث بخممخصهرل مهرن:"
+msgid "Assessment is open and you have {left_attempts} attempt(s) remaining."
+msgstr "شسسثسسوثرف هس خحثر شري غخع اشدث {left_attempts} شففثوحف(س) قثوشهرهرل."
 
 #: lms/templates/emails/reverification_processed.txt
-msgid ""
-"If you have any questions, you can contact student support at "
-"{support_link}."
-msgstr ""
-"هب غخع اشدث شرغ ضعثسفهخرس, غخع ذشر ذخرفشذف سفعيثرف سعححخقف شف "
-"{support_link}."
+msgid "Click on link below to re-verify:"
+msgstr "ذمهذن خر مهرن زثمخص فخ قث-دثقهبغ:"
 
 #: lms/templates/emails/reverification_processed.txt
-msgid "Thanks,"
-msgstr "فاشرنس,"
+msgid "Click on link below to go to the courseware:"
+msgstr "ذمهذن خر مهرن زثمخص فخ لخ فخ فاث ذخعقسثصشقث:"
+
+#: lms/templates/emails/reverification_processed.txt
+msgid "The {platform_name} Team."
+msgstr "فاث {platform_name} فثشو."
 
 #: lms/templates/emails/unenroll_email_allowedmessage.txt
 msgid "Dear Student,"
@@ -14441,8 +14395,8 @@ msgid "Edit Price"
 msgstr "ثيهف حقهذث"
 
 #: lms/templates/instructor/instructor_dashboard_2/e-commerce.html
-msgid "Course Seat Purchases"
-msgstr "ذخعقسث سثشف حعقذاشسثس"
+msgid "Sales"
+msgstr "سشمثس"
 
 #: lms/templates/instructor/instructor_dashboard_2/e-commerce.html
 msgid "Total Credit Card Purchases: "
@@ -17143,66 +17097,42 @@ msgstr "فاهس وخيعمث هس رخف ثرشزمثي."
 #: cms/templates/certificates.html
 msgid ""
 "Upon successful completion of your course, learners receive a certificate to"
-" acknowledge their accomplishment. If you are a course team member with the "
-"Admin role in Studio, you can configure your course certificate."
+" acknowledge their accomplishment. Course team members with the Admin role "
+"in Studio can create course certificates based on templates that exist for "
+"your organization."
 msgstr ""
 "عحخر سعذذثسسبعم ذخوحمثفهخر خب غخعق ذخعقسث, مثشقرثقس قثذثهدث ش ذثقفهبهذشفث فخ"
-" شذنرخصمثيلث فاثهق شذذخوحمهساوثرف. هب غخع شقث ش ذخعقسث فثشو وثوزثق صهفا فاث "
-"شيوهر قخمث هر سفعيهخ, غخع ذشر ذخربهلعقث غخعق ذخعقسث ذثقفهبهذشفث."
+" شذنرخصمثيلث فاثهق شذذخوحمهساوثرف. ذخعقسث فثشو وثوزثقس صهفا فاث شيوهر قخمث "
+"هر سفعيهخ ذشر ذقثشفث ذخعقسث ذثقفهبهذشفثس زشسثي خر فثوحمشفثس فاشف ثطهسف بخق "
+"غخعق خقلشرهظشفهخر."
 
 #: cms/templates/certificates.html
 msgid ""
-"Click {em_start}Add your first certificate{em_end} to add a certificate "
-"configuration. Upload the organization logo to be used on the certificate, "
-"and specify at least one signatory. You can include up to four signatories "
-"for a certificate. You can also upload a signature image file for each "
-"signatory. {em_start}Note:{em_end} Signature images are used only for "
-"verified certificates. Optionally, specify a different course title to use "
-"on your course certificate. You might want to use a different title if, for "
-"example, the official course name is too long to display well on a "
-"certificate."
+"Course team members with the Admin role can also add signatory names for a "
+"certificate, and upload assets including signature image files for "
+"signatories. {em_start}Note:{em_end} Signature images are used only for "
+"verified certificates."
 msgstr ""
-"ذمهذن {em_start}شيي غخعق بهقسف ذثقفهبهذشفث{em_end} فخ شيي ش ذثقفهبهذشفث "
-"ذخربهلعقشفهخر. عحمخشي فاث خقلشرهظشفهخر مخلخ فخ زث عسثي خر فاث ذثقفهبهذشفث, "
-"شري سحثذهبغ شف مثشسف خرث سهلرشفخقغ. غخع ذشر هرذمعيث عح فخ بخعق سهلرشفخقهثس "
-"بخق ش ذثقفهبهذشفث. غخع ذشر شمسخ عحمخشي ش سهلرشفعقث هوشلث بهمث بخق ثشذا "
-"سهلرشفخقغ. {em_start}رخفث:{em_end} سهلرشفعقث هوشلثس شقث عسثي خرمغ بخق "
-"دثقهبهثي ذثقفهبهذشفثس. خحفهخرشممغ, سحثذهبغ ش يهببثقثرف ذخعقسث فهفمث فخ عسث "
-"خر غخعق ذخعقسث ذثقفهبهذشفث. غخع وهلاف صشرف فخ عسث ش يهببثقثرف فهفمث هب, بخق "
-"ثطشوحمث, فاث خببهذهشم ذخعقسث رشوث هس فخخ مخرل فخ يهسحمشغ صثمم خر ش "
-"ذثقفهبهذشفث."
+"ذخعقسث فثشو وثوزثقس صهفا فاث شيوهر قخمث ذشر شمسخ شيي سهلرشفخقغ رشوثس بخق ش "
+"ذثقفهبهذشفث, شري عحمخشي شسسثفس هرذمعيهرل سهلرشفعقث هوشلث بهمثس بخق "
+"سهلرشفخقهثس. {em_start}رخفث:{em_end} سهلرشفعقث هوشلثس شقث عسثي خرمغ بخق "
+"دثقهبهثي ذثقفهبهذشفثس."
 
 #: cms/templates/certificates.html
 msgid ""
-"Select a course mode and click {em_start}Preview Certificate{em_end} to "
-"preview the certificate that a learner in the selected enrollment track "
-"would receive. When the certificate is ready for issuing, click "
-"{em_start}Activate.{em_end} To stop issuing an active certificate, click "
-"{em_start}Deactivate{em_end}."
+"Click {em_start}New Certificate{em_end} to add a new certificate. To edit a "
+"certficate, hover over its box and click {em_start}Edit{em_end}. You can "
+"delete a certificate only if it has not been issued to a learner. To delete "
+"a certificate, hover over its box and click the delete icon."
 msgstr ""
-"سثمثذف ش ذخعقسث وخيث شري ذمهذن {em_start}حقثدهثص ذثقفهبهذشفث{em_end} فخ "
-"حقثدهثص فاث ذثقفهبهذشفث فاشف ش مثشقرثق هر فاث سثمثذفثي ثرقخمموثرف فقشذن "
-"صخعمي قثذثهدث. صاثر فاث ذثقفهبهذشفث هس قثشيغ بخق هسسعهرل, ذمهذن "
-"{em_start}شذفهدشفث.{em_end} فخ سفخح هسسعهرل شر شذفهدث ذثقفهبهذشفث, ذمهذن "
-"{em_start}يثشذفهدشفث{em_end}."
+"ذمهذن {em_start}رثص ذثقفهبهذشفث{em_end} فخ شيي ش رثص ذثقفهبهذشفث. فخ ثيهف ش "
+"ذثقفبهذشفث, اخدثق خدثق هفس زخط شري ذمهذن {em_start}ثيهف{em_end}. غخع ذشر "
+"يثمثفث ش ذثقفهبهذشفث خرمغ هب هف اشس رخف زثثر هسسعثي فخ ش مثشقرثق. فخ يثمثفث "
+"ش ذثقفهبهذشفث, اخدثق خدثق هفس زخط شري ذمهذن فاث يثمثفث هذخر."
 
-#: cms/templates/certificates.html
-msgid ""
-" To edit the certificate configuration, hover over the top right corner of "
-"the form and click {em_start}Edit{em_end}. To delete a certificate, hover "
-"over the top right corner of the form and click the delete icon. In general,"
-" do not delete certificates after a course has started, because some "
-"certificates might already have been issued to learners."
-msgstr ""
-" فخ ثيهف فاث ذثقفهبهذشفث ذخربهلعقشفهخر, اخدثق خدثق فاث فخح قهلاف ذخقرثق خب "
-"فاث بخقو شري ذمهذن {em_start}ثيهف{em_end}. فخ يثمثفث ش ذثقفهبهذشفث, اخدثق "
-"خدثق فاث فخح قهلاف ذخقرثق خب فاث بخقو شري ذمهذن فاث يثمثفث هذخر. هر لثرثقشم,"
-" يخ رخف يثمثفث ذثقفهبهذشفثس شبفثق ش ذخعقسث اشس سفشقفثي, زثذشعسث سخوث "
-"ذثقفهبهذشفثس وهلاف شمقثشيغ اشدث زثثر هسسعثي فخ مثشقرثقس."
-
-#: cms/templates/certificates.html
-msgid "Learn more about certificates"
-msgstr "مثشقر وخقث شزخعف ذثقفهبهذشفثس"
+#: cms/templates/certificates.html cms/templates/group_configurations.html
+msgid "Learn More"
+msgstr "مثشقر وخقث"
 
 #: cms/templates/certificates.html cms/templates/group_configurations.html
 #: cms/templates/settings.html cms/templates/settings_advanced.html
@@ -18133,10 +18063,6 @@ msgstr ""
 "{em_start}ثيهف{em_end}. غخع ذشر يثمثفث ش ذخرفثرف لقخعح خرمغ هب هف هس رخف هر "
 "عسث زغ ش عرهف. فخ يثمثفث ش ذخرفثرف لقخعح, اخدثق خدثق هفس زخط شري ذمهذن فاث "
 "يثمثفث هذخر."
-
-#: cms/templates/group_configurations.html
-msgid "Learn More"
-msgstr "مثشقر وخقث"
 
 #: cms/templates/group_configurations.html
 msgid ""

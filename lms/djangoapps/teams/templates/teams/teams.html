@@ -15,8 +15,6 @@
     <div class="teams-wrapper">
         <section class="teams-content">
         </section>
-        <div class="test-card"></div>
-        <div class="test-card-2"></div>
     </div>
 </div>
 
@@ -30,31 +28,41 @@
 </script>
 <script type="text/javascript">
     (function (require) {
-        require(['jquery', 'backbone', 'teams/js/views/topic_card'], function ($, Backbone, TopicCardView) {
-            new TopicCardView({
-                model: new Backbone.Model({
-                    name: 'Renewable Energy Production',
-                    description: 'Teams in this topic will be exploring how changes in renewable energy production will change our day to day lives.',
-                    team_count: 34,
-                    topic_id: 'renewable_energy'
-                }),
+        require(['jquery',
+                 'teams/js/views/topic_card',
+                 'teams/js/models/topic_card'],
+            function ($, TopicCardView, TopicCardModel) {
+                var card1 = new TopicCardView({
+                    model: new TopicCardModel({
+                        name: 'Renewable Energy Production',
+                        description: 'Teams in this topic will be exploring how changes in renewable energy production will change our day to day lives.',
+                        team_count: Math.floor(Math.random() * 50),
+                        id: 'renewable_energy'
+                    }),
 
-                el: $(".test-card"),
+                    configuration: 'square_card'
+                });
+                var card2 = new TopicCardView({
+                    model: new TopicCardModel({
+                        name: 'Renewable Energy Production',
+                        description: 'Teams in this topic will be exploring how changes in renewable energy production will change our day to day lives.',
+                        team_count: Math.floor(Math.random() * 1000),
+                        id: 'renewable_energy'
+                    }),
 
-                configuration: 'square_card'
-            });
-            new TopicCardView({
-                model: new Backbone.Model({
-                    name: 'Renewable Energy Production',
-                    description: 'Teams in this topic will be exploring how changes in renewable energy production will change our day to day lives.',
-                    team_count: 34,
-                    topic_id: 'renewable_energy'
-                }),
+                    configuration: 'square_card'
+                });
+                var card3 = new TopicCardView({
+                    model: new TopicCardModel({
+                        name: 'Renewable Energy Production',
+                        description: 'Teams in this topic will be exploring how changes in renewable energy production will change our day to day lives.',
+                        team_count: Math.floor(Math.random() * 10000),
+                        id: 'renewable_energy'
+                    }),
 
-                el: $(".test-card-2"),
-
-                configuration: 'list_card'
-            });
+                    configuration: 'list_card'
+                });
+                $('.teams-content').append(card1.el).append(card2.el).append(card3.el);
         });
     }).call(this, require || RequireJS.require);
 </script>
