@@ -2,6 +2,7 @@
 import logging
 import uuid
 from django.db import transaction
+from openedx.core.djangoapps.credit.models import CreditProvider
 
 from student.models import User
 
@@ -183,14 +184,13 @@ def create_credit_request(course_key, provider_id, username):
 
     """
     try:
-        user_eligibility = CreditEligibility.objects.select_related('course', 'provider').get(
+        user_eligibility = CreditEligibility.objects.select_related('course').get(
             username=username,
-            course__course_key=course_key,
-            provider__provider_id=provider_id
+            course__course_key=course_key
         )
         credit_course = user_eligibility.course
-        credit_provider = user_eligibility.provider
-    except CreditEligibility.DoesNotExist:
+        credit_provider = credit_course.providers.get(provider_id=provider_id)
+    except CreditEligibility.DoesNotExist, CreditProvider.DoesNotExist:
         raise UserIsNotEligible
 
     # Initiate a new request if one has not already been created

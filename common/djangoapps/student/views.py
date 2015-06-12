@@ -28,7 +28,6 @@ from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.translation import ungettext
 from datetime import timedelta
-from django_future.csrf import ensure_csrf_cookie
 from django.utils.http import cookie_date, base36_to_int
 from django.utils.translation import ugettext as _, get_language
 from django.views.decorators.cache import never_cache
