@@ -1874,6 +1874,16 @@ class SplitMongoModuleStore(SplitBulkWriteMixin, ModuleStoreWriteBase):
                 block_data.fields = settings
 
                 new_id = new_structure['_id']
+
+                # Stuck in published mode
+                # Source_version for draft block is present when it is from pubslihed structure at revert_to_published()
+                # after this source_verion is not updated for draft block but its update_version always updated
+                # as result has_changes() return false (first look in source_version and then update_version)
+                # by changing the source_version to None has_changes() will pick update_version instead source_version
+                # and prevent/eliminate at stuck on publish mode state
+                if block_data.edit_info.source_version:
+                    block_data.edit_info.source_version = None
+
                 self.version_block(block_data, user_id, new_id)
                 self.update_structure(course_key, new_structure)
                 # update the index entry if appropriate
@@ -2969,7 +2979,15 @@ class SplitMongoModuleStore(SplitBulkWriteMixin, ModuleStoreWriteBase):
                     setattr(destination_block.edit_info, key, val)
 
         # introduce new edit info field for tracing where copied/published blocks came
-        destination_block.edit_info.source_version = new_block.edit_info.update_version
+        destination_source_version = new_block.edit_info.update_version
+
+        # Stuck in draft mode
+        # After revert_to_pusblihed the source_version of both draft and published blocks are same and if we
+        # pubslihed the xblock after this the pubslihed block is replaced wit draft block information and
+        # we have situation that pubslihed block is updates even draft_block has no changes
+        if new_block.edit_info.source_version:
+            destination_source_version = new_block.edit_info.source_version
+        destination_block.edit_info.source_version = destination_source_version
 
         if blacklist != EXCLUDE_ALL:
             for child in destination_block.fields.get('children', []):
