@@ -230,9 +230,7 @@ class CreditRequirementStatus(TimeStampedModel):
             requirement(CreditRequirement): 'CreditRequirement' object
             status(str): Status of the requirement
             reason(dict): Reason of the status
-
-        Returns:
-            requirement_status: 'CreditRequirementStatus' object
+            
         """
         requirement_status, created = cls.objects.get_or_create(
             username=username,

@@ -345,9 +345,6 @@ def set_credit_requirement_status(username, requirement, status="satisfied", rea
         status(str): Status of the requirement
         reason(dict): Reason of the status
 
-    Returns:
-        'CreditRequirementStatus' object
-
     """
     CreditRequirementStatus.add_or_update_requirement_status(
         username, requirement, status, reason
