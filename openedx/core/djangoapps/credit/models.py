@@ -243,7 +243,6 @@ class CreditRequirementStatus(TimeStampedModel):
             requirement_status.status = status
             requirement_status.reason = reason if reason else {}
             requirement_status.save()
-        return requirement_status
 
 
 class CreditEligibility(TimeStampedModel):

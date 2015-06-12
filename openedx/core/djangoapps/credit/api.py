@@ -349,7 +349,7 @@ def set_credit_requirement_status(username, requirement, status="satisfied", rea
         'CreditRequirementStatus' object
 
     """
-    return CreditRequirementStatus.add_or_update_requirement_status(
+    CreditRequirementStatus.add_or_update_requirement_status(
         username, requirement, status, reason
     )
 

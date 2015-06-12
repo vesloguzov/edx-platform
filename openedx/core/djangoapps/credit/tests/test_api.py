@@ -240,13 +240,17 @@ class CreditRequirementApiTests(CreditApiTestBase):
         self.assertEqual(len(course_requirements), 2)
 
         requirement = get_credit_requirement(self.course_key, "grade", "grade")
-        status = set_credit_requirement_status("staff", requirement, 'satisfied', {})
+        set_credit_requirement_status("staff", requirement, 'satisfied', {})
+        status = CreditRequirementStatus.objects.get(username="staff", requirement=requirement)
         self.assertEqual(status.requirement.namespace, requirement.namespace)
+        self.assertEqual(status.status, "satisfied")
 
-        status = set_credit_requirement_status(
+        set_credit_requirement_status(
             "staff", requirement, 'failed', {'failure_reason': "requirements not satisfied"}
         )
+        status = CreditRequirementStatus.objects.get(username="staff", requirement=requirement)
         self.assertEqual(status.requirement.namespace, requirement.namespace)
+        self.assertEqual(status.status, "failed")
 
 
 @ddt.ddt
