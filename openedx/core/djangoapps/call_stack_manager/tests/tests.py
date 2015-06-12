@@ -17,8 +17,7 @@ class TestingCallStackManager(TestCase):
         1. classes with CallStackMixin should participate in logging.
         """
         ModelMixin(id_field=1).save()
-        desired_class = ModelMixin
-        self.assertEqual(desired_class, log_capt.call_args[0][1])
+        self.assertEqual(ModelMixin, log_capt.call_args[0][1])
 
     @patch('openedx.core.djangoapps.call_stack_manager.core.log.info')
     def test_withoutmixin_save(self, log_capt):
@@ -35,8 +34,7 @@ class TestingCallStackManager(TestCase):
         """
         ModelMixinCSM(id_field=1).save()
         ModelMixinCSM.objects.all()
-        desired_class = ModelMixinCSM
-        self.assertEqual(desired_class, log_capt.call_args[0][1])
+        self.assertEqual(ModelMixinCSM, log_capt.call_args[0][1])
 
     @patch('openedx.core.djangoapps.call_stack_manager.core.log.info')
     def test_withoutqueryset(self, log_capt):
@@ -63,8 +61,7 @@ class TestingCallStackManager(TestCase):
         1. Should not log calls of classes specified in the decorator @donotrack
         """
         donottrack_child_func()
-        desired_class = ModelMixinCSM
-        self.assertEqual(desired_class, log_capt.call_args[0][1])
+        self.assertEqual(ModelMixinCSM, log_capt.call_args[0][1])
 
     @patch('openedx.core.djangoapps.call_stack_manager.core.log.info')
     def test_nested_parameterized_donottrack(self, log_capt):
@@ -73,23 +70,21 @@ class TestingCallStackManager(TestCase):
         """
         ModelAnotherCSM(id_field=1).save()
         donottrack_parent_func()
-        actual_classes = [log_capt.call_args_list[0][0][1], log_capt.call_args_list[1][0][1]]
-        desired_classes = [ModelAnotherCSM, ModelMixinCSM]
-        self.assertEqual(actual_classes, desired_classes)
+        self.assertEqual(ModelAnotherCSM, log_capt.call_args_list[0][0][1])
+        self.assertEqual(ModelMixinCSM, log_capt.call_args_list[1][0][1])
 
     @patch('openedx.core.djangoapps.call_stack_manager.core.log.info')
     def test_nested_parameterized_donottrack_after(self, log_capt):
         """ Tests parameterized nested @donottrack
-        1. should not track call of classes specified in decorated with scope bounded to the respective class
+        1. should not track call of classes specified in decorated with scope bounded to the respective function
         """
         donottrack_child_func()
         # class with CallStackManager as Manager
         ModelAnotherCSM(id_field=1).save()
         # test is this- that this should get called.
         ModelAnotherCSM.objects.filter(id_field=1)
-        actual_classes = [log_capt.call_args_list[0][0][1], log_capt.call_args_list[1][0][1]]
-        desired_classes = [ModelMixinCSM, ModelAnotherCSM]
-        self.assertEqual(actual_classes, desired_classes)
+        self.assertEqual(ModelMixinCSM, log_capt.call_args_list[0][0][1])
+        self.assertEqual(ModelAnotherCSM, log_capt.call_args_list[1][0][1])
 
     @patch('openedx.core.djangoapps.call_stack_manager.core.log.info')
     def test_donottrack_called_in_func(self, log_capt):
@@ -98,12 +93,11 @@ class TestingCallStackManager(TestCase):
         ModelAnotherCSM(id_field=1).save()
         ModelMixinCSM(id_field=1).save()
         track_it()
-        actual_classes = [log_capt.call_args_list[0][0][1],
-                          log_capt.call_args_list[1][0][1],
-                          log_capt.call_args_list[2][0][1],
-                          log_capt.call_args_list[3][0][1]]
-        desired_classes = [ModelMixinCSM, ModelAnotherCSM, ModelMixinCSM, ModelAnotherCSM]
-        self.assertEqual(actual_classes, desired_classes)
+        self.assertEqual(ModelMixinCSM, log_capt.call_args_list[0][0][1])
+        self.assertEqual(ModelAnotherCSM, log_capt.call_args_list[1][0][1] )
+        self.assertEqual(ModelMixinCSM, log_capt.call_args_list[2][0][1])
+        self.assertEqual(ModelAnotherCSM, log_capt.call_args_list[3][0][1] )
+
 
     @patch('openedx.core.djangoapps.call_stack_manager.core.log.info')
     def test_donottrack_child_too(self, log_capt):
