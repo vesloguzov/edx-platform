@@ -23,6 +23,7 @@
                         )
                     }]
                 },
+                getActionClass: function () { return 'action-view'; },
                 getActionContent: function () { return gettext('View') + ' <span class="icon fa-arrow-right"></span>'; }
             });
 

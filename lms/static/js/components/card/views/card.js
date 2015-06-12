@@ -10,6 +10,7 @@
  *      - tag: string of the HTML tag name for this detail
  *      - detail_class: class for the detail DOM element
  *      - content: Detail content. This may include HTML.
+ * - getActionClass: Returns class name for the action DOM element.
  * - getActionUrl: Returns the URL to navigate to when the action button is clicked.
  * - getActionContent: Returns the content of the action button. This may include HTML.
  *
@@ -55,6 +56,7 @@
                         title: this.getTitle(),
                         description: this.getDescription(),
                         details: this.getDetails(),
+                        action_class: this.getActionClass(),
                         action_url: this.getActionUrl(),
                         action_content: this.getActionContent()
                     }));
@@ -66,6 +68,7 @@
                 getTitle: function () { return ''; },
                 getDescription: function () { return ''; },
                 getDetails: function () { return []; },
+                getActionClass: function () { return ''; },
                 getActionUrl: function () { return ''; },
                 getActionContent: function () { return ''; }
             });

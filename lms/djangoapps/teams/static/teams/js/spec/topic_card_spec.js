@@ -26,6 +26,7 @@
                     expect(view.$el.find('.card-title').text()).toContain('Renewable Energy');
                     expect(view.$el.find('.card-description').text()).toContain('changes in renewable energy');
                     expect(view.$el.find('.card-meta-details').text()).toContain('34 Teams');
+                    expect(view.$el.find('.action').text()).toContain('View');
                 });
 
                 it('navigates when clicked', function () {

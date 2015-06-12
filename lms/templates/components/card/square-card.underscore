@@ -11,6 +11,6 @@
         <% }) %>
     </div>
     <div class="card-actions">
-        <a class="action action-view" href="<%= action_url %>"><%= action_content %></a>
+        <a class="action <%= action_class %>" href="<%= action_url %>"><%= action_content %></a>
     </div>
 </div>
