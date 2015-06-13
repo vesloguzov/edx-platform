@@ -183,7 +183,20 @@ MOCK_MODULES = [
     'update_account_settings',
     'serializers',
     'profile_images.images',
-    'xmodule.course_module'
+    'xmodule.course_module',
+    'reference',
+    'plugins',
+    'xblock.reference',
+    'xblock.reference.plugins',
+    'services',
+    'xmodule.services',
+    'SettingsService',
+    'library_tools',
+    'xmodule.library_tools',
+    'xmodule.partitions',
+    'partitions_service',
+    'xmodule.partitions.partitions_service',
+    'lms.djangoapps.lms_xblock.runtime'
 
 
 ]

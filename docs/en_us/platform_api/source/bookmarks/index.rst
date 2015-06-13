@@ -10,4 +10,4 @@ Bookmarks API Version 1.0
      
     overview
     endpoints
-    enrollment
+    bookmarks

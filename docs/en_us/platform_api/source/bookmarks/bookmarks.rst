@@ -78,6 +78,3 @@ Retrieve or Delete a Bookmark
 	    ],
 	    "created": "2014-09-23T14:00:00Z"
 	}
-
-
-

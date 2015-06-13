@@ -22,8 +22,8 @@ Bookmarks API Capabilities
 
 With the Bookmarks API, you can complete these tasks.
  
-* :ref:`Get a list of bookmarks in reverse chronological order <Get List or Create Bookmarks`.
+* :ref:`Get a list of bookmarks in reverse chronological order <Get List or
+  Create Bookmarks>`.
 * :ref:`Create a new bookmark <Get List or Create Bookmarks>`.
 * :ref:`Retrieve a bookmark <Retrieve or Delete a Bookmark>`.
 * :ref:`Delete a bookmark <Retrieve or Delete a Bookmark>`.
-

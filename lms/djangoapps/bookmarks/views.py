@@ -131,8 +131,9 @@ class BookmarksListView(ListCreateAPIView, BookmarksViewMixin):
 
             * display_name (optional): String. The display name of the bookmark's XBlock.
 
-            * path (optional): List. List of dicts containing {"usage_id": <usage-id>, display_name:<display-name>}
-                for the XBlocks from the top of the course tree to the parent of the bookmarked XBlock.
+            * path (optional): List. List of dicts containing {"usage_id":
+              <usage-id>, display_name:<display-name>} for the XBlocks from the
+              top of the course tree to the parent of the bookmarked XBlock.
 
             * created: ISO 8601 String. The timestamp of the bookmark's creation.
 
@@ -259,8 +260,9 @@ class BookmarksDetailView(APIView, BookmarksViewMixin):
 
         * display_name (optional): String. The display name of the bookmark's XBlock.
 
-        * path (optional): List of dicts containing {"usage_id": <usage-id>, display_name: <display-name>}
-            for the XBlocks from the top of the course tree to the parent of the bookmarked XBlock.
+        * path (optional): List of dicts containing {"usage_id": <usage-id>,
+          display_name: <display-name>} for the XBlocks from the top of the
+          course tree to the parent of the bookmarked XBlock.
 
         * created: ISO 8601 String. The timestamp of the bookmark's creation.
 
