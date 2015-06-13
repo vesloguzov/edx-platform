@@ -196,7 +196,10 @@ MOCK_MODULES = [
     'xmodule.partitions',
     'partitions_service',
     'xmodule.partitions.partitions_service',
-    'lms.djangoapps.lms_xblock.runtime'
+    'lms.djangoapps.lms_xblock.runtime',
+    'jsonfield',
+    'fields',
+    'jsonfield.fields'
 
 
 ]
