@@ -1,0 +1,64 @@
+.owners {
+    padding: $baseline;
+    max-width: grid-width(12);
+    margin: 0 auto;
+
+    .owners-listing {
+        @include padding-left(0);
+        list-style-type: none;
+        @include columns(5 15em);
+
+        li>a {
+            margin: 5px 0;
+        }
+    }
+}
+.courses-by-owner {
+    h1, h2, p {
+      font-family: $sans-serif;
+    }
+    h2 {
+      color: #222;
+      text-transform: none;
+      clear: both;
+      margin: 0;
+      font-size: 1em;
+      font-weight: 600;
+    }
+    p {
+      line-height: 1.2;
+    }
+
+    .courses-container {
+      max-width: grid-width(12);
+      padding-top: 5px;
+    }
+}
+.owner-profile {
+    margin: 0 auto;
+    padding: $baseline ($baseline/2);
+    max-width: grid-width(12);
+
+    .image-wrapper {
+        width: 120px;
+        height: 120px;
+        @include float(left);
+        margin-bottom: $baseline;
+        @include margin-right($baseline);
+
+        .image-frame {
+            width: 120px;
+            border-radius: 5px;
+        }
+    }
+    h1 {
+        font-size: 1.5em;
+        font-weight: 600;
+        text-align: left;
+        margin-top: $baseline;
+        margin-bottom: ($baseline/2);
+    }
+    .user-tag {
+        margin-top: ($baseline/2);
+    }
+}

@@ -1822,6 +1822,9 @@ INSTALLED_APPS = (
 
     # Credit courses
     'openedx.core.djangoapps.credit',
+
+    # Storing information about users creating courses
+    'course_owners',
 )
 
 ######################### CSRF #########################################

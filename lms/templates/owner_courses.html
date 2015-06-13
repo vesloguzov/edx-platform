@@ -1,0 +1,61 @@
+<%!
+  import json
+  from django.conf import settings
+  from django.utils.translation import ugettext as _
+  from openedx.core.lib.json_utils import EscapedEdxJSONEncoder
+%>
+<%inherit file="main.html" />
+<%namespace name='static' file='/static_content.html'/>
+
+<%block name="pagetitle">${_("{username}'s courses").format(username=owner.username)}</%block>
+
+<section class="courses-by-owner">
+  <section class="owner-profile">
+      <div class="image-wrapper">
+        <img class="image-frame" src="${profile['image']['large']}" alt="${_("Profile image for {username}").format(username=owner.username)}">
+      </div>
+      <h1>${ owner.username }</h1>
+      % if profile.get('country'):
+      <p class="user-tag">
+        <i class="u-field-icon icon fa fa-map-marker fa-fw" aria-hidden="true"></i>
+        ${profile['country']}
+      </p>
+      % endif
+      % if profile.get('languages'):
+      <p class="user-tag">
+        <i class="u-field-icon icon fa fa-comment fa-fw" aria-hidden="true"></i>
+        ${', '.join(profile['languages'])}
+      % endif
+      </p>
+      % if profile.get('bio'):
+      <h2>${_("About {username}").format(username=owner.username)}</h2>
+      <p>
+        ${profile['bio']}
+      </p>
+      % endif
+  </section>
+  <section class="courses-container">
+    <section class="courses">
+      <h2>${_("{username}'s MOOCs").format(username=owner.username)}</h2>
+      % if courses:
+      <p>
+      ${_("Browse free online courses in a variety of subjects.")}
+      % if settings.FEATURES['ENABLE_SHOPPING_CART']:
+      ${_("{username}'s courses found below can be audited free or students can choose to receive a verified certificate for a small fee.").format(username=owner.username)}
+      % else:
+      ${_("{username}'s courses found below can be audited free.").format(username=owner.username)}
+      % endif
+      ${_("Select a course to learn more.")}</p>
+      <ul class="courses-listing">
+	    %for course in courses:
+        <li class="courses-listing-item">
+          <%include file="course.html" args="course=course" />
+        </li>
+        %endfor
+      </ul>
+      % else:
+      <p>${_("User {username} currently has no open courses.").format(username=owner.username)}</p>
+      % endif
+    </section>
+  </section>
+</section>

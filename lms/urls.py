@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls import patterns, include, url
 from ratelimitbackend import admin
 from django.conf.urls.static import static
+from django.core.validators import slug_re
 
 import django.contrib.auth.views
 from microsite_configuration import microsite
@@ -427,6 +428,10 @@ if settings.COURSEWARE_ENABLED:
         # Student Notes
         url(r'^courses/{}/edxnotes'.format(settings.COURSE_ID_PATTERN),
             include('edxnotes.urls'), name="edxnotes_endpoints"),
+
+        # Course owners
+        url(r'^courses/users$', 'course_owners.views.owners_list', name='owners'),
+        url(r'^courses/users/(?P<username>{})$'.format(slug_re.pattern[1:-1]), 'course_owners.views.owner_courses', name='owner_courses'),
 
         url(r'^api/branding/v1/', include('branding.api_urls')),
     )
