@@ -200,6 +200,7 @@ FEATURES = {
 
     # Toggle to indicate use of a custom theme
     'USE_CUSTOM_THEME': False,
+    'USE_CUSTOM_STUDIO_THEME': False,
 
     # Don't autoplay videos for students
     'AUTOPLAY_VIDEOS': False,

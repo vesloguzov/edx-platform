@@ -15,6 +15,10 @@
 // +Libs and Resets - *do not edit*
 // ====================
 @import 'bourbon/bourbon'; // lib - bourbon
-@import 'vendor/bi-app/bi-app-rtl'; // set the layout for right to left languages
+@import 'vendor/bi-app/bi-app-ltr'; // set the layout for left to right languages
+% if env["FEATURES"].get("USE_CUSTOM_STUDIO_THEME", False):
+  // import theme's Sass overrides
+  @import '${env.get('STUDIO_THEME_NAME')}';
+% endif
 
 @import 'build'; // shared app style assets/rendering

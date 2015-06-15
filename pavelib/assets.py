@@ -31,6 +31,13 @@ if edxapp_env.feature_flags.get('USE_CUSTOM_THEME', False):
     THEME_COFFEE_PATHS = [theme_root]
     THEME_SASS_PATHS = [theme_root / "static" / "sass"]
 
+if edxapp_env.feature_flags.get('USE_CUSTOM_STUDIO_THEME', False):
+    theme_name = edxapp_env.env_tokens.get('STUDIO_THEME_NAME', '')
+    parent_dir = path(edxapp_env.REPO_ROOT).abspath().parent
+    theme_root = parent_dir / "themes" / theme_name
+    THEME_COFFEE_PATHS.append(theme_root)
+    THEME_SASS_PATHS.append(theme_root / "static" / "sass")
+
 
 class CoffeeScriptWatcher(PatternMatchingEventHandler):
     """

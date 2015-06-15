@@ -30,9 +30,16 @@ import json
     <%static:css group='style-vendor-tinymce-skin'/>
     <%static:css group='style-main'/>
 
+    % if settings.FEATURES.get('USE_CUSTOM_STUDIO_THEME'):
+    <%include file="theme-head-extra.html" />
+    % endif
+
     <%include file="widgets/segment-io.html" />
 
     <%block name="header_extras"></%block>
+    % if settings.FEATURES.get('USE_CUSTOM_STUDIO_THEME'):
+    <%include file="theme-google-analytics.html" />
+    % endif
   </head>
 
   <body class="${static.dir_rtl()} <%block name='bodyclass'></%block> lang_${LANGUAGE_CODE}">
@@ -56,7 +63,12 @@ import json
     <!-- view -->
     <div class="wrapper wrapper-view" dir="${static.dir_rtl()}">
         <% online_help_token = self.online_help_token() if hasattr(self, 'online_help_token') else None %>
+
+        % if settings.FEATURES.get('USE_CUSTOM_STUDIO_THEME'):
+        <%include file="theme-header.html" args="online_help_token=online_help_token" />
+        % else:
         <%include file="widgets/header.html" args="online_help_token=online_help_token" />
+        % endif
 
       <div id="page-alert">
       <%block name="page_alert"></%block>
@@ -69,7 +81,11 @@ import json
       % if user.is_authenticated():
         <%include file="widgets/sock.html" args="online_help_token=online_help_token" />
       % endif
+      % if settings.FEATURES.get('USE_CUSTOM_STUDIO_THEME'):
+      <%include file="theme-footer.html" />
+      % else:
       <%include file="widgets/footer.html" />
+      % endif
       <%include file="widgets/tender.html" />
 
       <div id="page-notification"></div>

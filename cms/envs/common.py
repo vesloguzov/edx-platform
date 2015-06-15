@@ -164,6 +164,7 @@ FEATURES = {
     # Teams feature
     'ENABLE_TEAMS': False,
 }
+STUDIO_THEME_NAME = ''
 
 ENABLE_JASMINE = False
 

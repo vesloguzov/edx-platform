@@ -10,6 +10,8 @@ settings.INSTALLED_APPS  # pylint: disable=pointless-statement
 from openedx.core.lib.django_startup import autostartup
 from monkey_patch import django_utils_translation
 
+import edxmako
+
 
 def run():
     """
@@ -21,7 +23,7 @@ def run():
 
     add_mimetypes()
 
-    if settings.FEATURES.get('USE_CUSTOM_THEME', False):
+    if settings.FEATURES.get('USE_CUSTOM_STUDIO_THEME', False):
         enable_theme()
 
 
@@ -51,20 +53,35 @@ def enable_theme():
     # Workaround for setting THEME_NAME to an empty
     # string which is the default due to this ansible
     # bug: https://github.com/ansible/ansible/issues/4812
-    if settings.THEME_NAME == "":
-        settings.THEME_NAME = None
+    if settings.STUDIO_THEME_NAME == "":
+        settings.STUDIO_THEME_NAME = None
         return
 
-    assert settings.FEATURES['USE_CUSTOM_THEME']
+    assert settings.FEATURES['USE_CUSTOM_STUDIO_THEME']
     settings.FAVICON_PATH = 'themes/{name}/images/favicon.ico'.format(
-        name=settings.THEME_NAME
+        name=settings.STUDIO_THEME_NAME
     )
 
     # Calculate the location of the theme's files
-    theme_root = settings.ENV_ROOT / "themes" / settings.THEME_NAME
+    theme_root = settings.ENV_ROOT / "themes" / settings.STUDIO_THEME_NAME
+
+    # Include the theme's templates in the template search paths
+    settings.TEMPLATE_DIRS.insert(0, theme_root / 'templates')
+    edxmako.paths.add_lookup('main', theme_root / 'templates', prepend=True)
 
     # Namespace the theme's static files to 'themes/<theme_name>' to
     # avoid collisions with default edX static files
     settings.STATICFILES_DIRS.append(
-        (u'themes/{}'.format(settings.THEME_NAME), theme_root / 'static')
+        (u'themes/{}'.format(settings.STUDIO_THEME_NAME), theme_root / 'static')
     )
+    # allow static files overrides
+    settings.STATICFILES_DIRS.insert(0, theme_root / 'static-overrides')
+
+    if settings.FEATURES['USE_CUSTOM_THEME']:
+        lms_theme_root = settings.ENV_ROOT / "themes" / settings.THEME_NAME
+        settings.STATICFILES_DIRS.append(
+            (u'themes/{}'.format(settings.THEME_NAME), lms_theme_root / 'static')
+        )
+
+    # Include theme locale path for django translations lookup
+    settings.LOCALE_PATHS = (theme_root / 'conf/locale',) + settings.LOCALE_PATHS

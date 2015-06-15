@@ -83,6 +83,8 @@ lms/static/sass/lms-footer-rtl.scss
 cms/static/css/
 cms/static/sass/*.css
 cms/static/sass/*.css.map
+cms/static/sass/studio-main.scss
+cms/static/sass/studio-main-rtl.scss
 
 
 ### Logging artifacts

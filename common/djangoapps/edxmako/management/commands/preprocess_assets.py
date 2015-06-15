@@ -56,6 +56,7 @@ class Command(NoArgsCommand):
         return {
             "FEATURES": settings.FEATURES,
             "THEME_NAME": getattr(settings, "THEME_NAME", None),
+            "STUDIO_THEME_NAME": getattr(settings, "STUDIO_THEME_NAME", None),
         }
 
     def __preprocess(self, infile, outfile):
