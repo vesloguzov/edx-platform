@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 from mock import patch
-from cms.startup import run, enable_theme
+from cms.startup import run, enable_lms_theme, enable_studio_theme
 
 
 class StartupTestCase(TestCase):
@@ -23,25 +23,37 @@ class StartupTestCase(TestCase):
     @override_settings(THEME_NAME="bar")
     def test_run_with_theme(self):
         self.assertEqual(settings.FEATURES["USE_CUSTOM_THEME"], True)
-        with patch('cms.startup.enable_theme') as mock_enable_theme:
+        with patch('cms.startup.enable_lms_theme') as mock_enable_theme:
             run()
             self.assertTrue(mock_enable_theme.called)
 
     @patch.dict("django.conf.settings.FEATURES", {"USE_CUSTOM_THEME": False})
     def test_run_without_theme(self):
         self.assertEqual(settings.FEATURES["USE_CUSTOM_THEME"], False)
-        with patch('cms.startup.enable_theme') as mock_enable_theme:
+        with patch('cms.startup.enable_lms_theme') as mock_enable_theme:
             run()
             self.assertFalse(mock_enable_theme.called)
 
     @patch.dict("django.conf.settings.FEATURES", {"USE_CUSTOM_THEME": True})
     @override_settings(THEME_NAME="bar")
     @override_settings(FAVICON_PATH="images/favicon.ico")
-    def test_enable_theme(self):
-        enable_theme()
+    def test_enable_lms_theme(self):
+        enable_lms_theme()
         self.assertEqual(
             settings.FAVICON_PATH,
             'themes/bar/images/favicon.ico'
         )
         exp_path = (u'themes/bar', settings.ENV_ROOT / "themes/bar/static")
+        self.assertIn(exp_path, settings.STATICFILES_DIRS)
+
+    @patch.dict("django.conf.settings.FEATURES", {"USE_CUSTOM_STUDIO_THEME": True})
+    @override_settings(STUDIO_THEME_NAME="foo")
+    @override_settings(FAVICON_PATH="images/favicon.ico")
+    def test_enable_studio_theme(self):
+        enable_studio_theme()
+        self.assertEqual(
+            settings.FAVICON_PATH,
+            'themes/foo/images/favicon.ico'
+        )
+        exp_path = (u'themes/foo', settings.ENV_ROOT / "themes/foo/static")
         self.assertIn(exp_path, settings.STATICFILES_DIRS)
