@@ -28,6 +28,7 @@ class ShortcutsTests(UrlResetMixin, TestCase):
     """
     @override_settings(MKTG_URLS={'ROOT': 'dummy-root', 'ABOUT': '/about-us'})
     @override_settings(MKTG_URL_LINK_MAP={'ABOUT': 'login'})
+    @override_settings(SERVICE_VARIANT_FOR_MKTG_LINKS=settings.ROOT_URLCONF[:3])
     def test_marketing_link(self):
         # test marketing site on
         with patch.dict('django.conf.settings.FEATURES', {'ENABLE_MKTG_SITE': True}):
@@ -40,6 +41,25 @@ class ShortcutsTests(UrlResetMixin, TestCase):
             expected_link = reverse('login')
             link = marketing_link('ABOUT')
             self.assertEquals(link, expected_link)
+
+    @override_settings(ENABLE_MKTG_SITE=False, MKTG_URL_LINK_MAP={'ABOUT': 'login'})
+    def test_service_variant_for_marketing_links(self):
+        current_service_variant = settings.ROOT_URLCONF[:3]
+        other_service_variant = 'cms' if current_service_variant == 'lms' else 'lms'
+        other_service_base = getattr(settings, '%s_BASE' % other_service_variant.upper())
+
+        # test current service for marketing links
+        with patch('django.conf.settings.SERVICE_VARIANT_FOR_MKTG_LINKS', current_service_variant):
+            self.assertEquals(
+                marketing_link('ABOUT'),
+                reverse('login')
+            )
+        # test other service for marketing links
+        with patch('django.conf.settings.SERVICE_VARIANT_FOR_MKTG_LINKS', other_service_variant):
+            self.assertEquals(
+                marketing_link('ABOUT'),
+                '//' + other_service_base + '/about'
+            )
 
     @ddt.data((True, None), (False, None))
     @ddt.unpack

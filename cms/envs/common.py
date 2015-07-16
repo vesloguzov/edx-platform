@@ -53,6 +53,7 @@ from xmodule.modulestore.edit_info import EditInfoMixin
 from xmodule.mixin import LicenseMixin
 
 ############################ FEATURE CONFIGURATION #############################
+SERVICE_VARIANT = "cms"
 STUDIO_NAME = "Studio"
 STUDIO_SHORT_NAME = "Studio"
 FEATURES = {
@@ -414,6 +415,7 @@ STATICFILES_DIRS = [
     # This is how you would use the textbook images locally
     # ("book", ENV_ROOT / "book_images"),
 ]
+STATIC_GRAB = False
 
 # Locale/Internationalization
 TIME_ZONE = 'America/New_York'  # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -668,6 +670,7 @@ INSTALLED_APPS = (
     'djcelery',
     'south',
     'method_override',
+    'static_template_view',
 
     # Database-backed configuration
     'config_models',
@@ -743,9 +746,8 @@ INSTALLED_APPS = (
 
 EDXMKTG_COOKIE_NAME = 'edxloggedin'
 MKTG_URLS = {}
-MKTG_URL_LINK_MAP = {
-
-}
+MKTG_URL_LINK_MAP = {}
+SERVICE_VARIANT_FOR_MKTG_LINKS = 'lms'
 
 COURSES_WITH_UNSAFE_CODE = []
 

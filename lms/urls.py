@@ -193,32 +193,9 @@ if not settings.FEATURES["USE_CUSTOM_THEME"]:
         url(r'^press/([_a-zA-Z0-9-]+)$', 'static_template_view.views.render_press_release', name='press_release'),
     )
 
-# Only enable URLs for those marketing links actually enabled in the
-# settings. Disable URLs by marking them as None.
-for key, value in settings.MKTG_URL_LINK_MAP.items():
-    # Skip disabled URLs
-    if value is None:
-        continue
-
-    # These urls are enabled separately
-    if key == "ROOT" or key == "COURSES":
-        continue
-
-    # Make the assumptions that the templates are all in the same dir
-    # and that they all match the name of the key (plus extension)
-    template = "%s.html" % key.lower()
-
-    # To allow theme templates to inherit from default templates,
-    # prepend a standard prefix
-    if settings.FEATURES["USE_CUSTOM_THEME"]:
-        template = "theme-" + template
-
-    # Make the assumption that the URL we want is the lowercased
-    # version of the map key
-    urlpatterns += (url(r'^%s$' % key.lower(),
-                        'static_template_view.views.render',
-                        {'template': template}, name=value),)
-
+# Marketing links used mostly by themes
+if settings.SERVICE_VARIANT_FOR_MKTG_LINKS == 'lms':
+    urlpatterns += (url(r'', include('static_template_view.urls')),)
 
 # Multicourse wiki (Note: wiki urls must be above the courseware ones because of
 # the custom tab catch-all)

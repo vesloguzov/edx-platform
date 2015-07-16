@@ -48,10 +48,16 @@ def marketing_link(name):
             return settings.MKTG_URLS.get('ROOT')
         return settings.MKTG_URLS.get('ROOT') + settings.MKTG_URLS.get(name)
     # only link to the old pages when the marketing site isn't on
-    elif not enable_mktg_site and name in link_map:
-        # don't try to reverse disabled marketing links
-        if link_map[name] is not None:
+    elif not enable_mktg_site and link_map.get(name, None) is not None:
+        if settings.SERVICE_VARIANT_FOR_MKTG_LINKS == settings.SERVICE_VARIANT:
             return reverse(link_map[name])
+        else:
+            # a little hack: we know how urlconf is created
+            mktg_service_base = '//' + getattr(settings,
+                '%s_BASE' % settings.SERVICE_VARIANT_FOR_MKTG_LINKS.upper(), '')
+            if name == 'ROOT':
+                return mktg_service_base
+            return mktg_service_base + '/' + name.lower()
     else:
         log.warning("Cannot find corresponding link for name: {name}".format(name=name))
         return '#'
