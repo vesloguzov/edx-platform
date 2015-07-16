@@ -16,6 +16,17 @@
 // ====================
 @import 'bourbon/bourbon'; // lib - bourbon
 @import 'vendor/bi-app/bi-app-rtl'; // set the layout for right to left languages
+
+// +Vendor and Rebase - *referenced/used vendor presentation and reset*
+// ====================
+@import 'reset';
+
+// +Base - Utilities
+// ====================
+@import 'variables';
+@import 'mixins';
+@import 'mixins-inherited';
+
 % if env["FEATURES"].get("USE_CUSTOM_STUDIO_THEME", False):
   // import theme's Sass overrides
   @import '${env.get('STUDIO_THEME_NAME')}';
