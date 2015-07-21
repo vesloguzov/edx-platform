@@ -24,7 +24,8 @@ for key, value in settings.MKTG_URL_LINK_MAP.items():
 
     # To allow theme templates to inherit from default templates,
     # prepend a standard prefix
-    if settings.FEATURES["USE_CUSTOM_THEME"]:
+    if (settings.SERVICE_VARIANT == 'lms' and settings.FEATURES["USE_CUSTOM_THEME"]
+        or settings.SERVICE_VARIANT == 'cms' and settings.FEATURES["USE_CUSTOM_STUDIO_THEME"]):
         template = "theme-" + template
 
     # Make the assumption that the URL we want is the lowercased
