@@ -1,13 +1,23 @@
 # -*- coding: utf-8 -*-
 """ Tests for student profile views. """
+from mock import patch
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from django.test.client import RequestFactory
+from django.test.utils import override_settings
+from django.contrib.auth.models import AnonymousUser
+
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.factories import CourseFactory
 
 from util.testing import UrlResetMixin
 from student.tests.factories import UserFactory
+from student.roles import CourseStaffRole
+from course_owners.models import CourseOwnership
+from openedx.core.djangoapps.user_api.preferences.api import set_user_preference
+from openedx.core.djangoapps.user_api.accounts import ACCOUNT_VISIBILITY_PREF_KEY, PRIVATE_VISIBILITY
 
 from student_profile.views import learner_profile_context
 
@@ -40,8 +50,9 @@ class LearnerProfileViewTest(UrlResetMixin, TestCase):
         Verify learner profile page context data.
         """
         request = RequestFactory().get('/url')
+        request.user = self.user
 
-        context = learner_profile_context(self.user, self.USERNAME, self.user.is_staff, request.build_absolute_uri)
+        context = learner_profile_context(request, self.USERNAME)
 
         self.assertEqual(
             context['data']['default_public_account_fields'],
@@ -100,3 +111,83 @@ class LearnerProfileViewTest(UrlResetMixin, TestCase):
         profile_path = reverse('learner_profile', kwargs={'username': "no_such_user"})
         response = self.client.get(path=profile_path)
         self.assertEqual(404, response.status_code)
+
+    @patch.dict('django.conf.settings.FEATURES', {'ALLOW_PROFILE_ANONYMOUS_ACCESS': True})
+    def test_anonymous_access_setting(self):
+        """
+        Verify that anonymous user can access profile page
+        if settings.FEATURES['ALLOW_PROFILE_ANONYMOUS_ACCESS'] is set to True
+        """
+        self.client.logout()
+        profile_path = reverse('learner_profile', kwargs={'username': self.USERNAME})
+        response = self.client.get(path=profile_path)
+
+        self.assertEqual(200, response.status_code)
+        for attribute in self.CONTEXT_DATA:
+            self.assertIn(attribute, response.content)
+
+
+class CourseOwnerProfileViewTest(ModuleStoreTestCase):
+    """Tests for profile view of users authoring any courses"""
+
+    USERNAME = "username"
+    PASSWORD = "password"
+
+    def setUp(self):
+        super(CourseOwnerProfileViewTest, self).setUp()
+        self.user = UserFactory.create(username=self.USERNAME, password=self.PASSWORD)
+        self.client.login(username=self.USERNAME, password=self.PASSWORD)
+
+        self.course = CourseFactory.create(user_id=self.user.id)
+        CourseOwnership.objects.create(course_id=self.course.id, user=self.user)
+
+        self.hidden_course = CourseFactory.create(
+            user_id=self.user.id,
+            metadata={'catalog_visibility': 'about'}
+        )
+        # suppose ordinary case when owner is a staff member of a course team
+        CourseStaffRole(self.hidden_course.id).add_users(self.user)
+        CourseOwnership.objects.create(course_id=self.hidden_course.id, user=self.user)
+
+    @override_settings(COURSE_CATALOG_VISIBILITY_PERMISSION='see_in_catalog')
+    def test_owned_courses(self):
+        """Test owned courses are listed in context"""
+        request = RequestFactory().get('/url')
+        request.user = self.user
+        context = learner_profile_context(request, self.USERNAME)
+
+        self._assert_course_listing(self.course, context)
+        self._assert_course_listing(self.hidden_course, context) # because owner is automatically made course staff
+
+    @override_settings(COURSE_CATALOG_VISIBILITY_PERMISSION='see_in_catalog')
+    def test_owned_couses_for_anonymous_user(self):
+        """Test owned course links access for anonymous user"""
+        # more a so-called "learning" test for 'has_access' than a real test for profile page
+
+        request = RequestFactory().get('/url')
+        request.user = AnonymousUser()
+        context = learner_profile_context(request, self.USERNAME)
+
+        self._assert_course_listing(self.course, context)
+        self._assert_course_listing(self.hidden_course, context, False)
+
+    def test_owned_courses_empty_in_limited_profile(self):
+        """
+        Test owned courses are not listed at all in limited profile
+        """
+        set_user_preference(self.user, ACCOUNT_VISIBILITY_PREF_KEY, PRIVATE_VISIBILITY)
+
+        request = RequestFactory().get('/url')
+        request.user = self.user
+        context = learner_profile_context(request, self.USERNAME)
+
+        self._assert_course_listing(self.course, context, False)
+        self._assert_course_listing(self.hidden_course, context, False)
+
+    def _assert_course_listing(self, course, context, listed=True):
+        course_id = unicode(course.id)
+        courses = context['data']['owned_courses_data']['owned_courses']
+        return self.assertEqual(
+            any(c['course_id'] == course_id for c in courses),
+            listed
+        )

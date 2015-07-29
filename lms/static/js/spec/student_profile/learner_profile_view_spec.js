@@ -109,6 +109,18 @@ define(['backbone', 'jquery', 'underscore', 'js/common_helpers/ajax_helpers', 'j
                     {
                         el: $('.wrapper-profile'),
                         ownProfile: ownProfile,
+                        owned_courses_data: {
+                            paid_courses_available: false,
+                            owned_courses: [{
+                                course_id: 'org/test/run',
+                                display_name: 'Test course',
+                                number: 'test',
+                                org: 'org',
+                                start_datetime_text: 'soon',
+                                course_image: 'course_image',
+                                about_url: '#'
+                            }]
+                        },
                         hasPreferencesAccess: true,
                         accountSettingsModel: accountSettingsModel,
                         preferencesModel: accountPreferencesModel,
@@ -128,6 +140,7 @@ define(['backbone', 'jquery', 'underscore', 'js/common_helpers/ajax_helpers', 'j
                 TemplateHelpers.installTemplate('templates/fields/field_image');
                 TemplateHelpers.installTemplate('templates/fields/message_banner');
                 TemplateHelpers.installTemplate('templates/student_profile/learner_profile');
+                TemplateHelpers.installTemplate('templates/student_profile/courses');
             });
 
             it("shows loading error correctly", function() {

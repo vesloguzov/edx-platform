@@ -25,11 +25,24 @@ define(['backbone', 'jquery', 'underscore', 'js/common_helpers/ajax_helpers', 'j
                 TemplateHelpers.installTemplate('templates/fields/field_image');
                 TemplateHelpers.installTemplate('templates/fields/message_banner');
                 TemplateHelpers.installTemplate('templates/student_profile/learner_profile');
+                TemplateHelpers.installTemplate('templates/student_profile/courses');
             });
 
             var createProfilePage = function(ownProfile, options) {
                 return new LearnerProfilePage({
                     'accounts_api_url': Helpers.USER_ACCOUNTS_API_URL,
+                    'owned_courses_data': {
+                        'paid_courses_available': false,
+                        'owned_courses': [{
+                            'course_id': 'org/test/run',
+                            'display_name': 'Test course',
+                            'number': 'test',
+                            'org': 'org',
+                            'start_datetime_text': 'soon',
+                            'course_image': 'course_image',
+                            'about_url': '#'
+                        }]
+                    },
                     'preferences_api_url': Helpers.USER_PREFERENCES_API_URL,
                     'own_profile': ownProfile,
                     'account_settings_page_url': Helpers.USER_ACCOUNTS_API_URL,

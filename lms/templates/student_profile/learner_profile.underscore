@@ -24,5 +24,9 @@
                 <% } %>
             </div>
         </div>
+        <% if (showFullProfile) { %>
+        <section class="profile-owned-courses-wrapper courses-container">
+        </section>
+        <% } %>
     </div>
 </div>

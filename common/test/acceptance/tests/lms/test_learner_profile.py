@@ -2,18 +2,21 @@
 """
 End-to-end tests for Student's Profile Page.
 """
+import ddt
 from flaky import flaky
 from contextlib import contextmanager
 
 from datetime import datetime
 from bok_choy.web_app_test import WebAppTest
 from nose.plugins.attrib import attr
+from opaque_keys.edx.locator import CourseLocator
 
 from ...pages.common.logout import LogoutPage
 from ...pages.lms.account_settings import AccountSettingsPage
 from ...pages.lms.auto_auth import AutoAuthPage
 from ...pages.lms.learner_profile import LearnerProfilePage
 from ...pages.lms.dashboard import DashboardPage
+from ...fixtures.course import CourseFixture
 
 from ..helpers import EventsTestMixin
 
@@ -736,3 +739,72 @@ class DifferentUserLearnerProfilePageTest(LearnerProfileTestMixin, WebAppTest):
         LogoutPage(self.browser).visit()
 
         return username, user_id
+
+
+@ddt.ddt
+@attr('shard_4')
+class CourseOwnerLearnerProfilePageTest(LearnerProfileTestMixin, WebAppTest):
+    """
+    Tests that verify course listing view at a course owner profile page.
+    """
+
+    @ddt.data(
+        LearnerProfileTestMixin.PRIVACY_PUBLIC,
+        LearnerProfileTestMixin.PRIVACY_PRIVATE,
+    )
+    def test_owned_courses(self, privacy):
+        """
+        Test appearance of owned courses listing.
+
+        Given that I am a course owner.
+        And I visit My Profile page.
+        And I set the profile visibility to <privacy>.
+        Then I should <privacy is private: not> see my owned course.
+        And I reload the page.
+        Then I should <privacy is private: not> see my owned course.
+
+        And other user visits My Profile page.
+        Then (s)he should <privacy is private: not> see my owned course.
+        """
+        course_expected_visible = (privacy == self.PRIVACY_PUBLIC)
+
+        username = self.log_in_as_course_owner()
+        profile_page = self.visit_profile_page(username, privacy=privacy)
+        self.assertEqual(
+            profile_page.owned_course_present(self.course_key),
+            course_expected_visible,
+            'Invalid view of owned courses with privacy "%s"' % privacy
+        )
+        self.browser.refresh()
+        profile_page.wait_for_page()
+        self.assertEqual(
+            profile_page.owned_course_present(self.course_key),
+            course_expected_visible,
+            'Invalid view of owned courses with privacy "%s"' % privacy
+        )
+
+        # log in as other user
+        # mixing two tests in one for tests perfomance reason
+        self._change_user()
+        profile_page = self.visit_profile_page(username)
+        self.assertEqual(
+            profile_page.owned_course_present(self.course_key),
+            course_expected_visible,
+            'Invalid view of owned courses user with privacy "%s" for other user' % privacy
+        )
+
+    def log_in_as_course_owner(self):
+        org, number, run ='test_org', self.unique_id, 'test_run'
+        course_fixture = CourseFixture(org, number, run, display_name='Test course')
+        course_fixture.install()
+
+        self.course_key = CourseLocator(org, number, run)
+        username = course_fixture.user['username']
+
+        # Log in as a creator of a course
+        auto_auth_page = AutoAuthPage(self.browser, username=username,).visit()
+        return username
+
+    def _change_user(self):
+        LogoutPage(self.browser).visit()
+        AutoAuthPage(self.browser).visit()

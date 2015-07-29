@@ -1,0 +1,43 @@
+<section class="courses">
+  <h2><%- interpolate(gettext("%s's MOOCs"), [username]) %></h2>
+  <p>
+    <%- gettext("Browse free online courses in a variety of subjects.") %>
+    <% if (paid_courses_available) { %>
+    <%- interpolate(gettext("%s's courses found below can be audited free or students can choose to receive a verified certificate for a small fee."), [username]) %>
+    <% } else { %>
+    <%- interpolate(gettext("%s's courses found below can be audited free."), [username]) %>
+    <% } %>
+    <%- gettext("Select a course to learn more.") %>
+  </p>
+  <ul class="courses-listing">
+    <li class="courses-listing-item">
+    <% _.each(owned_courses, function(course) { %>
+    <article class="course" id="<%- course.course_id %>" role="region" aria-label="<%- course.display_name %>">
+      <a href="<%- course.about_url %>">
+        <header class="course-image">
+          <div class="cover-image">
+            <img src="<%- course.course_image %>" alt="<%- course.display_name %> <%- course.number %>" />
+            <div class="learn-more" aria-hidden=true><%- gettext("LEARN MORE") %></div>
+          </div>
+        </header>
+        <section class="course-info" aria-hidden=true>
+          <h2 class="course-name">
+            <span class="course-organization"><%- course.org %></span>
+            <span class="course-code"><%- course.number %></span>
+            <span class="course-title"><%- course.display_name %></span>
+          </h2>
+          <div class="course-date" aria-hidden="true"><%- gettext("Starts") %>: <%- course.start_datetime_text %></div>
+        </section>
+        <div class="sr">
+          <ul>
+          <li><%- course.org %></li>
+          <li><%- course.number %></li>
+          <li><%- gettext("Starts") %>: <time itemprop="startDate" datetime="<%- course.start_datetime_text %>"><%- course.start_datetime_text %></time></li>
+        </ul>
+        </div>
+      </a>
+    </article>
+    <% }) %>
+    </li>
+  </ul>
+</section>

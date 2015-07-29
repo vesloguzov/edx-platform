@@ -8,6 +8,7 @@
 
             initialize: function () {
                 this.template = _.template($('#learner_profile-tpl').text());
+                this.courses_template = _.template($('#courses-tpl').text());
                 _.bindAll(this, 'showFullProfile', 'render', 'renderFields', 'showLoadingError');
                 this.listenTo(this.options.preferencesModel, "change:" + 'account_privacy', this.render);
             },
@@ -28,6 +29,7 @@
                     showFullProfile: this.showFullProfile()
                 }));
                 this.renderFields();
+                this.renderOwnedCourses();
                 return this;
             },
 
@@ -58,6 +60,18 @@
                     _.each(this.options.sectionTwoFieldViews, function (fieldView) {
                         view.$('.profile-section-two-fields').append(fieldView.render().el);
                     });
+                }
+            },
+
+            renderOwnedCourses: function() {
+                var owned_courses_data = this.options.owned_courses_data;
+
+                if (this.showFullProfile() && owned_courses_data.owned_courses.length) {
+                    this.$('.profile-owned-courses-wrapper').append(
+                        this.courses_template($.extend({
+                            username: this.options.accountSettingsModel.get('username'),
+                        }, owned_courses_data))
+                    );
                 }
             },
 

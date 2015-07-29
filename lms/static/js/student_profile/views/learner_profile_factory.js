@@ -117,6 +117,7 @@
                 el: learnerProfileElement,
                 ownProfile: options.own_profile,
                 has_preferences_access: options.has_preferences_access,
+                owned_courses_data: options.owned_courses_data,
                 accountSettingsModel: accountSettingsModel,
                 preferencesModel: accountPreferencesModel,
                 accountPrivacyFieldView: accountPrivacyFieldView,

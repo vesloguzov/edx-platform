@@ -14,7 +14,7 @@
   <ul class="owners-listing">
     %for owner in owners:
     <li class="owners-listing-item">
-        <a href="${reverse('owner_courses', kwargs={'username':owner.username})}" title="${_("Show {owner_username}'s courses").format(owner_username=owner.username)}">
+        <a href="${reverse('learner_profile', kwargs={'username':owner.username})}" title="${_("Show {owner_username}'s courses").format(owner_username=owner.username)}">
         ${ owner.username }
         </a>
     </li>

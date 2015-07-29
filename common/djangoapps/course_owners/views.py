@@ -28,44 +28,17 @@ def owners_list(request):
     """
     List all users owning the course(s)
     """
+    # TODO: add information about owners having accessible courses
     owner_ids = CourseOwnership.objects.values_list('user', flat=True)
     owners = User.objects.filter(id__in=owner_ids).order_by('username')
     return render_to_response('owners.html', {'owners': owners})
 
 
-@ensure_csrf_cookie
-@cache_if_anonymous()
-@require_http_methods(['GET'])
-def owner_courses(request, username):
-    owner = get_object_or_404(User, username=username)
+def get_accessible_owner_courses(request, owner):
+    """
+    Helper method for filtering courses by access and owners
+    """
 
-    context = {
-        'owner': owner,
-        'courses': _get_owner_courses(request, owner),
-        'profile': {
-            'image': get_profile_image_urls_for_user(owner),
-        },
-    }
-    if (UserPreference.get_value(owner, ACCOUNT_VISIBILITY_PREF_KEY) == 'all_users'
-        and not owner.profile.requires_parental_consent()):
-        context['profile'].update(_get_owner_profile(owner))
-
-    return render_to_response('owner_courses.html', context)
-
-
-def _get_owner_profile(user):
-    profile = user.profile
-    # TODO: should we translate language (since edX does not translate)?
-    languages = [settings.LANGUAGE_DICT[lang.code]
-                 for lang in profile.language_proficiencies.all()]
-    return {
-        'country': _(countries.name(profile.country)),
-        'languages': languages,
-        'bio': profile.bio,
-    }
-
-
-def _get_owner_courses(request, owner):
     from courseware.courses import get_courses, sort_by_announcement, sort_by_start_date
 
     courses = get_courses(request.user, request.META.get('HTTP_HOST'))

@@ -408,7 +408,6 @@ if settings.COURSEWARE_ENABLED:
 
         # Course owners
         url(r'^courses/users$', 'course_owners.views.owners_list', name='owners'),
-        url(r'^courses/users/(?P<username>{})$'.format(slug_re.pattern[1:-1]), 'course_owners.views.owner_courses', name='owner_courses'),
 
         url(r'^api/branding/v1/', include('branding.api_urls')),
     )

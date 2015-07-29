@@ -43,7 +43,7 @@ class LearnerProfilePage(FieldsMixin, PageObject):
         """
         Check if browser is showing correct page.
         """
-        return 'Learner Profile' in self.browser.title
+        return 'Personal Profile' in self.browser.title
 
     @property
     def privacy(self):
@@ -269,3 +269,16 @@ class LearnerProfilePage(FieldsMixin, PageObject):
         self.wait_for_field('image')
         self.mouse_hover(self.browser.find_element_by_css_selector('.image-wrapper'))
         return self.q(css='.u-field-remove-button').visible
+
+    def owned_course_present(self, course_id):
+        """
+        Check if a course with id `course_id` is shown.
+
+        Arguments:
+            course_id (str): course id
+
+        Returns:
+            True/False
+        """
+        self.wait_for_ajax()
+        return self.q(css='article[id="{}"]'.format(course_id)).is_present()

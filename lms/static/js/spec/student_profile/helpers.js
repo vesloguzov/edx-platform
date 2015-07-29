@@ -70,10 +70,22 @@ define(['underscore'], function(_) {
         });
     };
 
+    var expectOwnedCoursesToBeRendered = function(learnerProfileView) {
+        var coursesListElement = learnerProfileView.$('.profile-owned-courses-wrapper');
+        var courseElements = $(coursesListElement).find('.course');
+
+        expect(courseElements.length).toBe(learnerProfileView.options.owned_courses_data.owned_courses.length)
+    };
+
+    var expectOwnedCoursesNotToBeRendered = function(learnerProfileView) {
+        expect(learnerProfileView.$('.profile-owned-courses-wrapper').length).toBe(0);
+    }
+
     var expectProfileSectionsAndFieldsToBeRendered = function (learnerProfileView, othersProfile) {
         expectProfilePrivacyFieldTobeRendered(learnerProfileView, othersProfile);
         expectSectionOneTobeRendered(learnerProfileView);
         expectSectionTwoTobeRendered(learnerProfileView);
+        expectOwnedCoursesToBeRendered(learnerProfileView);
     };
 
     var expectLimitedProfileSectionsAndFieldsToBeRendered = function (learnerProfileView, othersProfile) {
@@ -97,6 +109,7 @@ define(['underscore'], function(_) {
         } else {
             expect($('.profile-private--message').text()).toBe('You are currently sharing a limited profile.');
         }
+        expectOwnedCoursesNotToBeRendered(learnerProfileView);
     };
 
     var expectProfileSectionsNotToBeRendered = function(learnerProfileView) {

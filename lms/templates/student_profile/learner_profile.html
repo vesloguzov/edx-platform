@@ -6,7 +6,7 @@
 <%inherit file="/main.html" />
 <%namespace name='static' file='/static_content.html'/>
 
-<%block name="pagetitle">${_("Learner Profile")}</%block>
+<%block name="pagetitle">${_("Personal Profile")}</%block>
 <%block name="nav_skip">#u-field-select-account_privacy</%block>
 
 <%block name="bodyclass">view-profile</%block>
@@ -18,7 +18,7 @@
         </script>
     % endfor
 
-    % for template_name in ["learner_profile"]:
+    % for template_name in ["learner_profile", "courses"]:
         <script type="text/template" id="${template_name}-tpl">
             <%static:include path="student_profile/${template_name}.underscore" />
         </script>

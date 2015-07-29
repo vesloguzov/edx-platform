@@ -394,6 +394,9 @@ FEATURES = {
 
     # Teams feature
     'ENABLE_TEAMS': False,
+
+    # Learner profile access for anonymous user
+    'ALLOW_PROFILE_ANONYMOUS_ACCESS': False,
 }
 
 # Ignore static asset files on import which match this pattern

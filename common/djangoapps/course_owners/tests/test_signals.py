@@ -77,6 +77,9 @@ class CreateOwnershipTest(ModuleStoreTestCase):
         )
 
     def test_rerun_multiple_ownership(self):
+        """
+        Test copying of all owners for the course rerun
+        """
         course = CourseFactory.create()
         extra_owner = UserFactory()
         CourseOwnership.objects.create(course_id=course.id, user=self.user)
