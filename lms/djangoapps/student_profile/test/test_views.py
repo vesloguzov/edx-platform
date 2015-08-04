@@ -127,6 +127,7 @@ class LearnerProfileViewTest(UrlResetMixin, TestCase):
             self.assertIn(attribute, response.content)
 
 
+@override_settings(COURSE_CATALOG_VISIBILITY_PERMISSION='see_in_catalog', COURSE_LISTINGS={})
 class CourseOwnerProfileViewTest(ModuleStoreTestCase):
     """Tests for profile view of users authoring any courses"""
 
@@ -149,7 +150,6 @@ class CourseOwnerProfileViewTest(ModuleStoreTestCase):
         CourseStaffRole(self.hidden_course.id).add_users(self.user)
         CourseOwnership.objects.create(course_id=self.hidden_course.id, user=self.user)
 
-    @override_settings(COURSE_CATALOG_VISIBILITY_PERMISSION='see_in_catalog')
     def test_owned_courses(self):
         """Test owned courses are listed in context"""
         request = RequestFactory().get('/url')
@@ -159,7 +159,6 @@ class CourseOwnerProfileViewTest(ModuleStoreTestCase):
         self._assert_course_listing(self.course, context)
         self._assert_course_listing(self.hidden_course, context) # because owner is automatically made course staff
 
-    @override_settings(COURSE_CATALOG_VISIBILITY_PERMISSION='see_in_catalog')
     def test_owned_couses_for_anonymous_user(self):
         """Test owned course links access for anonymous user"""
         # more a so-called "learning" test for 'has_access' than a real test for profile page
