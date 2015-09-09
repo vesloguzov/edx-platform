@@ -25,6 +25,7 @@ from django.test.utils import override_settings
 from openedx.core.lib.tempdir import mkdtemp_clean
 from contentstore.tests.utils import parse_json, AjaxEnabledTestClient, CourseTestCase
 from contentstore.views.component import ADVANCED_COMPONENT_TYPES
+from contentstore.views.course import START_COURSE_NUMBER
 
 from edxval.api import create_video, get_videos_for_course
 
@@ -1930,6 +1931,157 @@ class SigninPageTestCase(TestCase):
         self.assertEqual(csrf_token.value, csrf_input_field.attrib["value"])
 
 
+@mock.patch.dict('django.conf.settings.FEATURES', {'AUTOGENERATE_KEY_FIELDS': True})
+class AutoCourseKeyTestCase(ContentStoreTestCase):
+    """
+    Tests for course id generation on creation/rerunning of the course
+    """
+    def setUp(self):
+        super(AutoCourseKeyTestCase, self).setUp()
+        self.full_course_data = {
+            'org': 'UnivercityX',
+            'number': 'number_100',
+            'display_name': 'Robot Super Course',
+            'run': '2015_Autumn'
+        }
+
+    @property
+    def standard_course_key(self):
+        """
+        Course key to be created without autogeneration
+        """
+        return _get_course_id(self.store, self.full_course_data)
+
+    # TODO: do the same on rerun if rerun by non-staff is enabled
+    def test_auto_course_key_for_nonstaff_user(self):
+        """
+        Test auto generation of course ids works for non-staff users
+        """
+        self.user.is_staff = False
+        self.user.save()
+
+        course_data = {'display_name': self.full_course_data['display_name']}
+        data = _create_course(self, '', course_data)
+        self.assertIn(self.user.username, data['course_key'])
+
+    # TODO: do the same on rerun if rerun by non-staff is enabled
+    def test_auto_course_key_for_nonstaff_user_skip_key_params(self):
+        """
+        Test non-staff users can't create courses with arbitrary ids
+        even if they pass corresponding parameters to POST request
+        """
+        self.user.is_staff = False
+        self.user.save()
+
+        data = _create_course(self, '', self.full_course_data)
+        self.assertNotEqual(data['course_key'], unicode(self.standard_course_key))
+
+    def test_auto_course_key_for_staff_user(self):
+        """
+        Test auto generation of course ids works for staff users
+        """
+        course_data = {'display_name': self.full_course_data['display_name']}
+        data = _create_course(self, '', course_data)
+        self.assertIn(self.user.username, data['course_key'])
+
+    def test_auto_course_key_for_staff_user_on_rerun(self):
+        """
+        Test auto generation of course ids works for staff users
+        """
+        data = self._create_rerun(
+            {'display_name': self.full_course_data['display_name']},
+            {'display_name': self.full_course_data['display_name']},
+        )
+        self.assertNotEqual(data['destination_course_key'], unicode(self.standard_course_key))
+        self.assertIn(self.user.username, data['destination_course_key'])
+
+    def test_custom_course_key_for_staff_user(self):
+        """
+        Test staff users privilledge to create courses with arbitrary ids
+        even if non-staff users can't create such ids
+        """
+        data = _create_course(self, '', self.full_course_data)
+        self.assertEqual(data['course_key'], unicode(self.standard_course_key))
+
+    def test_custom_course_key_for_staff_user_on_rerun(self):
+        """
+        Test staff users privilledge to rerun courses with arbitrary ids
+        even if non-staff users can't create such ids
+        """
+        data = self._create_rerun(
+            {'display_name': self.full_course_data['display_name']},
+            self.full_course_data
+        )
+        self.assertEqual(data['destination_course_key'], unicode(self.standard_course_key))
+
+    def test_increment_course_run_on_rerun(self):
+        """
+        Test auto-increment of course run number if user reruns the course
+        """
+        source_course_data = {
+            'org': 'UnivercityX',
+            'number': '100500',
+            'display_name': 'Robot Super Course',
+            'run': '1'
+        }
+        data = self._create_rerun(source_course_data, {'display_name': source_course_data['display_name']})
+
+        destination_course_data = source_course_data.copy()
+        destination_course_data['run'] = '2'
+        self.assertEqual(
+            data['destination_course_key'],
+            unicode(_get_course_id(self.store, destination_course_data))
+        )
+
+    def test_increment_course_run_on_double_rerun(self):
+        source_course_data = {
+            'org': 'UnivercityX',
+            'number': '100500',
+            'display_name': 'Robot Super Course',
+            'run': '1'
+        }
+        # create first rerun
+        self._create_rerun(source_course_data, {'display_name': source_course_data['display_name']})
+        # create second rerun of the same course
+        data = self._create_rerun(source_course_data, {'display_name': source_course_data['display_name']}, False)
+        destination_course_data = source_course_data.copy()
+        destination_course_data['run'] = '3'
+        self.assertEqual(
+            data['destination_course_key'],
+            unicode(_get_course_id(self.store, destination_course_data))
+        )
+
+    def test_increment_number_for_new_course(self):
+        prev_course_data = self.full_course_data.copy()
+        prev_course_data['number'] = str(START_COURSE_NUMBER)
+        _create_course(self, '', prev_course_data)
+
+        data = _create_course(self, '', {'display_name': 'One more super course'})
+        number = CourseKey.from_string(data['course_key']).course
+        self.assertEqual(number, str(START_COURSE_NUMBER + 1))
+
+    def _create_rerun(self, source_course_data, course_data, create_source_course=True):
+        """
+        Create course and rerun it in one step
+
+        Return response json after re-run creation
+        """
+        if create_source_course:
+            data = _create_course(self, '', source_course_data)
+            source_course_key = data['course_key']
+        else:
+            source_course_key = _get_course_id(self.store, source_course_data)
+        course_url = get_url('course_handler', source_course_key, 'course_key_string')
+
+        _course_data = {'source_course_key': unicode(source_course_key)}
+        _course_data.update(course_data)
+        response = self.client.ajax_post(course_url, _course_data)
+        self.assertEqual(response.status_code, 200)
+        data = parse_json(response)
+        self.assertNotIn('ErrMsg', data)
+        return data
+
+
 def _create_course(test, course_key, course_data):
     """
     Creates a course via an AJAX request and verifies the URL returned in the response.
@@ -1939,7 +2091,9 @@ def _create_course(test, course_key, course_data):
     test.assertEqual(response.status_code, 200)
     data = parse_json(response)
     test.assertNotIn('ErrMsg', data)
-    test.assertEqual(data['url'], course_url)
+    if course_key:
+        test.assertEqual(data['url'], course_url)
+    return data
 
 
 def _get_course_id(store, course_data):

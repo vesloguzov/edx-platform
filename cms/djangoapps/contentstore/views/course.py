@@ -1,10 +1,12 @@
 """
 Views related to operations on course objects
 """
-from django.shortcuts import redirect
 import json
 import random
 import string  # pylint: disable=deprecated-module
+import logging
+
+from django.shortcuts import redirect
 from django.utils.translation import ugettext as _
 import django.utils
 from django.contrib.auth.decorators import login_required
@@ -42,6 +44,7 @@ from contentstore.utils import (
     add_instructor,
     initialize_permissions,
     get_lms_link_for_item,
+    get_next_int_key,
     add_extra_panel_tab,
     remove_extra_panel_tab,
     reverse_course_url,
@@ -101,6 +104,11 @@ __all__ = ['course_info_handler', 'course_handler', 'course_listing',
            'course_notifications_handler',
            'textbooks_list_handler', 'textbooks_detail_handler',
            'group_configurations_list_handler', 'group_configurations_detail_handler']
+
+START_COURSE_NUMBER = 100000
+START_COURSE_RUN = 1
+
+log = logging.getLogger(__name__)
 
 
 class AccessListFallback(Exception):
@@ -289,7 +297,9 @@ def course_rerun_handler(request, course_key_string):
                 'display_name': course_module.display_name,
                 'user': request.user,
                 'course_creator_status': _get_course_creator_status(request.user),
-                'allow_unicode_course_id': settings.FEATURES.get('ALLOW_UNICODE_COURSE_ID', False)
+                'allow_unicode_course_id': settings.FEATURES.get('ALLOW_UNICODE_COURSE_ID', False),
+                'autogenerate_key_fields': settings.FEATURES['AUTOGENERATE_KEY_FIELDS'],
+                'allow_auto_key_override': GlobalStaff().has_user(request.user),
             })
 
 
@@ -465,7 +475,9 @@ def course_listing(request):
         'course_creator_status': _get_course_creator_status(request.user),
         'rerun_creator_status': GlobalStaff().has_user(request.user),
         'allow_unicode_course_id': settings.FEATURES.get('ALLOW_UNICODE_COURSE_ID', False),
-        'allow_course_reruns': settings.FEATURES.get('ALLOW_COURSE_RERUNS', True)
+        'allow_course_reruns': settings.FEATURES.get('ALLOW_COURSE_RERUNS', True),
+        'autogenerate_key_fields': settings.FEATURES['AUTOGENERATE_KEY_FIELDS'],
+        'allow_auto_key_override': GlobalStaff().has_user(request.user),
     })
 
 
@@ -612,6 +624,13 @@ def course_outline_initial_state(locator_to_show, course_structure):
     }
 
 
+class SpecialCharactersKeyError(Exception):
+    """
+    Raised when non-ascii characters appear in course org/number/run
+    """
+    pass
+
+
 @expect_json
 def _create_or_rerun_course(request):
     """
@@ -623,20 +642,11 @@ def _create_or_rerun_course(request):
         raise PermissionDenied()
 
     try:
-        org = request.json.get('org')
-        course = request.json.get('number', request.json.get('course'))
+        org, course, run = _get_course_key_parts(request)
+
         display_name = request.json.get('display_name')
         # force the start date for reruns and allow us to override start via the client
         start = request.json.get('start', CourseFields.start.default)
-        run = request.json.get('run')
-
-        # allow/disable unicode characters in course_id according to settings
-        if not settings.FEATURES.get('ALLOW_UNICODE_COURSE_ID'):
-            if _has_non_ascii_characters(org) or _has_non_ascii_characters(course) or _has_non_ascii_characters(run):
-                return JsonResponse(
-                    {'error': _('Special characters not allowed in organization, course number, and course run.')},
-                    status=400
-                )
 
         fields = {'start': start}
         if display_name is not None:
@@ -647,6 +657,11 @@ def _create_or_rerun_course(request):
         else:
             return _create_new_course(request, org, course, run, fields)
 
+    except SpecialCharactersKeyError:
+        return JsonResponse(
+            {'error': _('Special characters not allowed in organization, course number, and course run.')},
+            status=400
+        )
     except DuplicateCourseError:
         return JsonResponse({
             'ErrMsg': _(
@@ -665,6 +680,53 @@ def _create_or_rerun_course(request):
         return JsonResponse({
             "ErrMsg": _("Unable to create course '{name}'.\n\n{err}").format(name=display_name, err=error.message)}
         )
+
+
+def _get_course_key_parts(request):
+    """
+    Get course org/number/run from request or generate them automatically if required
+
+    Global staff member always can create arbitrary course key,
+    feature 'AUTOGENERATE_KEY_FIELDS' enables auto-generation for non-staff users.
+    """
+    def _get_next_course_number():  # pylint: disable=missing-docstring
+        return get_next_int_key(
+            modulestore().get_courses(), lambda c: c.id.course, START_COURSE_NUMBER
+        )
+
+    def _get_next_course_run(source_course_key):  # pylint: disable=missing-docstring
+        return get_next_int_key(
+            [c for c in modulestore().get_courses(org=source_course_key.org)
+             if c.id.course == source_course_key.course],
+            lambda c: c.id.run,
+            START_COURSE_RUN
+        )
+
+    if not settings.FEATURES['AUTOGENERATE_KEY_FIELDS'] or GlobalStaff().has_user(request.user):
+        org = request.json.get('org')
+        course = request.json.get('number', request.json.get('course'))
+        run = request.json.get('run')
+    else:
+        org, course, run = None, None, None
+
+    if settings.FEATURES['AUTOGENERATE_KEY_FIELDS']:
+        if 'source_course_key' in request.json:
+            # if re-run, copy course number and try to increment course run
+            source_course_key = CourseKey.from_string(request.json.get('source_course_key'))
+            org = org or source_course_key.org
+            course = course or source_course_key.course
+            run = run or _get_next_course_run(source_course_key)
+        else:
+            # if course is being created, generate new number and start new run counting
+            org = org or request.user.username
+            course = course or _get_next_course_number()
+            run = run or str(START_COURSE_RUN)
+
+    # allow/disable unicode characters in course_id according to settings
+    if not settings.FEATURES.get('ALLOW_UNICODE_COURSE_ID'):
+        if _has_non_ascii_characters(org) or _has_non_ascii_characters(course) or _has_non_ascii_characters(run):
+            raise SpecialCharactersKeyError
+    return org, course, run
 
 
 def _create_new_course(request, org, number, run, fields):

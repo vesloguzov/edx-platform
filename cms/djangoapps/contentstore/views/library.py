@@ -9,7 +9,7 @@ import json
 import logging
 
 from contentstore.views.item import create_xblock_info
-from contentstore.utils import reverse_library_url, add_instructor
+from contentstore.utils import reverse_library_url, add_instructor, get_next_int_key
 from django.http import HttpResponseNotAllowed, Http404
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -30,7 +30,7 @@ from .component import get_component_templates, CONTAINER_TEMPATES
 from student.auth import (
     STUDIO_VIEW_USERS, STUDIO_EDIT_ROLES, get_user_permissions, has_studio_read_access, has_studio_write_access
 )
-from student.roles import CourseCreatorRole, CourseInstructorRole, CourseStaffRole, LibraryUserRole
+from student.roles import CourseCreatorRole, CourseInstructorRole, CourseStaffRole, GlobalStaff, LibraryUserRole
 from student import auth
 from util.json_request import expect_json, JsonResponse, JsonResponseBadRequest
 
@@ -39,6 +39,7 @@ __all__ = ['library_handler', 'manage_library_users']
 log = logging.getLogger(__name__)
 
 LIBRARIES_ENABLED = settings.FEATURES.get('ENABLE_CONTENT_LIBRARIES', False)
+START_LIBRARY_CODE = 1
 
 
 @login_required
@@ -121,10 +122,7 @@ def _create_library(request):
     display_name = None
     try:
         display_name = request.json['display_name']
-        org = request.json['org']
-        library = request.json.get('number', None)
-        if library is None:
-            library = request.json['library']
+        org, library = _get_library_key_parts(request)
         store = modulestore()
         with store.default_store(ModuleStoreEnum.Type.split):
             new_lib = store.create_library(
@@ -160,6 +158,37 @@ def _create_library(request):
         'url': reverse_library_url('library_handler', lib_key_str),
         'library_key': lib_key_str,
     })
+
+
+def _get_library_key_parts(request):
+    """
+    Get library org/number from request or generate them automatically if required
+
+    Global staff member always can create arbitrary library key,
+    feature 'AUTOGENERATE_KEY_FIELDS' enables auto-generation for non-staff users.
+
+    Raises KeyError if org or number/library not found in request.json
+    """
+    def _get_next_library_code(org):  # pylint: disable=missing-docstring
+        return get_next_int_key(
+            [l for l in modulestore().get_libraries()
+             if l.location.library_key.org == org],
+            lambda l: l.location.library_key.library,
+            START_LIBRARY_CODE
+        )
+
+    if not settings.FEATURES['AUTOGENERATE_KEY_FIELDS'] or GlobalStaff().has_user(request.user):
+        org = request.json.get('org', None)
+        library = request.json.get('number', None)
+        if library is None:
+            library = request.json.get('library', None)
+    else:
+        org, library = None, None
+
+    if settings.FEATURES['AUTOGENERATE_KEY_FIELDS']:
+        org = org or request.user.username
+        library = library or _get_next_library_code(org)
+    return org, library
 
 
 def library_blocks_view(library, user, response_format):

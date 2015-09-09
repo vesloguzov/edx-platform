@@ -8,6 +8,7 @@ import logging
 import re
 from datetime import datetime
 from pytz import UTC
+import itertools
 
 from django.conf import settings
 from django.utils.translation import ugettext as _
@@ -339,3 +340,24 @@ def reverse_usage_url(handler_name, usage_key, kwargs=None):
     Creates the URL for handlers that use usage_keys as URL parameters.
     """
     return reverse_url(handler_name, 'usage_key_string', usage_key, kwargs)
+
+
+def get_next_int_key(items, key_getter, start_value):
+    """
+    Generates minimal integer-valued unique string key
+
+    Args:
+        items: existing items for filtering out existing keys
+        key_getter: function used on each item to extract existing key
+        start_value: minimal integer value for the key
+    Returns:
+        string
+    """
+    existing_keys = [
+        int(key_getter(item))
+        for item in items
+        if key_getter(item).isdigit()
+    ]
+    for key in itertools.count(start_value):
+        if key not in existing_keys:
+            return str(key)

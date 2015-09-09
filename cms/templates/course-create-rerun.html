@@ -71,15 +71,19 @@
                   <ol class="list-input">
                     <li class="field text required" id="field-course-name">
                       <label for="rerun-course-name">${_("Course Name")}</label>
-                      <input class="rerun-course-name" id="rerun-course-name" type="text" name="rerun-course-name" aria-required="true" value="${display_name}" placeholder="${_('e.g. Introduction to Computer Science')}" />
+                      <input class="rerun-course-name" id="rerun-course-name" type="text" name="rerun-course-name" required value="${display_name}" placeholder="${_('e.g. Introduction to Computer Science')}" />
                       <span class="tip">
                         ${_("The public display name for the new course. (This name is often the same as the original course name.)")}
                       </span>
                       <span class="tip tip-error is-hidden"></span>
                     </li>
-                    <li class="field text required" id="field-organization">
+                    %if allow_auto_key_override or not autogenerate_key_fields:
+                    <%
+                        required_modifier = ' required' if not autogenerate_key_fields else ''
+                    %>
+                    <li class="field text${required_modifier}" id="field-organization">
                       <label for="rerun-course-org">${_("Organization")}</label>
-                      <input class="rerun-course-org" id="rerun-course-org" type="text" name="rerun-course-org" aria-required="true" value="${source_course_key.org | h}" placeholder="${_('e.g. UniversityX or OrganizationX')}" />
+                      <input class="rerun-course-org" id="rerun-course-org" type="text" name="rerun-course-org"${required_modifier} value="${source_course_key.org | h}" placeholder="${_('e.g. UniversityX or OrganizationX')}" />
                       <span class="tip">
                         ${_("The name of the organization sponsoring the new course. (This name is often the same as the original organization name.)")}
                         <strong class="tip-note" class="tip-note">${_("Note: No spaces or special characters are allowed.")}</strong>
@@ -88,9 +92,9 @@
                     </li>
 
                     <li class="row">
-                      <div class="column field text required" id="field-course-number">
+                      <div class="column field text${required_modifier}" id="field-course-number">
                         <label for="rerun-course-number">${_("Course Number")}</label>
-                        <input class="rerun-course-number" id="rerun-course-number" type="text" name="rerun-course-number" aria-required="true" value="${source_course_key.course | h}" placeholder="${_('e.g. CS101')}" />
+                        <input class="rerun-course-number" id="rerun-course-number" type="text" name="rerun-course-number"${required_modifier} value="${source_course_key.course | h}" placeholder="${_('e.g. CS101')}" />
                         <span class="tip">
                           ${_("The unique number that identifies the new course within the organization.  (This number is often the same as the original course number.)")}
                           <strong class="tip-note" class="tip-note">${_("Note: No spaces or special characters are allowed.")}</strong>
@@ -98,9 +102,9 @@
                         <span class="tip tip-error is-hidden"></span>
                       </div>
 
-                      <div class="column field text required" id="field-course-run">
+                      <div class="column field text${required_modifier}" id="field-course-run">
                         <label for="rerun-course-run">${_("Course Run")}</label>
-                        <input class="rerun-course-run" id="rerun-course-run" type="text" name="rerun-course-run" aria-required="true"placeholder="${_('e.g. 2014_T1')}" />
+                        <input class="rerun-course-run" id="rerun-course-run" type="text" name="rerun-course-run"${required_modifier} placeholder="${_('e.g. 2014_T1')}" />
                         <span class="tip">
                           ${_("The term in which the new course will run. (This value is often different than the original course run value.)")}
                           <strong class="tip-note" class="tip-note">${_("Note: No spaces or special characters are allowed.")}</strong>
@@ -108,6 +112,7 @@
                         <span class="tip tip-error is-hidden"></span>
                       </div>
                     </li>
+                    %endif
                   </ol>
 
                   <input type="hidden" value="${allow_unicode_course_id}" class="allow-unicode-course-id" /> <!-- TODO: need to add support for allow_unicode_course_id in real view's template -->
@@ -115,7 +120,7 @@
               </div>
 
               <div class="actions">
-                <button type="submit" class="action action-primary rerun-course-save is-disabled" aria-disabled="true" >${_('Create Re-run')}</button>
+                  <button type="submit" class="action action-primary rerun-course-save${' is-disabled" aria-disabled="true' if not autogenerate_course_key else ''}">${_('Create Re-run')}</button>
                 <button type="button" class="action action-secondary action-cancel rerun-course-cancel">${_('Cancel')}</button>
               </div>
             </form>

@@ -56,8 +56,11 @@ define(["jquery", "underscore", "gettext", "js/views/utils/view_utils"],
                     self.nonEmptyCheckFieldSelectors,
                     function (acc, element) {
                         var $element = $(element);
-                        var error = self.validateRequiredField($element.val());
-                        self.setFieldInErr($element.parent(), error);
+                        var error = null;
+                        if ($element.length > 0){
+                            var error = self.validateRequiredField($element.val());
+                            self.setFieldInErr($element.parent(), error);
+                        }
                         return error ? true : acc;
                     },
                     false
@@ -70,7 +73,7 @@ define(["jquery", "underscore", "gettext", "js/views/utils/view_utils"],
                     self.nonEmptyCheckFieldSelectors,
                     function (acc, element) {
                         var $element = $(element);
-                        return $element.val().length !== 0 ? acc : false;
+                        return ($element.length && $element.val().length == 0) ? false : acc;
                     },
                     true
                 );
@@ -89,7 +92,13 @@ define(["jquery", "underscore", "gettext", "js/views/utils/view_utils"],
                             if (event.keyCode === $.ui.keyCode.TAB) {
                                 return;
                             }
-                            var error = self.validateURLItemEncoding($element.val(), $(self.selectors.allowUnicode).val() === 'True');
+                            // Check field is required (if it's in non empty field list)
+                            // and field encoding
+                            var error  = (
+                                $element.is(self.nonEmptyCheckFieldSelectors.join(','))
+                                && self.validateRequiredField($element.val())
+                                || self.validateURLItemEncoding($element.val(), $(self.selectors.allowUnicode).val() === 'True')
+                            );
                             self.setFieldInErr($element.parent(), error);
                             self.validateTotalKeyLength();
                             if (!self.validateFilledFields()) {

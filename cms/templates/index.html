@@ -44,6 +44,9 @@
     <article class="content-primary" role="main">
 
       % if course_creator_status=='granted':
+      <%
+        required_modifier = ' required' if not autogenerate_key_fields else ''
+      %>
       <div class="wrapper-create-element wrapper-create-course">
         <form class="form-create create-course course-info" id="create-course-form" name="create-course-form">
           <div class="wrap-error">
@@ -66,30 +69,32 @@
                   <span class="tip" id="tip-new-course-name">${_("The public display name for your course. This cannot be changed, but you can set a different display name in Advanced Settings later.")}</span>
                   <span class="tip tip-error is-hiding" id="tip-error-new-course-name"></span>
                 </li>
-                <li class="field text required" id="field-organization">
+                %if allow_auto_key_override or not autogenerate_key_fields:
+                <li class="field text${required_modifier}" id="field-organization">
                   <label for="new-course-org">${_("Organization")}</label>
                   ## Translators: This is an example for the name of the organization sponsoring a course, seen when filling out the form to create a new course. The organization name cannot contain spaces.
                   ## Translators: "e.g. UniversityX or OrganizationX" is a placeholder displayed when user put no data into this field.
-                  <input class="new-course-org" id="new-course-org" type="text" name="new-course-org" required placeholder="${_('e.g. UniversityX or OrganizationX')}" aria-describedby="tip-new-course-org tip-error-new-course-org" />
+                  <input class="new-course-org" id="new-course-org" type="text" name="new-course-org"${required_modifier} placeholder="${_('e.g. UniversityX or OrganizationX')}" aria-describedby="tip-new-course-org tip-error-new-course-org" />
                   <span class="tip" id="tip-new-course-org">${_("The name of the organization sponsoring the course.")}  <strong>${_("Note: This is part of your course URL, so no spaces or special characters are allowed.")}</strong> ${_("This cannot be changed, but you can set a different display name in Advanced Settings later.")}</span>
                   <span class="tip tip-error is-hiding" id="tip-error-new-course-org"></span>
                 </li>
 
-                <li class="field text required" id="field-course-number">
+                <li class="field text${required_modifier}" id="field-course-number">
                   <label for="new-course-number">${_("Course Number")}</label>
                   ## Translators: This is an example for the number used to identify a course, seen when filling out the form to create a new course. The number here is short for "Computer Science 101". It can contain letters but cannot contain spaces.
-                  <input class="new-course-number" id="new-course-number" type="text" name="new-course-number" required placeholder="${_('e.g. CS101')}" aria-describedby="tip-new-course-number tip-error-new-course-number" />
+                  <input class="new-course-number" id="new-course-number" type="text" name="new-course-number"${required_modifier} placeholder="${_('e.g. CS101')}" aria-describedby="tip-new-course-number tip-error-new-course-number" />
                   <span class="tip" id="tip-new-course-number">${_("The unique number that identifies your course within your organization.")} <strong>${_("Note: This is part of your course URL, so no spaces or special characters are allowed and it cannot be changed.")}</strong></span>
                   <span class="tip tip-error is-hiding" id="tip-error-new-course-number"></span>
                 </li>
 
-                <li class="field text required" id="field-course-run">
+                <li class="field text${required_modifier}" id="field-course-run">
                   <label for="new-course-run">${_("Course Run")}</label>
                   ## Translators: This is an example for the "run" used to identify different instances of a course, seen when filling out the form to create a new course.
-                  <input class="new-course-run" id="new-course-run" type="text" name="new-course-run" required placeholder="${_('e.g. 2014_T1')}" aria-describedby="tip-new-course-run tip-error-new-course-run" />
+                  <input class="new-course-run" id="new-course-run" type="text" name="new-course-run"${required_modifier} placeholder="${_('e.g. 2014_T1')}" aria-describedby="tip-new-course-run tip-error-new-course-run" />
                   <span class="tip" id="tip-new-course-run">${_("The term in which your course will run.")} <strong>${_("Note: This is part of your course URL, so no spaces or special characters are allowed and it cannot be changed.")}</strong></span>
                   <span class="tip tip-error is-hiding" id="tip-error-new-course-run"></span>
                 </li>
+                %endif
               </ol>
 
             </fieldset>
@@ -126,20 +131,22 @@
                     <span class="tip" id="tip-new-library-name">${_("The public display name for your library.")}</span>
                     <span class="tip tip-error is-hiding" id="tip-error-new-library-name"></span>
                   </li>
-                  <li class="field text required" id="field-organization">
+                  %if allow_auto_key_override or not autogenerate_key_fields:
+                  <li class="field text${required_modifier}" id="field-organization">
                     <label for="new-library-org">${_("Organization")}</label>
-                    <input class="new-library-org" id="new-library-org" type="text" name="new-library-org" required placeholder="${_('e.g. UniversityX or OrganizationX')}" aria-describedby="tip-new-library-org tip-error-new-library-org" />
+                    <input class="new-library-org" id="new-library-org" type="text" name="new-library-org"${required_modifier} placeholder="${_('e.g. UniversityX or OrganizationX')}" aria-describedby="tip-new-library-org tip-error-new-library-org" />
                     <span class="tip" id="tip-new-library-org">${_("The public organization name for your library.")} ${_("This cannot be changed.")}</span>
                     <span class="tip tip-error is-hiding" id="tip-error-new-library-org"></span>
                   </li>
 
-                  <li class="field text required" id="field-library-number">
+                  <li class="field text${required_modifier}" id="field-library-number">
                     <label for="new-library-number">${_("Library Code")}</label>
                     ## Translators: This is an example for the "code" used to identify a library, seen when filling out the form to create a new library. This example is short for "Computer Science Problems". The example number may contain letters but must not contain spaces.
-                    <input class="new-library-number" id="new-library-number" type="text" name="new-library-number" required placeholder="${_('e.g. CSPROB')}" aria-describedby="tip-new-library-number tip-error-new-library-number" />
+                    <input class="new-library-number" id="new-library-number" type="text" name="new-library-number"${required_modifier} placeholder="${_('e.g. CSPROB')}" aria-describedby="tip-new-library-number tip-error-new-library-number" />
                     <span class="tip" id="tip-new-library-number">${_("The unique code that identifies this library.")} <strong>${_("Note: This is part of your library URL, so no spaces or special characters are allowed.")}</strong> ${_("This cannot be changed.")}</span>
                     <span class="tip tip-error is-hiding" id="tip-error-new-library-number"></span>
                   </li>
+                  %endif
                 </ol>
 
               </fieldset>

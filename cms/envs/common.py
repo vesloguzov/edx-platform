@@ -164,6 +164,9 @@ FEATURES = {
 
     # Teams feature
     'ENABLE_TEAMS': False,
+
+    # Automatic course/library key generation feature
+    'AUTOGENERATE_KEY_FIELDS': False,
 }
 STUDIO_THEME_NAME = ''
 

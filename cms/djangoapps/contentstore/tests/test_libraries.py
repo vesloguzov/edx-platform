@@ -1,14 +1,16 @@
 """
 Content library unit tests that require the CMS runtime.
 """
+import ddt
+from mock import patch, Mock
+
 from django.test.utils import override_settings
 from contentstore.tests.utils import AjaxEnabledTestClient, parse_json
 from contentstore.utils import reverse_url, reverse_usage_url, reverse_library_url
 from contentstore.views.item import _duplicate_item
 from contentstore.views.preview import _load_preview_module
+from contentstore.views.library import START_LIBRARY_CODE
 from contentstore.views.tests.test_library import LIBRARY_REST_URL
-import ddt
-from mock import patch
 from student.auth import has_studio_read_access, has_studio_write_access
 from student.roles import (
     CourseInstructorRole, CourseStaffRole, CourseCreatorRole, LibraryUserRole,
@@ -19,7 +21,6 @@ from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-from mock import Mock
 from opaque_keys.edx.locator import CourseKey, LibraryLocator
 from openedx.core.djangoapps.content.course_structures.tests import SignalDisconnectTestMixin
 
@@ -458,6 +459,92 @@ class TestLibraries(LibraryTestCase):
         self.assertEqual(resp.status_code, 200)
         with self.assertRaises(ValueError):
             self._refresh_children(lc_block, status_code_expected=400)
+
+
+@patch.dict('django.conf.settings.FEATURES', {'AUTOGENERATE_KEY_FIELDS': True})
+class AutoLibraryKeyTestCase(ModuleStoreTestCase):
+    """
+    Tests for course id generation on creation/rerunning of the course
+    """
+    def setUp(self):
+        user_password = super(AutoLibraryKeyTestCase, self).setUp()
+
+        self.client = AjaxEnabledTestClient()
+        self.client.login(username=self.user.username, password=user_password)
+
+        self.full_library_data = {
+            'org': 'UnivercityX',
+            'library': 'code_100',
+            'display_name': 'Robot Super Library',
+        }
+
+    @property
+    def standard_library_key(self):
+        """
+        Library key to be created without autogeneration
+        """
+        return LibraryLocator(org=self.full_library_data['org'], library=self.full_library_data['library'])
+
+    def test_auto_library_key_for_nonstaff_user(self):
+        """
+        Test auto generation of library key works for non-staff users
+        """
+        self.user.is_staff = False
+        self.user.save()
+
+        library_data = {'display_name': self.full_library_data['display_name']}
+        data = self._create_library(library_data)
+        self.assertIn(self.user.username, data['library_key'])
+
+    def test_auto_library_key_for_nonstaff_user_skip_key_params(self):
+        """
+        Test non-staff users can't create libraries with arbitrary ids
+        even if they pass corresponding parameters to POST request
+        """
+        self.user.is_staff = False
+        self.user.save()
+
+        data = self._create_library(self.full_library_data)
+        self.assertNotEqual(data['library_key'], unicode(self.standard_library_key))
+
+    def test_auto_library_key_for_staff_user(self):
+        """
+        Test auto generation of library ids works for staff users
+        """
+        library_data = {'display_name': self.full_library_data['display_name']}
+        data = self._create_library(library_data)
+        self.assertIn(self.user.username, data['library_key'])
+
+    def test_custom_library_key_for_staff_user(self):
+        """
+        Test staff users privilledge to create libraries with arbitrary ids
+        even if non-staff users can't create such ids
+        """
+        data = self._create_library(self.full_library_data)
+        self.assertEqual(data['library_key'], unicode(self.standard_library_key))
+
+    def test_increment_code_for_new_library(self):
+        """
+        Test auto-generated library code is incremented when the user creates
+        one more library
+        """
+        prev_library_data = {
+            'display_name': self.full_library_data['display_name'],
+            'number': str(START_LIBRARY_CODE),
+        }
+        self._create_library(prev_library_data)
+
+        data = self._create_library({'display_name': 'One more super library'})
+        code = CourseKey.from_string(data['library_key']).library
+        self.assertEqual(code, str(START_LIBRARY_CODE + 1))
+
+    def _create_library(self, data):
+        response = self.client.ajax_post(LIBRARY_REST_URL, data)
+        self.assertEqual(response.status_code, 200)
+        lib_info = parse_json(response)
+        lib_key = CourseKey.from_string(lib_info['library_key'])
+        self.assertIsInstance(lib_key, LibraryLocator)
+        return lib_info
 
 
 @ddt.ddt

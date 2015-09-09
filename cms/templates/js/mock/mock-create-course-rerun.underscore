@@ -52,7 +52,7 @@
                                         <li class="field text required" id="field-course-name">
                                             <label for="rerun-course-name">Course Name</label>
                                             <input class="rerun-course-name" id="rerun-course-name" type="text"
-                                                   name="rerun-course-name" aria-required="true" value="edX Demonstration Course"
+                                                   name="rerun-course-name" required value="edX Demonstration Course"
                                                    placeholder="e.g. Introduction to Computer Science"/>
                                             <span class="tip">
                                                 The public display name for the new course. (This name is often the same as the original course name.)
@@ -62,7 +62,7 @@
                                         <li class="field text required" id="field-organization">
                                             <label for="rerun-course-org">Organization</label>
                                             <input class="rerun-course-org" id="rerun-course-org" type="text"
-                                                   name="rerun-course-org" aria-required="true"
+                                                   name="rerun-course-org" required
                                                    value="edX"
                                                    placeholder="e.g. UniversityX or OrganizationX"/>
                                             <span class="tip">
@@ -76,7 +76,7 @@
                                             <div class="column field text required" id="field-course-number">
                                                 <label for="rerun-course-number">Course Number</label>
                                                 <input class="rerun-course-number" id="rerun-course-number" type="text"
-                                                       name="rerun-course-number" aria-required="true"
+                                                       name="rerun-course-number" required
                                                        value="Open_DemoX" placeholder="e.g. CS101"/>
                                                 <span class="tip">
                                                   The unique number that identifies the new course within the organization.  (This number is often the same as the original course number.)
@@ -88,7 +88,7 @@
                                             <div class="column field text required" id="field-course-run">
                                                 <label for="rerun-course-run">Course Run</label>
                                                 <input class="rerun-course-run" id="rerun-course-run" type="text"
-                                                       name="rerun-course-run" aria-required="true"
+                                                       name="rerun-course-run" required
                                                        placeholder="e.g. 2014_T1"/>
                                                 <span class="tip">
                                                   The term in which the new course will run. (This value is often different than the original course run value.)

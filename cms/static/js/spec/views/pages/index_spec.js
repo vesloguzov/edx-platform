@@ -145,4 +145,103 @@ define(["jquery", "js/common_helpers/ajax_helpers", "js/spec_helpers/view_helper
                 expect($libraraies_tab).not.toHaveClass('active');
             });
         });
+        describe("Course listing page with auto key generator", function () {
+            var mockIndexPageHTML = readFixtures('mock/mock-index-page-auto-key.underscore');
+
+            var fillInFields = function (org, number, run, name) {
+                $('.new-course-org').val(org);
+                $('.new-course-number').val(number);
+                $('.new-course-run').val(run);
+                $('.new-course-name').val(name);
+            };
+
+            var fillInLibraryFields = function(org, number, name) {
+                $('.new-library-org').val(org).keyup();
+                $('.new-library-number').val(number).keyup();
+                $('.new-library-name').val(name).keyup();
+            };
+
+            beforeEach(function () {
+                ViewHelpers.installMockAnalytics();
+                appendSetFixtures(mockIndexPageHTML);
+                IndexUtils.onReady();
+            });
+
+            afterEach(function () {
+                ViewHelpers.removeMockAnalytics();
+                delete window.source_course_key;
+            });
+
+            it("saves new courses with auto key", function () {
+                var requests = AjaxHelpers.requests(this);
+                var redirectSpy = spyOn(ViewUtils, 'redirect');
+                $('.new-course-button').click()
+                fillInFields('', '', '', 'Demo course');
+                $('.new-course-save').click();
+                AjaxHelpers.expectJsonRequest(requests, 'POST', '/course/', {
+                    org: '',
+                    number: '',
+                    run: '',
+                    display_name: 'Demo course'
+                });
+                AjaxHelpers.respondWithJson(requests, {
+                    url: 'dummy_test_url'
+                });
+                expect(redirectSpy).toHaveBeenCalledWith('dummy_test_url');
+            });
+
+            it("displays an error when a required field (name) is blank", function () {
+                var requests = AjaxHelpers.requests(this);
+                var requests_count = requests.length;
+                $('.new-course-button').click();
+                var values = ('DemoX', 'DM101', '2014', '');
+                // Try to submit some filled fields when the name is empty and ensure the form won't submit
+                for (var i=0; i<values.length;i++) {
+                    var values_with_blank = values.slice();
+                    values_with_blank[i] = '';
+                    fillInFields.apply(this, values_with_blank);
+                    expect($('.create-course li.field.text input[value=]').parent()).toHaveClass('error');
+                    expect($('.new-course-save')).toHaveClass('is-disabled');
+                    expect($('.new-course-save')).toHaveAttr('aria-disabled', 'true');
+                    $('.new-course-save').click();
+                    expect(requests.length).toEqual(requests_count); // Expect no new requests
+                }
+            });
+
+            it("saves new libraries with auto key", function () {
+                var requests = AjaxHelpers.requests(this);
+                var redirectSpy = spyOn(ViewUtils, 'redirect');
+                $('.new-library-button').click();
+                fillInLibraryFields('1', '1', 'Demo library');
+                $('.new-library-save').click();
+                AjaxHelpers.expectJsonRequest(requests, 'POST', '/library/', {
+                    org: '1',
+                    number: '1',
+                    display_name: 'Demo library'
+                });
+                AjaxHelpers.respondWithJson(requests, {
+                    url: 'dummy_test_url'
+                });
+                expect(redirectSpy).toHaveBeenCalledWith('dummy_test_url');
+            });
+
+            it("displays an error when a required field (name) is blank", function () {
+                var requests = AjaxHelpers.requests(this);
+                var requests_count = requests.length;
+                $('.new-library-button').click();
+                var values = ['DemoX', 'DM101', ''];
+                // Try to submit some filled fields when the name is empty and ensure the form won't submit
+                for (var i=0; i<values.length;i++) {
+                    var values_with_blank = values.slice();
+                    values_with_blank[i] = '';
+                    fillInLibraryFields.apply(this, values_with_blank);
+                    expect($('.create-library li.field.text input[value=]').parent()).toHaveClass('error');
+                    expect($('.new-library-save')).toHaveClass('is-disabled');
+                    expect($('.new-library-save')).toHaveAttr('aria-disabled', 'true');
+                    $('.new-library-save').click();
+                    expect(requests.length).toEqual(requests_count); // Expect no new requests
+                }
+            });
+
+        });
     });

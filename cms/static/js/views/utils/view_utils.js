@@ -189,10 +189,6 @@ define(["jquery", "underscore", "gettext", "js/views/feedback_notification", "js
          * Check that a course (org, number, run) doesn't use any special characters
          */
         validateURLItemEncoding = function (item, allowUnicode) {
-            var required = validateRequiredField(item);
-            if (required) {
-                return required;
-            }
             if (allowUnicode) {
                 if (/\s/g.test(item)) {
                     return gettext('Please do not use any spaces in this field.');
