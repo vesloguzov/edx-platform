@@ -2,7 +2,6 @@ from django.conf import settings
 from django.conf.urls import patterns, include, url
 from ratelimitbackend import admin
 from django.conf.urls.static import static
-from django.core.validators import slug_re
 
 import django.contrib.auth.views
 from microsite_configuration import microsite

@@ -53,8 +53,9 @@ def marketing_link(name):
             return reverse(link_map[name])
         else:
             # a little hack: we know how urlconf is created
-            mktg_service_base = '//' + getattr(settings,
-                '%s_BASE' % settings.SERVICE_VARIANT_FOR_MKTG_LINKS.upper(), '')
+            mktg_service_base = '//' + getattr(
+                settings, '%s_BASE' % settings.SERVICE_VARIANT_FOR_MKTG_LINKS.upper(), ''
+            )
             if name == 'ROOT':
                 return mktg_service_base
             return mktg_service_base + '/' + name.lower()

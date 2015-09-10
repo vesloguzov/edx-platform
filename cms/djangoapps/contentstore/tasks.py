@@ -18,7 +18,7 @@ from xmodule.course_module import CourseFields
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import DuplicateCourseError, ItemNotFoundError
 
-import signals
+import contentstore.signals
 
 LOGGER = get_task_logger(__name__)
 FULL_COURSE_REINDEX_THRESHOLD = 1
@@ -54,7 +54,7 @@ def rerun_course(source_course_key_string, destination_course_key_string, user_i
         # call edxval to attach videos to the rerun
         copy_course_videos(source_course_key, destination_course_key)
 
-        signals.course_rerun_created.send(
+        contentstore.signals.COURSE_RERUN_CREATED.send(
             store,
             src_course_id=source_course_key,
             dst_course_id=destination_course_key,

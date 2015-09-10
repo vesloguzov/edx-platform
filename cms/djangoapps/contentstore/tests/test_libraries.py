@@ -539,6 +539,10 @@ class AutoLibraryKeyTestCase(ModuleStoreTestCase):
         self.assertEqual(code, str(START_LIBRARY_CODE + 1))
 
     def _create_library(self, data):
+        """
+        Helper method used to create a library with full/partial data provided.
+        Uses the REST API.
+        """
         response = self.client.ajax_post(LIBRARY_REST_URL, data)
         self.assertEqual(response.status_code, 200)
         lib_info = parse_json(response)

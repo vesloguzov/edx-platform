@@ -157,7 +157,7 @@ class CourseOwnerProfileViewTest(ModuleStoreTestCase):
         context = learner_profile_context(request, self.USERNAME)
 
         self._assert_course_listing(self.course, context)
-        self._assert_course_listing(self.hidden_course, context) # because owner is automatically made course staff
+        self._assert_course_listing(self.hidden_course, context)  # because owner is automatically made course staff
 
     def test_owned_couses_for_anonymous_user(self):
         """Test owned course links access for anonymous user"""
@@ -184,6 +184,9 @@ class CourseOwnerProfileViewTest(ModuleStoreTestCase):
         self._assert_course_listing(self.hidden_course, context, False)
 
     def _assert_course_listing(self, course, context, listed=True):
+        """
+        Assert the course is present/absent in context
+        """
         course_id = unicode(course.id)
         courses = context['data']['owned_courses_data']['owned_courses']
         return self.assertEqual(

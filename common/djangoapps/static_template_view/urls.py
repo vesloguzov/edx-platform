@@ -7,6 +7,10 @@ from django.conf.urls import patterns, url
 
 urlpatterns = patterns('',)
 
+_use_theme_templates = (
+    settings.SERVICE_VARIANT == 'lms' and settings.FEATURES["USE_CUSTOM_THEME"]
+    or settings.SERVICE_VARIANT == 'cms' and settings.FEATURES["USE_CUSTOM_STUDIO_THEME"]
+)
 # Only enable URLs for those marketing links actually enabled in the
 # settings. Disable URLs by marking them as None.
 for key, value in settings.MKTG_URL_LINK_MAP.items():
@@ -24,8 +28,7 @@ for key, value in settings.MKTG_URL_LINK_MAP.items():
 
     # To allow theme templates to inherit from default templates,
     # prepend a standard prefix
-    if (settings.SERVICE_VARIANT == 'lms' and settings.FEATURES["USE_CUSTOM_THEME"]
-        or settings.SERVICE_VARIANT == 'cms' and settings.FEATURES["USE_CUSTOM_STUDIO_THEME"]):
+    if _use_theme_templates:
         template = "theme-" + template
 
     # Make the assumption that the URL we want is the lowercased

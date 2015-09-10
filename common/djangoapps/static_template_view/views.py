@@ -1,7 +1,9 @@
-# View for semi-static templatized content.
-#
-# List of valid templates is explicitly managed for (short-term)
-# security reasons.
+"""
+View for semi-static templatized content.
+
+List of valid templates is explicitly managed for (short-term)
+security reasons.
+"""
 
 from edxmako.shortcuts import render_to_response, render_to_string
 from mako.exceptions import TopLevelLookupException

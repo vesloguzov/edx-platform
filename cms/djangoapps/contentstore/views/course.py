@@ -737,7 +737,7 @@ def _create_new_course(request, org, number, run, fields):
     """
     store_for_new_course = modulestore().default_modulestore.get_modulestore_type()
     new_course = create_new_course_in_store(store_for_new_course, request.user, org, number, run, fields)
-    signals.new_course_created.send(modulestore(), course_id=new_course.id, user=request.user)
+    signals.COURSE_CREATED.send(modulestore(), course_id=new_course.id, user=request.user)
     return JsonResponse({
         'url': reverse_course_url('course_handler', new_course.id),
         'course_key': unicode(new_course.id),

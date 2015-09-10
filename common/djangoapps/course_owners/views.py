@@ -4,19 +4,12 @@ Views related to course owners
 from django_future.csrf import ensure_csrf_cookie
 from django.contrib.auth.models import User
 from django.views.decorators.http import require_http_methods
-from django.shortcuts import get_object_or_404
-from django.utils.translation import ugettext as _
 from django.conf import settings
-
-from django_countries import countries
 
 from microsite_configuration import microsite
 
 from util.cache import cache_if_anonymous
 from edxmako.shortcuts import render_to_response
-from openedx.core.djangoapps.user_api.models import UserPreference
-from openedx.core.djangoapps.user_api.accounts import ACCOUNT_VISIBILITY_PREF_KEY
-from openedx.core.djangoapps.user_api.accounts.image_helpers import get_profile_image_urls_for_user
 
 from .models import CourseOwnership
 
@@ -24,7 +17,7 @@ from .models import CourseOwnership
 @ensure_csrf_cookie
 @cache_if_anonymous()
 @require_http_methods(['GET'])
-def owners_list(request):
+def owners_list(request):  # pylint: disable=unused-argument
     """
     List all users owning the course(s)
     """

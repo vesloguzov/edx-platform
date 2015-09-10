@@ -747,6 +747,7 @@ class CourseOwnerLearnerProfilePageTest(LearnerProfileTestMixin, WebAppTest):
     """
     Tests that verify course listing view at a course owner profile page.
     """
+    course_key = None
 
     @ddt.data(
         LearnerProfileTestMixin.PRIVACY_PUBLIC,
@@ -794,7 +795,11 @@ class CourseOwnerLearnerProfilePageTest(LearnerProfileTestMixin, WebAppTest):
         )
 
     def log_in_as_course_owner(self):
-        org, number, run ='test_org', self.unique_id, 'test_run'
+        """
+        Create new course, authenticate as the user that created the course
+        and return the account's username.
+        """
+        org, number, run = 'test_org', self.unique_id, 'test_run'
         course_fixture = CourseFixture(org, number, run, display_name='Test course')
         course_fixture.install()
 
@@ -802,9 +807,12 @@ class CourseOwnerLearnerProfilePageTest(LearnerProfileTestMixin, WebAppTest):
         username = course_fixture.user['username']
 
         # Log in as a creator of a course
-        auto_auth_page = AutoAuthPage(self.browser, username=username,).visit()
+        AutoAuthPage(self.browser, username=username,).visit()
         return username
 
     def _change_user(self):
+        """
+        Log out current user and log in as user not owning the course.
+        """
         LogoutPage(self.browser).visit()
         AutoAuthPage(self.browser).visit()

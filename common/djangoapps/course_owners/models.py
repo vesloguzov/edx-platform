@@ -17,6 +17,7 @@ from django.utils.translation import ugettext_lazy
 
 from xmodule_django.models import CourseKeyField
 
+
 class CourseOwnership(models.Model):
     """
     Maps users to courses they own, e.g. courses that are shown in the list
@@ -27,7 +28,7 @@ class CourseOwnership(models.Model):
     course_id = CourseKeyField(max_length=255, db_index=True)
     created = models.DateTimeField(auto_now_add=True, null=True, db_index=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=missing-docstring
         unique_together = (('user', 'course_id'),)
         ordering = ('user', 'course_id')
         verbose_name = ugettext_lazy('course ownership')
@@ -39,7 +40,7 @@ class CourseOwnership(models.Model):
         ).format(self.user, self.course_id, self.created)
 
 
-def create_new_course_ownership(course_id, user, *args, **kwargs):
+def create_new_course_ownership(course_id, user, **kwargs):  # pylint: disable=unused-argument
     """
     Assign owner for new course just created
     """
@@ -47,7 +48,7 @@ def create_new_course_ownership(course_id, user, *args, **kwargs):
     return CourseOwnership.objects.create(user=user, course_id=course_id)
 
 
-def create_rerun_ownership(src_course_id, dst_course_id, *args, **kwargs):
+def create_rerun_ownership(src_course_id, dst_course_id, **kwargs):  # pylint: disable=unused-argument
     """
     Copy owner(s) from the source course if possible or leave course unowned
     Return list of CourseOwnership objects

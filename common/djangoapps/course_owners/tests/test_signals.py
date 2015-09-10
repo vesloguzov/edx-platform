@@ -1,7 +1,9 @@
+"""
+Tests for signals resulting in CourseOwnership items creation
+"""
 import json
 import unittest
 
-from django.test.utils import override_settings
 from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.conf import settings
@@ -34,14 +36,12 @@ class CreateOwnershipTest(ModuleStoreTestCase):
         """
         Test CourseOwner creation on course creation
         """
-        org = 'test_org'
-        course_name = 'test'
-        run = 'test_run'
-
         response = self.client.post(
             reverse('course_handler'),
-            data = json.dumps({
-                'org': org, 'course': course_name, 'run': run,
+            data=json.dumps({
+                'org': 'test_org',
+                'course': 'test',
+                'run': 'test_run',
                 'display_name': 'Test Course'
             }),
             content_type='application/json',
@@ -58,12 +58,13 @@ class CreateOwnershipTest(ModuleStoreTestCase):
         course = CourseFactory.create()
         CourseOwnership.objects.create(course_id=course.id, user=self.user)
 
-        run = 'new_run'
         response = self.client.post(
             reverse('course_handler'),
-            data = json.dumps({
+            data=json.dumps({
                 'source_course_key': unicode(course.id),
-                'org': course.org, 'course': course.number, 'run': 'new_run',
+                'org': course.org,
+                'course': course.number,
+                'run': 'new_run',
                 'display_name': 'Test Course'
             }),
             content_type='application/json',
@@ -85,12 +86,13 @@ class CreateOwnershipTest(ModuleStoreTestCase):
         CourseOwnership.objects.create(course_id=course.id, user=self.user)
         CourseOwnership.objects.create(course_id=course.id, user=extra_owner)
 
-        run = 'new_run'
         response = self.client.post(
             reverse('course_handler'),
-            data = json.dumps({
+            data=json.dumps({
                 'source_course_key': unicode(course.id),
-                'org': course.org, 'course': course.number, 'run': 'new_run',
+                'org': course.org,
+                'course': course.number,
+                'run': 'new_run',
                 'display_name': 'Test Course'
             }),
             content_type='application/json',

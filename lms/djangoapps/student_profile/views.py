@@ -18,7 +18,6 @@ from openedx.core.djangoapps.user_api.preferences.api import get_user_preference
 from student.models import User
 from microsite_configuration import microsite
 from course_owners.views import get_accessible_owner_courses
-from course_about.api import get_course_about_details
 from courseware.courses import course_image_url
 
 from django.utils.translation import ugettext as _
@@ -103,6 +102,7 @@ def learner_profile_context(request, profile_username):
         },
     }
     return context
+
 
 def _get_owned_courses(request, owner, preferences):
     """
