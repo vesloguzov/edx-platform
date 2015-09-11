@@ -12,6 +12,7 @@ from nose.plugins.attrib import attr
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 from course_modes.models import CourseMode
+from track.tests import EventTrackingTestCase
 from xmodule.modulestore.tests.django_utils import TEST_DATA_MIXED_CLOSED_MODULESTORE
 
 from student.models import CourseEnrollment
@@ -34,7 +35,7 @@ SHIB_ERROR_STR = "The currently logged-in user account does not have permission 
 
 
 @attr('shard_1')
-class AboutTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
+class AboutTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase, EventTrackingTestCase):
     """
     Tests about xblock.
     """
@@ -429,7 +430,7 @@ class AboutPurchaseCourseTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertIn("Add buyme to Cart ($10)", resp.content)
+        self.assertIn("Add buyme to Cart <span>($10 USD)</span>", resp.content)
 
     def test_logged_in(self):
         """
@@ -439,7 +440,7 @@ class AboutPurchaseCourseTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertIn("Add buyme to Cart ($10)", resp.content)
+        self.assertIn("Add buyme to Cart <span>($10 USD)</span>", resp.content)
 
     def test_already_in_cart(self):
         """
@@ -454,7 +455,7 @@ class AboutPurchaseCourseTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertIn("This course is in your", resp.content)
-        self.assertNotIn("Add buyme to Cart ($10)", resp.content)
+        self.assertNotIn("Add buyme to Cart <span>($10 USD)</span>", resp.content)
 
     def test_already_enrolled(self):
         """
@@ -473,7 +474,7 @@ class AboutPurchaseCourseTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("You are registered for this course", resp.content)
         self.assertIn("View Courseware", resp.content)
-        self.assertNotIn("Add buyme to Cart ($10)", resp.content)
+        self.assertNotIn("Add buyme to Cart <span>($10 USD)</span>", resp.content)
 
     def test_closed_enrollment(self):
         """
@@ -493,7 +494,7 @@ class AboutPurchaseCourseTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Enrollment is Closed", resp.content)
-        self.assertNotIn("Add buyme to Cart ($10)", resp.content)
+        self.assertNotIn("Add buyme to Cart <span>($10 USD)</span>", resp.content)
 
         # course price is visible ihe course_about page when the course
         # mode is set to honor and it's price is set
@@ -530,7 +531,7 @@ class AboutPurchaseCourseTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         url = reverse('about_course', args=[course.id.to_deprecated_string()])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertIn("Add buyme to Cart ($10)", resp.content)
+        self.assertIn("Add buyme to Cart <span>($10 USD)</span>", resp.content)
 
         # note that we can't call self.enroll here since that goes through
         # the Django student views, which doesn't allow for enrollments

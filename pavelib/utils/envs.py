@@ -6,7 +6,7 @@ import os
 import sys
 import json
 from lazy import lazy
-from path import path
+from path import Path as path
 import memcache
 
 
@@ -21,6 +21,9 @@ class Env(object):
     # Reports Directory
     REPORT_DIR = REPO_ROOT / 'reports'
     METRICS_DIR = REPORT_DIR / 'metrics'
+
+    # Python unittest dirs
+    PYTHON_COVERAGERC = REPO_ROOT / ".coveragerc"
 
     # Bok_choy dirs
     BOK_CHOY_DIR = REPO_ROOT / "common" / "test" / "acceptance"
@@ -109,6 +112,7 @@ class Env(object):
         REPO_ROOT / 'cms/static/js_test_squire.yml',
         REPO_ROOT / 'common/lib/xmodule/xmodule/js/js_test.yml',
         REPO_ROOT / 'common/static/js_test.yml',
+        REPO_ROOT / 'common/static/js_test_requirejs.yml',
     ]
 
     JS_TEST_ID_KEYS = [
@@ -118,6 +122,7 @@ class Env(object):
         'cms-squire',
         'xmodule',
         'common',
+        'common-requirejs'
     ]
 
     JS_REPORT_DIR = REPORT_DIR / 'javascript'

@@ -11,6 +11,7 @@ MEDIA_ROOT = "/edx/var/edxapp/uploads"
 DEBUG = True
 USE_I18N = True
 TEMPLATE_DEBUG = DEBUG
+HTTPS = 'off'
 
 ################################ LOGGERS ######################################
 
@@ -29,6 +30,11 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 LMS_BASE = "localhost:8000"
 FEATURES['PREVIEW_LMS_BASE'] = "preview." + LMS_BASE
+
+########################### PIPELINE #################################
+
+# Skip RequireJS optimizer in development
+STATICFILES_STORAGE = 'pipeline.storage.PipelineCachedStorage'
 
 ############################# ADVANCED COMPONENTS #############################
 
@@ -91,6 +97,14 @@ XBLOCK_SETTINGS = {
 FEATURES['ENABLE_COURSEWARE_INDEX'] = True
 FEATURES['ENABLE_LIBRARY_INDEX'] = True
 SEARCH_ENGINE = "search.elastic.ElasticSearchEngine"
+
+########################## Certificates Web/HTML View #######################
+FEATURES['CERTIFICATES_HTML_VIEW'] = True
+
+################################# DJANGO-REQUIRE ###############################
+
+# Whether to run django-require in debug mode.
+REQUIRE_DEBUG = DEBUG
 
 ###############################################################################
 # See if the developer has any local overrides.

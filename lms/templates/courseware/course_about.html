@@ -167,8 +167,9 @@ from edxmako.shortcuts import marketing_link
             reg_element_id = "reg_then_add_to_cart"
           %>
           <a href="${reg_href}" class="add-to-cart" id="${reg_element_id}">
-            ${_("Add {course_name} to Cart ({price})")\
+            ${_("Add {course_name} to Cart <span>({price} USD)</span>")\
               .format(course_name=course.display_number_with_default, price=course_price)}
+
           </a>
           <div id="register_error"></div>
         %else:
@@ -284,7 +285,7 @@ from edxmako.shortcuts import marketing_link
         </header>
 
         <ol class="important-dates">
-          <li class="important-dates-item"><i class="icon fa fa-info-sign"></i><p class="important-dates-item-title">${_("Course Number")}</p><span class="important-dates-item-text course-number">${course.display_number_with_default | h}</span></li>
+          <li class="important-dates-item"><i class="icon fa fa-info-circle"></i><p class="important-dates-item-title">${_("Course Number")}</p><span class="important-dates-item-text course-number">${course.display_number_with_default | h}</span></li>
           % if not course.start_date_is_still_default:
             <li class="important-dates-item"><i class="icon fa fa-calendar"></i><p class="important-dates-item-title">${_("Classes Start")}</p><span class="important-dates-item-text start-date">${course.start_datetime_text()}</span></li>
           % endif

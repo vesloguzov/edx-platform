@@ -12,7 +12,7 @@ import os
 import urlparse
 from contextlib import contextmanager
 from datetime import datetime
-from path import path
+from path import Path as path
 from bok_choy.javascript import js_defined
 from bok_choy.web_app_test import WebAppTest
 from bok_choy.promise import EmptyPromise, Promise
@@ -67,8 +67,7 @@ def is_youtube_available():
 
     youtube_api_urls = {
         'main': 'https://www.youtube.com/',
-        'player': 'http://www.youtube.com/iframe_api',
-        'metadata': 'http://gdata.youtube.com/feeds/api/videos/',
+        'player': 'https://www.youtube.com/iframe_api',
         # For transcripts, you need to check an actual video, so we will
         # just specify our default video and see if that one is available.
         'transcript': 'http://video.google.com/timedtext?lang=en&v=3_yD_cEKoCk',
@@ -91,9 +90,17 @@ def load_data_str(rel_path):
     Load a file from the "data" directory as a string.
     `rel_path` is the path relative to the data directory.
     """
-    full_path = path(__file__).abspath().dirname() / "data" / rel_path  # pylint: disable=no-value-for-parameter
+    full_path = path(__file__).abspath().dirname() / "data" / rel_path
     with open(full_path) as data_file:
         return data_file.read()
+
+
+def remove_file(filename):
+    """
+    Remove a file if it exists
+    """
+    if os.path.exists(filename):
+        os.remove(filename)
 
 
 def disable_animations(page):
@@ -675,4 +682,4 @@ class TestWithSearchIndexMixin(object):
 
     def _cleanup_index_file(self):
         """ Removes search index backing file """
-        os.remove(self.TEST_INDEX_FILENAME)
+        remove_file(self.TEST_INDEX_FILENAME)

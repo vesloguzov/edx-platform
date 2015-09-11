@@ -13,6 +13,8 @@ from lms.envs.dev import (WIKI_ENABLED)
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
+HTTPS = 'off'
+
 LOGGING = get_logger_config(ENV_ROOT / "log",
                             logging_env="dev",
                             tracking_filename="tracking.log",
@@ -115,7 +117,10 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'edx_location_mem_cache',
     },
-
+    'course_structure_cache': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'edx_course_structure_mem_cache',
+    },
 }
 
 # Make the keyedcache startup warnings go away

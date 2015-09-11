@@ -42,8 +42,11 @@ from lms.envs.common import (
     # technically accessible through the CMS via legacy URLs.
     PROFILE_IMAGE_BACKEND, PROFILE_IMAGE_DEFAULT_FILENAME, PROFILE_IMAGE_DEFAULT_FILE_EXTENSION,
     PROFILE_IMAGE_SECRET_KEY, PROFILE_IMAGE_MIN_BYTES, PROFILE_IMAGE_MAX_BYTES,
+    # The following setting is included as it is used to check whether to
+    # display credit eligibility table on the CMS or not.
+    ENABLE_CREDIT_ELIGIBILITY, YOUTUBE_API_KEY
 )
-from path import path
+from path import Path as path
 from warnings import simplefilter
 
 from lms.djangoapps.lms_xblock.mixin import LmsBlockMixin
@@ -156,17 +159,41 @@ FEATURES = {
     # Enable course reruns, which will always use the split modulestore
     'ALLOW_COURSE_RERUNS': True,
 
+    # Certificates Web/HTML Views
+    'CERTIFICATES_HTML_VIEW': False,
+
     # Social Media Sharing on Student Dashboard
-    'DASHBOARD_SHARE_SETTINGS': {
+    'SOCIAL_SHARING_SETTINGS': {
         # Note: Ensure 'CUSTOM_COURSE_URLS' has a matching value in lms/envs/common.py
         'CUSTOM_COURSE_URLS': False
     },
 
     # Teams feature
-    'ENABLE_TEAMS': False,
+    'ENABLE_TEAMS': True,
+
+    # Teams search feature
+    'ENABLE_TEAMS_SEARCH': False,
 
     # Automatic course/library key generation feature
     'AUTOGENERATE_KEY_FIELDS': False,
+
+    # Show video bumper in Studio
+    'ENABLE_VIDEO_BUMPER': False,
+
+    # Timed Proctored Exams
+    'ENABLE_PROCTORED_EXAMS': False,
+
+    # How many seconds to show the bumper again, default is 7 days:
+    'SHOW_BUMPER_PERIODICITY': 7 * 24 * 3600,
+
+    # Enable credit eligibility feature
+    'ENABLE_CREDIT_ELIGIBILITY': ENABLE_CREDIT_ELIGIBILITY,
+
+    # Can the visibility of the discussion tab be configured on a per-course basis?
+    'ALLOW_HIDING_DISCUSSION_TAB': False,
+
+    # Timed or Proctored Exams
+    'ENABLE_PROCTORED_EXAMS': False,
 }
 STUDIO_THEME_NAME = ''
 
@@ -200,6 +227,7 @@ MAKO_TEMPLATES['main'] = [
     COMMON_ROOT / 'templates',
     COMMON_ROOT / 'djangoapps' / 'pipeline_mako' / 'templates',
     COMMON_ROOT / 'djangoapps' / 'pipeline_js' / 'templates',
+    COMMON_ROOT / 'static',  # required to statically include common Underscore templates
 ]
 
 for namespace, template_dirs in lms.envs.common.MAKO_TEMPLATES.iteritems():
@@ -236,7 +264,6 @@ LMS_BASE = None
 from lms.envs.common import (
     COURSE_KEY_PATTERN, COURSE_ID_PATTERN, USAGE_KEY_PATTERN, ASSET_KEY_PATTERN
 )
-
 
 ######################### CSRF #########################################
 
@@ -295,7 +322,9 @@ MIDDLEWARE_CLASSES = (
     'embargo.middleware.EmbargoMiddleware',
 
     # Detects user-requested locale from 'accept-language' header in http request
-    'django.middleware.locale.LocaleMiddleware',
+    # TODO: Re-import the Django version once we upgrade to Django 1.8 [PLAT-671]
+    # 'django.middleware.locale.LocaleMiddleware',
+    'django_locale.middleware.LocaleMiddleware',
 
     'django.middleware.transaction.TransactionMiddleware',
     # needs to run after locale middleware (or anything that modifies the request context)
@@ -441,7 +470,7 @@ MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 EMBARGO_SITE_REDIRECT_URL = None
 
 ############################### Pipeline #######################################
-STATICFILES_STORAGE = 'cms.lib.django_require.staticstorage.OptimizedCachedRequireJsStorage'
+STATICFILES_STORAGE = 'openedx.core.lib.django_require.staticstorage.OptimizedCachedRequireJsStorage'
 
 from openedx.core.lib.rooted_paths import rooted_glob
 
@@ -474,15 +503,16 @@ PIPELINE_CSS = {
         'output_filename': 'css/cms-style-vendor-tinymce-skin.css',
     },
     'style-main': {
+        # this is unnecessary and can be removed
         'source_filenames': [
-            'sass/studio-main.css',
-            'css/edx-cc.css',
+            'css/studio-main.css',
         ],
         'output_filename': 'css/studio-main.css',
     },
     'style-main-rtl': {
+        # this is unnecessary and can be removed
         'source_filenames': [
-            'sass/studio-main-rtl.css',
+            'css/studio-main-rtl.css',
         ],
         'output_filename': 'css/studio-main-rtl.css',
     },
@@ -528,7 +558,7 @@ PIPELINE_JS_COMPRESSOR = None
 
 STATICFILES_IGNORE_PATTERNS = (
     "*.py",
-    "*.pyc"
+    "*.pyc",
     # it would be nice if we could do, for example, "**/*.scss",
     # but these strings get passed down to the `fnmatch` module,
     # which doesn't support that. :(
@@ -558,7 +588,7 @@ REQUIRE_BASE_URL = "./"
 # A sensible value would be 'app.build.js'. Leave blank to use the built-in default build profile.
 # Set to False to disable running the default profile (e.g. if only using it to build Standalone
 # Modules)
-REQUIRE_BUILD_PROFILE = "build.js"
+REQUIRE_BUILD_PROFILE = "cms/js/build.js"
 
 # The name of the require.js script used by your project, relative to REQUIRE_BASE_URL.
 REQUIRE_JS = "js/vendor/require.js"
@@ -576,6 +606,17 @@ REQUIRE_EXCLUDE = ("build.txt",)
 # auto will autodetect the environment and make use of node if available and rhino if not.
 # It can also be a path to a custom class that subclasses require.environments.Environment and defines some "args" function that returns a list with the command arguments to execute.
 REQUIRE_ENVIRONMENT = "node"
+
+
+########################## DJANGO DEBUG TOOLBAR ###############################
+
+# We don't enable Django Debug Toolbar universally, but whenever we do, we want
+# to avoid patching settings.  Patched settings can cause circular import
+# problems: http://django-debug-toolbar.readthedocs.org/en/1.0/installation.html#explicit-setup
+
+DEBUG_TOOLBAR_PATCH_SETTINGS = False
+
+################################# TENDER ######################################
 
 # If you want to enable Tender integration (http://tenderapp.com/),
 # put in the subdomain where Tender hosts tender_widget.js. For example,
@@ -637,10 +678,10 @@ CELERY_QUEUES = {
 
 YOUTUBE = {
     # YouTube JavaScript API
-    'API': 'www.youtube.com/iframe_api',
+    'API': 'https://www.youtube.com/iframe_api',
 
-    # URL to test YouTube availability
-    'TEST_URL': 'gdata.youtube.com/feeds/api/videos/',
+    # URL to get YouTube metadata
+    'METADATA_URL': 'https://www.googleapis.com/youtube/v3/videos',
 
     # Current youtube api for requesting transcripts.
     # For example: http://video.google.com/timedtext?lang=en&v=j_jEn79vS3g.
@@ -651,6 +692,8 @@ YOUTUBE = {
             'v': 'set_youtube_id_of_11_symbols_here',
         },
     },
+
+    'IMAGE_API': 'http://img.youtube.com/vi/{youtube_id}/0.jpg',  # /maxresdefault.jpg for 1920*1080
 }
 
 ############################# VIDEO UPLOAD PIPELINE #############################
@@ -674,6 +717,9 @@ INSTALLED_APPS = (
     'south',
     'method_override',
     'static_template_view',
+
+    # History tables
+    'simple_history',
 
     # Database-backed configuration
     'config_models',
@@ -735,6 +781,7 @@ INSTALLED_APPS = (
     # Additional problem types
     'edx_jsme',    # Molecular Structure
 
+    'openedx.core.djangoapps.content.course_overviews',
     'openedx.core.djangoapps.content.course_structures',
 
     # Credit courses
@@ -742,12 +789,20 @@ INSTALLED_APPS = (
 
     # Storing information about users creating courses
     'course_owners',
+
+    'xblock_django',
+
+    # edX Proctoring
+    'edx_proctoring',
 )
 
 
 ################# EDX MARKETING SITE ##################################
 
-EDXMKTG_COOKIE_NAME = 'edxloggedin'
+EDXMKTG_LOGGED_IN_COOKIE_NAME = 'edxloggedin'
+EDXMKTG_USER_INFO_COOKIE_NAME = 'edx-user-info'
+EDXMKTG_USER_INFO_COOKIE_VERSION = 1
+
 MKTG_URLS = {}
 MKTG_URL_LINK_MAP = {}
 SERVICE_VARIANT_FOR_MKTG_LINKS = 'lms'
@@ -846,6 +901,9 @@ OPTIONAL_APPS = (
 
     # milestones
     'milestones',
+
+    # edX Proctoring
+    'edx_proctoring',
 )
 
 
@@ -883,7 +941,30 @@ MAX_ASSET_UPLOAD_FILE_SIZE_URL = ""
 ### Default value for entrance exam minimum score
 ENTRANCE_EXAM_MIN_SCORE_PCT = 50
 
+### Default language for a new course
+DEFAULT_COURSE_LANGUAGE = "en"
+
+
 ################ ADVANCED_COMPONENT_TYPES ###############
+
+# These strings are entry-point names from the setup.py of the XBlock.
+# For example:
+#
+#   setup(
+#       name='xblock-foobar',
+#       version='0.1',
+#       packages=[
+#           'foobar_xblock',
+#       ],
+#       entry_points={
+#           'xblock.v1': [
+#               'foobar-block = foobar_xblock:FoobarBlock',
+#           #    ^^^^^^^^^^^^ This is the one you want.
+#           ]
+#       },
+#   )
+#
+# To use this block, add 'foobar-block' to the ADVANCED_COMPONENT_TYPES list.
 
 ADVANCED_COMPONENT_TYPES = [
     'annotatable',
@@ -897,6 +978,8 @@ ADVANCED_COMPONENT_TYPES = [
     'edx_sga',
     'problem-builder',
     'pb-dashboard',
+    'poll',
+    'survey',
     # XBlocks from pmitros repos are prototypes. They should not be used
     # except for edX Learning Sciences experiments on edge.edx.org without
     # further work to make them robust, maintainable, finalize data formats,
@@ -918,23 +1001,31 @@ ADVANCED_COMPONENT_TYPES = [
     # embed public google drive documents and calendars within edX units
     'google-document',
     'google-calendar',
+
+    # In-course reverification checkpoint
+    'edx-reverification-block',
 ]
 
-# Adding components in this list will disable the creation of new problem for those
-# compoenents in studio. Existing problems will work fine and one can edit them in studio
+# Adding components in this list will disable the creation of new problem for
+# those components in Studio. Existing problems will work fine and one can edit
+# them in Studio.
 DEPRECATED_ADVANCED_COMPONENT_TYPES = []
 
-# Specify xblocks that should be treated as advanced problems. Each entry is a tuple
-# specifying the xblock name and an optional YAML template to be used.
+# Specify XBlocks that should be treated as advanced problems. Each entry is a
+# dict:
+#       'component': the entry-point name of the XBlock. See the comment for
+#               ADVANCED_COMPONENT_TYPES for details of where to find this
+#               name.
+#       'boilerplate_name': an optional YAML template to be used.  Specify as
+#               None to omit.
+#
 ADVANCED_PROBLEM_TYPES = [
     {
         'component': 'openassessment',
         'boilerplate_name': None,
-    }
+    },
 ]
 
-#date format the api will be formatting the datetime values
-API_DATE_FORMAT = '%Y-%m-%d'
 
 # Files and Uploads type filter values
 
@@ -967,6 +1058,9 @@ ELASTIC_FIELD_MAPPINGS = {
 XBLOCK_SETTINGS = {
     "VideoDescriptor": {
         "licensing_enabled": FEATURES.get("LICENSING", False)
+    },
+    'VideoModule': {
+        'YOUTUBE_API_KEY': YOUTUBE_API_KEY
     }
 }
 
@@ -979,3 +1073,21 @@ CREDIT_TASK_DEFAULT_RETRY_DELAY = 30
 # Maximum number of retries per task for errors that are not related
 # to throttling.
 CREDIT_TASK_MAX_RETRIES = 5
+
+# Maximum age in seconds of timestamps we will accept
+# when a credit provider notifies us that a student has been approved
+# or denied for credit.
+CREDIT_PROVIDER_TIMESTAMP_EXPIRATION = 15 * 60
+
+
+################################ Deprecated Blocks Info ################################
+
+DEPRECATED_BLOCK_TYPES = ['peergrading', 'combinedopenended']
+
+#### PROCTORING CONFIGURATION DEFAULTS
+
+PROCTORING_BACKEND_PROVIDER = {
+    'class': 'edx_proctoring.backends.null.NullBackendProvider',
+    'options': {},
+}
+PROCTORING_SETTINGS = {}

@@ -111,8 +111,7 @@ class SearchIndexerBase(object):
             exclude_dictionary={"id": list(exclude_items)}
         )
         result_ids = [result["data"]["id"] for result in response["results"]]
-        for result_id in result_ids:
-            searcher.remove(cls.DOCUMENT_TYPE, result_id)
+        searcher.remove(cls.DOCUMENT_TYPE, result_ids)
 
     @classmethod
     def index(cls, modulestore, structure_key, triggered_at=None, reindex_age=REINDEX_AGE):
@@ -142,7 +141,7 @@ class SearchIndexerBase(object):
         structure_key = cls.normalize_structure_key(structure_key)
         location_info = cls._get_location_info(structure_key)
 
-        # Wrap counter in dictionary - otherwise we seem to lose scope inside the embedded function `index_item`
+        # Wrap counter in dictionary - otherwise we seem to lose scope inside the embedded function `prepare_item_index`
         indexed_count = {
             "count": 0
         }
@@ -153,9 +152,20 @@ class SearchIndexerBase(object):
         # list - those are ready to be destroyed
         indexed_items = set()
 
-        def index_item(item, skip_index=False, groups_usage_info=None):
+        # items_index is a list of all the items index dictionaries.
+        # it is used to collect all indexes and index them using bulk API,
+        # instead of per item index API call.
+        items_index = []
+
+        def get_item_location(item):
             """
-            Add this item to the search index and indexed_items list
+            Gets the version agnostic item location
+            """
+            return item.location.version_agnostic().replace(branch=None)
+
+        def prepare_item_index(item, skip_index=False, groups_usage_info=None):
+            """
+            Add this item to the items_index and indexed_items list
 
             Arguments:
             item - item to add to index, its children will be processed recursively
@@ -175,8 +185,25 @@ class SearchIndexerBase(object):
                 return
 
             item_content_groups = None
+
+            if item.category == "split_test":
+                split_partition = item.get_selected_partition()
+                for split_test_child in item.get_children():
+                    if split_partition:
+                        for group in split_partition.groups:
+                            group_id = unicode(group.id)
+                            child_location = item.group_id_to_child.get(group_id, None)
+                            if child_location == split_test_child.location:
+                                groups_usage_info.update({
+                                    unicode(get_item_location(split_test_child)): [group_id],
+                                })
+                                for component in split_test_child.get_children():
+                                    groups_usage_info.update({
+                                        unicode(get_item_location(component)): [group_id]
+                                    })
+
             if groups_usage_info:
-                item_location = item.location.version_agnostic().replace(branch=None)
+                item_location = get_item_location(item)
                 item_content_groups = groups_usage_info.get(unicode(item_location), None)
 
             item_id = unicode(cls._id_modifier(item.scope_ids.usage_id))
@@ -189,7 +216,7 @@ class SearchIndexerBase(object):
                 for child_item in item.get_children():
                     if modulestore.has_published_version(child_item):
                         children_groups_usage.append(
-                            index_item(
+                            prepare_item_index(
                                 child_item,
                                 skip_index=skip_child_index,
                                 groups_usage_info=groups_usage_info
@@ -211,7 +238,7 @@ class SearchIndexerBase(object):
                     item_index['start_date'] = item.start
                 item_index['content_groups'] = item_content_groups if item_content_groups else None
                 item_index.update(cls.supplemental_fields(item))
-                searcher.index(cls.DOCUMENT_TYPE, item_index)
+                items_index.append(item_index)
                 indexed_count["count"] += 1
                 return item_content_groups
             except Exception as err:  # pylint: disable=broad-except
@@ -229,7 +256,8 @@ class SearchIndexerBase(object):
 
                 # Now index the content
                 for item in structure.get_children():
-                    index_item(item, groups_usage_info=groups_usage_info)
+                    prepare_item_index(item, groups_usage_info=groups_usage_info)
+                searcher.index(cls.DOCUMENT_TYPE, items_index)
                 cls.remove_deleted_items(searcher, structure_key, indexed_items)
         except Exception as err:  # pylint: disable=broad-except
             # broad exception so that index operation does not prevent the rest of the application from working
@@ -540,6 +568,7 @@ class CourseAboutSearchIndexer(object):
         AboutInfo("enrollment_end", AboutInfo.PROPERTY, AboutInfo.FROM_COURSE_PROPERTY),
         AboutInfo("org", AboutInfo.PROPERTY, AboutInfo.FROM_COURSE_PROPERTY),
         AboutInfo("modes", AboutInfo.PROPERTY, AboutInfo.FROM_COURSE_MODE),
+        AboutInfo("language", AboutInfo.PROPERTY, AboutInfo.FROM_COURSE_PROPERTY),
     ]
 
     @classmethod
@@ -599,7 +628,7 @@ class CourseAboutSearchIndexer(object):
 
         # Broad exception handler to protect around and report problems with indexing
         try:
-            searcher.index(cls.DISCOVERY_DOCUMENT_TYPE, course_info)
+            searcher.index(cls.DISCOVERY_DOCUMENT_TYPE, [course_info])
         except:  # pylint: disable=bare-except
             log.exception(
                 "Course discovery indexing error encountered, course discovery index may be out of date %s",

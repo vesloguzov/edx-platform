@@ -384,24 +384,80 @@ class YouTubeVideoTest(VideoBaseTest):
 
         self.assertTrue(self.video.is_video_rendered('html5'))
 
-    def test_video_with_youtube_blocked(self):
+    def test_video_with_youtube_blocked_with_default_response_time(self):
+        """
+        Scenario: Video is rendered in HTML5 mode when the YouTube API is blocked
+        Given the YouTube API is blocked
+        And the course has a Video component in "Youtube_HTML5" mode
+        Then the video has rendered in "HTML5" mode
+        And only one video has rendered
+        """
+        # configure youtube server
+        self.youtube_configuration.update({
+            'youtube_api_blocked': True,
+        })
+
+        self.metadata = self.metadata_for_mode('youtube_html5')
+
+        self.navigate_to_video()
+
+        self.assertTrue(self.video.is_video_rendered('html5'))
+
+        # The video should only be loaded once
+        self.assertEqual(len(self.video.q(css='video')), 1)
+
+    def test_video_with_youtube_blocked_delayed_response_time(self):
         """
         Scenario: Video is rendered in HTML5 mode when the YouTube API is blocked
         Given the YouTube server response time is greater than 1.5 seconds
         And the YouTube API is blocked
         And the course has a Video component in "Youtube_HTML5" mode
         Then the video has rendered in "HTML5" mode
+        And only one video has rendered
         """
         # configure youtube server
         self.youtube_configuration.update({
             'time_to_response': 2.0,
             'youtube_api_blocked': True,
         })
+
         self.metadata = self.metadata_for_mode('youtube_html5')
 
         self.navigate_to_video()
 
         self.assertTrue(self.video.is_video_rendered('html5'))
+
+        # The video should only be loaded once
+        self.assertEqual(len(self.video.q(css='video')), 1)
+
+    def test_html5_video_rendered_with_youtube_captions(self):
+        """
+        Scenario: User should see Youtube captions for If there are no transcripts
+        available for HTML5 mode
+        Given that I have uploaded a .srt.sjson file to assets for Youtube mode
+        And the YouTube API is blocked
+        And the course has a Video component in "Youtube_HTML5" mode
+        And Video component rendered in HTML5 mode
+        And Html5 mode video has no transcripts
+        When I see the captions for HTML5 mode video
+        Then I should see the Youtube captions
+        """
+        self.assets.append('subs_3_yD_cEKoCk.srt.sjson')
+        # configure youtube server
+        self.youtube_configuration.update({
+            'time_to_response': 2.0,
+            'youtube_api_blocked': True,
+        })
+
+        data = {'sub': '3_yD_cEKoCk'}
+        self.metadata = self.metadata_for_mode('youtube_html5', additional_data=data)
+
+        self.navigate_to_video()
+
+        self.assertTrue(self.video.is_video_rendered('html5'))
+        # check if caption button is visible
+        self.assertTrue(self.video.is_button_shown('CC'))
+        self._verify_caption_text('Welcome to edX.')
 
     def test_download_transcript_button_works_correctly(self):
         """
@@ -710,6 +766,84 @@ class YouTubeVideoTest(VideoBaseTest):
             self.assertTrue(self.video.downloaded_transcript_contains_text('srt', unicode_text))
 
         self.assertEqual(self.video.caption_languages, {'zh_HANS': 'Simplified Chinese', 'zh_HANT': 'Traditional Chinese'})
+
+    def test_video_bumper_render(self):
+        """
+        Scenario: Multiple videos with bumper in sequentials all load and work, switching between sequentials
+        Given it has videos "A,B" in "Youtube" and "HTML5" modes in position "1" of sequential
+        And video "C" in "Youtube" mode in position "2" of sequential
+        When I open sequential position "1"
+        Then I see video "B" has a poster
+        When I click on it
+        Then I see video bumper is playing
+        When I skip the bumper
+        Then I see the main video
+        When I click on video "A"
+        Then the main video starts playing
+        When I open sequential position "2"
+        And click on the poster
+        Then the main video starts playing
+        Then I see that the main video starts playing once I go back to position "2" of sequential
+        When I reload the page
+        Then I see that the main video starts playing when I click on the poster
+        """
+        additional_data = {
+            u'video_bumper': {
+                u'value': {
+                    "transcripts": {},
+                    "video_id": "video_001"
+                }
+            }
+        }
+
+        self.verticals = [
+            [{'display_name': 'A'}, {'display_name': 'B', 'metadata': self.metadata_for_mode('html5')}],
+            [{'display_name': 'C'}]
+        ]
+
+        tab1_video_names = ['A', 'B']
+        tab2_video_names = ['C']
+
+        def execute_video_steps(video_names):
+            """
+            Execute video steps
+            """
+            for video_name in video_names:
+                self.video.use_video(video_name)
+                self.assertTrue(self.video.is_poster_shown)
+                self.video.click_on_poster()
+                self.video.wait_for_video_player_render(autoplay=True)
+                self.assertIn(self.video.state, ['playing', 'buffering', 'finished'])
+
+        self.course_fixture.add_advanced_settings(additional_data)
+        self.navigate_to_video_no_render()
+
+        self.video.use_video('B')
+        self.assertTrue(self.video.is_poster_shown)
+        self.video.click_on_poster()
+        self.video.wait_for_video_bumper_render()
+        self.assertIn(self.video.state, ['playing', 'buffering', 'finished'])
+        self.video.click_player_button('skip_bumper')
+
+        # no autoplay here, maybe video is too small, so pause is not switched
+        self.video.wait_for_video_player_render()
+        self.assertIn(self.video.state, ['playing', 'buffering', 'finished'])
+
+        self.video.use_video('A')
+        execute_video_steps(['A'])
+
+        # go to second sequential position
+        self.course_nav.go_to_sequential_position(2)
+
+        execute_video_steps(tab2_video_names)
+
+        # go back to first sequential position
+        # we are again playing tab 1 videos to ensure that switching didn't broke some video functionality.
+        self.course_nav.go_to_sequential_position(1)
+        execute_video_steps(tab1_video_names)
+
+        self.video.browser.refresh()
+        execute_video_steps(tab1_video_names)
 
 
 class YouTubeHtml5VideoTest(VideoBaseTest):

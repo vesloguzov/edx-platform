@@ -77,7 +77,8 @@ class LmsSearchInitializerTestCase(StaffMasqueradeTestCase):
             user=self.global_staff,
             course_id=unicode(self.course.id)
         )
-        self.assertIsNone(filter_directory['content_groups'])
+        # User is staff by default, no content groups filter is set - see all
+        self.assertNotIn('content_groups', filter_directory)
 
         # Install a masquerading group
         request = self._create_mock_json_request(
@@ -97,7 +98,7 @@ class LmsSearchInitializerTestCase(StaffMasqueradeTestCase):
             user=self.global_staff,
             course_id=unicode(self.course.id)
         )
-        self.assertEqual(filter_directory['content_groups'], unicode(1))
+        self.assertEqual(filter_directory['content_groups'], [unicode(1)])
 
     def test_staff_masquerading_as_a_staff_user(self):
         """

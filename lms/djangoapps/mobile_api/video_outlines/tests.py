@@ -2,7 +2,6 @@
 """
 Tests for video outline API
 """
-# pylint: disable=no-member
 import ddt
 import itertools
 from uuid import uuid4
@@ -144,12 +143,12 @@ class TestVideoAPIMixin(object):
         """
         path = course_outline[outline_index]['path']
         self.assertEqual(len(path), len(path_list))
-        for i in range(0, len(path_list)):
+        for i in range(len(path_list)):
             self.assertEqual(path_list[i], path[i]['name'])
         #named_path will be deprecated eventually
         named_path = course_outline[outline_index]['named_path']
         self.assertEqual(len(named_path), len(path_list))
-        for i in range(0, len(path_list)):
+        for i in range(len(path_list)):
             self.assertEqual(path_list[i], named_path[i])
 
     def _setup_course_partitions(self, scheme_id='random', is_cohorted=False):

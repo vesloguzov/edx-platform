@@ -20,7 +20,7 @@ from xmodule.modulestore.tests.factories import CourseFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 from course_modes.tests.factories import CourseModeFactory
-from verify_student.models import SoftwareSecurePhotoVerification  # pylint: disable=F0401
+from verify_student.models import VerificationDeadline, SoftwareSecurePhotoVerification  # pylint: disable=import-error
 from util.testing import UrlResetMixin
 
 
@@ -41,12 +41,7 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
         self.course = CourseFactory.create()
         success = self.client.login(username=self.user.username, password="edx")
         self.assertTrue(success, msg="Did not log in successfully")
-
-        # Use the URL with the querystring param to put the user
-        # in the experimental track.
-        # TODO (ECOM-188): Once the A/B test of decoupling verified / payment
-        # completes, we can remove the querystring param.
-        self.dashboard_url = reverse('dashboard') + '?separate-verified=1'
+        self.dashboard_url = reverse('dashboard')
 
     def test_enrolled_as_non_verified(self):
         self._setup_mode_and_enrollment(None, "honor")
@@ -66,9 +61,11 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
             mode="verified"
         )
 
-        # The default course has no verified mode,
-        # so no verification status should be displayed
-        self._assert_course_verification_status(None)
+        # Continue to show the student as needing to verify.
+        # The student is enrolled as verified, so we might as well let them
+        # complete verification.  We'd need to change their enrollment mode
+        # anyway to ensure that the student is issued the correct kind of certificate.
+        self._assert_course_verification_status(VERIFY_STATUS_NEED_TO_VERIFY)
 
     def test_need_to_verify_no_expiration(self):
         self._setup_mode_and_enrollment(None, "verified")
@@ -290,6 +287,7 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
             user=self.user,
             mode=enrollment_mode
         )
+        VerificationDeadline.set_deadline(self.course.id, deadline)
 
     BANNER_ALT_MESSAGES = {
         None: "Honor",

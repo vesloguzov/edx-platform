@@ -11,11 +11,16 @@ file and check it in at the same time as your model changes. To do that,
 2. ./manage.py lms schemamigration student --auto description_of_your_change
 3. Add the migration file created in edx-platform/common/djangoapps/student/migrations/
 """
+import logging
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy
 
 from xmodule_django.models import CourseKeyField
+
+
+log = logging.getLogger(__name__)
 
 
 class CourseOwnership(models.Model):
@@ -59,3 +64,11 @@ def create_rerun_ownership(src_course_id, dst_course_id, **kwargs):  # pylint: d
             course_id=dst_course_id
         ) for ownership in CourseOwnership.objects.filter(course_id=src_course_id)
     ]
+
+def cleanup_deleted_course_ownership(course_id, **kwargs):
+    """
+    Remove any course ownership objects left after course deletion
+    """
+
+    log.info('Removing course ownership objects for deleted course {}'.format(course_id))
+    CourseOwnership.objects.filter(course_id=course_id).delete()

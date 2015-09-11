@@ -1,9 +1,9 @@
 """
 Views related to course owners
 """
-from django_future.csrf import ensure_csrf_cookie
 from django.contrib.auth.models import User
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.conf import settings
 
 from microsite_configuration import microsite

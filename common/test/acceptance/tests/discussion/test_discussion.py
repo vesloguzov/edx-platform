@@ -6,6 +6,7 @@ import datetime
 from pytz import UTC
 from uuid import uuid4
 from nose.plugins.attrib import attr
+from flaky import flaky
 
 from .helpers import BaseDiscussionTestCase
 from ..helpers import UniqueCourseTest
@@ -176,7 +177,7 @@ class DiscussionResponsePaginationTestMixin(BaseDiscussionMixin):
         self.assertFalse(self.thread_page.has_add_response_button())
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionHomePageTest(UniqueCourseTest):
     """
     Tests for the discussion home page.
@@ -203,7 +204,7 @@ class DiscussionHomePageTest(UniqueCourseTest):
         self.assertIsNotNone(self.page.new_post_form)
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionTabSingleThreadTest(BaseDiscussionTestCase, DiscussionResponsePaginationTestMixin):
     """
     Tests for the discussion page displaying a single thread
@@ -217,6 +218,7 @@ class DiscussionTabSingleThreadTest(BaseDiscussionTestCase, DiscussionResponsePa
         self.thread_page = self.create_single_thread_page(thread_id)  # pylint: disable=attribute-defined-outside-init
         self.thread_page.visit()
 
+    @flaky  # TODO fix this, see TNL-2419
     def test_mathjax_rendering(self):
         thread_id = "test_thread_{}".format(uuid4().hex)
 
@@ -233,6 +235,26 @@ class DiscussionTabSingleThreadTest(BaseDiscussionTestCase, DiscussionResponsePa
         self.assertTrue(self.thread_page.is_discussion_body_visible())
         self.assertTrue(self.thread_page.is_mathjax_preview_available())
         self.assertTrue(self.thread_page.is_mathjax_rendered())
+
+    def test_markdown_reference_link(self):
+        """
+        Check markdown editor renders reference link correctly
+        and colon(:) in reference link is not converted to %3a
+        """
+        sample_link = "http://example.com/colon:test"
+        thread_content = """[enter link description here][1]\n[1]: http://example.com/colon:test"""
+        thread_id = "test_thread_{}".format(uuid4().hex)
+        thread_fixture = SingleThreadViewFixture(
+            Thread(
+                id=thread_id,
+                body=thread_content,
+                commentable_id=self.discussion_id,
+                thread_type="discussion"
+            )
+        )
+        thread_fixture.push()
+        self.setup_thread_page(thread_id)
+        self.assertEqual(self.thread_page.get_link_href(), sample_link)
 
     def test_marked_answer_comments(self):
         thread_id = "test_thread_{}".format(uuid4().hex)
@@ -256,7 +278,7 @@ class DiscussionTabSingleThreadTest(BaseDiscussionTestCase, DiscussionResponsePa
         self.assertFalse(self.thread_page.is_show_comments_visible(response_id))
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionTabMultipleThreadTest(BaseDiscussionTestCase):
     """
     Tests for the discussion page with multiple threads
@@ -311,7 +333,7 @@ class DiscussionTabMultipleThreadTest(BaseDiscussionTestCase):
         self.thread_page_2.check_window_is_on_top()
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionOpenClosedThreadTest(BaseDiscussionTestCase):
     """
     Tests for checking the display of attributes on open and closed threads
@@ -360,7 +382,7 @@ class DiscussionOpenClosedThreadTest(BaseDiscussionTestCase):
         self.assertFalse(page._is_element_visible('.response_response1 .display-vote'))
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionCommentDeletionTest(BaseDiscussionTestCase):
     """
     Tests for deleting comments displayed beneath responses in the single thread view.
@@ -372,8 +394,11 @@ class DiscussionCommentDeletionTest(BaseDiscussionTestCase):
     def setup_view(self):
         view = SingleThreadViewFixture(Thread(id="comment_deletion_test_thread", commentable_id=self.discussion_id))
         view.addResponse(
-            Response(id="response1"),
-            [Comment(id="comment_other_author", user_id="other"), Comment(id="comment_self_author", user_id=self.user_id)])
+            Response(id="response1"), [
+                Comment(id="comment_other_author"),
+                Comment(id="comment_self_author", user_id=self.user_id, thread_id="comment_deletion_test_thread")
+            ]
+        )
         view.push()
 
     def test_comment_deletion_as_student(self):
@@ -397,7 +422,7 @@ class DiscussionCommentDeletionTest(BaseDiscussionTestCase):
         page.delete_comment("comment_other_author")
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionResponseEditTest(BaseDiscussionTestCase):
     """
     Tests for editing responses displayed beneath thread in the single thread view.
@@ -491,7 +516,7 @@ class DiscussionResponseEditTest(BaseDiscussionTestCase):
         page.endorse_response('response_other_author')
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionCommentEditTest(BaseDiscussionTestCase):
     """
     Tests for editing comments displayed beneath responses in the single thread view.
@@ -574,7 +599,7 @@ class DiscussionCommentEditTest(BaseDiscussionTestCase):
         self.assertTrue(page.is_add_comment_visible("response1"))
 
 
-@attr('shard_1')
+@attr('shard_2')
 class InlineDiscussionTest(UniqueCourseTest, DiscussionResponsePaginationTestMixin):
     """
     Tests for inline discussions
@@ -733,7 +758,7 @@ class InlineDiscussionTest(UniqueCourseTest, DiscussionResponsePaginationTestMix
         self.assertFalse(self.additional_discussion_page._is_element_visible(".new-post-article"))
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionUserProfileTest(UniqueCourseTest):
     """
     Tests for user profile page in discussion tab.
@@ -862,7 +887,7 @@ class DiscussionUserProfileTest(UniqueCourseTest):
         self.assertTrue(learner_profile_page.field_is_visible('username'))
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionSearchAlertTest(UniqueCourseTest):
     """
     Tests for spawning and dismissing alerts related to user search actions and their results.
@@ -936,7 +961,7 @@ class DiscussionSearchAlertTest(UniqueCourseTest):
         ).wait_for_page()
 
 
-@attr('shard_1')
+@attr('shard_2')
 class DiscussionSortPreferenceTest(UniqueCourseTest):
     """
     Tests for the discussion page displaying a single thread.

@@ -60,7 +60,7 @@ def marketing_link(name):
                 return mktg_service_base
             return mktg_service_base + '/' + name.lower()
     else:
-        log.warning("Cannot find corresponding link for name: {name}".format(name=name))
+        log.debug("Cannot find corresponding link for name: %s", name)
         return '#'
 
 

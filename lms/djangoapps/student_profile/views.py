@@ -20,8 +20,6 @@ from microsite_configuration import microsite
 from course_owners.views import get_accessible_owner_courses
 from courseware.courses import course_image_url
 
-from django.utils.translation import ugettext as _
-
 
 @user_passes_test(lambda u: settings.FEATURES['ALLOW_PROFILE_ANONYMOUS_ACCESS'] or u.is_authenticated())
 @require_http_methods(['GET'])
@@ -65,14 +63,11 @@ def learner_profile_context(request, profile_username):
         ObjectDoesNotExist: the specified profile_username does not exist.
     """
     profile_user = User.objects.get(username=profile_username)
+    logged_in_user = request.user
 
     own_profile = (request.user.username == profile_username)
 
-    account_settings_data = get_account_settings(request.user, profile_username)
-    # Account for possibly relative URLs.
-    for key, value in account_settings_data['profile_image'].items():
-        if key.startswith(PROFILE_IMAGE_KEY_PREFIX):
-            account_settings_data['profile_image'][key] = request.build_absolute_uri(value)
+    account_settings_data = get_account_settings(request, profile_username)
 
     preferences_data = get_user_preferences(profile_user, profile_username)
 
@@ -100,6 +95,7 @@ def learner_profile_context(request, profile_username):
                 'owned_courses': _get_owned_courses(request, profile_user, preferences_data),
             },
         },
+        'disable_courseware_js': True,
     }
     return context
 

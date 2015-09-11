@@ -1,8 +1,11 @@
 """
 Views related to operations on course objects
 """
+import copy
+from django.shortcuts import redirect
 import json
 import random
+import logging
 import string  # pylint: disable=deprecated-module
 import logging
 
@@ -17,21 +20,24 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseBadRequest, HttpResponseNotFound, HttpResponse, Http404
 from util.json_request import JsonResponse, JsonResponseBadRequest
 from util.date_utils import get_default_time_display
-from util.db import generate_int_id, MYSQL_MAX_INT
 from edxmako.shortcuts import render_to_response
 
 from xmodule.course_module import DEFAULT_START_DATE
 from xmodule.error_module import ErrorDescriptor
 from xmodule.modulestore.django import modulestore
 from xmodule.contentstore.content import StaticContent
-from xmodule.tabs import PDFTextbookTabs
+from xmodule.tabs import CourseTab, CourseTabList, InvalidTabsException
+from openedx.core.lib.course_tabs import CourseTabPluginManager
+from openedx.core.djangoapps.credit.api import is_credit_course, get_credit_requirements
+from openedx.core.djangoapps.credit.tasks import update_credit_course_requirements
+from openedx.core.djangoapps.content.course_structures.api.v0 import api, errors
 from xmodule.modulestore import EdxJSONEncoder
 from xmodule.modulestore.exceptions import ItemNotFoundError, DuplicateCourseError
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.locations import Location
 from opaque_keys.edx.keys import CourseKey
 
-from django_future.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
 from contentstore.course_info_model import get_course_updates, update_course_updates, delete_course_update
 from contentstore.course_group_config import (
     GroupConfiguration,
@@ -45,8 +51,6 @@ from contentstore.utils import (
     initialize_permissions,
     get_lms_link_for_item,
     get_next_int_key,
-    add_extra_panel_tab,
-    remove_extra_panel_tab,
     reverse_course_url,
     reverse_library_url,
     reverse_usage_url,
@@ -60,9 +64,6 @@ from util.json_request import expect_json
 from util.string_utils import _has_non_ascii_characters
 from student.auth import has_studio_write_access, has_studio_read_access
 from .component import (
-    OPEN_ENDED_COMPONENT_TYPES,
-    NOTE_COMPONENT_TYPES,
-    ADVANCED_COMPONENT_POLICY_KEY,
     SPLIT_TEST_COMPONENT_TYPE,
     ADVANCED_COMPONENT_TYPES,
 )
@@ -75,7 +76,7 @@ from contentstore.views.entrance_exam import (
 
 from .library import LIBRARIES_ENABLED
 from .item import create_xblock_info
-from .. import signals
+import contentstore.signals
 from contentstore.push_notification import push_notification_enabled
 from course_creators.views import get_course_creator_status, add_user_with_status_unrequested
 from contentstore import utils
@@ -87,13 +88,14 @@ from course_action_state.models import CourseRerunState, CourseRerunUIStateManag
 from course_action_state.managers import CourseActionStateItemNotFoundError
 from microsite_configuration import microsite
 from xmodule.course_module import CourseFields
-from xmodule.split_test_module import get_split_user_partitions
 from student.auth import has_course_author_access
 
 from util.milestones_helpers import (
     set_prerequisite_courses,
     is_valid_course_key
 )
+
+log = logging.getLogger(__name__)
 
 __all__ = ['course_info_handler', 'course_handler', 'course_listing',
            'course_info_update_handler', 'course_search_index_handler',
@@ -340,7 +342,8 @@ def _course_outline_json(request, course_module):
         course_module,
         include_child_info=True,
         course_outline=True,
-        include_children_predicate=lambda xblock: not xblock.category == 'vertical'
+        include_children_predicate=lambda xblock: not xblock.category == 'vertical',
+        user=request.user
     )
 
 
@@ -470,6 +473,7 @@ def course_listing(request):
         'in_process_course_actions': in_process_course_actions,
         'libraries_enabled': LIBRARIES_ENABLED,
         'libraries': [format_library_for_view(lib) for lib in libraries],
+        'show_new_library_button': LIBRARIES_ENABLED and request.user.is_active,
         'user': request.user,
         'request_course_creator_url': reverse('contentstore.views.request_course_creator'),
         'course_creator_status': _get_course_creator_status(request.user),
@@ -484,6 +488,44 @@ def course_listing(request):
 def _get_rerun_link_for_item(course_key):
     """ Returns the rerun link for the given course key. """
     return reverse_course_url('course_rerun_handler', course_key)
+
+
+def _deprecated_blocks_info(course_module, deprecated_block_types):
+    """
+    Returns deprecation information about `deprecated_block_types`
+
+    Arguments:
+        course_module (CourseDescriptor): course object
+        deprecated_block_types (list): list of deprecated blocks types
+
+    Returns:
+        Dict with following keys:
+        block_types (list): list containing types of all deprecated blocks
+        block_types_enabled (bool): True if any or all `deprecated_blocks` present in Advanced Module List else False
+        blocks (list): List of `deprecated_block_types` component names and their parent's url
+        advance_settings_url (str): URL to advance settings page
+    """
+    data = {
+        'block_types': deprecated_block_types,
+        'block_types_enabled': any(
+            block_type in course_module.advanced_modules for block_type in deprecated_block_types
+        ),
+        'blocks': [],
+        'advance_settings_url': reverse_course_url('advanced_settings_handler', course_module.id)
+    }
+
+    try:
+        structure_data = api.course_structure(course_module.id, block_types=deprecated_block_types)
+    except errors.CourseStructureNotAvailableError:
+        return data
+
+    blocks = []
+    for block in structure_data['blocks'].values():
+        blocks.append([reverse_usage_url('container_handler', block['parent']), block['display_name']])
+
+    data['blocks'].extend(blocks)
+
+    return data
 
 
 @login_required
@@ -513,6 +555,8 @@ def course_index(request, course_key):
         except (ItemNotFoundError, CourseActionStateItemNotFoundError):
             current_action = None
 
+        deprecated_blocks_info = _deprecated_blocks_info(course_module, settings.DEPRECATED_BLOCK_TYPES)
+
         return render_to_response('course_outline.html', {
             'context_course': course_module,
             'lms_link': lms_link,
@@ -526,6 +570,7 @@ def course_index(request, course_key):
             'course_release_date': course_release_date,
             'settings_url': settings_url,
             'reindex_link': reindex_link,
+            'deprecated_blocks_info': deprecated_blocks_info,
             'notification_dismiss_url': reverse_course_url(
                 'course_notifications_handler',
                 current_action.course_key,
@@ -638,7 +683,7 @@ def _create_or_rerun_course(request):
     Returns the destination course_key and overriding fields for the new course.
     Raises DuplicateCourseError and InvalidKeyError
     """
-    if not auth.has_access(request.user, CourseCreatorRole()):
+    if not auth.user_has_role(request.user, CourseCreatorRole()):
         raise PermissionDenied()
 
     try:
@@ -651,6 +696,14 @@ def _create_or_rerun_course(request):
         fields = {'start': start}
         if display_name is not None:
             fields['display_name'] = display_name
+
+        # Set a unique wiki_slug for newly created courses. To maintain active wiki_slugs for
+        # existing xml courses this cannot be changed in CourseDescriptor.
+        # # TODO get rid of defining wiki slug in this org/course/run specific way and reconcile
+        # w/ xmodule.course_module.CourseDescriptor.__init__
+        wiki_slug = u"{0}.{1}.{2}".format(org, course, run)
+        definition_data = {'wiki_slug': wiki_slug}
+        fields.update(definition_data)
 
         if 'source_course_key' in request.json:
             return _rerun_course(request, org, course, run, fields)
@@ -737,7 +790,7 @@ def _create_new_course(request, org, number, run, fields):
     """
     store_for_new_course = modulestore().default_modulestore.get_modulestore_type()
     new_course = create_new_course_in_store(store_for_new_course, request.user, org, number, run, fields)
-    signals.COURSE_CREATED.send(modulestore(), course_id=new_course.id, user=request.user)
+    contentstore.signals.COURSE_CREATED.send(modulestore(), course_id=new_course.id, user=request.user)
     return JsonResponse({
         'url': reverse_course_url('course_handler', new_course.id),
         'course_key': unicode(new_course.id),
@@ -749,13 +802,9 @@ def create_new_course_in_store(store, user, org, number, run, fields):
     Create course in store w/ handling instructor enrollment, permissions, and defaulting the wiki slug.
     Separated out b/c command line course creation uses this as well as the web interface.
     """
-    # Set a unique wiki_slug for newly created courses. To maintain active wiki_slugs for
-    # existing xml courses this cannot be changed in CourseDescriptor.
-    # # TODO get rid of defining wiki slug in this org/course/run specific way and reconcile
-    # w/ xmodule.course_module.CourseDescriptor.__init__
-    wiki_slug = u"{0}.{1}.{2}".format(org, number, run)
-    definition_data = {'wiki_slug': wiki_slug}
-    fields.update(definition_data)
+
+    # Set default language from settings
+    fields.update({'language': getattr(settings, 'DEFAULT_COURSE_LANGUAGE', 'en')})
 
     with modulestore().default_store(store):
         # Creating the course raises DuplicateCourseError if an existing course with this org/name is found
@@ -801,6 +850,9 @@ def _rerun_course(request, org, number, run, fields):
 
     # Mark the action as initiated
     CourseRerunState.objects.initiated(source_course_key, destination_course_key, request.user, fields['display_name'])
+
+    # Clear the fields that must be reset for the rerun
+    fields['advertised_start'] = None
 
     # Rerun the course as a new celery task
     json_fields = json.dumps(fields, cls=EdxJSONEncoder)
@@ -908,6 +960,7 @@ def settings_handler(request, course_key_string):
     """
     course_key = CourseKey.from_string(course_key_string)
     prerequisite_course_enabled = settings.FEATURES.get('ENABLE_PREREQUISITE_COURSES', False)
+    credit_eligibility_enabled = settings.FEATURES.get('ENABLE_CREDIT_ELIGIBILITY', False)
     with modulestore().bulk_operations(course_key):
         course_module = get_course_and_check_access(course_key, request.user)
         if 'text/html' in request.META.get('HTTP_ACCEPT', '') and request.method == 'GET':
@@ -932,6 +985,10 @@ def settings_handler(request, course_key_string):
                 'short_description_editable': short_description_editable,
                 'upload_asset_url': upload_asset_url,
                 'course_handler_url': reverse_course_url('course_handler', course_key),
+                'language_options': settings.ALL_LANGUAGES,
+                'credit_eligibility_enabled': credit_eligibility_enabled,
+                'is_credit_course': False,
+                'show_min_grade_warning': False,
             }
             if prerequisite_course_enabled:
                 courses, in_process_course_actions = get_courses_accessible_to_user(request)
@@ -940,6 +997,27 @@ def settings_handler(request, course_key_string):
                 if courses:
                     courses = _remove_in_process_courses(courses, in_process_course_actions)
                 settings_context.update({'possible_pre_requisite_courses': courses})
+
+            if credit_eligibility_enabled:
+                if is_credit_course(course_key):
+                    # get and all credit eligibility requirements
+                    credit_requirements = get_credit_requirements(course_key)
+                    # pair together requirements with same 'namespace' values
+                    paired_requirements = {}
+                    for requirement in credit_requirements:
+                        namespace = requirement.pop("namespace")
+                        paired_requirements.setdefault(namespace, []).append(requirement)
+
+                    # if 'minimum_grade_credit' of a course is not set or 0 then
+                    # show warning message to course author.
+                    show_min_grade_warning = False if course_module.minimum_grade_credit > 0 else True
+                    settings_context.update(
+                        {
+                            'is_credit_course': True,
+                            'credit_requirements': paired_requirements,
+                            'show_min_grade_warning': show_min_grade_warning,
+                        }
+                    )
 
             return render_to_response('settings.html', settings_context)
         elif 'application/json' in request.META.get('HTTP_ACCEPT', ''):
@@ -1026,6 +1104,7 @@ def grading_handler(request, course_key_string, grader_index=None):
                 'course_locator': course_key,
                 'course_details': json.dumps(course_details, cls=CourseSettingsEncoder),
                 'grading_url': reverse_course_url('grading_handler', course_key),
+                'is_credit_course': is_credit_course(course_key),
             })
         elif 'application/json' in request.META.get('HTTP_ACCEPT', ''):
             if request.method == 'GET':
@@ -1038,6 +1117,11 @@ def grading_handler(request, course_key_string, grader_index=None):
                 else:
                     return JsonResponse(CourseGradingModel.fetch_grader(course_key, grader_index))
             elif request.method in ('POST', 'PUT'):  # post or put, doesn't matter.
+                # update credit course requirements if 'minimum_grade_credit'
+                # field value is changed
+                if 'minimum_grade_credit' in request.json:
+                    update_credit_course_requirements.delay(unicode(course_key))
+
                 # None implies update the whole model (cutoffs, graceperiod, and graders) not a specific grader
                 if grader_index is None:
                     return JsonResponse(
@@ -1053,101 +1137,40 @@ def grading_handler(request, course_key_string, grader_index=None):
                 return JsonResponse()
 
 
-# pylint: disable=invalid-name
-def _add_tab(request, tab_type, course_module):
+def _refresh_course_tabs(request, course_module):
     """
-    Adds tab to the course.
+    Automatically adds/removes tabs if changes to the course require them.
+
+    Raises:
+        InvalidTabsException: raised if there's a problem with the new version of the tabs.
     """
-    # Add tab to the course if needed
-    changed, new_tabs = add_extra_panel_tab(tab_type, course_module)
-    # If a tab has been added to the course, then send the
-    # metadata along to CourseMetadata.update_from_json
-    if changed:
-        course_module.tabs = new_tabs
-        request.json.update({'tabs': {'value': new_tabs}})
-        # Indicate that tabs should not be filtered out of
-        # the metadata
-        return True
-    return False
 
+    def update_tab(tabs, tab_type, tab_enabled):
+        """
+        Adds or removes a course tab based upon whether it is enabled.
+        """
+        tab_panel = {
+            "type": tab_type.type,
+        }
+        has_tab = tab_panel in tabs
+        if tab_enabled and not has_tab:
+            tabs.append(CourseTab.from_json(tab_panel))
+        elif not tab_enabled and has_tab:
+            tabs.remove(tab_panel)
 
-# pylint: disable=invalid-name
-def _remove_tab(request, tab_type, course_module):
-    """
-    Removes the tab from the course.
-    """
-    changed, new_tabs = remove_extra_panel_tab(tab_type, course_module)
-    if changed:
-        course_module.tabs = new_tabs
-        request.json.update({'tabs': {'value': new_tabs}})
-        return True
-    return False
+    course_tabs = copy.copy(course_module.tabs)
 
+    # Additionally update any tabs that are provided by non-dynamic course views
+    for tab_type in CourseTabPluginManager.get_tab_types():
+        if not tab_type.is_dynamic and tab_type.is_default:
+            tab_enabled = tab_type.is_enabled(course_module, user=request.user)
+            update_tab(course_tabs, tab_type, tab_enabled)
 
-def is_advanced_component_present(request, advanced_components):
-    """
-    Return True when one of `advanced_components` is present in the request.
+    CourseTabList.validate_tabs(course_tabs)
 
-    raises TypeError
-    when request.ADVANCED_COMPONENT_POLICY_KEY is malformed (not iterable)
-    """
-    if ADVANCED_COMPONENT_POLICY_KEY not in request.json:
-        return False
-
-    new_advanced_component_list = request.json[ADVANCED_COMPONENT_POLICY_KEY]['value']
-    for ac_type in advanced_components:
-        if ac_type in new_advanced_component_list and ac_type in ADVANCED_COMPONENT_TYPES:
-            return True
-
-
-def is_field_value_true(request, field_list):
-    """
-    Return True when one of field values is set to True by request
-    """
-    return any([request.json.get(field, {}).get('value') for field in field_list])
-
-
-# pylint: disable=invalid-name
-def _modify_tabs_to_components(request, course_module):
-    """
-    Automatically adds/removes tabs if user indicated that they want
-    respective modules enabled in the course
-
-    Return True when tab configuration has been modified.
-    """
-    tab_component_map = {
-        # 'tab_type': (check_function, list_of_checked_components_or_values),
-
-        # open ended tab by combinedopendended or peergrading module
-        'open_ended': (is_advanced_component_present, OPEN_ENDED_COMPONENT_TYPES),
-        # notes tab
-        'notes': (is_advanced_component_present, NOTE_COMPONENT_TYPES),
-        # student notes tab
-        'edxnotes': (is_field_value_true, ['edxnotes'])
-    }
-
-    tabs_changed = False
-    for tab_type in tab_component_map.keys():
-        check, component_types = tab_component_map[tab_type]
-        try:
-            tab_enabled = check(request, component_types)
-        except TypeError:
-            # user has failed to put iterable value into advanced component list.
-            # return immediately and let validation handle.
-            return
-
-        if tab_enabled:
-            # check passed, some of this component_types are present, adding tab
-            if _add_tab(request, tab_type, course_module):
-                # tab indeed was added, the change needs to propagate
-                tabs_changed = True
-        else:
-            # the tab should not be present (anymore)
-            if _remove_tab(request, tab_type, course_module):
-                # tab indeed was removed, the change needs to propagate
-                tabs_changed = True
-
-    return tabs_changed
+    # Save the tabs into the course if they have been changed
+    if course_tabs != course_module.tabs:
+        course_module.tabs = course_tabs
 
 
 @login_required
@@ -1179,24 +1202,37 @@ def advanced_settings_handler(request, course_key_string):
                 return JsonResponse(CourseMetadata.fetch(course_module))
             else:
                 try:
-                    # do not process tabs unless they were modified according to course metadata
-                    filter_tabs = not _modify_tabs_to_components(request, course_module)
-
-                    # validate data formats and update
+                    # validate data formats and update the course module.
+                    # Note: don't update mongo yet, but wait until after any tabs are changed
                     is_valid, errors, updated_data = CourseMetadata.validate_and_update_from_json(
                         course_module,
                         request.json,
-                        filter_tabs=filter_tabs,
                         user=request.user,
                     )
 
                     if is_valid:
+                        try:
+                            # update the course tabs if required by any setting changes
+                            _refresh_course_tabs(request, course_module)
+                        except InvalidTabsException as err:
+                            log.exception(err.message)
+                            response_message = [
+                                {
+                                    'message': _('An error occurred while trying to save your tabs'),
+                                    'model': {'display_name': _('Tabs Exception')}
+                                }
+                            ]
+                            return JsonResponseBadRequest(response_message)
+
+                        # now update mongo
+                        modulestore().update_item(course_module, request.user.id)
+
                         return JsonResponse(updated_data)
                     else:
                         return JsonResponseBadRequest(errors)
 
                 # Handle all errors that validation doesn't catch
-                except (TypeError, ValueError) as err:
+                except (TypeError, ValueError, InvalidTabsException) as err:
                     return HttpResponseBadRequest(
                         django.utils.html.escape(err.message),
                         content_type="text/plain"
@@ -1309,8 +1345,8 @@ def textbooks_list_handler(request, course_key_string):
                     textbook["id"] = tid
                     tids.add(tid)
 
-            if not any(tab['type'] == PDFTextbookTabs.type for tab in course.tabs):
-                course.tabs.append(PDFTextbookTabs())
+            if not any(tab['type'] == 'pdf_textbooks' for tab in course.tabs):
+                course.tabs.append(CourseTab.load('pdf_textbooks'))
             course.pdf_textbooks = textbooks
             store.update_item(course, request.user.id)
             return JsonResponse(course.pdf_textbooks)
@@ -1326,8 +1362,8 @@ def textbooks_list_handler(request, course_key_string):
             existing = course.pdf_textbooks
             existing.append(textbook)
             course.pdf_textbooks = existing
-            if not any(tab['type'] == PDFTextbookTabs.type for tab in course.tabs):
-                course.tabs.append(PDFTextbookTabs())
+            if not any(tab['type'] == 'pdf_textbooks' for tab in course.tabs):
+                course.tabs.append(CourseTab.load('pdf_textbooks'))
             store.update_item(course, request.user.id)
             resp = JsonResponse(textbook, status=201)
             resp["Location"] = reverse_course_url(
@@ -1488,7 +1524,7 @@ def group_configurations_list_handler(request, course_key_string):
                 response["Location"] = reverse_course_url(
                     'group_configurations_detail_handler',
                     course.id,
-                    kwargs={'group_configuration_id': new_configuration.id}  # pylint: disable=no-member
+                    kwargs={'group_configuration_id': new_configuration.id}
                 )
                 store.update_item(course, request.user.id)
                 return response

@@ -25,7 +25,9 @@ from model_utils.models import TimeStampedModel
 from student.models import user_by_anonymous_id
 from submissions.models import score_set, score_reset
 
+from openedx.core.djangoapps.call_stack_manager import CallStackManager, CallStackMixin
 from xmodule_django.models import CourseKeyField, LocationKeyField, BlockTypeKeyField  # pylint: disable=import-error
+log = logging.getLogger(__name__)
 
 log = logging.getLogger("edx.courseware")
 
@@ -67,12 +69,18 @@ class ChunkingManager(models.Manager):
         return res
 
 
-class StudentModule(models.Model):
+class ChunkingCallStackManager(CallStackManager, ChunkingManager):
+    """
+    A derived class of ChunkingManager, and CallStackManager
+    """
+    pass
+
+
+class StudentModule(CallStackMixin, models.Model):
     """
     Keeps student state for a particular module in a particular course.
     """
-    objects = ChunkingManager()
-
+    objects = ChunkingCallStackManager()
     MODEL_TAGS = ['course_id', 'module_type']
 
     # For a homework problem, contains a JSON
@@ -96,10 +104,10 @@ class StudentModule(models.Model):
     class Meta(object):  # pylint: disable=missing-docstring
         unique_together = (('student', 'module_state_key', 'course_id'),)
 
-    ## Internal state of the object
+    # Internal state of the object
     state = models.TextField(null=True, blank=True)
 
-    ## Grade, and are we done?
+    # Grade, and are we done?
     grade = models.FloatField(null=True, blank=True, db_index=True)
     max_grade = models.FloatField(null=True, blank=True)
     DONE_TYPES = (
@@ -133,7 +141,10 @@ class StudentModule(models.Model):
         return 'StudentModule<%r>' % ({
             'course_id': self.course_id,
             'module_type': self.module_type,
-            'student': self.student.username,  # pylint: disable=no-member
+            # We use the student_id instead of username to avoid a database hop.
+            # This can actually matter in cases where we're logging many of
+            # these (e.g. on a broken progress page).
+            'student_id': self.student_id,  # pylint: disable=no-member
             'module_state_key': self.module_state_key,
             'state': str(self.state)[:20],
         },)
@@ -142,11 +153,11 @@ class StudentModule(models.Model):
         return unicode(repr(self))
 
 
-class StudentModuleHistory(models.Model):
+class StudentModuleHistory(CallStackMixin, models.Model):
     """Keeps a complete history of state changes for a given XModule for a given
     Student. Right now, we restrict this to problems so that the table doesn't
     explode in size."""
-
+    objects = CallStackManager()
     HISTORY_SAVING_TYPES = {'problem'}
 
     class Meta(object):  # pylint: disable=missing-docstring
@@ -211,7 +222,6 @@ class XModuleUserStateSummaryField(XBlockFieldBase):
     """
     Stores data set in the Scope.user_state_summary scope by an xmodule field
     """
-
     class Meta(object):  # pylint: disable=missing-docstring
         unique_together = (('usage_id', 'field_name'),)
 
@@ -223,7 +233,6 @@ class XModuleStudentPrefsField(XBlockFieldBase):
     """
     Stores data set in the Scope.preferences scope by an xmodule field
     """
-
     class Meta(object):  # pylint: disable=missing-docstring
         unique_together = (('student', 'module_type', 'field_name'),)
 
@@ -237,10 +246,8 @@ class XModuleStudentInfoField(XBlockFieldBase):
     """
     Stores data set in the Scope.preferences scope by an xmodule field
     """
-
     class Meta(object):  # pylint: disable=missing-docstring
         unique_together = (('student', 'field_name'),)
-
     student = models.ForeignKey(User, db_index=True)
 
 
