@@ -14,6 +14,7 @@
     }
 }
 .profile-owned-courses-wrapper.courses-container {
+    padding: 5px 10px 10px;;
 
   h2 {
     font-family: $sans-serif;
@@ -22,6 +23,11 @@
     font-weight: $font-semibold;
     color: $gray;
     margin-bottom: ($baseline/2);
+  }
+
+  p {
+    line-height: 1.4;
+    margin-bottom: 15px;
   }
 
   .courses .courses-listing .courses-listing-item {
