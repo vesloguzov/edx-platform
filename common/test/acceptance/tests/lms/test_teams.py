@@ -7,7 +7,6 @@ import time
 
 from dateutil.parser import parse
 import ddt
-from flaky import flaky
 from nose.plugins.attrib import attr
 from uuid import uuid4
 from unittest import skip

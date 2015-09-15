@@ -65,7 +65,8 @@ def create_rerun_ownership(src_course_id, dst_course_id, **kwargs):  # pylint: d
         ) for ownership in CourseOwnership.objects.filter(course_id=src_course_id)
     ]
 
-def cleanup_deleted_course_ownership(course_id, **kwargs):
+
+def cleanup_deleted_course_ownership(course_id, **kwargs):  # pylint: disable=unused-argument
     """
     Remove any course ownership objects left after course deletion
     """

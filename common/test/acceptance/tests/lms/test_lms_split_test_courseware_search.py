@@ -1,7 +1,6 @@
 """
 Test courseware search
 """
-import os
 import json
 
 from ..helpers import remove_file

@@ -112,8 +112,8 @@ class CourseRetrieveUpdateViewTests(CourseApiViewTestMixin, ModuleStoreTestCase)
 
     @ddt.data('post', 'put')
     def test_authorization_required(self, method):
-        self.user.user_permissions.clear()
         """ Verify create/edit operations require appropriate permissions. """
+        self.user.user_permissions.clear()
         response = getattr(self.client, method)(self.path, content_type=JSON_CONTENT_TYPE)
         self.assertEqual(response.status_code, 403)
 

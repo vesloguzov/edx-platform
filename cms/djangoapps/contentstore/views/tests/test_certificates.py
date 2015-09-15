@@ -23,7 +23,6 @@ from student.models import CourseEnrollment
 from student.roles import CourseInstructorRole, CourseStaffRole
 from student.tests.factories import UserFactory
 from contentstore.views.certificates import CertificateManager
-from django.test.utils import override_settings
 from contentstore.utils import get_lms_link_for_certificate_web_view
 from util.testing import EventTestMixin
 
@@ -79,7 +78,7 @@ class HelperMethods(object):
                 'title': 'Title ' + str(i),
                 'signature_image_path': '/c4x/test/CSS101/asset/Signature{}.png'.format(i),
                 'id': i
-            } for i in xrange(0, signatory_count)
+            } for i in xrange(signatory_count)
 
         ]
 
@@ -98,7 +97,7 @@ class HelperMethods(object):
                 'signatories': signatories,
                 'version': CERTIFICATE_SCHEMA_VERSION,
                 'is_active': is_active
-            } for i in xrange(0, count)
+            } for i in xrange(count)
         ]
         self.course.certificates = {'certificates': certificates}
         self.save_course()

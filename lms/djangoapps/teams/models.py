@@ -3,7 +3,6 @@
 from datetime import datetime
 from uuid import uuid4
 import pytz
-from datetime import datetime
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User

@@ -63,7 +63,6 @@ def learner_profile_context(request, profile_username):
         ObjectDoesNotExist: the specified profile_username does not exist.
     """
     profile_user = User.objects.get(username=profile_username)
-    logged_in_user = request.user
 
     own_profile = (request.user.username == profile_username)
 

@@ -15,7 +15,6 @@ from rest_framework.authentication import (
 )
 from rest_framework import status
 from rest_framework import permissions
-from django.db.models import Count
 from django.contrib.auth.models import User
 from django_countries import countries
 from django.utils.translation import ugettext as _

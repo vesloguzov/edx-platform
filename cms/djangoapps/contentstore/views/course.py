@@ -2,12 +2,10 @@
 Views related to operations on course objects
 """
 import copy
-from django.shortcuts import redirect
 import json
 import random
 import logging
 import string  # pylint: disable=deprecated-module
-import logging
 
 from django.shortcuts import redirect
 from django.utils.translation import ugettext as _
