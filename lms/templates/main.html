@@ -163,7 +163,7 @@ from branding import api as branding_api
 </html>
 
 <%def name="login_query()">${
-  u"?next={0}".format(urlquote_plus(login_redirect_url)) if login_redirect_url else ""
+  u"?next={0}".format(urlquote_plus(login_redirect_url if login_redirect_url else request.path))
 }</%def>
 
 <!-- Performance beacon for onload times -->

@@ -61,7 +61,11 @@ import calendar
         if (!isExternal(nextUrl)) {
           location.href=nextUrl;
         } else {
-          location.href="${reverse('dashboard')}";
+          nextUrl = $(this).data('redirect-url');
+          if (redirectHostAllowed(nextUrl, $(this).data('redirect-hosts').split(',')))
+            location.href = nextUrl;
+          else
+            location.href="${reverse('dashboard')}";
         }
       });
 
@@ -111,7 +115,7 @@ import calendar
 
 <section class="register container">
   <section role="main" class="content">
-    <form role="form" id="register-form" method="post" data-remote="true" action="/create_account" novalidate>
+    <form role="form" id="register-form" method="post" data-remote="true" action="/create_account" novalidate data-redirect-hosts="//${settings.CMS_BASE}" data-redirect-url="${request.GET.get('next', '')}">
       <input type="hidden" name="csrfmiddlewaretoken" value="${ csrf_token }">
 
       <!-- status messages -->

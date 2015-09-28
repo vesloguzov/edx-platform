@@ -19,6 +19,29 @@ window.isExternal = function (url) {
     return false;
 };
 
+// Check whether or not the url is allowed for redirect by comparing with current and allowed hosts
+// Extends isExternal utility
+window.redirectHostAllowed = function(url, allowed_hosts){
+    // parse the url into protocol, host, path, query, and fragment. More information can be found here: http://tools.ietf.org/html/rfc3986#appendix-B
+    var match = url.match(/^([^:\/?#]+:)?(?:\/\/([^\/?#]*))?([^?#]+)?(\?[^#]*)?(#.*)?/);
+    // match[1] matches a protocol if one exists in the url
+    // if the protocol in the url does not match the protocol in the window's location, this url is considered not allowed
+    if (typeof match[1] === "string" &&
+            match[1].length > 0 &&
+            match[1].toLowerCase() !== location.protocol)
+        return false;
+    // match[2] matches the host if one exists in the url
+    // if the host in the url does not match the host of the window location
+    // or any of allowed hosts, this url is considered external
+    if (typeof match[2] === "string" && match[2].length > 0) {
+        var domain_name = match[2].replace(new RegExp(":("+{"http:":80,"https:":443}[location.protocol]+")?$"), "");
+        var allowed_domains = allowed_domains || [];
+        if (domain_name != location.host && !$.inArray(domain_name, allowed_domains))
+            return false;
+    }
+    return true;
+}
+
 // Utility method for replacing a portion of a string.
 window.rewriteStaticLinks = function(content, from, to) {
     if (from === null || to === null) {

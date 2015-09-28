@@ -72,7 +72,11 @@ from microsite_configuration import microsite
           if (!isExternal(nextUrl)) {
             location.href=nextUrl;
           } else {
-            location.href="${reverse('dashboard')}";
+            nextUrl = $(this).data('redirect-url');
+            if (redirectHostAllowed(nextUrl, $(this).data('redirect-hosts').split(',')))
+              location.href = nextUrl;
+            else
+              location.href="${reverse('dashboard')}";
           }
         } else if(json.hasOwnProperty('redirect')) {
           // Shibboleth authentication redirect requested by the server:
@@ -143,7 +147,7 @@ from microsite_configuration import microsite
 
 <section class="login container">
   <section role="main" class="content">
-    <form role="form" id="login-form" method="post" data-remote="true" action="/login_ajax" novalidate>
+    <form role="form" id="login-form" method="post" data-remote="true" action="/login_ajax" novalidate data-redirect-hosts="//${settings.CMS_BASE}" data-redirect-url="${request.GET.get('next', '')}">
 
       <!-- status messages -->
       <div role="alert" class="status message">
