@@ -1,7 +1,7 @@
-define(["js/views/baseview", "codemirror", "js/models/course_update",
+define(["module", "js/views/baseview", "codemirror", "js/models/course_update",
         "common/js/components/views/feedback_prompt", "common/js/components/views/feedback_notification",
-        "js/views/course_info_helper", "js/utils/modal"],
-    function(BaseView, CodeMirror, CourseUpdateModel, PromptView, NotificationView, CourseInfoHelper, ModalUtils) {
+        "js/views/course_info_helper", "js/utils/modal", 'jquery.ui.datepickerDefaults'],
+    function(module, BaseView, CodeMirror, CourseUpdateModel, PromptView, NotificationView, CourseInfoHelper, ModalUtils) {
 
     var CourseInfoUpdateView = BaseView.extend({
 
@@ -76,7 +76,7 @@ define(["js/views/baseview", "codemirror", "js/models/course_update",
             });
 
             $('.date').datepicker('destroy');
-            $('.date').datepicker({ 'dateFormat': 'MM d, yy' });
+            $('.date').datepicker();
         },
 
         onSave: function(event) {

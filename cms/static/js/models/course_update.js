@@ -1,12 +1,13 @@
-define(["backbone", "jquery", "jquery.ui"], function(Backbone, $) {
+define(["backbone", "jquery", "jquery.ui", "jquery.ui.datepickerDefaults"], function(Backbone, $) {
     // course update -- biggest kludge here is the lack of a real id to map updates to originals
     var CourseUpdate = Backbone.Model.extend({
         defaults: {
-            "date" : $.datepicker.formatDate('MM d, yy', new Date()),
+            "date" : $.datepicker.formatDate($.datepicker._defaults['dateFormat'], new Date()),
             "content" : "",
             "push_notification_enabled": false,
             "push_notification_selected" : false
         }
     });
+    console.log($.datepicker._defaults);
     return CourseUpdate;
 }); // end define()

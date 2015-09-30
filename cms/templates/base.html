@@ -3,6 +3,7 @@
 <%!
 from django.utils.translation import ugettext as _
 from django.template.defaultfilters import escapejs
+from django.utils.formats import get_format
 import json
 %>
 <!doctype html>
@@ -50,7 +51,16 @@ import json
     <script type="text/javascript">
       window.baseUrl = ${json.dumps(settings.STATIC_URL)};
       window.TENDER_SUBDOMAIN = ${json.dumps(settings.TENDER_SUBDOMAIN)};
-      var require = {baseUrl: window.baseUrl};
+
+      var require = {
+          baseUrl: window.baseUrl,
+          config: {
+            'jquery.ui.datepickerDefaults': {
+              dateFormatPython: "${get_format('DATE_INPUT_FORMATS')[0]}",
+              defaults: <%include file="datepicker_defaults.html" />
+            }
+          }
+      }
     </script>
     <script type="text/javascript" src="${static.url("js/vendor/require.js")}"></script>
     <script type="text/javascript" src="${static.url("cms/js/require-config.js")}"></script>
