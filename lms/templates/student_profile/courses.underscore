@@ -10,8 +10,8 @@
     <%- gettext("Select a course to learn more.") %>
   </p>
   <ul class="courses-listing">
-    <li class="courses-listing-item">
     <% _.each(owned_courses, function(course) { %>
+    <li class="courses-listing-item">
     <article class="course" id="<%- course.course_id %>" role="region" aria-label="<%- course.display_name %>">
       <a href="<%- course.about_url %>">
         <header class="course-image">
@@ -37,7 +37,7 @@
         </div>
       </a>
     </article>
-    <% }) %>
     </li>
+    <% }) %>
   </ul>
 </section>

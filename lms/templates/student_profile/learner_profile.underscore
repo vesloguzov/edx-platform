@@ -1,7 +1,7 @@
 <div class="profile <%- ownProfile ? 'profile-self' : 'profile-other' %>">
     <div class="wrapper-profile-field-account-privacy"></div>
 
-    <div class="wrapper-profile-sections account-settings-container">
+    <div class="wrapper-profile-sections account-settings-container home">
         <div class="wrapper-profile-section-one">
             <div class="profile-image-field">
             </div>
