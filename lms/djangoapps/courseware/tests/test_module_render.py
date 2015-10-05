@@ -1121,6 +1121,8 @@ class TestHtmlModifiers(ModuleStoreTestCase):
         self.assertIn('href="/static/toy_course_dir', result_fragment.content)
 
     def test_course_image(self):
+        # Test common case with custom image
+        self.course.course_image = u"test_image.png"
         url = course_image_url(self.course)
         self.assertTrue(url.startswith('/c4x/'))
 
@@ -1128,6 +1130,11 @@ class TestHtmlModifiers(ModuleStoreTestCase):
         url = course_image_url(self.course)
         self.assertTrue(url.startswith('/static/toy_course_dir/'))
         self.course.static_asset_path = ""
+
+        # Test default empty image
+        self.course.course_image = u""
+        url = course_image_url(self.course)
+        self.assertTrue(url.startswith(settings.STATIC_URL))
 
     @override_settings(DEFAULT_COURSE_ABOUT_IMAGE_URL='test.png')
     @override_settings(STATIC_URL='static/')

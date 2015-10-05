@@ -15,7 +15,7 @@ from path import Path as path
 from textwrap import dedent
 from uuid import uuid4
 from functools import wraps
-from unittest import SkipTest
+from unittest import SkipTest, expectedFailure
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -1697,6 +1697,8 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         # is this test too strict? i.e., it requires the dicts to be ==
         self.assertEqual(course.checklists, fetched_course.checklists)
 
+    # out-of-date fallback, not relevant for new courses and new edx instances
+    @expectedFailure
     def test_image_import(self):
         """Test backwards compatibilty of course image."""
         content_store = contentstore()
@@ -1719,6 +1721,13 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         # Ensure that the imported course image is present -- this shouldn't raise an exception
         asset_key = course.id.make_asset_key('asset', course.course_image)
         content_store.find(asset_key)
+
+    def test_default_course_image(self):
+        """Test course image for course created in Studio is empty by default"""
+        test_course_data = self.assert_created_course()
+        course_id = _get_course_id(self.store, test_course_data)
+        course = self.store.get_course(course_id)
+        self.assertEqual(course.course_image, '')
 
     def _show_course_overview(self, course_key):
         """

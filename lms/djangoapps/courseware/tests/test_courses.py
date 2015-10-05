@@ -100,7 +100,7 @@ class MongoCourseImageTestCase(ModuleStoreTestCase):
 
     def test_get_image_url(self):
         """Test image URL formatting."""
-        course = CourseFactory.create(org='edX', course='999')
+        course = CourseFactory.create(org='edX', course='999', course_image="test.png")
         self.assertEquals(course_image_url(course), '/c4x/edX/999/asset/{0}'.format(course.course_image))
 
     def test_non_ascii_image_name(self):

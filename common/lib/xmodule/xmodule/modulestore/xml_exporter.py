@@ -225,25 +225,6 @@ class CourseExportManager(ExportManager):
                 root_courselike_dir + '/policies/assets.json',
             )
 
-            # If we are using the default course image, export it to the
-            # legacy location to support backwards compatibility.
-            if courselike.course_image == courselike.fields['course_image'].default:
-                try:
-                    course_image = self.contentstore.find(
-                        StaticContent.compute_location(
-                            courselike.id,
-                            courselike.course_image
-                        ),
-                    )
-                except NotFoundError:
-                    pass
-                else:
-                    output_dir = root_courselike_dir + '/static/images/'
-                    if not os.path.isdir(output_dir):
-                        os.makedirs(output_dir)
-                    with OSFS(output_dir).open('course_image.jpg', 'wb') as course_image_file:
-                        course_image_file.write(course_image.data)
-
         # export the static tabs
         export_extra_content(
             export_fs, self.modulestore, self.courselike_key, xml_centric_courselike_key,
