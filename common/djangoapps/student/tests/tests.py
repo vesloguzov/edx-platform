@@ -13,6 +13,7 @@ from django.contrib.auth.models import User, AnonymousUser
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from django.test.client import Client
+from django.test.utils import override_settings
 from mock import Mock, patch
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
@@ -907,3 +908,35 @@ class AnonymousLookupTable(ModuleStoreTestCase):
         real_user = user_by_anonymous_id(anonymous_id)
         self.assertEqual(self.user, real_user)
         self.assertEqual(anonymous_id, anonymous_id_for_user(self.user, course2.id, save=False))
+
+
+class IndexViewTest(ModuleStoreTestCase):
+    """
+    Tests for index view course listing
+    """
+    def setUp(self):
+        super(IndexViewTest, self).setUp()
+        self.course = CourseFactory.create()
+        self.client = Client()
+        cache.clear()
+
+    def test_index_page_courses(self):
+        """Test existing course is displayed by default"""
+        response = self.client.get(reverse('root'))
+        self.assertContains(response, self.course.display_name)
+
+    @override_settings(INDEX_PAGE_COURSE_LISTING=['testx/index_page_course/test'])
+    def test_index_page_course_listing(self):
+        """
+        Test that only courses listed in INDEX_PAGE_COURSE_LISTING displayed on index page
+        """
+        index_page_course = CourseFactory.create(
+            org='testx',
+            number='index_page_course',
+            run='test',
+            display_name='index page course'
+        )
+
+        response = self.client.get(reverse('root'))
+        self.assertContains(response, index_page_course.display_name)
+        self.assertNotContains(response, self.course.display_name)

@@ -158,7 +158,7 @@ def index(request, extra_context=None, user=AnonymousUser()):
     if domain is False:
         domain = request.META.get('HTTP_HOST')
 
-    courses = get_courses(user, domain=domain)
+    courses = get_index_page_courses(user, domain=domain)
     if microsite.get_value("ENABLE_COURSE_SORTING_BY_START_DATE",
                            settings.FEATURES["ENABLE_COURSE_SORTING_BY_START_DATE"]):
         courses = sort_by_start_date(courses)
@@ -169,6 +169,22 @@ def index(request, extra_context=None, user=AnonymousUser()):
 
     context.update(extra_context)
     return render_to_response('index.html', context)
+
+
+def get_index_page_courses(user, domain):
+    courses = get_courses(user, domain=domain)
+    # See if we have filtered course listings for index page
+    index_page_course_listing = microsite.get_value(
+        "INDEX_PAGE_COURSE_LISTING",
+        settings.INDEX_PAGE_COURSE_LISTING
+    )
+    if index_page_course_listing is not None:
+        filtered_visible_ids = frozenset([
+            SlashSeparatedCourseKey.from_deprecated_string(c) for c in index_page_course_listing
+        ])
+        courses = [course for course in courses if course.id in filtered_visible_ids]
+
+    return courses
 
 
 def process_survey_link(survey_link, user):

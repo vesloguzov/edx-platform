@@ -32,6 +32,8 @@ def get_accessible_owner_courses(request, owner):
     Helper method for filtering courses by access and owners
     """
 
+    # prevent calling from other applications
+    assert settings.ROOT_URLCONF == 'lms.urls'
     from courseware.courses import get_courses, sort_by_announcement, sort_by_start_date
 
     courses = get_courses(request.user, request.META.get('HTTP_HOST'))

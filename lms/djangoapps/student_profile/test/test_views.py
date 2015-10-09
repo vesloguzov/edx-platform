@@ -183,6 +183,24 @@ class CourseOwnerProfileViewTest(ModuleStoreTestCase):
         self._assert_course_listing(self.course, context, False)
         self._assert_course_listing(self.hidden_course, context, False)
 
+    @override_settings(INDEX_PAGE_COURSE_LISTING=[])
+    @patch.dict('django.conf.settings.FEATURES', {'ALWAYS_REDIRECT_HOMEPAGE_TO_DASHBOARD_FOR_AUTHENTICATED_USER': False})
+    def test_owned_courses_with_course_listings(self):
+        """
+        Test owned courses are listed in context even if they are hidden
+        on the main page
+        """
+        response = self.client.get(reverse('root'))
+        self.assertNotContains(response, self.course.display_name)
+        self.assertNotContains(response, self.hidden_course.display_name)
+
+        request = RequestFactory().get('/url')
+        request.user = self.user
+        context = learner_profile_context(request, self.USERNAME)
+
+        self._assert_course_listing(self.course, context)
+        self._assert_course_listing(self.hidden_course, context)  # because owner is automatically made course staff
+
     def _assert_course_listing(self, course, context, listed=True):
         """
         Assert the course is present/absent in context

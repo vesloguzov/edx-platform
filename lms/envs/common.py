@@ -709,6 +709,9 @@ COURSE_LISTINGS = {}
 SUBDOMAIN_BRANDING = {}
 VIRTUAL_UNIVERSITIES = []
 
+############# microsite-compatible index page course listing ###################
+INDEX_PAGE_COURSE_LISTING = None
+
 ############# XBlock Configuration ##########
 
 # Import after sys.path fixup
