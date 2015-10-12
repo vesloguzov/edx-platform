@@ -588,6 +588,16 @@ def dashboard(request):
         and has_access(request.user, 'view_courseware_with_prerequisites', enrollment.course_overview)
     )
 
+    # Get information about studio link accessibility
+    # trying to hit modulestore as less as possible
+    # TODO: modify CourseOverview in case of perfomance issues
+    show_studio_links_for = frozenset(
+        enrollment.course_id for enrollment in course_enrollments
+        if has_access(request.user, 'staff', enrollment.course_id)
+        and modulestore().get_modulestore_type(enrollment.course_id) != ModuleStoreEnum.Type.xml
+        and modulestore().get_course(enrollment.course_id).course_edit_method == 'Studio'
+    )
+
     # Construct a dictionary of course mode information
     # used to render the course list.  We re-use the course modes dict
     # we loaded earlier to avoid hitting the database.
@@ -688,6 +698,7 @@ def dashboard(request):
         'staff_access': staff_access,
         'errored_courses': errored_courses,
         'show_courseware_links_for': show_courseware_links_for,
+        'show_studio_links_for': show_studio_links_for,
         'all_course_modes': course_mode_info,
         'cert_statuses': cert_statuses,
         'credit_statuses': _credit_statuses(user, course_enrollments),

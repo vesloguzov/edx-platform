@@ -537,6 +537,30 @@
       }
     }
 
+    .course-staff-actions {
+      ul {
+        display: table;
+        table-layout: fixed;
+        width: 100%;
+        @include padding-left(0);
+      }
+
+      li {
+        display: table-cell;
+        @include padding-left($baseline/2);
+
+        &:first-child {
+          @include padding-left(0);
+          @include padding-right($baseline/2);
+        }
+      }
+
+      a {
+        @extend %btn-pl-default-base;
+        width: 100%;
+      }
+    }
+
     // ====================
 
     // UI: messages

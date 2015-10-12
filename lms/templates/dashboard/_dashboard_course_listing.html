@@ -1,13 +1,14 @@
-<%page args="course_overview, enrollment, show_courseware_link, cert_status, credit_status, show_email_settings, course_mode_info, show_refund_option, is_paid_course, is_course_blocked, verification_status, course_requirements, dashboard_index, share_settings" />
+<%page args="course_overview, enrollment, show_courseware_link, show_studio_link, cert_status, credit_status, show_email_settings, course_mode_info, show_refund_option, is_paid_course, is_course_blocked, verification_status, course_requirements, dashboard_index, share_settings" />
 
 <%!
 import urllib
 
 from django.utils.translation import ugettext as _
-from django.utils.translation import ungettext
+from django.utils.translation import ungettext, pgettext
 from django.core.urlresolvers import reverse
 from markupsafe import escape
 from courseware.courses import get_course_university_about_section
+from courseware.access import has_access
 from course_modes.models import CourseMode
 from student.helpers import (
   VERIFY_STATUS_NEED_TO_VERIFY,
@@ -17,6 +18,13 @@ from student.helpers import (
   VERIFY_STATUS_NEED_TO_REVERIFY
 )
 %>
+
+<%def name="has_staff_access(course_overview)">
+    <% return bool(has_access(user, 'staff', course_overview.id)) %>
+</%def>
+<%def name="get_studio_link(course_overview)">
+    <% return u"//{}/{}/{}".format(settings.CMS_BASE, 'course', unicode(course_overview.id)) %>
+</%def>
 
 <%
   cert_name_short = course_overview.cert_name_short
@@ -269,6 +277,16 @@ from student.helpers import (
         </div>
       </div>
   </section>
+  % if has_staff_access(course_overview):
+  <section class="course-staff-actions">
+      <ul>
+          % if show_studio_link:
+          <li><a href="${get_studio_link(course_overview)}">${_('Edit Course')}</a></li>
+          % endif
+          <li><a href="${reverse('instructor_dashboard', args=[course_overview.id.to_deprecated_string()])}">${pgettext('dashboard staff link', 'Instructor Dashboard')}</a></li>
+      </ul>
+  </section>
+  % endif
   <footer class="wrapper-messages-primary">
     <ul class="messages-list">
       % if course_overview.may_certify() and cert_status:
@@ -277,7 +295,7 @@ from student.helpers import (
 
       % if credit_status is not None:
         <%include file="_dashboard_credit_info.html" args="credit_status=credit_status"/>
-      % endif 
+      % endif
 
         % if verification_status.get('status') in [VERIFY_STATUS_NEED_TO_VERIFY, VERIFY_STATUS_SUBMITTED, VERIFY_STATUS_APPROVED, VERIFY_STATUS_NEED_TO_REVERIFY] and not is_course_blocked:
         <div class="message message-status wrapper-message-primary is-shown">
