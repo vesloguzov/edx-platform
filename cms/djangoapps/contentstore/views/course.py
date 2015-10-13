@@ -804,6 +804,9 @@ def create_new_course_in_store(store, user, org, number, run, fields):
     # Set default language from settings
     fields.update({'language': getattr(settings, 'DEFAULT_COURSE_LANGUAGE', 'en')})
 
+    # Set default catalog visibility from settings
+    fields.update({'catalog_visibility': settings.DEFAULT_COURSE_CATALOG_VISIBILITY})
+
     with modulestore().default_store(store):
         # Creating the course raises DuplicateCourseError if an existing course with this org/name is found
         new_course = modulestore().create_course(
@@ -851,6 +854,9 @@ def _rerun_course(request, org, number, run, fields):
 
     # Clear the fields that must be reset for the rerun
     fields['advertised_start'] = None
+
+    # Set catalog visibility from settings
+    fields['catalog_visibility'] = settings.DEFAULT_COURSE_CATALOG_VISIBILITY
 
     # Rerun the course as a new celery task
     json_fields = json.dumps(fields, cls=EdxJSONEncoder)

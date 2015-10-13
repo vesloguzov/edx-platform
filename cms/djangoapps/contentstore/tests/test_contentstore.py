@@ -43,7 +43,7 @@ from xmodule.modulestore.xml_exporter import export_course_to_xml
 from xmodule.modulestore.xml_importer import import_course_from_xml, perform_xlint
 
 from xmodule.capa_module import CapaDescriptor
-from xmodule.course_module import CourseDescriptor, Textbook
+from xmodule.course_module import CourseDescriptor, Textbook, CATALOG_VISIBILITY_CATALOG_AND_ABOUT, CATALOG_VISIBILITY_ABOUT
 from xmodule.seq_module import SequenceDescriptor
 
 from contentstore.utils import delete_course_and_groups, reverse_url, reverse_course_url
@@ -1750,6 +1750,16 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         response = self.client.get_html('/course/edX/test')
         self.assertEquals(response.status_code, 404)
 
+    @override_settings(DEFAULT_COURSE_CATALOG_VISIBILITY=CATALOG_VISIBILITY_ABOUT)
+    def test_new_course_default_visibility(self):
+        """
+        Test default catalog visibility setting for new course
+        """
+        test_course_data = self.assert_created_course()
+        course_id = _get_course_id(self.store, test_course_data)
+        course_module = self.store.get_course(course_id)
+        self.assertEqual(CATALOG_VISIBILITY_ABOUT, course_module.catalog_visibility)
+
 
 class MetadataSaveTestCase(ContentStoreTestCase):
     """Test that metadata is correctly cached and decached."""
@@ -2058,6 +2068,17 @@ class RerunCourseTest(ContentStoreTestCase):
 
         # Verify rerun course's wiki_slug.
         self.assertEquals(destination_course.wiki_slug, destination_wiki_slug)
+
+    @override_settings(DEFAULT_COURSE_CATALOG_VISIBILITY=CATALOG_VISIBILITY_ABOUT)
+    def test_rerun_not_visible_in_catalogue_by_default(self):
+        """
+        Test default catalog visibility setting for course re-run
+        """
+        source_course = CourseFactory.create(catalog_visibility=CATALOG_VISIBILITY_CATALOG_AND_ABOUT)
+        destination_course_key = self.post_rerun_request(source_course.id)
+        destination_course = self.store.get_course(destination_course_key)
+
+        self.assertNotEqual(CATALOG_VISIBILITY_CATALOG_AND_ABOUT, destination_course.catalog_visibility)
 
 
 class ContentLicenseTest(ContentStoreTestCase):

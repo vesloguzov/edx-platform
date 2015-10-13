@@ -946,6 +946,9 @@ ENTRANCE_EXAM_MIN_SCORE_PCT = 50
 ### Default language for a new course
 DEFAULT_COURSE_LANGUAGE = "en"
 
+### Default catalog visibility for new course / course re-run
+DEFAULT_COURSE_CATALOG_VISIBILITY = 'both'
+
 
 ################ ADVANCED_COMPONENT_TYPES ###############
 
