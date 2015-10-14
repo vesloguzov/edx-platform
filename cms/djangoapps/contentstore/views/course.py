@@ -20,7 +20,7 @@ from util.json_request import JsonResponse, JsonResponseBadRequest
 from util.date_utils import get_default_time_display
 from edxmako.shortcuts import render_to_response
 
-from xmodule.course_module import DEFAULT_START_DATE
+from xmodule.course_module import DEFAULT_START_DATE, CATALOG_VISIBILITY_CATALOG_AND_ABOUT
 from xmodule.error_module import ErrorDescriptor
 from xmodule.modulestore.django import modulestore
 from xmodule.contentstore.content import StaticContent
@@ -610,6 +610,8 @@ def _remove_in_process_courses(courses, in_process_course_actions):
             'display_name': course.display_name,
             'course_key': unicode(course.location.course_key),
             'url': reverse_course_url('course_handler', course.id),
+            'is_visible_in_catalog': course.catalog_visibility == CATALOG_VISIBILITY_CATALOG_AND_ABOUT,
+            'visibility_setting_url': reverse_course_url('advanced_settings_handler', course.id),
             'lms_link': get_lms_link_for_item(course.location),
             'rerun_link': _get_rerun_link_for_item(course.id),
             'org': course.display_org_with_default,

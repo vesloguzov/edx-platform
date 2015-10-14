@@ -1,6 +1,6 @@
 define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/views/utils/create_course_utils",
-    "js/views/utils/create_library_utils", "common/js/components/utils/view_utils"],
-    function (domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibraryUtilsFactory, ViewUtils) {
+    "js/views/utils/create_library_utils", "common/js/components/utils/view_utils", "common/js/components/views/feedback_notification"],
+    function (domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibraryUtilsFactory, ViewUtils, NotificationView) {
         "use strict";
         var CreateCourseUtils = new CreateCourseUtilsFactory({
             name: '.new-course-name',
@@ -146,6 +146,24 @@ define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/vie
           };
         };
 
+        var toggleCourseVisibility = function(e) {
+          var visibility = $(this).is(':checked') ? 'about' : 'both';
+          var saving = new NotificationView.Mini({
+            title: gettext("Saving")
+          });
+          saving.show();
+          return $.ajax({
+            type: 'POST',
+            url: $(this).data('visibility-setting-url'),
+            data: JSON.stringify({
+              'catalog_visibility': {'value': visibility}
+            }),
+            contentType: 'application/json'
+          }).success(function() {
+            return saving.hide();
+          });
+        };
+
         var onReady = function () {
             $('.new-course-button').bind('click', addNewCourse);
             $('.new-library-button').bind('click', addNewLibrary);
@@ -155,6 +173,8 @@ define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/vie
             $('.action-reload').bind('click', ViewUtils.reload);
             $('#course-index-tabs .courses-tab').bind('click', showTab('courses'));
             $('#course-index-tabs .libraries-tab').bind('click', showTab('libraries'));
+
+            $('.toggle-checkbox').on('click', toggleCourseVisibility).enable();
         };
 
         domReady(onReady);

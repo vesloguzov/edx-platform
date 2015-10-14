@@ -16,6 +16,7 @@ from models.settings.course_details import (CourseDetails, CourseSettingsEncoder
 from models.settings.course_grading import CourseGradingModel
 from contentstore.utils import reverse_course_url, reverse_usage_url
 from xmodule.modulestore.tests.factories import CourseFactory
+from xmodule.course_module import CATALOG_VISIBILITY_CATALOG_AND_ABOUT, CATALOG_VISIBILITY_ABOUT
 
 from models.settings.course_metadata import CourseMetadata
 from xmodule.fields import Date
@@ -1042,6 +1043,25 @@ class CourseMetadataEditingTest(CourseTestCase):
         response = self.client.get_json(url)
         course_detail_json = json.loads(response.content)
         self.assertTrue(course_detail_json['has_cert_config'])
+
+    def test_catalog_visibility_settings(self):
+        """
+        Test update of catalog visibility settings via advanced settings handler
+        """
+        response = self.client.ajax_post(self.course_setting_url, {
+            'catalog_visibility': {'value': CATALOG_VISIBILITY_ABOUT}
+        })
+        print response.content
+        self.assertEqual(response.status_code, 200)
+        course = modulestore().get_course(self.course.id)
+        self.assertEqual(course.catalog_visibility, CATALOG_VISIBILITY_ABOUT)
+
+        response = self.client.ajax_post(self.course_setting_url, {
+            'catalog_visibility': {'value': CATALOG_VISIBILITY_CATALOG_AND_ABOUT}
+        })
+        self.assertEqual(response.status_code, 200)
+        course = modulestore().get_course(self.course.id)
+        self.assertEqual(course.catalog_visibility, CATALOG_VISIBILITY_CATALOG_AND_ABOUT)
 
 
 class CourseGraderUpdatesTest(CourseTestCase):

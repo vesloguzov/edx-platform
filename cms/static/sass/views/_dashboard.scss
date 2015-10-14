@@ -437,7 +437,7 @@
   // UI: individual course listings
   .course-item {
     @include box-sizing(border-box);
-    width: flex-grid(9, 9);
+    width: flex-grid(12, 12);
     position: relative;
     border-bottom: 1px solid $gray-l2;
     padding: $baseline;
@@ -476,7 +476,7 @@
     // encompassing course link
     .course-link {
       @extend %ui-depth2;
-      width: flex-grid(6, 9);
+      width: flex-grid(7, 12);
       @include margin-right(flex-gutter());
     }
 
@@ -518,7 +518,8 @@
       @include transition(opacity $tmg-f2 ease-in-out 0);
       @extend %ui-depth3;
       position: static;
-      width: flex-grid(3, 9);
+      width: flex-grid(4, 12);
+      margin-bottom: 0;
       @include text-align(right);
       opacity: 0;
       pointer-events: none;
@@ -544,15 +545,99 @@
       }
 
       // course re-run button
-      .action-rerun {
-        margin-right: $baseline;
-      }
-
       .rerun-button {
         font-weight: 600;
         // TODO: sync up button styling and add secondary style here
       }
     }
+      // Course visibility control
+      .action-item {
+        position: relative;
+        width: flex-grid(1, 12);
+        display: inline-block;
+        min-width: ($baseline*1.5);
+        max-width: 36px;
+        margin: 0;
+        text-align: center;
+
+        .action-button {
+          @include transition(all $tmg-f2 ease-in-out 0s);
+          display: block;
+          padding: 0 $baseline/2;
+          width: auto;
+          height: ($baseline*1.5);
+          border: 0;
+          border-radius: 3px;
+          background: none;
+          color: $gray-l1;
+
+          &:hover {
+            background-color: $blue;
+            color: $gray-l6;
+          }
+        }
+
+        .icon {
+          display: inline-block;
+          vertical-align: bottom;
+        }
+
+        &.action-visible {
+          position: relative;
+        }
+
+        &.action-visible label {
+          position: absolute;
+          top: 0;
+          right: 0;
+          height: 30px;
+          width: 30px;
+
+          &:hover {
+            background-color: $blue;
+          }
+        }
+
+        &.action-visible .toggle-checkbox {
+          position: absolute;
+          top: 0;
+          right: 0;
+          height: 30px;
+          width: 30px;
+          opacity: 0;
+        }
+
+        &.action-visible .toggle-checkbox:hover ~ .action-button,
+        &.action-visible .toggle-checkbox:checked:hover ~ .action-button {
+          background-color: $blue;
+          color: $gray-l6;
+        }
+
+        &.action-visible .toggle-checkbox ~ .action-button {
+          .fa-eye {
+            display: inline-block;
+            pointer-events: none;
+          }
+
+          .fa-eye-slash {
+            display: none;
+          }
+        }
+
+        &.action-visible .toggle-checkbox:checked ~ .action-button {
+          background-color: $gray;
+          color: $white;
+
+          .fa-eye {
+            display: none;
+          }
+
+          .fa-eye-slash {
+            display: inline-block;
+            pointer-events: none;
+          }
+        }
+      }
 
     // CASE: is processing
     &.is-processing {

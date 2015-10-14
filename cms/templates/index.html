@@ -300,6 +300,15 @@
                 <a href="${course_info['lms_link']}" rel="external" class="button view-button">${_("View Live")}</a>
               </li>
             </ul>
+            <div class="action-item action-visible">
+              <label><span class="sr">${_("Show this page")}</span></label>
+              % if course_info['is_visible_in_catalog']:
+                <input type="checkbox" class="toggle-checkbox" data-tooltip="${_('Show/hide course')}" data-visibility-setting-url="${course_info['visibility_setting_url']}" disabled />
+              % else:
+                <input type="checkbox" class="toggle-checkbox" data-tooltip="${_('Show/hide course')}"  data-visibility-setting-url="${course_info['visibility_setting_url']}" checked disabled/>
+              % endif
+              <div class="action-button"><i class="icon fa fa-eye"></i><i class="icon fa fa-eye-slash"></i></div>
+            </div>
           </li>
           %endfor
         </ul>
