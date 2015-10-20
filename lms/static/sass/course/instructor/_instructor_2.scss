@@ -510,6 +510,7 @@
       position: absolute;
       top: 15px;
       @include left($baseline*10);
+      z-index: 2;
       padding: ($baseline/2);
       width: 50%;
       background-color: $light-gray;
