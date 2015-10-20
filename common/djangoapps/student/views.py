@@ -42,7 +42,7 @@ from social.apps.django_app import utils as social_utils
 from social.backends import oauth as social_oauth
 from social.exceptions import AuthException, AuthAlreadyAssociated
 
-from edxmako.shortcuts import render_to_response, render_to_string
+from edxmako.shortcuts import render_to_response, render_to_string, marketing_link
 
 from course_modes.models import CourseMode
 from shoppingcart.api import order_history
@@ -1301,7 +1301,9 @@ def logout_user(request):
     if settings.FEATURES.get('AUTH_USE_CAS'):
         target = reverse('cas-logout')
     else:
-        target = '/'
+        target = marketing_root = marketing_link('ROOT')
+        if marketing_root == '#':
+            target = '/'
     response = redirect(target)
 
     delete_logged_in_cookies(response)
