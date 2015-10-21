@@ -161,9 +161,13 @@ def instructor_dashboard_2(request, course_id):
 
     disable_buttons = not _is_small_course(course_key)
 
+    old_dashboard_url = '#'
+    if settings.FEATURES['ENABLE_INSTRUCTOR_LEGACY_DASHBOARD']:
+        old_dashboard_url = reverse('instructor_dashboard_legacy', kwargs={'course_id': unicode(course_key)})
+
     context = {
         'course': course,
-        'old_dashboard_url': reverse('instructor_dashboard_legacy', kwargs={'course_id': unicode(course_key)}),
+        'old_dashboard_url': old_dashboard_url,
         'studio_url': get_studio_url(course, 'course'),
         'sections': sections,
         'disable_buttons': disable_buttons,
