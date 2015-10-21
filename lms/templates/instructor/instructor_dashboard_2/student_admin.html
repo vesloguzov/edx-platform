@@ -1,12 +1,17 @@
-<%! from django.utils.translation import ugettext as _ %>
+<%! from django.utils.translation import ugettext as _, ungettext %>
 <%page args="section_data"/>
 
 <div>
   %if section_data['is_small_course']:
   ## Show the gradebook for small courses
     <h2>${_("Student Gradebook")}</h2>
+      <% max_count = settings.FEATURES['MAX_ENROLLMENT_INSTR_BUTTONS'] %>
       <p>
-	${_("Click here to view the gradebook for enrolled students. This feature is only visible to courses with a small number of total enrolled students.")}
+        ${ungettext(
+            "The gradebook is only visible to courses with not more than {max_count} student enrolled.",
+            "The gradebook is only visible to courses with not more than {max_count} students enrolled.",
+            max_count
+        ).format(max_count=max_count)}
       </p>
       <br>
       <p>
@@ -22,7 +27,7 @@
   <br />
   <label>
   ${_("Specify the {platform_name} email address or username of a student here:").format(platform_name=settings.PLATFORM_NAME)}
-  <input type="text" name="student-select-progress" placeholder="${_("Student Email or Username")}" >
+  <input type="text" name="student-select-progress" size="60" placeholder="${_("Student Email or Username")}" >
   </label>
   <br>
 
@@ -43,13 +48,13 @@
   <p>
   <label>
   ${_("Specify the {platform_name} email address or username of a student here:").format(platform_name=settings.PLATFORM_NAME)}
-  <input type="text" name="student-select-grade" placeholder="${_("Student Email or Username")}">
+  <input type="text" name="student-select-grade" size="60" placeholder="${_("Student Email or Username")}">
   </label>
   </p>
   <br>
 
   <label> ${_("Specify a problem in the course here with its complete location:")}
-  <input type="text" name="problem-select-single" placeholder="${_("Problem location")}">
+  <input type="text" name="problem-select-single" size="60" placeholder="${_("Problem location")}">
   </label>
 
   ## Translators: A location (string of text) follows this sentence.
@@ -94,7 +99,7 @@
   <div class="request-response-error"></div>
   <label>
   ${_("Student's {platform_name} email address or username:").format(platform_name=settings.PLATFORM_NAME)}
-  <input type="text" name="entrance-exam-student-select-grade" placeholder="${_('Student Email or Username')}">
+  <input type="text" name="entrance-exam-student-select-grade" size="60" placeholder="${_('Student Email or Username')}">
   </label>
   <br>
 
