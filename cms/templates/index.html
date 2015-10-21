@@ -2,7 +2,7 @@
 
 <%inherit file="base.html" />
 <%def name="online_help_token()"><% return "home" %></%def>
-<%block name="title">${_("{studio_name} Home").format(studio_name=settings.STUDIO_SHORT_NAME)}</%block>
+<%block name="title">${_("Studio Home")}</%block>
 <%block name="bodyclass">is-signedin index view-dashboard</%block>
 
 <%block name="requirejs">
@@ -14,7 +14,7 @@
 <%block name="content">
 <div class="wrapper-mast wrapper">
   <header class="mast has-actions">
-    <h1 class="page-header">${_("{studio_name} Home").format(studio_name=settings.STUDIO_SHORT_NAME)}</h1>
+    <h1 class="page-header">${_("Studio Home")}</h1>
 
     % if user.is_active:
     <nav class="nav-actions" aria-label="${_('Page Actions')}">
@@ -318,7 +318,7 @@
       <div class="notice notice-incontext notice-instruction notice-instruction-nocourses list-notices courses-tab active">
         <div class="notice-item">
           <div class="msg">
-            <h3 class="title">${_("Are you staff on an existing {studio_name} course?").format(studio_name=set)}</h3>
+            <h3 class="title">${_("Are you staff on an existing Studio course?")}</h3>
             <div class="copy">
               <p>${_('The course creator must give you access to the course. Contact the course creator or administrator for the course you are helping to author.')}</p>
             </div>
@@ -349,13 +349,13 @@
       %if course_creator_status == "unrequested":
       <div class="wrapper wrapper-creationrights">
         <h3 class="title">
-          <a href="#instruction-creationrights" class="ui-toggle-control show-creationrights"><span class="label">${_('Becoming a Course Creator in {studio_name}').format(studio_name=settings.STUDIO_SHORT_NAME)}</span> <i class="icon fa fa-times-circle"></i></a>
+          <a href="#instruction-creationrights" class="ui-toggle-control show-creationrights"><span class="label">${_('Becoming a Course Creator in Studio')}</span> <i class="icon fa fa-times-circle"></i></a>
         </h3>
 
         <div class="notice notice-incontext notice-instruction notice-instruction-creationrights ui-toggle-target" id="instruction-creationrights">
           <div class="copy">
-            <p>${_('{studio_name} is a hosted solution for our xConsortium partners and selected guests. Courses for which you are a team member appear above for you to edit, while course creator privileges are granted by {platform_name}. Our team will evaluate your request and provide you feedback within 24 hours during the work week.').format(
-              studio_name=settings.STUDIO_NAME, platform_name=settings.PLATFORM_NAME)}</p>
+            <p>${_('Studio is a hosted solution for our xConsortium partners and selected guests. Courses for which you are a team member appear above for you to edit, while course creator privileges are granted by {platform_name}. Our team will evaluate your request and provide you feedback within 24 hours during the work week.').format(
+              platform_name=settings.PLATFORM_NAME)}</p>
           </div>
 
           <div class="status status-creationrights is-unrequested">
@@ -378,8 +378,8 @@
 
         <div class="notice notice-incontext notice-instruction notice-instruction-creationrights ui-toggle-target" id="instruction-creationrights">
           <div class="copy">
-            <p>${_('{studio_name} is a hosted solution for our xConsortium partners and selected guests. Courses for which you are a team member appear above for you to edit, while course creator privileges are granted by {platform_name}. Our team is has completed evaluating your request.').format(
-              studio_name=settings.STUDIO_NAME, platform_name=settings.PLATFORM_NAME,
+            <p>${_('Studio is a hosted solution for our xConsortium partners and selected guests. Courses for which you are a team member appear above for you to edit, while course creator privileges are granted by {platform_name}. Our team is has completed evaluating your request.').format(
+              platform_name=settings.PLATFORM_NAME,
             )}</p>
           </div>
 
@@ -406,8 +406,8 @@
 
         <div class="notice notice-incontext notice-instruction notice-instruction-creationrights ui-toggle-target" id="instruction-creationrights">
           <div class="copy">
-            <p>${_('{studio_name} is a hosted solution for our xConsortium partners and selected guests. Courses for which you are a team member appear above for you to edit, while course creator privileges are granted by {platform_name}. Our team is currently  evaluating your request.').format(
-              studio_name=settings.STUDIO_NAME, platform_name=settings.PLATFORM_NAME,
+            <p>${_('Studio is a hosted solution for our xConsortium partners and selected guests. Courses for which you are a team member appear above for you to edit, while course creator privileges are granted by {platform_name}. Our team is currently  evaluating your request.').format(
+              platform_name=settings.PLATFORM_NAME,
             )}</p>
           </div>
 
@@ -487,18 +487,18 @@
     </article>
     <aside class="content-supplementary" role="complementary">
       <div class="bit">
-        <h3 class="title title-3">${_('New to {studio_name}?').format(studio_name=settings.STUDIO_NAME)}</h3>
-        <p>${_('Click Help in the upper-right corner to get more information about the {studio_name} page you are viewing. You can also use the links at the bottom of the page to access our continually updated documentation and other {studio_name} resources.').format(studio_name=settings.STUDIO_SHORT_NAME)}</p>
+        <h3 class="title title-3">${_('New to Studio?')}</h3>
+        <p>${_('Click Help in the upper-right corner to get more information about the Studio page you are viewing. You can also use the links at the bottom of the page to access our continually updated documentation and other Studio resources.')}</p>
 
         <ol class="list-actions">
           <li class="action-item">
 
-            <a href="${get_online_help_info(online_help_token())['doc_url']}" target="_blank">${_("Getting Started with {studio_name}").format(studio_name=settings.STUDIO_NAME)}</a>
+            <a href="${get_online_help_info(online_help_token())['doc_url']}" target="_blank">${_("Getting Started with Studio")}</a>
           </li>
           % if settings.TENDER_DOMAIN:
             <li class="action-item">
               <a href="http://${settings.TENDER_DOMAIN}/discussion/new" class="action action-primary" title="${_("Use our feedback tool, Tender, to request help")}">
-                ${_("Request help with {studio_name}").format(studio_name=settings.STUDIO_NAME)}
+                ${_("Request help with Studio")}
               </a>
             </li>
           % endif
@@ -507,9 +507,8 @@
 
       % if course_creator_status=='disallowed_for_this_site' and settings.FEATURES.get('STUDIO_REQUEST_EMAIL',''):
       <div class="bit">
-        <h3 class="title title-3">${_("Can I create courses in {studio_name}?").format(studio_name=settings.STUDIO_NAME)}</h3>
-        <p>${_("In order to create courses in {studio_name}, you must {link_start}contact {platform_name} staff to help you create a course{link_end}.").format(
-            studio_name=settings.STUDIO_NAME,
+        <h3 class="title title-3">${_("Can I create courses in Studio?")}</h3>
+        <p>${_("In order to create courses in Studio, you must {link_start}contact {platform_name} staff to help you create a course{link_end}.").format(
             platform_name=settings.PLATFORM_NAME,
             link_start='<a href="mailto:{email}">'.format(email=settings.FEATURES.get('STUDIO_REQUEST_EMAIL','')),
             link_end="</a>",
@@ -519,13 +518,13 @@
 
       % if course_creator_status == "unrequested":
       <div class="bit">
-        <h3 class="title title-3">${_("Can I create courses in {studio_name}?").format(studio_name=settings.STUDIO_NAME)}</h3>
-        <p>${_('In order to create courses in {studio_name}, you must have course creator privileges to create your own course.').format(studio_name=settings.STUDIO_NAME)}</p>
+        <h3 class="title title-3">${_("Can I create courses in Studio?")}</h3>
+        <p>${_('In order to create courses in Studio, you must have course creator privileges to create your own course.')}</p>
       </div>
 
       % elif course_creator_status == "denied":
       <div class="bit">
-        <h3 class="title title-3">${_("Can I create courses in {studio_name}?").format(studio_name=settings.STUDIO_NAME)}</h3>
+        <h3 class="title title-3">${_("Can I create courses in Studio?")}</h3>
 <%!
 from django.conf import settings
 
@@ -538,8 +537,7 @@ else:
   help_link_start = '<a href="mailto:{email}">'.format(email=settings.TECH_SUPPORT_EMAIL)
   help_link_end = '</a>'
 %>
-        <p>${_("Your request to author courses in {studio_name} has been denied. Please {link_start}contact {platform_name} Staff with further questions{link_end}.").format(
-            studio_name=settings.STUDIO_NAME,
+        <p>${_("Your request to author courses in Studio has been denied. Please {link_start}contact {platform_name} Staff with further questions{link_end}.").format(
             platform_name=settings.PLATFORM_NAME,
             link_start=help_link_start,
             link_end=help_link_end,
@@ -577,7 +575,7 @@ else:
           % if settings.TENDER_DOMAIN:
             <li class="action-item">
               <a href="http://${settings.TENDER_DOMAIN}/discussion/new" class="show-tender" title="${_("Use our feedback tool, Tender, to request help")}">
-                ${_("Request help with your {studio_name} account").format(studio_name=settings.STUDIO_NAME)}
+                ${_("Request help with your Studio account")}
               </a>
             </li>
           % endif
