@@ -72,7 +72,6 @@ CMS.User.isGlobalStaff = '${is_global_staff}'=='True' ? true : false;
             <p>${_("For verified certificates, specify between one and four signatories and upload the associated images.")}</p>
             <p>${_("To edit or delete a certificate before it is activated, hover over the top right corner of the form and select {em_start}Edit{em_end} or the delete icon.").format(em_start="<strong>", em_end="</strong>")}</p>
             <p>${_("To view a sample certificate, choose a course mode and select {em_start}Preview Certificate{em_end}.").format(em_start='<strong>', em_end="</strong>")}</p>
-            
             <h3 class="title-3">${_("Issuing Certificates to Learners")}</h3>
             <p>${_("To begin issuing certificates, a course team member with the Admin role selects {em_start}Activate{em_end}. Course team members without the Admin role cannot edit or delete an activated certificate.").format(em_start='<strong>', em_end="</strong>")}</p>
             <p>${_("{em_start}Do not{em_end} delete certificates after a course has started; learners who have already earned certificates will no longer be able to access them.").format(em_start="<strong>", em_end="</strong>")}</p>
@@ -85,7 +84,9 @@ CMS.User.isGlobalStaff = '${is_global_staff}'=='True' ? true : false;
             details_url = utils.reverse_course_url('settings_handler', context_course.id)
             grading_url = utils.reverse_course_url('grading_handler', context_course.id)
             course_team_url = utils.reverse_course_url('course_team_handler', context_course.id)
+
             advanced_settings_url = utils.reverse_course_url('advanced_settings_handler', context_course.id)
+            show_advanced_settings_link = utils.has_access_to_advanced_settings(user, context_course.id)
           %>
         <h2 class="title-3">${_("Other Course Settings")}</h2>
           <nav class="nav-related" aria-label="${_('Other Course Settings')}">
@@ -93,7 +94,9 @@ CMS.User.isGlobalStaff = '${is_global_staff}'=='True' ? true : false;
               <li class="nav-item"><a href="${details_url}">${_("Details &amp; Schedule")}</a></li>
               <li class="nav-item"><a href="${grading_url}">${_("Grading")}</a></li>
               <li class="nav-item"><a href="${course_team_url}">${_("Course Team")}</a></li>
+              % if show_advanced_settings_link:
               <li class="nav-item"><a href="${advanced_settings_url}">${_("Advanced Settings")}</a></li>
+              % endif
               <li class="nav-item"><a href="${utils.reverse_course_url('group_configurations_list_handler', context_course.id)}">${_("Group Configurations")}</a></li>
             </ul>
           </nav>

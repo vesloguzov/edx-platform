@@ -194,6 +194,9 @@ FEATURES = {
 
     # Timed or Proctored Exams
     'ENABLE_PROCTORED_EXAMS': False,
+
+    # Allow course staff access to advanced course settings
+    'ALLOW_ADVANCED_SETTINGS_ACCESS_FOR_COURSE_STAFF': True,
 }
 STUDIO_THEME_NAME = ''
 

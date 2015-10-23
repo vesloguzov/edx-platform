@@ -125,12 +125,13 @@ class AccessListFallback(Exception):
     pass
 
 
-def get_course_and_check_access(course_key, user, depth=0):
+def get_course_and_check_access(course_key, user, depth=0, require_global_staff=False):
     """
     Internal method used to calculate and return the locator and course module
     for the view functions in this file.
     """
-    if not has_studio_read_access(user, course_key):
+    if (not has_studio_read_access(user, course_key)
+        or require_global_staff and not GlobalStaff().has_user(user)):
         raise PermissionDenied()
     course_module = modulestore().get_course(course_key, depth=depth)
     return course_module
@@ -1252,7 +1253,10 @@ def advanced_settings_handler(request, course_key_string):
     """
     course_key = CourseKey.from_string(course_key_string)
     with modulestore().bulk_operations(course_key):
-        course_module = get_course_and_check_access(course_key, request.user)
+        course_module = get_course_and_check_access(
+            course_key, request.user,
+            require_global_staff=not settings.FEATURES.get('ALLOW_ADVANCED_SETTINGS_ACCESS_FOR_COURSE_STAFF', True)
+        )
         if 'text/html' in request.META.get('HTTP_ACCEPT', '') and request.method == 'GET':
 
             return render_to_response('settings_advanced.html', {

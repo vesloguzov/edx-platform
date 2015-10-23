@@ -20,7 +20,7 @@ from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
 from opaque_keys.edx.keys import UsageKey, CourseKey
-from student.roles import CourseInstructorRole, CourseStaffRole
+from student.roles import CourseInstructorRole, CourseStaffRole, GlobalStaff
 from student.models import CourseEnrollment
 from student import auth
 
@@ -512,3 +512,9 @@ def get_visibility_partition_info(xblock):
         "has_selected_groups": has_selected_groups,
         "selected_verified_partition_id": selected_verified_partition_id,
     }
+
+
+def has_access_to_advanced_settings(user, course_key):
+    return (auth.has_studio_read_access(user, course_key)
+            and (settings.FEATURES.get('ALLOW_ADVANCED_SETTINGS_ACCESS_FOR_COURSE_STAFF')
+                 or GlobalStaff().has_user(user)))

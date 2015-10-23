@@ -436,7 +436,9 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url}';
           <%
             course_team_url = utils.reverse_course_url('course_team_handler', context_course.id)
             grading_config_url = utils.reverse_course_url('grading_handler', context_course.id)
-            advanced_config_url = utils.reverse_course_url('advanced_settings_handler', context_course.id)
+
+            advanced_settings_url = utils.reverse_course_url('advanced_settings_handler', context_course.id)
+            show_advanced_settings_link = utils.has_access_to_advanced_settings(user, context_course.id)
           %>
         <h3 class="title-3">${_("Other Course Settings")}</h3>
         <nav class="nav-related" aria-label="${_('Other Course Settings')}">
@@ -444,7 +446,9 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url}';
             <li class="nav-item"><a href="${grading_config_url}">${_("Grading")}</a></li>
             <li class="nav-item"><a href="${course_team_url}">${_("Course Team")}</a></li>
             <li class="nav-item"><a href="${utils.reverse_course_url('group_configurations_list_handler', context_course.id)}">${_("Group Configurations")}</a></li>
-            <li class="nav-item"><a href="${advanced_config_url}">${_("Advanced Settings")}</a></li>
+            % if show_advanced_settings_link:
+            <li class="nav-item"><a href="${advanced_settings_url}">${_("Advanced Settings")}</a></li>
+            % endif
           </ul>
         </nav>
      % endif
