@@ -20,7 +20,12 @@ from util.json_request import JsonResponse, JsonResponseBadRequest
 from util.date_utils import get_default_time_display
 from edxmako.shortcuts import render_to_response
 
-from xmodule.course_module import DEFAULT_START_DATE, CATALOG_VISIBILITY_CATALOG_AND_ABOUT
+from xmodule.course_module import (
+    DEFAULT_START_DATE,
+    CATALOG_VISIBILITY_CATALOG_AND_ABOUT,
+    CATALOG_VISIBILITY_ABOUT,
+    CATALOG_VISIBILITY_NONE
+)
 from xmodule.error_module import ErrorDescriptor
 from xmodule.modulestore.django import modulestore
 from xmodule.contentstore.content import StaticContent
@@ -96,6 +101,7 @@ from util.milestones_helpers import (
 log = logging.getLogger(__name__)
 
 __all__ = ['course_info_handler', 'course_handler', 'course_listing',
+           'catalog_visibility_handler',
            'course_info_update_handler', 'course_search_index_handler',
            'course_rerun_handler',
            'settings_handler',
@@ -611,7 +617,7 @@ def _remove_in_process_courses(courses, in_process_course_actions):
             'course_key': unicode(course.location.course_key),
             'url': reverse_course_url('course_handler', course.id),
             'is_visible_in_catalog': course.catalog_visibility == CATALOG_VISIBILITY_CATALOG_AND_ABOUT,
-            'visibility_setting_url': reverse_course_url('advanced_settings_handler', course.id),
+            'visibility_setting_url': reverse_course_url('catalog_visibility_handler', course.id),
             'lms_link': get_lms_link_for_item(course.location),
             'rerun_link': _get_rerun_link_for_item(course.id),
             'org': course.display_org_with_default,
@@ -869,6 +875,57 @@ def _rerun_course(request, org, number, run, fields):
         'url': reverse_url('course_handler'),
         'destination_course_key': unicode(destination_course_key)
     })
+
+
+@login_required
+@ensure_csrf_cookie
+@require_http_methods(("POST", "PUT"))
+@expect_json
+def catalog_visibility_handler(request, course_key_string):
+    """
+    Course settings configuration
+    PUT, POST
+        json: update the Course's catalog visibility. The payload is a json rep of the
+            corresponding item from metadata dicts.
+    """
+    course_key = CourseKey.from_string(course_key_string)
+    with modulestore().bulk_operations(course_key):
+        course_module = get_course_and_check_access(course_key, request.user)
+        try:
+            is_valid, errors, updated_data = _validate_and_update_visibility_from_json(
+                course_module, request.json, request.user
+            )
+            if is_valid:
+                modulestore().update_item(course_module, request.user.id)
+
+                return JsonResponse(updated_data)
+            else:
+                return JsonResponseBadRequest(errors)
+
+        # Handle all errors that validation doesn't catch
+        except (TypeError, ValueError, KeyError) as err:
+            return HttpResponseBadRequest(
+                django.utils.html.escape(err.message),
+                content_type="text/plain"
+            )
+
+def _validate_and_update_visibility_from_json(course_module, json_dict, user):
+    """
+    Check if catalog visibility value is valid and update item (not in mongo yet)
+    Raises KeyError if 'value' is not found in json_dict
+    """
+    visibility_value = json_dict['value']
+    if visibility_value not in (CATALOG_VISIBILITY_CATALOG_AND_ABOUT, CATALOG_VISIBILITY_ABOUT, CATALOG_VISIBILITY_NONE):
+        return (
+            False,
+            [{'message': 'unsupported visibility value', 'model': 'catalog_visibility'}],
+            None
+        )
+    return CourseMetadata.validate_and_update_from_json(
+        course_module,
+        {'catalog_visibility': {'value': visibility_value}},
+        user=user,
+    )
 
 
 # pylint: disable=unused-argument

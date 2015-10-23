@@ -1044,24 +1044,42 @@ class CourseMetadataEditingTest(CourseTestCase):
         course_detail_json = json.loads(response.content)
         self.assertTrue(course_detail_json['has_cert_config'])
 
+
+class CourseVisibilityEditingTest(CourseTestCase):
+    """
+    Tests for CourseMetadata.
+    """
+    def setUp(self):
+        CourseTestCase.setUp(self)
+        self.course_setting_url = get_url(self.course.id, 'catalog_visibility_handler')
+
     def test_catalog_visibility_settings(self):
         """
         Test update of catalog visibility settings via advanced settings handler
         """
         response = self.client.ajax_post(self.course_setting_url, {
-            'catalog_visibility': {'value': CATALOG_VISIBILITY_ABOUT}
+            'value': CATALOG_VISIBILITY_ABOUT
         })
-        print response.content
         self.assertEqual(response.status_code, 200)
         course = modulestore().get_course(self.course.id)
         self.assertEqual(course.catalog_visibility, CATALOG_VISIBILITY_ABOUT)
 
         response = self.client.ajax_post(self.course_setting_url, {
-            'catalog_visibility': {'value': CATALOG_VISIBILITY_CATALOG_AND_ABOUT}
+            'value': CATALOG_VISIBILITY_CATALOG_AND_ABOUT
         })
         self.assertEqual(response.status_code, 200)
         course = modulestore().get_course(self.course.id)
         self.assertEqual(course.catalog_visibility, CATALOG_VISIBILITY_CATALOG_AND_ABOUT)
+
+    def test_invalid_visibility_value(self):
+        initial_catalog_visibility = self.course.catalog_visibility
+
+        response = self.client.ajax_post(self.course_setting_url, {
+            'value': 'WRONG_VALUE'
+        })
+        self.assertEqual(response.status_code, 400)
+        course = modulestore().get_course(self.course.id)
+        self.assertEqual(course.catalog_visibility, initial_catalog_visibility)
 
 
 class CourseGraderUpdatesTest(CourseTestCase):

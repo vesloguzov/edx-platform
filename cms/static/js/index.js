@@ -155,9 +155,7 @@ define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/vie
           return $.ajax({
             type: 'POST',
             url: $(this).data('visibility-setting-url'),
-            data: JSON.stringify({
-              'catalog_visibility': {'value': visibility}
-            }),
+            data: JSON.stringify({ 'value': visibility }),
             contentType: 'application/json'
           }).success(function() {
             return saving.hide();
