@@ -1,54 +1,49 @@
 ---
 metadata:
-    display_name: Numerical Input with Hints and Feedback
+    display_name: Числовой ввод с подсказками
     markdown: |
-        
-        You can provide feedback for correct answers in numerical input problems. You cannot provide feedback for incorrect answers.
 
-        Use feedback for the correct answer to reinforce the process for arriving at the numerical value.
+        Можно задать дополнительную информацию для правильных ответов. Для неправильных ответов дополнительную информацию задать нельзя.
 
-        You can also add hints for learners.
+        Также можно добавить подсказки для слушателей.
 
-        Be sure to select Settings to specify a Display Name and other values that apply.
+        Не забудьте зайти в «Настройки», чтобы изменить отображаемое название компонента и другие опции.
 
-        Use the following example problem as a model.
+        Вы можете использовать следующую задачу в качестве примеров.
 
-        >>What is the arithmetic mean for the following set of numbers? (1, 5, 6, 3, 5)<<
+        >>Найдите среднее арифметическое чисел: 1, 5, 6, 3, 5<<
 
-        = 4 {{The mean for this set of numbers is 20 / 5, which equals 4.}}
+        = 4 {{Среднее этих чисел равно 20 / 5 = 4.}}
 
-        ||The mean is calculated by summing the set of numbers and dividing by n.||
-        ||n is the count of items in the set.||
+        ||Среднее значение равно сумме всех чисел, деленной на их количество.||
 
         [explanation]
-        The mean is calculated by summing the set of numbers and dividing by n. In this case: (1 + 5 + 6 + 3 + 5) / 5 = 20 / 5 = 4.
+        Среднее значение равно сумме всех чисел, делённой на их количество. В данном случае: (1 + 5 + 6 + 3 + 5) / 5 = 20 / 5 = 4.
         [explanation]
 
 hinted: true
 data: |
-    <problem>
-    
-    <p>You can provide feedback for correct answers in numerical input problems. You cannot provide feedback for incorrect answers.</p>
+        <problem>
+          <p>Можно задать дополнительную информацию для правильных ответов. Для неправильных ответов дополнительную информацию задать нельзя.</p>
 
-    <p>Use feedback for the correct answer to reinforce the process for arriving at the numerical value.</p>
+          <p>Не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
 
-    <p>Use the following example problem as a model.</p>
+          <p>Вы можете использовать следующие задачи в качестве примеров.</p>
 
-    <p>What is the arithmetic mean for the following set of numbers? (1, 5, 6, 3, 5)</p>
-    <numericalresponse answer="4">
-      <formulaequationinput label="What is the arithmetic mean for the following set of numbers? (1, 5, 6, 3, 5)" />
-      <correcthint>The mean for this set of numbers is 20 / 5, which equals 4.</correcthint>
-    </numericalresponse>
+          <p>Найдите среднее арифметическое чисел: 1, 5, 6, 3, 5</p>
+          <numericalresponse answer="4">
+            <formulaequationinput label="Найдите среднее арифметическое чисел: 1, 5, 6, 3, 5" />
+            <correcthint>Среднее этих чисел равно 20 / 5 = 4.</correcthint>
+          </numericalresponse>
 
-    <solution>
-      <div class="detailed-solution">
-        <p>Explanation</p>
-        <p>The mean is calculated by summing the set of numbers and dividing by n. In this case: (1 + 5 + 6 + 3 + 5) / 5 = 20 / 5 = 4.</p>
-      </div>
-    </solution>
+          <solution>
+            <div class="detailed-solution">
+              <p>Пояснение</p>
+              <p>Среднее значение равно сумме всех чисел, делённой на их количество. В данном случае: (1 + 5 + 6 + 3 + 5) / 5 = 20 / 5 = 4.</p>
+            </div>
+          </solution>
 
-    <demandhint>
-      <hint>The mean is calculated by summing the set of numbers and dividing by n.</hint>
-      <hint>n is the count of items in the set.</hint>
-    </demandhint>
-    </problem>
+          <demandhint>
+            <hint>Среднее значение равно сумме всех чисел, делённой на их количество.</hint>
+          </demandhint>
+        </problem>

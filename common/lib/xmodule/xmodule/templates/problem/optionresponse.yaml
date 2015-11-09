@@ -1,36 +1,34 @@
 ---
 metadata:
-    display_name: Dropdown
+    display_name: Выпадающий список
     markdown: |
-         Dropdown problems allow learners to select only one option from a list of options.
+         В задачах с выпадающим списком предлагается выбрать один из возможных вариантов.
 
-         When you add the problem, be sure to select Settings to specify a Display Name and other values that apply.
+         Не забудьте зайти в «Настройки», чтобы изменить отображаемое название компонента и другие опции.
 
-         You can use the following example problem as a model.
+         Вы можете использовать следующую задачу в качестве примера.
 
-          >>Which of the following countries celebrates its independence on August 15?<<
+          >>Какая из перечисленных стран празднует свою независимость 15 августа?<<
 
-          [[(India), Spain, China, Bermuda]]
+          [[(Индия), Испания, Китай, Бермуды]]
 
           [explanation]
-          India became an independent nation on August 15, 1947.
+          Индия получила независимость 15 августа 1947 года.
           [explanation]
 data: |
-  <problem>
-    <p>Dropdown problems allow learners to select only one option from a list of options.</p>
-    <p>When you add the problem, be sure to select <strong>Settings</strong> 
-    to specify a <strong>Display Name</strong> and other values that apply.</p>
-    <p>You can use the following example problem as a model.</p>
-      <p>Which of the following countries celebrates its independence on August 15?</p>
-      <br/>
-      <optionresponse>
-        <optioninput options="('India','Spain','China','Bermuda')" correct="India"></optioninput>
-      </optionresponse>
-    <solution>
-      <div class="detailed-solution">
-        <p>Explanation</p>
-        <p>India became an independent nation on August 15, 1947.</p>
-      </div>
-    </solution>
-  </problem>
-
+        <problem>
+            <p>В задачах с выпадающим списком предлагается выбрать один из возможных вариантов.</p>
+            <p>Не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
+            <p>Вы можете использовать следующую задачу в качестве примера.</p>
+            <p>Какая из перечисленных стран празднует свою независимость 15 августа?</p>
+            <br/>
+            <optionresponse>
+                <optioninput options="('Индия','Испания','Китай','Бермуды')" correct="Индия"></optioninput>
+            </optionresponse>
+          <solution>
+            <div class="detailed-solution">
+              <p>Пояснение</p>
+              <p>Индия получила независимость 15 августа 1947 года.</p>
+            </div>
+          </solution>
+        </problem>

@@ -1,69 +1,65 @@
 ---
 metadata:
-    display_name: Checkboxes with Hints and Feedback
+    display_name: Флажки с подсказками
     markdown: |
-      
-      You can provide feedback for each option in a checkbox problem, with distinct feedback depending on whether or not the learner selects that option.
 
-      You can also provide compound feedback for a specific combination of answers. For example, if you have three possible answers in the problem, you can configure specific feedback for when a learner selects each combination of possible answers.
+      Этот тип задачи позволяет предоставить слушателям дополнительную информацию для каждого варианта ответа, в зависимости от того, выбрал слушатель этот пункт или нет, а также в зависимости от комбинации выбранных ответов. Например, если задача предусматривает три возможных варианта ответа, можно настроить отдельную реакцию системы на каждую комбинацию возможных ответов.
 
-      You can also add hints for learners.
+      Также можно добавить подсказки для слушателей.
 
-      Be sure to select Settings to specify a Display Name and other values that apply.
+      Не забудьте зайти в «Настройки», чтобы изменить отображаемое название компонента и другие опции.
 
-      Use the following example problem as a model.
+      Вы можете использовать следующую задачу в качестве примера.
 
-      >>Which of the following is a fruit? Check all that apply.<<
+      >>Что из перечисленного является фруктом? Выберите все варианты.<<
 
-      [x] apple  {{ selected: You are correct that an apple is a fruit because it is the fertilized ovary that comes from an apple tree and contains seeds. }, { unselected: Remember that an apple is also a fruit.}}
-      [x] pumpkin {{ selected: You are correct that a pumpkin is a fruit because it is the fertilized ovary of a squash plant and contains seeds. }, { unselected: Remember that a pumpkin is also a fruit.}}
-      [ ] potato   {{ U: You are correct that a potato is a vegetable because it is an edible part of a plant in tuber form.}, { S: A potato is a vegetable, not a fruit, because it does not come from a flower and does not contain seeds.}}
-      [x] tomato  {{ S: You are correct that a tomato is a fruit because it is the fertilized ovary of a tomato plant and contains seeds. }, { U: Many people mistakenly think a tomato is a vegetable. However, because a tomato is the fertilized ovary of a tomato plant and contains seeds, it is a fruit.}}
+      [x] Яблоко  {{ selected: Яблоко является фруктом, т.к. это суть оплодотворенная завязь, которая растет на дереве и содержит семена. }, { unselected: Яблоко — это тоже фрукт.}}
+      [x] Тыква {{ selected: Тыква является фруктом, т.к. это суть оплодотворенная завязь, которая содержит семена. }, { unselected: Тыква — это тоже фрукт.}}
+      [ ] Картофель   {{ U: Картофель является овощем, т.к. это съедобная часть растения в виде клубней.}, { S: Картофель это овощ, а не фрукт, т.к. он не происходит из цветка, и не содержит семян.}}
+      [x] Томат  {{ S: Томат является фруктом, т.к. это суть оплодотворенная завязь, которая содержит семена. }, { U: Многие ошибочно считают томат овощем; однако, в связи с тем, что томат суть оплодотворенная завязь, которая содержит семена, — это фрукт.}}
 
 
-      {{ ((A B D)) An apple, pumpkin, and tomato are all fruits as they all are fertilized ovaries of a plant and contain seeds. }}
-      {{ ((A B C D)) You are correct that an apple, pumpkin, and tomato are all fruits as they all are fertilized ovaries of a plant and contain seeds. However, a potato is not a fruit as it is an edible part of a plant in tuber form and is a vegetable.  }}
+      {{ ((A B D)) Яблоко, тыква и томат являются фркутами, т.к. они происходят из оплодотворенных завязей, и содержат семена. }}
+      {{ ((A B C D)) Яблоко, тыква и томат являются фркутами, т.к. они происходят из оплодотворенных завязей, и содержат семена. Однако, картофель является не фруктом, а овощем, т.к. это съедобная часть растения в виде клубня.}}
 
-      ||A fruit is the fertilized ovary from a flower.||
-      ||A fruit contains seeds of the plant.||
+      ||Фрукт происходит из оплодотворенного цветка.||
+      ||Фрукт содержит семена растения.||
 
 hinted: true
 data: |
       <problem>
-      
-      <p>You can provide feedback for each option in a checkbox problem, with distinct feedback depending on whether or not the learner selects that option.</p>
 
-      <p>You can also provide compound feedback for a specific combination of answers. For example, if you have three possible answers in the problem, you can configure specific feedback for when a learner selects each combination of possible answers.</p>
+        <p>Этот тип задачи позволяет предоставить слушателям дополнительную информацию для каждого варианта ответа, в зависимости от того, выбрал слушатель этот пункт или нет, а также в зависимости от комбинации выбранных ответов. Например, если задача предусматривает три возможных варианта ответа, можно настроить отдельную реакцию системы на каждую комбинацию возможных ответов.</p>
 
-      <p>You can also add hints for learners.</p>
+        <p>Также можно добавить подсказки для слушателей.</p>
+        <p>Не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
+          <p>Вы можете использовать следующую задачу в качестве примера.</p>
 
-      <p>Use the following example problem as a model.</p>
-      
-      <p>Which of the following is a fruit? Check all that apply.</p>
-      <choiceresponse>
-        <checkboxgroup>
-          <choice correct="true">apple
-            <choicehint selected="true">You are correct that an apple is a fruit because it is the fertilized ovary that comes from an apple tree and contains seeds.</choicehint>
-            <choicehint selected="false">Remember that an apple is also a fruit.</choicehint>
-          </choice>
-          <choice correct="true">pumpkin
-            <choicehint selected="true">You are correct that a pumpkin is a fruit because it is the fertilized ovary of a squash plant and contains seeds.</choicehint>
-            <choicehint selected="false">Remember that a pumpkin is also a fruit.</choicehint>
-          </choice>
-          <choice correct="false">potato
-            <choicehint selected="true">A potato is a vegetable, not a fruit, because it does not come from a flower and does not contain seeds.</choicehint>              
-            <choicehint selected="false">You are correct that a potato is a vegetable because it is an edible part of a plant in tuber form.</choicehint>
-          </choice>
-          <choice correct="true">tomato
-            <choicehint selected="true">You are correct that a tomato is a fruit because it is the fertilized ovary of a tomato plant and contains seeds.</choicehint>
-            <choicehint selected="false">Many people mistakenly think a tomato is a vegetable. However, because a tomato is the fertilized ovary of a tomato plant and contains seeds, it a fruit.</choicehint>
-          </choice>
-          <compoundhint value="A B D">An apple, pumpkin, and tomato are all fruits as they all are fertilized ovaries of a plant and contain seeds.</compoundhint>
-          <compoundhint value="A B C D">You are correct that an apple, pumpkin, and tomato are all fruits as they all are fertilized ovaries of a plant and contain seeds. However, a potato is not a fruit as it is an edible part of a plant in tuber form and is classified as a vegetable.</compoundhint>
-        </checkboxgroup>
-      </choiceresponse>
-      <demandhint>
-        <hint>A fruit is the fertilized ovary from a flower.</hint>
-        <hint>A fruit contains seeds of the plant.</hint>
-      </demandhint>
+        <p>Что из нижеследующего является фруктом? Выберите все варианты.</p>
+        <choiceresponse>
+          <checkboxgroup>
+            <choice correct="true">Яблоко
+              <choicehint selected="true">Яблоко является фруктом, т.к. это суть оплодотворенная завязь, которая растет на дереве и содержит семена.</choicehint>
+              <choicehint selected="false">Яблоко — это тоже фрукт.</choicehint>
+            </choice>
+            <choice correct="true">Тыква
+              <choicehint selected="true">Тыква является фруктом, т.к. это суть оплодотворенная завязь, которая содержит семена.</choicehint>
+              <choicehint selected="false">Тыква — это тоже фрукт.</choicehint>
+            </choice>
+            <choice correct="false">Картофель
+              <choicehint selected="true">Картофель является овощем, т.к. это съедобная часть растения в виде клубней.</choicehint>
+              <choicehint selected="false">Картофель это овощ, а не фрукт, т.к. он не происходит из цветка, и не содержит семян.</choicehint>
+            </choice>
+            <choice correct="true">Томат
+              <choicehint selected="true">Томат является фруктом, т.к. это суть оплодотворенная завязь, которая содержит семена.</choicehint>
+              <choicehint selected="false">Многие ошибочно считают томат овощем; однако, в связи с тем, что томат суть оплодотворенная завязь, которая содержит семена, — это фрукт.</choicehint>
+            </choice>
+            <compoundhint value="A B D">Яблоко, тыква и томат являются фркутами, т.к. они происходят из оплодотворенных завязей, и содержат семена.</compoundhint>
+            <compoundhint value="A B C D">Яблоко, тыква и томат являются фркутами, т.к. они происходят из оплодотворенных завязей, и содержат семена. Однако, картофель является не фруктом, а овощем, т.к. это съедобная часть растения в виде клубня.</compoundhint>
+          </checkboxgroup>
+        </choiceresponse>
+        <demandhint>
+          <hint>Фрукт происходит из оплодотворенного цветка.</hint>
+          <hint>Фрукт содержит семена растения.</hint>
+        </demandhint>
       </problem>

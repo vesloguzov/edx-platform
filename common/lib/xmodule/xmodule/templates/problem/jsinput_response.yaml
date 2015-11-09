@@ -1,33 +1,22 @@
 ---
 metadata:
-    display_name: Custom Javascript Display and Grading
+    display_name: Задача с использованием Javascript
     markdown: !!null
     showanswer: never
 data: |
       <problem>
       <p>
-      In these problems (also called custom JavaScript problems or JS Input
-      problems), you add a problem or tool that uses JavaScript in Studio.
-      Studio embeds the problem in an IFrame so that your students can
-      interact with it in the LMS. You can grade your students' work using
-      JavaScript and some basic Python, and the grading is integrated into the
-      edX grading system.
+      В этих задачах необходима программа на JavaScript.
+      Конструктор вставляет программу в IFrame, и студенты могут
+      взаимодействовать с ней. Оценивание работы студентов осуществляется с помощью
+      JavaScript (и немного Python) и интегрируется в общую систему оценивания.
       </p>
       <p>
-      The JS Input problem that you create must use HTML, JavaScript, and cascading
-      style sheets (CSS). You can use any application creation tool, such as the
-      Google Web Toolkit (GWT), to create your JS Input problem.
+      Задачи, которые вы создаете, должны использовать HTML, JavaScript и CSS.
       </p>
-      <p>      
-      For more information, see 
-      <a href="http://edx.readthedocs.org/projects/edx-partner-course-staff/en/latest/exercises_tools/custom_javascript.html" target="_blank">
-      Custom JavaScript Problem</a> in <i>Building and Running an edX Course</i>.
-      </p>
-      <p>JavaScript developers should also see <a href="http://edx.readthedocs.org/projects/edx-developer-guide/en/latest/extending_platform/javascript.html" target="_blank">
-      Custom JavaScript Applications</a> in the <i>EdX Developer's Guide</i>.</p>
-      <p>When you add the problem, be sure to select <strong>Settings</strong> 
-      to specify a <strong>Display Name</strong> and other values that apply.</p>
-      <p>You can use the following example problem as a model.</p>
+
+      <p>После добавления задачи не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
+      <p>Вы можете использовать следующую задачу в качестве примера.</p>
 
       <script type="loncapa/python">
       <![CDATA[
@@ -52,8 +41,7 @@ data: |
         '''
       ]]>
       </script>
-      <p>In the following image, click the objects until the cone is yellow 
-      and the cube is blue.</p>
+      <p>Кликайте по объектам на картинке, пока конус не станет жёлтым, а куб — голубым.</p>
       <customresponse cfn="vglcfn">
         <jsinput gradefn="WebGLDemo.getGrade"
           get_statefn="WebGLDemo.getState"

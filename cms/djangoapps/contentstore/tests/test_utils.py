@@ -125,7 +125,7 @@ class CourseImageTestCase(ModuleStoreTestCase):
     def test_get_image_url(self):
         """Test image URL formatting with standard image name."""
         course_image = u"images_course_image.jpg"
-        course = CourseFactory.create()
+        course = CourseFactory.create(course_image=course_image)
         self.verify_url(
             unicode(course.id.make_asset_key('asset', course.course_image)),
             utils.course_image_url(course)

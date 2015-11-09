@@ -1,19 +1,18 @@
 ---
 metadata:
-    display_name: Anonymous User ID
+    display_name: Анонимный идентификатор пользователя
 data: |
-      <p>Your explanatory text here.</p>
-      <p><a href="https://YOUR_UNIVERSITY.qualtrics.com/SE/?SID=SV_###############&a=%%USER_ID%%" target="_blank">YOUR_LINK_TEXT</a></p>
-      
-      <!-- You can include %%USER_ID%% to include an anonymized user ID in your outside services so that you can relate them later.
-        
-        This example is a Qualtrics template:
-          - Replace the "###############" with your Survey ID.
-          - Also replace "YOUR_UNIVERSITY" with your qualtrics ID.
-          - Finally, replace "YOUR_LINK_TEXT" with your link text.
-          - If you wish to embed your survey into the courseware instead of opening a new tab, replace the above HTML with what is provided below.
-            
-            <p>Your explanatory text here.</p>
-            <iframe src="https://YOUR_UNIVERSITY.qualtrics.com/SE/?SID=SV_###############&a=%%USER_ID%%" height="1000" width="800" />
-        
+      <p>Сюда поместите текст с пояснением.</p>
+      <p><a href="https://ВАША_ОРГАНИЗАЦИЯ.qualtrics.com/SE/?SID=SV_###############&a=%%USER_ID%%" target="_blank">ТЕКСТ_ССЫЛКИ</a></p>
+
+      <!-- Чтобы на стороннем сервисе использовать анонимный идентификатор пользователя, Вы можете вставить маркер %%USER_ID%%.
+
+        В данном примере использован шаблон Qualtrics:
+          - Замените "###############" на идентификатор Вашего опроса.
+          - Также замените "ВАША_ОРГАНИЗАЦИЯ" на Ваш идентификатор на Qualtrix.
+          - Замените "ТЕКСТ_ССЫЛКИ" на собственный текст.
+          - Если Вы хотите вставить свой опрос прямо в содержимое курса, а не давать ссылку на него, замените текущий HTML-код на приведённый ниже.
+
+            <p>Сюда поместите текст с пояснением.</p>
+            <iframe src="https://ВАША_ОРГАНИЗАЦИЯ.qualtrics.com/SE/?SID=SV_###############&a=%%USER_ID%%" height="1000" width="800" />
       -->

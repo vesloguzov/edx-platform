@@ -1,46 +1,43 @@
 ---
 metadata:
-    display_name: Multiple Choice with Hints and Feedback
+    display_name: Выбор варианта с подсказками
     markdown: |
 
-       You can provide feedback for each option in a multiple choice problem.
+       Этот тип задачи позволяет предоставить слушателям дополнительную информацию для каждого варианта ответа, а также подсказки для слушателей.
 
-       You can also add hints for learners.
+       Не забудьте зайти в «Настройки», чтобы изменить отображаемое название компонента и другие опции.
 
-       Be sure to select Settings to specify a Display Name and other values that apply.
+       Вы можете использовать следующую задачу в качестве примера.
 
-       Use the following example problem as a model.
+       >>Что из нижеследующего является овощем?<<
+       ( ) Яблоко {{Яблоко является фруктом, т.к. это суть оплодотворенная завязь, которая растет на дереве и содержит семена.}}
+       ( ) Тыква {{Тыква является фруктом, т.к. это суть оплодотворенная завязь, которая содержит семена.}}
+       (x) Картофель {{Картофель является овощем, т.к. это съедобная часть растения в виде клубней.}}
+       ( ) Томат {{Многие ошибочно считают томат овощем; однако, в связи с тем, что томат суть оплодотворенная завязь, которая содержит семена — это фрукт.}}
 
-       >>Which of the following is a vegetable?<<
-       ( ) apple {{An apple is the fertilized ovary that comes from an apple tree and contains seeds, meaning it is a fruit.}}
-       ( ) pumpkin {{A pumpkin is the fertilized ovary of a squash plant and contains seeds, meaning it is a fruit.}}
-       (x) potato {{A potato is an edible part of a plant in tuber form and is a vegetable.}}
-       ( ) tomato {{Many people mistakenly think a tomato is a vegetable. However, because a tomato is the fertilized ovary of a tomato plant and contains seeds, it is a fruit.}}
-
-       ||A fruit is the fertilized ovary from a flower.||
-       ||A fruit contains seeds of the plant.||
+       ||Фрукт происходит из оплодотворенного цветка.||
+       ||Фрукт содержит семена растения.||
 
 hinted: true
 data: |
-   <problem>
-     
-     <p>You can provide feedback for each option in a multiple choice problem.</p>
+        <problem>
 
-     <p>You can also add hints for learners.</p>
+          <p>Этот тип задачи позволяет предоставить слушателям дополнительную информацию для каждого варианта ответа, а также подсказки для слушателей.</p>
 
-     <p>Use the following example problem as a model.</p>
+          <p>Не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
+          <p>Вы можете использовать следующую задачу в качестве примера.</p>
 
-     <p>Which of the following is a vegetable?</p>
-     <multiplechoiceresponse>
-       <choicegroup type="MultipleChoice">
-         <choice correct="false">apple <choicehint>An apple is the fertilized ovary that comes from an apple tree and contains seeds, meaning it is a fruit.</choicehint></choice>
-         <choice correct="false">pumpkin <choicehint>A pumpkin is the fertilized ovary of a squash plant and contains seeds, meaning it is a fruit.</choicehint></choice>
-         <choice correct="true">potato <choicehint>A potato is an edible part of a plant in tuber form and is a vegetable.</choicehint></choice>
-         <choice correct="false">tomato <choicehint>Many people mistakenly think a tomato is a vegetable. However, because a tomato is the fertilized ovary of a tomato plant and contains seeds, it is a fruit.</choicehint></choice>
-       </choicegroup>
-     </multiplechoiceresponse>
-     <demandhint>
-       <hint>A fruit is the fertilized ovary from a flower.</hint>
-       <hint>A fruit contains seeds of the plant.</hint>
-     </demandhint>
-     </problem>
+          <p>Что из нижеследующего является овощем?</p>
+          <multiplechoiceresponse>
+            <choicegroup type="MultipleChoice">
+              <choice correct="false">Яблоко <choicehint>Яблоко является фруктом, т.к. это суть оплодотворенная завязь, которая растет на дереве и содержит семена.</choicehint></choice>
+              <choice correct="false">Тыква <choicehint>Тыква является фруктом, т.к. это суть оплодотворенная завязь, которая содержит семена.</choicehint></choice>
+              <choice correct="true">Картофель <choicehint>Картофель является овощем, т.к. это съедобная часть растения в виде клубней.</choicehint></choice>
+              <choice correct="false">Томат <choicehint>Многие ошибочно считают томат овощем; однако, в связи с тем, что томат суть оплодотворенная завязь, которая содержит семена — это фрукт.</choicehint></choice>
+            </choicegroup>
+          </multiplechoiceresponse>
+          <demandhint>
+            <hint>Фрукт происходит из оплодотворенного цветка.</hint>
+            <hint>Фрукт содержит семена растения.</hint>
+          </demandhint>
+        </problem>

@@ -1,53 +1,49 @@
 ---
 metadata:
-    display_name: Multiple Choice
+    display_name: Выбор варианта
     markdown: |
-       Multiple choice problems allow learners to select only one option. Learners can see all the options along with the problem text.
+       Задачи с выбором варианта позволяют студенту выбрать только один вариант ответа. Все варианты ответа показываются рядом с текстом задачи.
 
-       When you add the problem, be sure to select Settings to specify a Display Name and other values that apply.
+       После добавления задачи не забудьте зайти в «Настройки», чтобы изменить отображаемое название компонента и другие опции.
 
-       You can use the following example problem as a model.
+       Вы можете использовать следующую задачу в качестве примера.
 
-       >>Which of the following countries has the largest population?<<
-       ( ) Brazil {{ timely feedback -- explain why an almost correct answer is wrong }}
-       ( ) Germany
-       (x) Indonesia
-       ( ) Russia
+       >>Выберите страну с наибольшим населением<<
+       ( ) Бразилия
+       ( ) Германия
+       (x) Индонезия
+       ( ) Россия
 
        [explanation]
-       According to September 2014 estimates:
-       The population of Indonesia is approximately 250 million.
-       The population of Brazil  is approximately 200 million.
-       The population of Russia is approximately 146 million.
-       The population of Germany is approximately 81 million.
+       По оценке на сентябрь 2014:
+       Население Индонезии — приблизительно 250 млн.
+       Население Бразилии — приблизительно 200 млн.
+       Население России — приблизительно 146 млн.
+       Население Германии — приблизительно 81 млн.
        [explanation]
 
 data: |
-   <problem>
-   <p>Multiple choice problems allow learners to select only one option.
-       Learners can see all the options along with the problem text.</p>
-   <p>When you add the problem, be sure to select <strong>Settings</strong> 
-   to specify a <strong>Display Name</strong> and other values that apply.</p>
-   <p>You can use the following example problem as a model.</p>
-      <p>Which of the following countries has the largest population?</p>
-      <multiplechoiceresponse>
-       <choicegroup type="MultipleChoice">
-          <choice correct="false" name="brazil">Brazil
-            <choicehint>timely feedback -- explain why an almost correct answer is wrong</choicehint>
-          </choice>
-          <choice correct="false" name="germany">Germany</choice>
-          <choice correct="true" name="indonesia">Indonesia</choice>
-          <choice correct="false" name="russia">Russia</choice>
-       </choicegroup>
-      </multiplechoiceresponse>
-    <solution>
-      <div class="detailed-solution">
-        <p>Explanation</p>
-        <p>According to September 2014 estimates:</p>
-        <p>The population of Indonesia is approximately 250 million.</p>
-        <p>The population of Brazil  is approximately 200 million.</p>
-        <p>The population of Russia is approximately 146 million.</p>
-        <p>The population of Germany is approximately 81 million.</p>
-      </div>
-    </solution>
-    </problem>
+        <problem>
+          <p>Задачи с выбором варианта позволяют студенту выбрать только один вариант ответа. Все варианты ответа показываются рядом с текстом задачи.</p>
+          <p>После добавления задачи не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
+          <p>Вы можете использовать следующую задачу в качестве примера.</p>
+          <p>Выберите страну с наибольшим населением</p>
+            <multiplechoiceresponse>
+              <choicegroup type="MultipleChoice">
+                <choice correct="false" name="brazil">Бразилия</choice>
+                <choice correct="false" name="germany">Германия</choice>
+                <choice correct="true" name="indonesia">Индонезия</choice>
+                <choice correct="false" name="russia">Россия</choice>
+              </choicegroup>
+            </multiplechoiceresponse>
+          <solution>
+            <div class="detailed-solution">
+              <p>Пояснение</p>
+              <p>По оценке на сентябрь 2014:</p>
+              <p>Население Индонезии — приблизительно 250 млн.</p>
+              <p>Население Бразилии — приблизительно 200 млн.</p>
+              <p>Население России — приблизительно 146 млн.</p>
+              <p>Население Германии — приблизительно 81 млн.</p>
+            </div>
+          </solution>
+        </problem>

@@ -131,7 +131,7 @@ def get_course_and_check_access(course_key, user, depth=0, require_global_staff=
     for the view functions in this file.
     """
     if (not has_studio_read_access(user, course_key)
-        or require_global_staff and not GlobalStaff().has_user(user)):
+            or require_global_staff and not GlobalStaff().has_user(user)):
         raise PermissionDenied()
     course_module = modulestore().get_course(course_key, depth=depth)
     return course_module
@@ -909,6 +909,7 @@ def catalog_visibility_handler(request, course_key_string):
                 django.utils.html.escape(err.message),
                 content_type="text/plain"
             )
+
 
 def _validate_and_update_visibility_from_json(course_module, json_dict, user):
     """

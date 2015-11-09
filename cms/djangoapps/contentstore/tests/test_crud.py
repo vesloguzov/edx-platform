@@ -1,3 +1,4 @@
+import re
 import unittest
 
 from opaque_keys.edx.locator import LocalId
@@ -52,14 +53,20 @@ class TemplateTests(unittest.TestCase):
         for template in found['problem']:
             self.assertIn('metadata', template)
             self.assertIn('display_name', template['metadata'])
-            if template['metadata']['display_name'] == 'Dropdown':
+            if template['template_id'] == 'optionresponse.yaml':
                 dropdown = template
                 break
         self.assertIsNotNone(dropdown)
         self.assertIn('markdown', dropdown['metadata'])
         self.assertIn('data', dropdown)
-        self.assertRegexpMatches(dropdown['metadata']['markdown'], r'^Dropdown.*')
-        self.assertRegexpMatches(dropdown['data'], r'<problem>\s*<p>Dropdown.*')
+        # make sure dropdown problem definition [[incorrect, (correct)]] is present in markdown
+        self.assertRegexpMatches(
+            dropdown['metadata']['markdown'],
+            re.compile(r'\[\[.*\([\w\s]*\).*\]\]', flags=re.MULTILINE | re.UNICODE | re.DOTALL))
+        # make sure dropdown xml tags are present in data
+        self.assertRegexpMatches(
+            dropdown['data'],
+            re.compile(r'<problem>.*<optionresponse>.*', flags=re.MULTILINE | re.UNICODE | re.DOTALL))
 
     def test_get_some_templates(self):
         self.assertEqual(len(SequenceDescriptor.templates()), 0)

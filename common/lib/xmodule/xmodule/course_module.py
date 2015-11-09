@@ -682,7 +682,7 @@ class CourseFields(object):
         ),
         scope=Scope.settings,
         # Empty default value enabling default image in LMS
-        default="" #images_course_image.jpg"
+        default=""
     )
     issue_badges = Boolean(
         display_name=_("Issue Open Badges"),

@@ -910,6 +910,7 @@ class AnonymousLookupTable(ModuleStoreTestCase):
         self.assertEqual(anonymous_id, anonymous_id_for_user(self.user, course2.id, save=False))
 
 
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 class IndexViewTest(ModuleStoreTestCase):
     """
     Tests for index view course listing

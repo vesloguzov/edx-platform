@@ -38,7 +38,7 @@ class WordCloudFields(object):
         display_name=_("Display Name"),
         help=_("Display name for this module"),
         scope=Scope.settings,
-        default="Word cloud"
+        default=_("Word cloud")
     )
     num_inputs = Integer(
         display_name=_("Inputs"),

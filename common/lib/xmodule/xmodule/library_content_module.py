@@ -6,7 +6,6 @@ import json
 from lxml import etree
 from copy import copy
 from capa.responsetypes import registry
-from gettext import ngettext
 from lazy import lazy
 
 from .mako_module import MakoModuleDescriptor
@@ -62,7 +61,7 @@ class LibraryContentFields(object):
     display_name = String(
         display_name=_("Display Name"),
         help=_("Display name for this module"),
-        default="Randomized Content Block",
+        default=_("Randomized Content Block"),
         scope=Scope.settings,
     )
     source_library_id = String(
@@ -396,12 +395,12 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
                 validation.set_summary(
                     StudioValidationMessage(
                         StudioValidationMessage.WARNING,
-                        _(u'This component is out of date. The library has new content.'),
+                        self.ugettext(u'This component is out of date. The library has new content.'),
                         # TODO: change this to action_runtime_event='...' once the unit page supports that feature.
                         # See https://openedx.atlassian.net/browse/TNL-993
                         action_class='library-update-btn',
                         # Translators: {refresh_icon} placeholder is substituted to "↻" (without double quotes)
-                        action_label=_(u"{refresh_icon} Update now.").format(refresh_icon=u"↻")
+                        action_label=self.ugettext(u"{refresh_icon} Update now.").format(refresh_icon=u"↻")
                     )
                 )
                 return False
@@ -409,9 +408,9 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
             validation.set_summary(
                 StudioValidationMessage(
                     StudioValidationMessage.ERROR,
-                    _(u'Library is invalid, corrupt, or has been deleted.'),
+                    self.ugettext(u'Library is invalid, corrupt, or has been deleted.'),
                     action_class='edit-button',
-                    action_label=_(u"Edit Library List.")
+                    action_label=self.ugettext(u"Edit Library List.")
                 )
             )
             return False
@@ -436,7 +435,7 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
             validation.set_summary(
                 StudioValidationMessage(
                     StudioValidationMessage.ERROR,
-                    _(
+                    self.ugettext(
                         u"This course does not support content libraries. "
                         u"Contact your system administrator for more information."
                     )
@@ -447,9 +446,9 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
             validation.set_summary(
                 StudioValidationMessage(
                     StudioValidationMessage.NOT_CONFIGURED,
-                    _(u"A library has not yet been selected."),
+                    self.ugettext(u"A library has not yet been selected."),
                     action_class='edit-button',
-                    action_label=_(u"Select a Library.")
+                    action_label=self.ugettext(u"Select a Library.")
                 )
             )
             return validation
@@ -464,9 +463,9 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
                 validation,
                 StudioValidationMessage(
                     StudioValidationMessage.WARNING,
-                    _(u'There are no matching problem types in the specified libraries.'),
+                    self.ugettext(u'There are no matching problem types in the specified libraries.'),
                     action_class='edit-button',
-                    action_label=_(u"Select another problem type.")
+                    action_label=self.ugettext(u"Select another problem type.")
                 )
             )
 
@@ -476,19 +475,19 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
                 StudioValidationMessage(
                     StudioValidationMessage.WARNING,
                     (
-                        ngettext(
+                        self.ungettext(
                             u'The specified library is configured to fetch {count} problem, ',
                             u'The specified library is configured to fetch {count} problems, ',
                             self.max_count
                         ) +
-                        ngettext(
+                        self.ungettext(
                             u'but there is only {actual} matching problem.',
                             u'but there are only {actual} matching problems.',
                             matching_children_count
                         )
                     ).format(count=self.max_count, actual=matching_children_count),
                     action_class='edit-button',
-                    action_label=_(u"Edit the library configuration.")
+                    action_label=self.ugettext(u"Edit the library configuration.")
                 )
             )
 
@@ -508,8 +507,8 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
             ]
         all_libraries.sort(key=lambda entry: entry[1])  # Sort by name
         if self.source_library_id and self.source_library_key not in [entry[0] for entry in all_libraries]:
-            all_libraries.append((self.source_library_id, _(u"Invalid Library")))
-        all_libraries = [(u"", _("No Library Selected"))] + all_libraries
+            all_libraries.append((self.source_library_id, self.ugettext(u"Invalid Library")))
+        all_libraries = [(u"", self.ugettext("No Library Selected"))] + all_libraries
         values = [{"display_name": name, "value": unicode(key)} for key, name in all_libraries]
         return values
 
@@ -571,3 +570,15 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
             if field.is_set_on(self):
                 xml_object.set(field_name, unicode(field.read_from(self)))
         return xml_object
+
+    def ugettext(self, message):
+        """
+        Runtime translation function
+        """
+        return self.runtime.service(self, "i18n").ugettext(message)
+
+    def ungettext(self, message, message_plural, count):
+        """
+        Runtime translation function
+        """
+        return self.runtime.service(self, "i18n").ungettext(message, message_plural, count)

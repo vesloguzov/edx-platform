@@ -1,6 +1,6 @@
 ---
 metadata:
-    display_name: E-text Written in LaTeX
+    display_name: Текст с использованием LaTeX
     source_code: |
         \subsection{Example of E-text in LaTeX}
 
@@ -12,10 +12,10 @@ metadata:
 
 data: |
     <html>
-        <h3>Example: E-text page</h3>
-        <p>You can write complex equations in LaTeX.</p>
-        <p>When you add the component, be sure to select <strong>Settings</strong> 
-        to specify a <strong>Display Name</strong> and other values that apply.</p>
-        <p>When editing this component, select <strong>Launch Latex Source Compiler</strong> to edit equations.</p>
-        <p>Then, in the equation editor, select <strong>Save and Compile to edX XML</strong> to see the equation in the component.</p>
+        <h3>Пример</h3>
+        <p>Вы можете записывать целые выражения с помощью LaTeX.</p>
+        <p>Не забудьте зайти в <strong>«Настройки»</strong>, чтобы
+        изменить отображаемое название и другие необходимые вам параметры.</p>
+        <p>Чтобы изменить компонент, выберите <strong>«Запуск компилятора LaTeX»</strong> для редактирования выражений.</p>
+        <p>Когда введете все выражения, выберите <strong>«Save and Compile to edX XML»</strong>, а затем <strong>«Сохранить»</strong>, чтобы увидеть, как готовое выражение выглядит в компоненте.</p>
     </html>

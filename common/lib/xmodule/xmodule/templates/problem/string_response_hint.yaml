@@ -1,54 +1,45 @@
 ---
 metadata:
-    display_name: Text Input with Hints and Feedback
-    markdown: | 
+    display_name: Текстовый ввод с подсказками
+    markdown: |
 
-        You can provide feedback for the correct answer in text input problems, as well as for specific incorrect answers.
+        Можно предоставить дополнительную информацию правильного варианта ответа, а также для некоторых неправильных вариантов.
 
-        Use feedback on expected incorrect answers to address common misconceptions and to provide guidance on how to arrive at the correct answer.
+        Не забудьте зайти в «Настройки», чтобы изменить отображаемое название компонента и другие опции.
+        Вы можете использовать следующую задачу в качестве примера.
 
-        Be sure to select Settings to specify a Display Name and other values that apply.
+        >>Какой штат США является наибольшим по площади?<<
 
-        Use the following example problem as a model.
+        =Аляска {{Площадь Аляски — 576,400 квадратных миль, более чем вдвое больше, чем у второго по площади штата, Техаса.}}
 
-        >>Which U.S. state has the largest land area?<<
+        not=Техас {{Техас всего лишь второй по площади штат, около 261,797 квадратных миль.}}
 
-        =Alaska {{Alaska is 576,400 square miles, more than double the land area
-        of the second largest state, Texas.}}
+        not=Калифорния {{Калифорния — третий по площади штат, 155,959 квадратных миль.}}
 
-        not=Texas {{While many people think Texas is the largest state, it is actually the second largest, with 261,797 square miles.}}
-
-        not=California {{California is the third largest state, with 155,959 square miles.}}
-
-        ||Consider the square miles, not population.||
-        ||Consider all 50 states, not just the continental United States.||
+        ||Вспомните все 50 штатов, а не только «континентальную часть» США.||
 
 hinted: true
 data: |
-  <problem>
+        <problem>
+          <p>Можно предоставить дополнительную информацию правильного варианта ответа, а также для некоторых неправильных вариантов.</p>
 
-    <p>You can provide feedback for the correct answer in text input problems, as well as for specific incorrect answers.</p>
+          <p>Не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
+          <p>Вы можете использовать следующую задачу в качестве примера.</p>
 
-    <p>Use feedback on expected incorrect answers to address common misconceptions and to provide guidance on how to arrive at the correct answer.</p>
+          <p>Какой штат США является наибольшим по площади?</p>
 
-    <p>Use the following example problem as a model.</p>
- 
-    <p>Which U.S. state has the largest land area?</p>
+          <stringresponse answer="Аляска" type="ci" >
 
-    <stringresponse answer="Alaska" type="ci" >
+            <correcthint>Площадь Аляски — 576,400 квадратных миль, более чем вдвое больше, чем у второго по площади штата, Техаса.</correcthint>
 
-    <correcthint>Alaska is 576,400 square miles, more than double the land area of the second largest state, Texas.</correcthint>
+            <stringequalhint answer="Техас">Техас всего лишь второй по площади штат, около 261,797 квадратных миль.</stringequalhint>
 
-    <stringequalhint answer="Texas">While many people think Texas is the largest state, it is actually the second largest, with 261,797 square miles.</stringequalhint>
+            <stringequalhint answer="Калифорния">Калифорния — третий по площади штат, 155,959 квадратных миль.</stringequalhint>
 
-    <stringequalhint answer="California">California is the third largest state, with 155,959 square miles.</stringequalhint>
+            <textline label="Какой штат США является наибольшим по площади?" size="20"/>
+          </stringresponse>
 
-    <textline label="Which U.S. state has the largest land area?" size="20"/>
-    </stringresponse>
-
-    <demandhint>
-      <hint>Consider the square miles, not population.</hint>
-      <hint>Consider all 50 states, not just the continental United States.</hint>
-    </demandhint>
-
-  </problem>
+          <demandhint>
+            <hint>Вспомните все 50 штатов, а не только «континентальную часть» США.</hint>
+          </demandhint>
+        </problem>

@@ -1,60 +1,50 @@
 ---
 metadata:
-    display_name: Numerical Input
+    display_name: Числовой ввод
     markdown: |
-        In a numerical input problem, learners enter numbers or a specific and relatively simple mathematical expression. Learners enter the response in plain text, and the system then converts the text to a symbolic expression that learners can see below the response field.
+        В задачах на числовой ввод студенты вводят ответ в виде чисел или простых математических выражений. Ответ вводится в виде текста; система преобразовывает текст в символьное выражение, которое отображается рядом с полем ввода ответа.
 
-        The system can handle several types of characters, including basic operators, fractions, exponents, and common constants such as "i". You can refer learners to "Entering Mathematical and Scientific Expressions" in the edX Guide for Students for more information.
+        Система воспринимает стандартные арифметические операции, дроби, степени, и специальные значения, такие как «i».
 
-        When you add the problem, be sure to select Settings to specify a Display Name and other values that apply.
+        Не забудьте зайти в «Настройки», чтобы изменить отображаемое название компонента и другие опции.
 
-        You can use the following example problems as models.
+        Вы можете использовать следующие задачи в качестве примеров.
 
-        >>How many miles away from Earth is the sun? Use scientific notation to answer.<<
+        >>Напишите расстояние от Земли до Солнца в милях. В ответе используйте экспоненциальную форму записи чисел.<<
 
-        = 9.3*10^7 
-        or= 9.296*10^7 
+        = 9.3*10^7
+        or= 9.296*10^7
 
-        >>The square of what number is -100?<<
+        >>Квадрат какого числа равен -100?<<
 
-        = 10*i 
+        = 10*i
 
         [explanation]
-        The sun is 93,000,000, or 9.3*10^7, miles away from Earth.
-        -100 is the square of 10 times the imaginary number, i.
+        Солнце находится в 93,000,000, или 9.3*10^7, милях от Земли.
+        -100 является квадратом 10, умноженного на мнимую единицу, i.
         [explanation]
 data: |
-    <problem>
+        <problem>
+            <p>В задачах на числовой ввод студенты вводят ответ в виде чисел или простых математических выражений. Ответ вводится в виде текста; система преобразовывает текст в символьное выражение, которое отображается рядом с полем ввода ответа.</p>
 
-    <p>In a numerical input problem, learners enter numbers or a specific and
-    relatively simple mathematical expression. Learners enter the response in
-    plain text, and the system then converts the text to a symbolic expression
-    that learners can see below the response field.</p>
+            <p>Система воспринимает стандартные арифметические операции, дроби, степени, и специальные значения, такие как «i».</p>
+            <p>Не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
 
-    <p>The system can handle several types of characters, including basic
-    operators, fractions, exponents, and common constants such as i. You can 
-    refer learners to 
-    <a href="http://edx.readthedocs.org/projects/edx-guide-for-students/en/latest/SFD_mathformatting.html" target="_blank">
-    Entering Mathematical and Scientific Expressions</a> in the <i>edX Guide for
-    Students</i> for information about how to enter text into the field.</p>
-    <p>When you add the problem, be sure to select <strong>Settings</strong> 
-    to specify a <strong>Display Name</strong> and other values that apply.</p>
+            <p>Вы можете использовать следующие задачи в качестве примеров.</p>
+            <p>Напишите расстояние от Земли до Солнца в милях. В ответе используйте экспоненциальную форму записи чисел.</p>
+            <numericalresponse answer="9.3*10^7">
+                <formulaequationinput label="Напишите расстояние от Земли до Солнца в милях. В ответе используйте экспоненциальную форму записи чисел." />
+            </numericalresponse>
 
-    <p>You can use the following example problems as models.</p>
-      <p>How many miles away from Earth is the sun? Use scientific notation to answer.</p>
-      <numericalresponse answer="9.3*10^7">
-        <formulaequationinput label="How many million miles are between Earth and the sun? Use scientific notation to answer." />
-      </numericalresponse>
-
-      <p>The square of what number is -100?</p>
-      <numericalresponse answer="10*i">
-        <formulaequationinput label="The square of what number is -100?" />
-      </numericalresponse>
-    <solution>
-      <div class="detailed-solution">
-        <p>Explanation</p>
-        <p>The sun is 93,000,000, or 9.3*10^7, miles away from Earth.</p>
-        <p>-100 is the square of 10 times the imaginary number, i.</p>
-      </div>
-    </solution>
-    </problem>
+            <p>Квадрат какого числа равен -100?</p>
+            <numericalresponse answer="10*i">
+                <formulaequationinput label="Квадрат какого числа равен -100?" />
+            </numericalresponse>
+            <solution>
+            <div class="detailed-solution">
+                <p>Пояснение</p>
+                <p>Солнце находится в 93,000,000, или 9.3*10^7, милях от Земли.</p>
+                <p>-100 является квадратом 10, умноженного на мнимую единицу, i.</p>
+            </div>
+            </solution>
+        </problem>

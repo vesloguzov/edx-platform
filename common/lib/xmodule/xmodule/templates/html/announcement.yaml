@@ -1,18 +1,18 @@
 ---
 metadata:
-    display_name: Announcement
+    display_name: Объявление
 data: |
-      <p>To use this template, replace the example text with your own text.</p>
-      <p>When you add the component, be sure to select <strong>Settings</strong> 
-      to specify a <strong>Display Name</strong> and other values that apply.</p>
-      <h3>Announcement Date</h3>
+      <p>Замените в этом шаблоне текст своим собственным.</p>
+      <p>После добавления компонента не забудьте выбрать пункт <strong>«Настройки»</strong>
+        чтобы уточнить отображаемое и другие опции</p>
+      <h3>Дата объявления</h3>
       <section class='update-description'>
-                   <section class='primary'>
-                              <p>Short note that introduces the topic</p>
-                              <p class='author'>Instructor's name</p>
-                   </section>
-                   <h4>Heading for announcement 1</h4>
-                   <p>Announcement 1 text</p>
-                   <h4>Heading for announcement 2</h4>
-                   <p>Announcement 2 text</p>
+        <section class='primary'>
+          <p>Короткая заметка</p>
+          <p class='author'>Автор</p>
+        </section>
+        <h4>Заголовок объявления 1</h4>
+        <p>Текст объявления 1</p>
+        <h4>Заголовок объявления 2</h4>
+        <p>Текст объявления 2</p>
       </section>

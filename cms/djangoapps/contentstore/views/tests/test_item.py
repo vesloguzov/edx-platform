@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for items views."""
 import json
 from datetime import datetime, timedelta
@@ -11,6 +12,7 @@ from webob import Response
 from django.http import Http404
 from django.test import TestCase
 from django.test.client import RequestFactory
+from django.test.utils import override_settings
 from django.core.urlresolvers import reverse
 from contentstore.utils import reverse_usage_url, reverse_course_url
 
@@ -221,13 +223,18 @@ class GetItemTest(ItemTest):
         root_usage_key = self._create_vertical()
         resp = self.create_xblock(category='split_test', parent_usage_key=root_usage_key)
         split_test_usage_key = self.response_usage_key(resp)
+
         resp = self.create_xblock(parent_usage_key=split_test_usage_key, category='html', boilerplate='announcement.yaml')
         self.assertEqual(resp.status_code, 200)
+        announcement = self.get_item_from_modulestore(self.response_usage_key(resp))
+
         resp = self.create_xblock(parent_usage_key=split_test_usage_key, category='html', boilerplate='zooming_image.yaml')
         self.assertEqual(resp.status_code, 200)
+        zooming_xblock = self.get_item_from_modulestore(self.response_usage_key(resp))
+
         html, __ = self._get_container_preview(split_test_usage_key)
-        self.assertIn('Announcement', html)
-        self.assertIn('Zooming', html)
+        self.assertIn(announcement.display_name, html)
+        self.assertIn(zooming_xblock.display_name, html)
 
     def test_split_test_edited(self):
         """
@@ -442,6 +449,16 @@ class TestCreateItem(ItemTest):
         new_tab = self.get_item_from_modulestore(usage_key)
         self.assertEquals(new_tab.display_name, 'Empty')
 
+    @override_settings(LANGUAGE_CODE='eo')
+    def test_translatable_display_name(self):
+        """
+        Test that a display name of a problem without a boilerplate is translated
+        """
+        resp = self.create_xblock(category='problem')
+        usage_key = self.response_usage_key(resp)
+        obj = self.get_item_from_modulestore(usage_key)
+        self.assertEqual(obj.display_name, u"Blänk Àdvänçéd Prößlém Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт αмєт, ¢#")
+
 
 class TestDuplicateItem(ItemTest):
     """
@@ -577,19 +594,22 @@ class TestDuplicateItem(ItemTest):
         """
         Tests the expected display name for the duplicated xblock.
         """
-        def verify_name(source_usage_key, parent_usage_key, expected_name, display_name=None):
+        def verify_name(source_usage_key, parent_usage_key, expected_name=None, display_name=None):
             usage_key = self._duplicate_item(parent_usage_key, source_usage_key, display_name)
             duplicated_item = self.get_item_from_modulestore(usage_key)
+            if not expected_name:
+                source_item = self.get_item_from_modulestore(source_usage_key)
+                expected_name = u"Duplicate of '{}'".format(source_item.display_name)
             self.assertEqual(duplicated_item.display_name, expected_name)
             return usage_key
 
         # Display name comes from template.
-        dupe_usage_key = verify_name(self.problem_usage_key, self.seq_usage_key, "Duplicate of 'Multiple Choice'")
+        dupe_usage_key = verify_name(self.problem_usage_key, self.seq_usage_key)  # "Duplicate of 'Multiple Choice'"
         # Test dupe of dupe.
-        verify_name(dupe_usage_key, self.seq_usage_key, "Duplicate of 'Duplicate of 'Multiple Choice''")
+        verify_name(dupe_usage_key, self.seq_usage_key)  # "Duplicate of 'Duplicate of 'Multiple Choice''"
 
         # Uses default display_name of 'Text' from HTML component.
-        verify_name(self.html_usage_key, self.seq_usage_key, "Duplicate of 'Text'")
+        verify_name(self.html_usage_key, self.seq_usage_key)  # "Duplicate of 'Text'"
 
         # The sequence does not have a display_name set, so category is shown.
         verify_name(self.seq_usage_key, self.chapter_usage_key, "Duplicate of sequential")
@@ -1378,10 +1398,10 @@ class TestComponentTemplates(CourseTestCase):
         """
         Test that advanced components without display names display their category instead.
         """
-        self.course.advanced_modules.append('graphical_slider_tool')
+        self.course.advanced_modules.append('recommender')
         self.templates = get_component_templates(self.course)
         template = self.get_templates_of_type('advanced')[0]
-        self.assertEqual(template.get('display_name'), 'graphical_slider_tool')
+        self.assertEqual(template.get('display_name'), 'recommender')
 
     def test_advanced_problems(self):
         """

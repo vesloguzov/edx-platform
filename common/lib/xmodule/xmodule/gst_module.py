@@ -18,6 +18,9 @@ from xblock.fields import String, Scope
 
 log = logging.getLogger(__name__)
 
+# Make '_' a no-op so we can scrape strings
+_ = lambda text: text
+
 DEFAULT_RENDER = """
     <h2>Graphic slider tool: Dynamic range and implicit functions.</h2>
 
@@ -60,6 +63,12 @@ DEFAULT_CONFIGURATION = """
 
 
 class GraphicalSliderToolFields(object):
+    display_name = String(
+        display_name=_("Display Name"),
+        help=_("Display name for this module"),
+        scope=Scope.settings,
+        default=_("Graphical Slider Tool")
+    )
     data = String(
         help="Html contents to display for this module",
         default='<render>{}</render><configuration>{}</configuration>'.format(

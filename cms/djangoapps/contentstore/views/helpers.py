@@ -15,6 +15,7 @@ from django.utils.translation import ugettext as _
 from edxmako.shortcuts import render_to_string, render_to_response
 from opaque_keys.edx.keys import UsageKey
 from xblock.core import XBlock
+from xblock.plugin import PluginMissingError
 import dogstats_wrapper as dog_stats_api
 from xmodule.modulestore.django import modulestore
 from xmodule.x_module import DEPRECATION_VSCOMPAT_EVENT
@@ -236,6 +237,16 @@ def create_xblock(parent_locator, user, category, display_name, boilerplate=None
         # For now, migrate them into dicts here.
         if isinstance(data, basestring):
             data = {'data': data}
+
+        # Force translation of no-op display name for components without boilerplate
+        if not boilerplate and display_name is None:
+            try:
+                component_class = XBlock.load_class(category, select=settings.XBLOCK_SELECT_FUNCTION)
+            except PluginMissingError:  # not a component
+                pass
+            else:
+                if hasattr(component_class, 'display_name') and component_class.display_name.default:
+                    metadata['display_name'] = _(component_class.display_name.default)
 
         created_block = store.create_child(
             user.id,
