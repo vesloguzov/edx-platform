@@ -21,7 +21,7 @@ class AccountLegacyProfileSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = UserProfile
         fields = (
-            "name", "gender", "goals", "year_of_birth", "level_of_education", "language", "country", "mailing_address"
+            "nickname", "name", "gender", "goals", "year_of_birth", "level_of_education", "language", "country", "mailing_address"
         )
         # Currently no read-only field, but keep this so view code doesn't need to know.
         read_only_fields = ()

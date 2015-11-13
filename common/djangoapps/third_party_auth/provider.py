@@ -95,14 +95,14 @@ class BaseProvider(object):
         # technically a data race between the creation of this value and the
         # creation of the user object, so it is still possible for users to get
         # an error on submit.
+        # Lektorium: replaced with duplicable nickname
         suggested_username = pipeline_kwargs.get('username')
 
         return {
             'email': cls.get_email(details) or '',
             'name': cls.get_name(details) or '',
             # Removed in favor of automatic username generation
-            # TODO: check if third party auth works correctly without username
-            # 'username': suggested_username,
+            'nickname': suggested_username,
         }
 
     @classmethod

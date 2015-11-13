@@ -80,6 +80,7 @@ class UserAPITestCase(APITestCase):
         :return:
         """
         legacy_profile = UserProfile.objects.get(id=user.id)
+        legacy_profile.nickname = "nick"
         legacy_profile.country = "US"
         legacy_profile.level_of_education = "m"
         legacy_profile.year_of_birth = 1900
@@ -126,9 +127,10 @@ class TestAccountAPI(UserAPITestCase):
         Verify that all account fields are returned (even those that are not shareable).
         """
         data = response.data
-        self.assertEqual(12, len(data))
+        self.assertEqual(13, len(data))
         self.assertEqual(self.user.username, data["username"])
         self.assertEqual(self.user.first_name + " " + self.user.last_name, data["name"])
+        self.assertEqual("nick", data["nickname"])
         self.assertEqual("US", data["country"])
         self.assertEqual("", data["language"])
         self.assertEqual("m", data["gender"])
@@ -240,12 +242,13 @@ class TestAccountAPI(UserAPITestCase):
         def verify_get_own_information():
             response = self.send_get(self.client)
             data = response.data
-            self.assertEqual(12, len(data))
+            self.assertEqual(13, len(data))
             self.assertEqual(self.user.username, data["username"])
             self.assertEqual(self.user.first_name + " " + self.user.last_name, data["name"])
             for empty_field in ("year_of_birth", "level_of_education", "mailing_address"):
                 self.assertIsNone(data[empty_field])
             self.assertIsNone(data["country"])
+            self.assertEqual("", data["nickname"])
             # TODO: what should the format of this be?
             self.assertEqual("", data["language"])
             self.assertEqual("m", data["gender"])
