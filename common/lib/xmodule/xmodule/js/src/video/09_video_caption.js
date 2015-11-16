@@ -238,7 +238,7 @@ function (Sjson, AsyncProcess) {
             state.el.removeClass('is-captions-rendered');
             // Fetch the captions file. If no file was specified, or if an error
             // occurred, then we hide the captions panel, and the "CC" button
-            this.fetchXHR = $.ajax({
+            this.fetchXHR = $.ajaxWithPrefix({
                 url: state.config.transcriptTranslationUrl + '/' + language,
                 notifyOnError: false,
                 data: data,
@@ -300,7 +300,7 @@ function (Sjson, AsyncProcess) {
             var self = this,
                 state = this.state;
 
-            return $.ajax({
+            return $.ajaxWithPrefix({
                 url: state.config.transcriptAvailableTranslationsUrl,
                 notifyOnError: false,
                 success: function (response) {

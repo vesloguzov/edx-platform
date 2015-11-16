@@ -6,7 +6,7 @@ class LmsRuntime.v1 extends XBlock.Runtime.v1
     usageId = $(element).data("usage-id")
     handlerAuth = if thirdparty then "handler_noauth" else "handler"
 
-    root_url = Courseware.prefix
+    root_url = Courseware.root_path_prefix
     uri = URI("#{ root_url }/courses").segment(courseId)
                          .segment('xblock')
                          .segment(usageId)

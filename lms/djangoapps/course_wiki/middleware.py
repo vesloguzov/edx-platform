@@ -12,7 +12,7 @@ from student.models import CourseEnrollment
 from util.request import course_id_from_url
 
 
-WIKI_ROOT_URL = u'{}/wiki/'.format(settings.EDX_ROOT_URL)
+WIKI_ROOT_URL = u'{}/wiki/'.format(settings.ROOT_URL_PREFIX)
 
 class WikiAccessMiddleware(object):
     """
@@ -33,7 +33,7 @@ class WikiAccessMiddleware(object):
             try:
                 _course = get_course_with_access(request.user, 'load', course_id)
                 return redirect(u"{root_url}/courses/{course_id}/wiki/{path}".format(
-                    root_url=settings.EDX_ROOT_URL,
+                    root_url=settings.ROOT_URL_PREFIX,
                     course_id=course_id.to_deprecated_string(),
                     path=wiki_path)
                 )
@@ -59,10 +59,10 @@ class WikiAccessMiddleware(object):
 
         if course_id:
             # This is a /courses/org/name/run/wiki request
-            course_path = u"{}/courses/{}".format(settings.EDX_ROOT_URL, course_id.to_deprecated_string())
+            course_path = u"{}/courses/{}".format(settings.ROOT_URL_PREFIX, course_id.to_deprecated_string())
             # HACK: django-wiki monkeypatches the reverse function to enable
             # urls to be rewritten
-            reverse._transform_url = lambda url: url.replace(settings.EDX_ROOT_URL, course_path, 1)
+            reverse._transform_url = lambda url: url.replace(settings.ROOT_URL_PREFIX, course_path, 1)
             # Authorization Check
             # Let's see if user is enrolled or the course allows for public access
             try:

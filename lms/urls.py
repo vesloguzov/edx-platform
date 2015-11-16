@@ -11,13 +11,13 @@ import oauth_exchange.views
 if settings.DEBUG or settings.FEATURES.get('ENABLE_DJANGO_ADMIN_SITE'):
     admin.autodiscover()
 
-if settings.EDX_ROOT_URL:
+if settings.ROOT_URL_PREFIX:
     url_django = url
     def url(regex, *args, **kwargs):
         """
         Built-in url override to insert common url prefix
         """
-        regex = r'^{}/{}'.format(settings.EDX_ROOT_URL[1:], regex[1:])
+        regex = r'^{}/{}'.format(settings.ROOT_URL_PREFIX[1:], regex[1:])
         return url_django(regex, *args, **kwargs)
 
 # Use urlpatterns formatted as within the Django docs with first parameter "stuck" to the open parenthesis

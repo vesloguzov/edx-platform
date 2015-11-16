@@ -122,10 +122,10 @@ STATIC_ROOT_BASE = ENV_TOKENS.get('STATIC_ROOT_BASE', None)
 if STATIC_ROOT_BASE:
     STATIC_ROOT = path(STATIC_ROOT_BASE)
 
-EDX_ROOT_URL = ENV_TOKENS.get('LMS_ROOT_URL', '')
+ROOT_URL_PREFIX = ENV_TOKENS.get('LMS_ROOT_URL_PREFIX', ROOT_URL_PREFIX)
 
-LOGIN_REDIRECT_URL = EDX_ROOT_URL + '/accounts/login'
-LOGIN_URL = EDX_ROOT_URL + '/accounts/login'
+LOGIN_REDIRECT_URL = EDX_ROOT_URL + ROOT_URL_PREFIX + '/accounts/login'
+LOGIN_URL = EDX_ROOT_URL + ROOT_URL_PREFIX + '/accounts/login'
 
 # STATIC_URL_BASE specifies the base url to use for static files
 STATIC_URL_BASE = ENV_TOKENS.get('STATIC_URL_BASE', None)
@@ -134,6 +134,8 @@ if STATIC_URL_BASE:
     STATIC_URL = STATIC_URL_BASE.encode('ascii')
     if not STATIC_URL.endswith("/"):
         STATIC_URL += "/"
+
+STATIC_URL = ROOT_URL_PREFIX + STATIC_URL
 
 PLATFORM_NAME = ENV_TOKENS.get('PLATFORM_NAME', PLATFORM_NAME)
 # For displaying on the receipt. At Stanford PLATFORM_NAME != MERCHANT_NAME, but PLATFORM_NAME is a fine default

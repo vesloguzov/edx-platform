@@ -1,8 +1,8 @@
 class @Courseware
-  @prefix: ''
+  @root_path_prefix: ''
 
   constructor: ->
-    Courseware.prefix = $("meta[name='path_prefix']").attr('content')
+    Courseware.root_path_prefix = $("meta[name='root_path_prefix']").attr('content')
     new Navigation
     Logger.bind()
     @render()
