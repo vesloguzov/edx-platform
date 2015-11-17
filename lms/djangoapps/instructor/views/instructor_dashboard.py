@@ -165,9 +165,13 @@ def instructor_dashboard_2(request, course_id):
     disable_buttons = not _is_small_course(course_key)
 
     certificate_white_list = CertificateWhitelist.get_certificate_white_list(course_key)
-    certificate_exception_url = reverse(
-        'create_certificate_exception',
-        kwargs={'course_id': unicode(course_key), 'white_list_student': ''}
+    generate_certificate_exceptions_url = reverse(  # pylint: disable=invalid-name
+        'generate_certificate_exceptions',
+        kwargs={'course_id': unicode(course_key), 'generate_for': ''}
+    )
+    certificate_exception_view_url = reverse(
+        'certificate_exception_view',
+        kwargs={'course_id': unicode(course_key)}
     )
 
     context = {
@@ -177,7 +181,8 @@ def instructor_dashboard_2(request, course_id):
         'disable_buttons': disable_buttons,
         'analytics_dashboard_message': analytics_dashboard_message,
         'certificate_white_list': certificate_white_list,
-        'certificate_exception_url': certificate_exception_url
+        'generate_certificate_exceptions_url': generate_certificate_exceptions_url,
+        'certificate_exception_view_url': certificate_exception_view_url
     }
     if settings.FEATURES['ENABLE_INSTRUCTOR_LEGACY_DASHBOARD']:
         context['old_dashboard_url'] = reverse('instructor_dashboard_legacy', kwargs={'course_id': unicode(course_key)})
