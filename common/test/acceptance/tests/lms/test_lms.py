@@ -158,12 +158,12 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
         self.register_page.visit()
 
         # Fill in the form and submit it
-        username = "test_{uuid}".format(uuid=self.unique_id[0:6])
-        email = "{user}@example.com".format(user=username)
+        nickname = "test_{uuid}".format(uuid=self.unique_id[0:6])
+        email = "{user}@example.com".format(user=nickname)
         self.register_page.register(
             email=email,
             password="password",
-            username=username,
+            nickname=nickname,
             full_name="Test User",
             country="US",
             terms_of_service=True
@@ -175,21 +175,21 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
 
         self.assertEqual("Test User", self.dashboard_page.full_name)
         self.assertEqual(email, self.dashboard_page.email)
-        self.assertEqual(username, self.dashboard_page.username)
+        self.assertEqual(nickname, self.dashboard_page.nickname)
 
     def test_register_failure(self):
         # Navigate to the registration page
         self.register_page.visit()
 
-        # Enter a blank for the username field, which is required
+        # Enter a blank for the nickname field, which is required
         # Don't agree to the terms of service / honor code.
         # Don't specify a country code, which is required.
-        username = "test_{uuid}".format(uuid=self.unique_id[0:6])
-        email = "{user}@example.com".format(user=username)
+        nickname = "test_{uuid}".format(uuid=self.unique_id[0:6])
+        email = "{user}@example.com".format(user=nickname)
         self.register_page.register(
             email=email,
             password="password",
-            username="",
+            nickname="",
             full_name="Test User",
             terms_of_service=False
         )
@@ -817,7 +817,7 @@ class VisibleToStaffOnlyTest(UniqueCourseTest):
 
 class TooltipTest(UniqueCourseTest):
     """
-    Tests that tooltips are displayed
+    Tests that tooltips are displayed if more than 4
     """
 
     def setUp(self):
@@ -840,7 +840,9 @@ class TooltipTest(UniqueCourseTest):
                 XBlockFixtureDesc('sequential', 'Test Subsection').add_children(
                     XBlockFixtureDesc('problem', 'Test Problem 1', data=load_data_str('multiple_choice.xml')),
                     XBlockFixtureDesc('problem', 'Test Problem 2', data=load_data_str('formula_problem.xml')),
-                    XBlockFixtureDesc('html', 'Test HTML'),
+                    XBlockFixtureDesc('html', 'Test HTML 1'),
+                    XBlockFixtureDesc('html', 'Test HTML 2'),
+                    XBlockFixtureDesc('html', 'Test HTML 3'),
                 )
             )
         ).install()

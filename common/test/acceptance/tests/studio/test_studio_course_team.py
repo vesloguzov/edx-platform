@@ -13,16 +13,16 @@ from ...pages.studio.index import DashboardPage
 @attr('shard_2')
 class CourseTeamPageTest(StudioCourseTest):
     """ As a course author, I want to be able to add others to my team """
-    def _make_user(self, username):
+    def _make_user(self, nickname):
         """ Registers user and returns user representation dictionary as expected by `log_in` function """
         user = {
-            'username': username,
-            'email': username + "@example.com",
-            'password': username + '123'
+            'nickname': nickname,
+            'email': nickname + "@example.com",
+            'password': nickname + '123'
         }
         AutoAuthPage(
             self.browser, no_login=True,
-            username=user.get('username'), email=user.get('email'), password=user.get('password')
+            username=user.get('nickname'), email=user.get('email'), password=user.get('password')
         ).visit()
         return user
 
@@ -73,9 +73,9 @@ class CourseTeamPageTest(StudioCourseTest):
     def _assert_user_present(self, user, present=True):
         """ Checks if specified user present on Course Team page """
         if present:
-            self.assertIn(user.get('username'), self.page.usernames)
+            self.assertIn(user.get('email'), self.page.emails)
         else:
-            self.assertNotIn(user.get('username'), self.page.usernames)
+            self.assertNotIn(user.get('email'), self.page.emails)
 
     def _should_see_dialog(self, dialog_type, dialog_message):
         """ Asserts dialog with specified message is shown """

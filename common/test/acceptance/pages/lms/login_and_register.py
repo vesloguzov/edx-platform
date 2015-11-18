@@ -37,15 +37,15 @@ class RegisterPage(PageObject):
             for title in self.q(css='span.title-sub').text
         ])
 
-    def provide_info(self, email, password, username, full_name):
+    def provide_info(self, email, password, nickname, full_name):
         """
         Fill in registration info.
-        `email`, `password`, `username`, and `full_name` are the user's credentials.
+        `email`, `password`, `nickname`, and `full_name` are the user's credentials.
         """
         self.wait_for_element_visibility('input#email', 'Email field is shown')
         self.q(css='input#email').fill(email)
         self.q(css='input#password').fill(password)
-        self.q(css='input#username').fill(username)
+        self.q(css='input#nickname').fill(nickname)
         self.q(css='input#name').fill(full_name)
         self.q(css='input#tos-yes').first.click()
         self.q(css='input#honorcode-yes').first.click()
@@ -144,7 +144,7 @@ class CombinedLoginAndRegisterPage(PageObject):
             "Finish toggling to the other form"
         ).fulfill()
 
-    def register(self, email="", password="", username="", full_name="", country="", terms_of_service=False):
+    def register(self, email="", password="", nickname="", full_name="", country="", terms_of_service=False):
         """Fills in and submits the registration form.
 
         Requires that the "register" form is visible.
@@ -155,7 +155,7 @@ class CombinedLoginAndRegisterPage(PageObject):
         Keyword Arguments:
             email (unicode): The user's email address.
             password (unicode): The user's password.
-            username (unicode): The user's username.
+            nickname (unicode): The user's nickname.
             full_name (unicode): The user's full name.
             country (unicode): Two-character country code.
             terms_of_service (boolean): If True, agree to the terms of service and honor code.
@@ -165,7 +165,7 @@ class CombinedLoginAndRegisterPage(PageObject):
         self.wait_for_element_visibility('#register-email', 'Email field is shown')
         self.q(css="#register-email").fill(email)
         self.q(css="#register-name").fill(full_name)
-        self.q(css="#register-username").fill(username)
+        self.q(css="#register-nickname").fill(nickname)
         self.q(css="#register-password").fill(password)
         if country:
             self.q(css="#register-country option[value='{country}']".format(country=country)).click()

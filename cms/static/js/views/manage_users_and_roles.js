@@ -116,7 +116,7 @@ define(['jquery', 'underscore', 'gettext', "js/views/baseview", 'js/views/feedba
                 this.tplUserURL = options.tplUserURL;
 
                 this.roles = options.roles; // [{key:role_key, name:Human-readable Name}, {key: admin, name: Admin}]
-                this.users = options.users; // [{username: username, email: email, role: role}, ...]
+                this.users = options.users; // [{nickname: nickname, email: email, role: role}, ...]
                 this.allow_actions = options.allow_actions;
                 this.current_user_id = options.current_user_id;
 

@@ -480,6 +480,10 @@ CREATE TABLE `auth_userprofile` (
   `allow_certificate` tinyint(1) NOT NULL,
   `country` varchar(2),
   `city` longtext,
+  `nickname` varchar(255) NOT NULL,
+  `first_name` varchar(255) NOT NULL,
+  `last_name` varchar(255) NOT NULL,
+  `birthdate` date,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`),
   KEY `auth_userprofile_52094d6e` (`name`),
@@ -488,6 +492,7 @@ CREATE TABLE `auth_userprofile` (
   KEY `auth_userprofile_fca3d292` (`gender`),
   KEY `auth_userprofile_d85587` (`year_of_birth`),
   KEY `auth_userprofile_551e365c` (`level_of_education`),
+  kEY `auth_userprofile_e6a08719` (`nickname`),
   CONSTRAINT `user_id_refs_id_628b4c11` FOREIGN KEY (`user_id`) REFERENCES `auth_user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;

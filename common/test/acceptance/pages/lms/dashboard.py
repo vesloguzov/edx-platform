@@ -62,7 +62,7 @@ class DashboardPage(PageObject):
         return self.q(css='li.info--email .data').text[0]
 
     @property
-    def username(self):
+    def nickname(self):
         """Return the displayed value for the user's username"""
         return self.q(css='.user-name').text[0]
 

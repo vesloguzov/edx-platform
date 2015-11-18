@@ -54,6 +54,13 @@ class UsersPageMixin(PageObject):
         return [user.name for user in self.users]
 
     @property
+    def emails(self):
+        """
+        Returns a list of user emails for users listed on this page
+        """
+        return [user.email for user in self.users]
+
+    @property
     def has_add_button(self):
         """
         Is the "New Team Member" button present?
@@ -176,8 +183,8 @@ class UserWrapper(PageObject):
 
     @property
     def name(self):
-        """ Get this user's username, as displayed. """
-        return self.q(css=self._bounded_selector('.user-username')).text[0]
+        """ Get this user's nickname, as displayed. """
+        return self.q(css=self._bounded_selector('.user-nickname')).text[0]
 
     @property
     def role_label(self):

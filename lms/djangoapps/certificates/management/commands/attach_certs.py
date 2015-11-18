@@ -89,7 +89,7 @@ def _attach_certificate(src_filename, certificate):
     shutil.copy(src_filename, os.path.join(dst_dir, dst_filename))
 
     certificate.status = CertificateStatuses.downloadable
-    certificate.download_url = os.path.join(
+    certificate.download_url = u'//' + os.path.join(
         settings.LMS_BASE, settings.CERT_URL, certificate.download_uuid, dst_filename
     )
     certificate.save()
