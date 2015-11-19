@@ -52,6 +52,7 @@ class Command(BaseCommand):
         make_option('-U', '--create-uids',
                     metavar='CREATE_UUIDS',
                     dest='create_uuids',
+                    action="store_true",
                     default=False,
                     help='create uuids for certificates'),
     )
@@ -72,7 +73,12 @@ class Command(BaseCommand):
 
         if options['input_file']:
             print 'Generating stubs from json...'
-            result = _generate_cert_stubs_from_json(course, options['input_file'], options['create_uuids'])
+            result = _generate_cert_stubs_from_json(
+                course,
+                options['input_file'],
+                options['create_uuids'],
+                forced_grade=options['grade_value']
+            )
         else:
             print 'Generating stubs...'
             result = _generate_cert_stubs(course, forced_grade=options['grade_value'], create_uuids=options['create_uuids'])
@@ -102,7 +108,7 @@ def _generate_cert_stubs(course, forced_grade=None, create_uuids=False):
     return results
 
 
-def _generate_cert_stubs_from_json(course, source_file, create_uuids=False):
+def _generate_cert_stubs_from_json(course, source_file, create_uuids=False, forced_grade=None):
     with open(source_file) as f:
         data = json.load(f)
 
@@ -116,7 +122,7 @@ def _generate_cert_stubs_from_json(course, source_file, create_uuids=False):
         if _can_generate_certificate_for_student(student, course):
             if create_uuids:
                 item['download_uuid'] = uuid.uuid4().hex
-            cert = _generate_cert_stub_for_student_from_json(student, course, item)
+            cert = _generate_cert_stub_for_student_from_json(student, course, item, forced_grade=forced_grade)
             results.setdefault(cert.status, []).append(cert)
         else:
             results.setdefault('INVALID', []).append(GeneratedCertificate.objects.get(user=student, course_id=course.id))
@@ -170,10 +176,10 @@ def _generate_cert_stub_for_student(student, course, whitelist, restricted, requ
     return cert
 
 
-def _generate_cert_stub_for_student_from_json(student, course, data):
+def _generate_cert_stub_for_student_from_json(student, course, data, forced_grade):
     cert_data = {
         'mode': _get_certificate_mode(student, course),
-        'grade': data[GRADE_KEY],
+        'grade': forced_grade or data[GRADE_KEY],
         'name': data[NAME_KEY],
         'status': CertificateStatuses.generating,
         'download_uuid': data['download_uuid'],
