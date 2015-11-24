@@ -50,7 +50,7 @@ def get_user_preference(requesting_user, preference_key, username=None):
 
 
 @intercept_errors(UserAPIInternalError, ignore_errors=[UserAPIRequestError])
-def get_user_preferences(request, username=None):
+def get_user_preferences(requesting_user, username=None):
     """Returns all user preferences as a JSON response.
 
     Args:

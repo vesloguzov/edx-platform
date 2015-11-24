@@ -215,6 +215,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('name', models.CharField(db_index=True, max_length=255, blank=True)),
+                ('nickname', models.CharField(db_index=True, default=b'Anonymous', max_length=255, blank=True)),
+                ('first_name', models.CharField(default=b'', max_length=255, blank=True)),
+                ('last_name', models.CharField(default=b'', max_length=255, blank=True)),
+                ('birthdate', models.DateField(default=None, null=True, blank=True)),
                 ('meta', models.TextField(blank=True)),
                 ('courseware', models.CharField(default=b'course.xml', max_length=255, blank=True)),
                 ('language', models.CharField(db_index=True, max_length=255, blank=True)),

@@ -91,7 +91,7 @@ class Command(TrackedCommand):
 
         form = AccountCreationForm(
             data={
-                'nickname': options['nickname'],
+                'nickname': nickname,
                 'email': options['email'],
                 'password': options['password'],
                 'name': name,
