@@ -1,7 +1,8 @@
 class @Courseware
-  @prefix: ''
+  @root_path_prefix: ''
 
   constructor: ->
+    Courseware.root_path_prefix = $("meta[name='root_path_prefix']").attr('content')
     Logger.bind()
     @render()
 

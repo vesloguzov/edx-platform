@@ -56,7 +56,7 @@ from branding import api as branding_api
       </script>
   % endif
 
-  <script type="text/javascript" src="/i18n.js"></script>
+  <script type="text/javascript" src="${reverse('jsi18n')}"></script>
 
   <link rel="icon" type="image/x-icon" href="${static.url(microsite.get_value('favicon_path', settings.FAVICON_PATH))}" />
 
@@ -84,79 +84,60 @@ from branding import api as branding_api
 
   <%block name="headextra"/>
 
-<%
-  if theme_enabled() and not is_microsite():
-    header_extra_file = 'theme-head-extra.html'
-    header_file = 'theme-header.html'
-    google_analytics_file = 'theme-google-analytics.html'
-
-    style_overrides_file = None
-
-  else:
-    header_extra_file = microsite.get_template_path('header_extra.html')
-
-    if settings.FEATURES['IS_EDX_DOMAIN'] and not is_microsite():
-        header_file = microsite.get_template_path('navigation-edx.html')
-    else:
-        header_file = microsite.get_template_path('navigation.html')
-
-    google_analytics_file = microsite.get_template_path('google_analytics.html')
-
-    style_overrides_file = microsite.get_value('css_overrides_file')
-  google_tag_manager_file = microsite.get_template_path('google_tag_manager.html')
-%>
-
-  % if header_extra_file:
-    <%include file="${header_extra_file}" />
+  % if HEADER_EXTRA_FILE:
+    <%include file="${HEADER_EXTRA_FILE}" />
   % endif
 
   <%include file="widgets/optimizely.html" />
   <%include file="widgets/segment-io.html" />
 
   <meta name="path_prefix" content="${EDX_ROOT_URL}">
+  <meta name="root_path_prefix" content="${settings.ROOT_URL_PREFIX}">
   <meta name="google-site-verification" content="_mipQ4AtZQDNmbtOkwehQDOgCxUUV2fb_C0b6wbiRHY" />
 
-  <%include file="${google_analytics_file}" />
+  <%include file="${GOOGLE_ANALYTICS_FILE}" />
 
-% if style_overrides_file:
-  <link rel="stylesheet" type="text/css" href="${static.url(style_overrides_file)}" />
+% if STYLE_OVERRIDES_FILE:
+  <link rel="stylesheet" type="text/css" href="${static.url(STYLE_OVERRIDES_FILE)}" />
 % endif
 
 </head>
 
 <body class="${static.dir_rtl()} <%block name='bodyclass'/> lang_${LANGUAGE_CODE}">
-<%include file="${google_tag_manager_file}" />
+<%include file="${GOOGLE_TAG_MANAGER_FILE}" />
 <div id="page-prompt"></div>
 % if not disable_window_wrap:
   <div class="window-wrap" dir="${static.dir_rtl()}">
 % endif
     <a class="nav-skip" href="<%block name="nav_skip">#content</%block>">${_("Skip to main content")}</a>
 
+    <div class="sticky-footer-wrapper">
     % if not disable_header:
-        <%include file="${header_file}" />
+    <%include file="${HEADER_FILE}" />
     % endif
 
     <div class="content-wrapper" id="content">
       ${self.body()}
       <%block name="bodyextra"/>
     </div>
+    </div>
 
     % if not disable_footer:
-        <%block name="footer">
-          ## Can be overridden by child templates wanting to hide the footer.
-          % if theme_enabled() and not is_microsite():
-            <%include file="theme-footer.html" />
-          % elif settings.FEATURES.get('IS_EDX_DOMAIN', False) and not is_microsite():
-              <%include file="footer-edx-v3.html" />
-          % else:
-            <%include file="${microsite.get_template_path('footer.html')}" />
-          % endif
-        </%block>
+      <%block name="footer">
+        ## Can be overridden by child templates wanting to hide the footer.
+        <%include file="${FOOTER_FILE}" />
+      </%block>
     % endif
 
 % if not disable_window_wrap:
   </div>
 % endif
+
+% if hasattr(request, '_required_student_data_form'):
+  <%static:js group='modalform'/>
+  <%include file="required_student_data.html" />
+% endif
+
 
   <%block name="js_extra"/>
   <%include file="widgets/segment-io-footer.html" />

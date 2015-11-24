@@ -6,6 +6,7 @@ import re
 import string       # pylint: disable=deprecated-module
 import fnmatch
 import unicodedata
+import datetime
 import urllib
 
 from textwrap import dedent
@@ -29,6 +30,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidde
 from django.utils.http import urlquote, is_safe_url
 from django.shortcuts import redirect
 from django.utils.translation import ugettext as _
+from django.db import IntegrityError
 
 from edxmako.shortcuts import render_to_response, render_to_string
 try:
@@ -47,6 +49,7 @@ from openid.extensions import ax, sreg
 from ratelimitbackend.exceptions import RateLimitException
 
 import student.views
+from student.models import CourseEnrollment
 from xmodule.modulestore.django import modulestore
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
@@ -109,8 +112,8 @@ def openid_login_complete(request,
         log.debug('openid success, details=%s', details)
 
         url = getattr(settings, 'OPENID_SSO_SERVER_URL', None)
-        external_domain = "{0}{1}".format(OPENID_DOMAIN_PREFIX, url)
-        fullname = '%s %s' % (details.get('first_name', ''),
+        external_domain = u"{0}{1}".format(OPENID_DOMAIN_PREFIX, url)
+        fullname = u'%s %s' % (details.get('first_name', ''),
                               details.get('last_name', ''))
 
         return _external_login_or_signup(
@@ -283,12 +286,12 @@ def _signup(request, eamap, retfun=None):
     if settings.FEATURES.get('AUTH_USE_CERTIFICATES_IMMEDIATE_SIGNUP', ''):
         # do signin immediately, by calling create_account, instead of asking
         # student to fill in form.  MIT students already have information filed.
-        username = eamap.external_email.split('@', 1)[0]
-        username = username.replace('.', '_')
-        post_vars = dict(username=username,
+        nickname = eamap.external_email.split('@', 1)[0]
+        nickname = nickname.replace('.', '_')
+        post_vars = dict(nickname=nickname,
                          honor_code=u'true',
                          terms_of_service=u'true')
-        log.info(u'doing immediate signup for %s, params=%s', username, post_vars)
+        log.info(u'doing immediate signup for %s, params=%s', nickname, post_vars)
         student.views.create_account(request, post_vars)
         # should check return content for successful completion before
         if retfun is not None:
@@ -462,28 +465,68 @@ def ssl_login(request):
 # -----------------------------------------------------------------------------
 # CAS (Central Authentication Service)
 # -----------------------------------------------------------------------------
-def cas_login(request, next_page=None, required=False):
+def cas_create_user(username, attributes):
     """
-        Uses django_cas for authentication.
+        Uses django_cas for user creation.
         CAS is a common authentcation method pioneered by Yale.
         See http://en.wikipedia.org/wiki/Central_Authentication_Service
 
-        Does normal CAS login then generates user_profile if nonexistent,
-        and if login was successful.  We assume that user details are
-        maintained by the central service, and thus an empty user profile
-        is appropriate.
+        After successful CAS login authenticates user or creates new user and
+        corresponding user profile if nonexistent.
+
+        Utilizes CAS response attributes to retrieve required email field and
+        fill profile informaiton if possible.
     """
 
-    ret = django_cas_login(request, next_page, required)
+    email = attributes[settings.CAS_ATTRIBUTE_KEYS['email']]
+    try:
+        user = User.objects.create(username=username, email=email)
+    except IntegrityError:
+        log.error(u'Failed to create user from CAS response: username="{}" email="{}"'.format(username, email))
+        raise
+    else:
+        # since user profile has no required or unique fields, no exception handling is used
+        _create_profile_from_attributes(user, attributes)
+        CourseEnrollment.enroll_pending(user)
+        return user
 
-    if request.user.is_authenticated():
-        user = request.user
-        if not UserProfile.objects.filter(user=user):
-            user_profile = UserProfile(name=user.username, user=user)
-            user_profile.save()
 
-    return ret
+def _create_profile_from_attributes(user, attributes):
+    profile = UserProfile(user=user)
+    keys = settings.CAS_ATTRIBUTE_KEYS
 
+    for field in ('name', 'nickname'):
+        value = attributes.get(keys[field])
+        if value:
+            setattr(profile, field, value)
+
+
+    day_of_birth = attributes.get(keys['day_of_birth'])
+    if day_of_birth:
+        try:
+            day_of_birth = _get_date_from_string(day_of_birth)
+        except:
+            # just ignore invalid date
+            log.warning(u'Invalid datetime format: {}'.format(day_of_birth))
+        else:
+            profile.year = day_of_birth.year
+
+    gender = attributes.get(keys['gender'])
+    if gender:
+        # suppose something like 'male' or 'female' is received
+        if gender.startswith('m'):
+            profile.gender = 'm'
+        elif gender.startswith('f'):
+            profile.gender = 'f'
+    profile.save()
+
+
+def _get_date_from_string(datestring):
+    for _format in settings.DATE_INPUT_FORMATS + settings.DATETIME_INPUT_FORMATS:
+        try:
+            return datetime.datetime.strptime(datestring, _format).date()
+        except ValueError:
+            pass
 
 # -----------------------------------------------------------------------------
 # Shibboleth (Stanford and others.  Uses *Apache* environment variables)
@@ -838,7 +881,7 @@ def provider_login(request):
             if settings.FEATURES['SQUELCH_PII_IN_LOGS']:
                 AUDIT_LOG.warning("OpenID login failed - Unknown user email")
             else:
-                msg = "OpenID login failed - Unknown user email: {0}".format(email)
+                msg = u"OpenID login failed - Unknown user email: {0}".format(email)
                 AUDIT_LOG.warning(msg)
             return HttpResponseRedirect(openid_request_url)
 
@@ -857,7 +900,7 @@ def provider_login(request):
             if settings.FEATURES['SQUELCH_PII_IN_LOGS']:
                 AUDIT_LOG.warning("OpenID login failed - invalid password")
             else:
-                msg = "OpenID login failed - password for {0} is invalid".format(email)
+                msg = u"OpenID login failed - password for {0} is invalid".format(email)
                 AUDIT_LOG.warning(msg)
             return HttpResponseRedirect(openid_request_url)
 
@@ -869,9 +912,9 @@ def provider_login(request):
                 del request.session['openid_error']
 
             if settings.FEATURES['SQUELCH_PII_IN_LOGS']:
-                AUDIT_LOG.info("OpenID login success - user.id: {0}".format(user.id))
+                AUDIT_LOG.info(u"OpenID login success - user.id: {0}".format(user.id))
             else:
-                AUDIT_LOG.info("OpenID login success - {0} ({1})".format(
+                AUDIT_LOG.info(u"OpenID login success - {0} ({1})".format(
                                user.username, user.email))
 
             # redirect user to return_to location
@@ -894,7 +937,7 @@ def provider_login(request):
         if settings.FEATURES['SQUELCH_PII_IN_LOGS']:
             AUDIT_LOG.warning("Login failed - Account not active for user.id {0}".format(user.id))
         else:
-            msg = "Login failed - Account not active for user {0}".format(username)
+            msg = u"Login failed - Account not active for user {0}".format(username)
             AUDIT_LOG.warning(msg)
         return HttpResponseRedirect(openid_request_url)
 

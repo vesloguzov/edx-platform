@@ -164,7 +164,7 @@ include_special_exams = settings.FEATURES.get('ENABLE_SPECIAL_EXAMS', False) and
             user_name: selectedOption.val() === 'specific student' ? userNameElement.val() : null
         };
         $.ajax({
-            url: '/courses/${course.id}/masquerade',
+            url: '${reverse('masquerade_update', args=[course.id.to_deprecated_string()])}',
             type: 'POST',
             dataType: 'json',
             contentType: 'application/json',

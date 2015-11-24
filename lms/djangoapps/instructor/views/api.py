@@ -104,6 +104,8 @@ from .tools import (
     find_unit,
     get_student_from_identifier,
     require_student_from_identifier,
+    get_student_from_email_or_nickname,
+    require_student_from_email_or_nickname,
     handle_dashboard_error,
     parse_datetime,
     set_due_date_extension,
@@ -124,6 +126,12 @@ def common_exceptions_400(func):
     Catches common exceptions and renders matching 400 errors.
     (decorator without arguments)
     """
+    def bad_request(message, use_json):
+        if use_json:
+            return JsonResponse({"error": message}, 400)
+        else:
+            return HttpResponseBadRequest(message)
+
     def wrapped(request, *args, **kwargs):  # pylint: disable=missing-docstring
         use_json = (request.is_ajax() or
                     request.META.get("HTTP_ACCEPT", "").startswith("application/json"))
@@ -131,16 +139,13 @@ def common_exceptions_400(func):
             return func(request, *args, **kwargs)
         except User.DoesNotExist:
             message = _("User does not exist.")
-            if use_json:
-                return JsonResponse({"error": message}, 400)
-            else:
-                return HttpResponseBadRequest(message)
+            return bad_request(message, use_json)
+        except User.MultipleObjectsReturned:
+            message = _('Multiple users found, use email instead')
+            return bad_request(message, use_json)
         except AlreadyRunningError:
             message = _("Task is already running.")
-            if use_json:
-                return JsonResponse({"error": message}, 400)
-            else:
-                return HttpResponseBadRequest(message)
+            return bad_request(message, use_json)
     return wrapped
 
 
@@ -562,7 +567,7 @@ def students_update_enrollment(request, course_id):
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     action = request.POST.get('action')
     identifiers_raw = request.POST.get('identifiers')
-    identifiers = _split_input_list(identifiers_raw)
+    identifiers = _split_input_list_with_nicknames(identifiers_raw)
     auto_enroll = request.POST.get('auto_enroll') in ['true', 'True', True]
     email_students = request.POST.get('email_students') in ['true', 'True', True]
     is_white_label = CourseMode.is_white_label(course_id)
@@ -590,7 +595,13 @@ def students_update_enrollment(request, course_id):
         email = None
         language = None
         try:
-            user = get_student_from_identifier(identifier)
+            user = get_student_from_email_or_nickname(identifier)
+        except User.MultipleObjectsReturned:
+            results.append({
+                'identifier': identifier,
+                'nonuniqueNickname': True,
+            })
+            continue
         except User.DoesNotExist:
             email = identifier
         else:
@@ -642,7 +653,7 @@ def students_update_enrollment(request, course_id):
 
             else:
                 return HttpResponseBadRequest(strip_tags(
-                    "Unrecognized action '{}'".format(action)
+                    u"Unrecognized action '{}'".format(action)
                 ))
 
         except ValidationError:
@@ -701,7 +712,7 @@ def bulk_beta_modify_access(request, course_id):
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     action = request.POST.get('action')
     identifiers_raw = request.POST.get('identifiers')
-    identifiers = _split_input_list(identifiers_raw)
+    identifiers = _split_input_list_with_nicknames(identifiers_raw)
     email_students = request.POST.get('email_students') in ['true', 'True', True]
     auto_enroll = request.POST.get('auto_enroll') in ['true', 'True', True]
     results = []
@@ -716,8 +727,7 @@ def bulk_beta_modify_access(request, course_id):
     for identifier in identifiers:
         try:
             error = False
-            user_does_not_exist = False
-            user = get_student_from_identifier(identifier)
+            user = get_student_from_email_or_nickname(identifier)
 
             if action == 'add':
                 allow_access(course, user, rolename)
@@ -725,11 +735,13 @@ def bulk_beta_modify_access(request, course_id):
                 revoke_access(course, user, rolename)
             else:
                 return HttpResponseBadRequest(strip_tags(
-                    "Unrecognized action '{}'".format(action)
+                    u"Unrecognized action '{}'".format(action)
                 ))
         except User.DoesNotExist:
-            error = True
-            user_does_not_exist = True
+            error = 'userDoesNotExist'
+        except User.MultipleObjectsReturned:
+            error = 'nonuniqueNickname'
+
         # catch and log any unexpected exceptions
         # so that one error doesn't cause a 500.
         except Exception as exc:  # pylint: disable=broad-except
@@ -750,8 +762,9 @@ def bulk_beta_modify_access(request, course_id):
             # Tabulate the action result of this email address
             results.append({
                 'identifier': identifier,
-                'error': error,
-                'userDoesNotExist': user_does_not_exist
+                'error': bool(error),
+                'userDoesNotExist': error == 'userDoesNotExist',
+                'nonuniqueNickname': error == 'nonuniqueNickname'
             })
 
     response_payload = {
@@ -766,7 +779,7 @@ def bulk_beta_modify_access(request, course_id):
 @require_level('instructor')
 @common_exceptions_400
 @require_query_params(
-    unique_student_identifier="email or username of user to change access",
+    student_identifier="email or nickname of user to change access",
     rolename="'instructor', 'staff', 'beta', or 'ccx_coach'",
     action="'allow' or 'revoke'"
 )
@@ -778,7 +791,7 @@ def modify_access(request, course_id):
     NOTE: instructors cannot remove their own instructor access.
 
     Query parameters:
-    unique_student_identifer is the target user's username or email
+    student_identifier is the target user's email or nickname
     rolename is one of ['instructor', 'staff', 'beta', 'ccx_coach']
     action is one of ['allow', 'revoke']
     """
@@ -787,20 +800,26 @@ def modify_access(request, course_id):
         request.user, 'instructor', course_id, depth=None
     )
     try:
-        user = get_student_from_identifier(request.GET.get('unique_student_identifier'))
+        identifier = request.GET.get('student_identifier')
+        user = get_student_from_email_or_nickname(identifier)
     except User.DoesNotExist:
         response_payload = {
-            'unique_student_identifier': request.GET.get('unique_student_identifier'),
+            'student_identifier': identifier,
             'userDoesNotExist': True,
         }
         return JsonResponse(response_payload)
+    except User.MultipleObjectsReturned:
+        return JsonResponse({
+            'student_identifier': identifier,
+            'multipleUsers': True,
+        })
 
     # Check that user is active, because add_users
     # in common/djangoapps/student/roles.py fails
     # silently when we try to add an inactive user.
     if not user.is_active:
         response_payload = {
-            'unique_student_identifier': user.username,
+            'student_identifier': user.profile.nickname or user.email,
             'inactiveUser': True,
         }
         return JsonResponse(response_payload)
@@ -809,14 +828,14 @@ def modify_access(request, course_id):
     action = request.GET.get('action')
 
     if rolename not in ROLES:
-        error = strip_tags("unknown rolename '{}'".format(rolename))
+        error = strip_tags(u"unknown rolename '{}'".format(rolename))
         log.error(error)
         return HttpResponseBadRequest(error)
 
     # disallow instructors from removing their own instructor access.
     if rolename == 'instructor' and user == request.user and action != 'allow':
         response_payload = {
-            'unique_student_identifier': user.username,
+            'student_identifier': user.profile.nickname or user.email,
             'rolename': rolename,
             'action': action,
             'removingSelfAsInstructor': True,
@@ -829,11 +848,11 @@ def modify_access(request, course_id):
         revoke_access(course, user, rolename)
     else:
         return HttpResponseBadRequest(strip_tags(
-            "unrecognized action '{}'".format(action)
+            u"unrecognized action '{}'".format(action)
         ))
 
     response_payload = {
-        'unique_student_identifier': user.username,
+        'student_identifier': user.profile.nickname or user.email,
         'rolename': rolename,
         'action': action,
         'success': 'yes',
@@ -857,6 +876,7 @@ def list_course_role_members(request, course_id):
         "staff": [
             {
                 "username": "staff1",
+                "nickname": "staff",
                 "email": "staff1@example.org",
                 "first_name": "Joe",
                 "last_name": "Shmoe",
@@ -878,6 +898,7 @@ def list_course_role_members(request, course_id):
         """ convert user into dicts for json view """
         return {
             'username': user.username,
+            'nickname': user.profile.nickname_or_default,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,
@@ -1045,7 +1066,7 @@ def sale_validation(request, course_id):
         invoice_number = int(invoice_number)
     except ValueError:
         return HttpResponseBadRequest(
-            "invoice_number must be an integer, {value} provided".format(
+            u"invoice_number must be an integer, {value} provided".format(
                 value=invoice_number
             )
         )
@@ -1158,7 +1179,7 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=red
 
     if not query_features:
         query_features = [
-            'id', 'username', 'name', 'email', 'language', 'location',
+            'id', 'nickname', 'name', 'email', 'language', 'location',
             'year_of_birth', 'gender', 'level_of_education', 'mailing_address',
             'goals'
         ]
@@ -1168,7 +1189,7 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=red
     # used as the header row in the CSV, but could be in the future.
     query_features_names = {
         'id': _('User ID'),
-        'username': _('Username'),
+        'nickname': _('Nickname'),
         'name': _('Name'),
         'email': _('Email'),
         'language': _('Language'),
@@ -1630,11 +1651,11 @@ def generate_registration_codes(request, course_id):
     site_name = microsite.get_value('SITE_NAME', 'localhost')
     quantity = course_code_number
     discount = (float(quantity * course_price) - float(sale_price))
-    course_url = '{base_url}{course_about}'.format(
+    course_url = u'{base_url}{course_about}'.format(
         base_url=microsite.get_value('SITE_NAME', settings.SITE_NAME),
         course_about=reverse('about_course', kwargs={'course_id': course_id.to_deprecated_string()})
     )
-    dashboard_url = '{base_url}{dashboard}'.format(
+    dashboard_url = u'{base_url}{dashboard}'.format(
         base_url=microsite.get_value('SITE_NAME', settings.SITE_NAME),
         dashboard=reverse('dashboard')
     )
@@ -1675,7 +1696,7 @@ def generate_registration_codes(request, course_id):
     csv_file = StringIO.StringIO()
     csv_writer = csv.writer(csv_file)
     for registration_code in registration_codes:
-        full_redeem_code_url = 'http://{base_url}{redeem_code_url}'.format(
+        full_redeem_code_url = u'http://{base_url}{redeem_code_url}'.format(
             base_url=microsite.get_value('SITE_NAME', settings.SITE_NAME),
             redeem_code_url=reverse('register_code_redemption', kwargs={'registration_code': registration_code.code})
         )
@@ -1805,20 +1826,20 @@ def get_anon_ids(request, course_id):  # pylint: disable=unused-argument
 @common_exceptions_400
 @require_level('staff')
 @require_query_params(
-    unique_student_identifier="email or username of student for whom to get progress url"
+    student_identifier="email or username of student for whom to get progress url"
 )
 def get_student_progress_url(request, course_id):
     """
     Get the progress url of a student.
     Limited to staff access.
 
-    Takes query paremeter unique_student_identifier and if the student exists
+    Takes query paremeter student_identifier and if the student exists
     returns e.g. {
         'progress_url': '/../...'
     }
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-    user = get_student_from_identifier(request.GET.get('unique_student_identifier'))
+    user = get_student_from_email_or_nickname(request.GET.get('student_identifier'))
 
     progress_url = reverse('student_progress', kwargs={'course_id': course_id.to_deprecated_string(), 'student_id': user.id})
 
@@ -1846,7 +1867,7 @@ def reset_student_attempts(request, course_id):
 
     Takes some of the following query paremeters
         - problem_to_reset is a urlname of a problem
-        - unique_student_identifier is an email or username
+        - student_identifier is an email or username
         - all_students is a boolean
             requires instructor access
             mutually exclusive with delete_module
@@ -1861,17 +1882,17 @@ def reset_student_attempts(request, course_id):
     )
 
     problem_to_reset = strip_if_string(request.GET.get('problem_to_reset'))
-    student_identifier = request.GET.get('unique_student_identifier', None)
+    student_identifier = request.GET.get('student_identifier', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_identifier(student_identifier)
+        student = get_student_from_email_or_nickname(student_identifier)
     all_students = request.GET.get('all_students', False) in ['true', 'True', True]
     delete_module = request.GET.get('delete_module', False) in ['true', 'True', True]
 
     # parameter combinations
     if all_students and student:
         return HttpResponseBadRequest(
-            "all_students and unique_student_identifier are mutually exclusive."
+            "all_students and student_identifier are mutually exclusive."
         )
     if all_students and delete_module:
         return HttpResponseBadRequest(
@@ -1990,17 +2011,17 @@ def rescore_problem(request, course_id):
 
     Takes either of the following query paremeters
         - problem_to_reset is a urlname of a problem
-        - unique_student_identifier is an email or username
+        - student_identifier is an email or nickname
         - all_students is a boolean
 
-    all_students and unique_student_identifier cannot both be present.
+    all_students and student_identifier cannot both be present.
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     problem_to_reset = strip_if_string(request.GET.get('problem_to_reset'))
-    student_identifier = request.GET.get('unique_student_identifier', None)
+    student_identifier = request.GET.get('student_identifier', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_identifier(student_identifier)
+        student = get_student_from_email_or_nickname(student_identifier)
 
     all_students = request.GET.get('all_students') in ['true', 'True', True]
 
@@ -2009,7 +2030,7 @@ def rescore_problem(request, course_id):
 
     if all_students and student:
         return HttpResponseBadRequest(
-            "Cannot rescore with all_students and unique_student_identifier."
+            "Cannot rescore with all_students and student_identifier."
         )
 
     try:
@@ -2132,18 +2153,18 @@ def list_instructor_tasks(request, course_id):
     Takes optional query paremeters.
         - With no arguments, lists running tasks.
         - `problem_location_str` lists task history for problem
-        - `problem_location_str` and `unique_student_identifier` lists task
+        - `problem_location_str` and `student_identifier` lists task
             history for problem AND student (intersection)
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     problem_location_str = strip_if_string(request.GET.get('problem_location_str', False))
-    student = request.GET.get('unique_student_identifier', None)
+    student = request.GET.get('student_identifier', None)
     if student is not None:
-        student = get_student_from_identifier(student)
+        student = get_student_from_email_or_nickname(student)
 
     if student and not problem_location_str:
         return HttpResponseBadRequest(
-            "unique_student_identifier must accompany problem_location_str"
+            "student_identifier must accompany problem_location_str"
         )
 
     if problem_location_str:
@@ -2233,7 +2254,7 @@ def list_financial_report_downloads(_request, course_id):
 
     response_payload = {
         'downloads': [
-            dict(name=name, url=url, link='<a href="{}">{}</a>'.format(url, name))
+            dict(name=name, url=url, link=u'<a href="{}">{}</a>'.format(url, name))
             for name, url in report_store.links_for(course_id)
         ]
     }
@@ -2327,7 +2348,7 @@ def list_forum_members(request, course_id):
     # filter out unsupported for roles
     if rolename not in [FORUM_ROLE_ADMINISTRATOR, FORUM_ROLE_MODERATOR, FORUM_ROLE_COMMUNITY_TA]:
         return HttpResponseBadRequest(strip_tags(
-            "Unrecognized rolename '{}'.".format(rolename)
+            u"Unrecognized rolename '{}'.".format(rolename)
         ))
 
     try:
@@ -2410,7 +2431,7 @@ def send_email(request, course_id):
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
 @require_query_params(
-    unique_student_identifier="email or username of user to change access",
+    student_identifier="email or nickname of user to change access",
     rolename="the forum role",
     action="'allow' or 'revoke'",
 )
@@ -2436,7 +2457,7 @@ def update_forum_role_membership(request, course_id):
         request.user, course_id, FORUM_ROLE_ADMINISTRATOR
     )
 
-    unique_student_identifier = request.GET.get('unique_student_identifier')
+    student_identifier = request.GET.get('student_identifier')
     rolename = request.GET.get('rolename')
     action = request.GET.get('action')
 
@@ -2452,10 +2473,10 @@ def update_forum_role_membership(request, course_id):
 
     if rolename not in [FORUM_ROLE_ADMINISTRATOR, FORUM_ROLE_MODERATOR, FORUM_ROLE_COMMUNITY_TA]:
         return HttpResponseBadRequest(strip_tags(
-            "Unrecognized rolename '{}'.".format(rolename)
+            u"Unrecognized rolename '{}'.".format(rolename)
         ))
 
-    user = get_student_from_identifier(unique_student_identifier)
+    user = get_student_from_email_or_nickname(student_identifier)
 
     try:
         update_forum_role(course_id, user, rolename, action)
@@ -2589,6 +2610,16 @@ def _split_input_list(str_list):
 
     return new_list
 
+def _split_input_list_with_nicknames(str_list):
+    """
+    Same as _split_input_list, but splits only on line breaks and commas
+    """
+    new_list = re.split(r'[\n\r,]', str_list)
+    new_list = [s.strip() for s in new_list]
+    new_list = [s for s in new_list if s != '']
+
+    return new_list
+
 
 def _instructor_dash_url(course_key, section=None):
     """Return the URL for a section in the instructor dashboard.
@@ -2661,13 +2692,13 @@ def spoc_gradebook(request, course_id):
     enrolled_students = User.objects.filter(
         courseenrollment__course_id=course_key,
         courseenrollment__is_active=1
-    ).order_by('username').select_related("profile")
+    ).order_by('profile__nickname').select_related("profile")
 
     # possible extension: implement pagination to show to large courses
 
     student_info = [
         {
-            'username': student.username,
+            'nickname': student.profile.nickname_or_default,
             'id': student.id,
             'email': student.email,
             'grade_summary': student_grades(student, request, course),

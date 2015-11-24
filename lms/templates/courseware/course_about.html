@@ -68,8 +68,8 @@ from edxmako.shortcuts import marketing_link
         perms_error = _('The currently logged-in user account does not have permission to enroll in this course. '
                         'You may need to {start_logout_tag}log out{end_tag} then try the enroll button again. '
                         'Please visit the {start_help_tag}help page{end_tag} for a possible solution.').format(
-                          start_help_tag="<a href='{url}'>".format(url=marketing_link('FAQ')), end_tag='</a>',
-                          start_logout_tag="<a href='{url}'>".format(url=reverse('logout'))
+                          start_help_tag=u"<a href='{url}'>".format(url=marketing_link('FAQ')), end_tag='</a>',
+                          start_logout_tag=u"<a href='{url}'>".format(url=reverse('logout'))
                           )
       %>
     $('#class_enroll_form').on('ajax:complete', function(event, xhr) {
@@ -120,6 +120,17 @@ from edxmako.shortcuts import marketing_link
     <div class="intro-inner-wrapper">
       <div class="table">
       <section class="intro">
+        <p class="date-block">
+        % if course.has_ended():
+        ${_("Course Completed - {end_date}").format(end_date=course.end_datetime_text())}
+        % elif course.has_started():
+        ${_("Course Started - {start_date}").format(start_date=course.start_datetime_text())}
+        % elif course.start_date_is_still_default: # Course start date TBD
+        ${_("Course has not yet started")}
+        % else:   # hasn't started yet
+        ${_("Course Starts - {start_date}").format(start_date=course.start_datetime_text())}
+        % endif
+        </p>
         <hgroup>
           <h1>
             ${get_course_about_section(course, "title")}
@@ -138,7 +149,7 @@ from edxmako.shortcuts import marketing_link
           <span class="register disabled">${_("You are enrolled in this course")}</span>
 
           %if show_courseware_link:
-            <strong>${_("View Courseware")}</strong>
+            <strong class='view-course'>${_("View Courseware")}</strong>
             </a>
           %endif
 
@@ -206,15 +217,6 @@ from edxmako.shortcuts import marketing_link
           <a class="instructor-info-action" href="${studio_url}">${_("View About Page in studio")}</a>
         </div>
       % endif
-
-      <nav aria-label="${_('Course About')}">
-        <a href="#" class="active">${_("Overview")}</a>
-      ##  <a href="#">${_("FAQ")}</a>
-      ##  <a href="#">${_("Requirements")}</a>
-      ##  <a href="#">${_("Text-book")}</a>
-      ##  <a href="#">${_("Syllabus")}</a>
-      ##  <a href="#">${_("Reviews")}</a>
-      </nav>
 
       <div class="inner-wrapper">
         ${get_course_about_section(course, "overview")}
@@ -305,8 +307,8 @@ from edxmako.shortcuts import marketing_link
             </li>
             % endif
 
-          % if get_course_about_section(course, "effort"):
-            <li class="important-dates-item"><i class="icon fa fa-pencil"></i><p class="important-dates-item-title">${_("Estimated Effort")}</p><span class="important-dates-item-text effort">${get_course_about_section(course, "effort")}</span></li>
+          % if get_course_about_section(course, "effort").strip():
+            <li class="important-dates-item"><i class="icon fa fa-clock-o"></i><p class="important-dates-item-title">${_("Estimated Effort Per Week")}</p><span class="important-dates-item-text effort">${get_course_about_section(course, "effort")}</span></li>
           % endif
 
           ##<li class="important-dates-item"><i class="icon fa fa-clock-o"></i><p class="important-dates-item-title">${_('Course Length')}</p><span class="important-dates-item-text course-length">${_('{number} weeks').format(number=15)}</span></li>

@@ -23,6 +23,8 @@ from mock import Mock
 from opaque_keys.edx.locator import CourseKey, LibraryLocator
 from openedx.core.djangoapps.content.course_structures.tests import SignalDisconnectTestMixin
 
+from student.tests.factories import UserProfileFactory
+
 
 class LibraryTestCase(ModuleStoreTestCase):
     """
@@ -30,6 +32,7 @@ class LibraryTestCase(ModuleStoreTestCase):
     """
     def setUp(self):
         user_password = super(LibraryTestCase, self).setUp()
+        self.user.profile = UserProfileFactory(user=self.user)
 
         self.client = AjaxEnabledTestClient()
         self.client.login(username=self.user.username, password=user_password)
@@ -470,6 +473,7 @@ class TestLibraryAccess(SignalDisconnectTestMixin, LibraryTestCase):
         """ Create a library, staff user, and non-staff user """
         super(TestLibraryAccess, self).setUp()
         self.non_staff_user, self.non_staff_user_password = self.create_non_staff_user()
+        self.non_staff_user.profile = UserProfileFactory(user=self.non_staff_user)
 
     def _login_as_non_staff_user(self, logout_first=True):
         """ Login as a user that starts out with no roles/permissions granted. """

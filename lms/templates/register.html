@@ -111,7 +111,7 @@ import calendar
 
 <section class="register container">
   <section role="main" class="content">
-    <form role="form" id="register-form" method="post" data-remote="true" action="/create_account" novalidate>
+      <form role="form" id="register-form" method="post" data-remote="true" action="${ reverse('create_account') }" novalidate>
       <input type="hidden" name="csrfmiddlewaretoken" value="${ csrf_token }">
 
       <!-- status messages -->
@@ -184,10 +184,10 @@ import calendar
             <input id="name" type="text" name="name" value="${name}" placeholder="${_('example: Jane Doe')}" required aria-required="true" aria-describedby="name-tip" />
             <span class="tip tip-input" id="name-tip">${_("Needed for any certificates you may earn")}</span>
           </li>
-          <li class="field required text" id="field-username">
-            <label for="username">${_('Public Username')}</label>
-            <input id="username" type="text" name="username" value="${username}" placeholder="${_('example: JaneDoe')}" required aria-required="true" aria-describedby="username-tip"/>
-            <span class="tip tip-input" id="username-tip">${_('Will be shown in any discussions or forums you participate in')} <strong>(${_('cannot be changed later')})</strong></span>
+          <li class="field required text" id="field-nickname">
+            <label for="nickname">${_('Public Nickname')}</label>
+            <input id="nickname" type="text" name="nickname" value="${nickname}" placeholder="${_('example: JaneDoe')}" required aria-required="true" aria-describedby="nickname-tip"/>
+            <span class="tip tip-input" id="nickname-tip">${_('Will be shown in any discussions or forums you participate in')}</span>
           </li>
 
           % if third_party_auth.is_enabled() and running_pipeline:
@@ -225,10 +225,10 @@ import calendar
 
           % endif
 
-          <li class="field required text" id="field-username">
-            <label for="username">${_('Public Display Name')}</label>
-            <input id="username" type="text" name="username" value="${extauth_username}" placeholder="${_('example: JaneDoe')}" required aria-required="true" aria-describedby="username-tip" />
-            <span class="tip tip-input" id="id="username-tip>${_('Will be shown in any discussions or forums you participate in')} <strong>(${_('cannot be changed later')})</strong></span>
+          <li class="field required text" id="field-nickname">
+            <label for="nickname">${_('Public Display Name')}</label>
+            <input id="nickname" type="text" name="nickname" value="${extauth_username}" placeholder="${_('example: Jane Doe')}" required aria-required="true" aria-describedby="nickname-tip" />
+            <span class="tip tip-input" id="id="nickname-tip>${_('Will be shown in any discussions or forums you participate in')} <strong>(${_('cannot be changed later')})</strong></span>
           </li>
 
           % if ask_for_fullname:

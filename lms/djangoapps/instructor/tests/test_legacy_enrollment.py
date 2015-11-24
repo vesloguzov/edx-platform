@@ -224,7 +224,7 @@ class TestInstructorEnrollsStudent(SharedModuleStoreTestCase, LoginEnrollmentTes
         )
         self.assertEqual(
             mail.outbox[0].body,
-            "Dear Autoenrolled Test\n\nYou have been enrolled in {} "
+            "Dear Autoenrolled Test,\n\nYou have been enrolled in {} "
             "at edx.org by a member of the course staff. "
             "The course should now appear on your edx.org dashboard.\n\n"
             "To start accessing course materials, please visit "
@@ -330,7 +330,7 @@ class TestInstructorEnrollsStudent(SharedModuleStoreTestCase, LoginEnrollmentTes
         )
         self.assertEqual(
             mail.outbox[0].body,
-            "Dear ShibTest Enrolled\n\nYou have been enrolled in {} "
+            "Dear ShibTest Enrolled,\n\nYou have been enrolled in {} "
             "at edx.org by a member of the course staff. "
             "The course should now appear on your edx.org dashboard.\n\n"
             "To start accessing course materials, please visit "

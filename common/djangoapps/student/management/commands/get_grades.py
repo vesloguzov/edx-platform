@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from optparse import make_option
 import datetime
 from django.core.handlers.base import BaseHandler
-import csv
+import unicodecsv as csv
 
 
 class RequestMock(RequestFactory):
@@ -83,7 +83,7 @@ class Command(BaseCommand):
         enrolled_students = User.objects.filter(
             courseenrollment__course_id=course_key
         )
-        factory = RequestMock()
+        factory = RequestMock(HTTP_HOST='127.0.0.1')
         request = factory.get('/')
 
         total = enrolled_students.count()

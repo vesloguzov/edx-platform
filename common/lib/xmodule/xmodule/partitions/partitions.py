@@ -70,11 +70,11 @@ class Group(namedtuple("Group", "id name")):
 
         for key in ("id", "name", "version"):
             if key not in value:
-                raise TypeError("Group dict {0} missing value key '{1}'".format(
+                raise TypeError(u"Group dict {0} missing value key '{1}'".format(
                     value, key))
 
         if value["version"] != Group.VERSION:
-            raise TypeError("Group dict {0} has unexpected version".format(
+            raise TypeError(u"Group dict {0} has unexpected version".format(
                 value))
 
         return Group(value["id"], value["name"])
@@ -129,7 +129,7 @@ class UserPartition(namedtuple("UserPartition", "id name description groups sche
         try:
             scheme = UserPartition.scheme_extensions[name].plugin
         except KeyError:
-            raise UserPartitionError("Unrecognized scheme {0}".format(name))
+            raise UserPartitionError(u"Unrecognized scheme {0}".format(name))
         scheme.name = name
         return scheme
 
@@ -166,7 +166,7 @@ class UserPartition(namedtuple("UserPartition", "id name description groups sche
 
         for key in ("id", "name", "description", "version", "groups"):
             if key not in value:
-                raise TypeError("UserPartition dict {0} missing value key '{1}'".format(value, key))
+                raise TypeError(u"UserPartition dict {0} missing value key '{1}'".format(value, key))
 
         if value["version"] == 1:
             # If no scheme was provided, set it to the default ('random')
@@ -177,18 +177,18 @@ class UserPartition(namedtuple("UserPartition", "id name description groups sche
         # version, we should try to read it rather than raising an exception.
         elif value["version"] >= 2:
             if "scheme" not in value:
-                raise TypeError("UserPartition dict {0} missing value key 'scheme'".format(value))
+                raise TypeError(u"UserPartition dict {0} missing value key 'scheme'".format(value))
 
             scheme_id = value["scheme"]
         else:
-            raise TypeError("UserPartition dict {0} has unexpected version".format(value))
+            raise TypeError(u"UserPartition dict {0} has unexpected version".format(value))
 
         parameters = value.get("parameters", {})
         active = value.get("active", True)
         groups = [Group.from_json(g) for g in value["groups"]]
         scheme = UserPartition.get_scheme(scheme_id)
         if not scheme:
-            raise TypeError("UserPartition dict {0} has unrecognized scheme {1}".format(value, scheme_id))
+            raise TypeError(u"UserPartition dict {0} has unrecognized scheme {1}".format(value, scheme_id))
 
         return UserPartition(
             value["id"],
@@ -217,5 +217,5 @@ class UserPartition(namedtuple("UserPartition", "id name description groups sche
                 return group
 
         raise NoSuchUserPartitionGroupError(
-            "could not find a Group with ID [{}] in UserPartition [{}]".format(group_id, self.id)
+            u"could not find a Group with ID [{}] in UserPartition [{}]".format(group_id, self.id)
         )

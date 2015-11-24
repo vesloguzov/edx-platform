@@ -77,6 +77,8 @@ from microsite_configuration import microsite
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from opaque_keys.edx.keys import CourseKey, UsageKey
 from instructor.enrollment import uses_shib
+from instructor.views.tools import get_student_from_email_or_nickname
+from required_student_data.decorators import require_student_data
 
 import survey.utils
 import survey.views
@@ -101,7 +103,7 @@ def user_groups(user):
         return []
 
     # TODO: Rewrite in Django
-    key = 'user_group_names_{user.id}'.format(user=user)
+    key = u'user_group_names_{user.id}'.format(user=user)
     cache_expiration = 60 * 60  # one hour
 
     # Kill caching on dev machines -- we switch groups a lot
@@ -286,6 +288,7 @@ def save_positions_recursively_up(user, request, field_data_cache, xmodule, cour
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @ensure_valid_course_key
 @outer_atomic(read_committed=True)
+@require_student_data
 def index(request, course_id, chapter=None, section=None,
           position=None):
     """
@@ -444,7 +447,7 @@ def _index_bulk_op(request, course_key, chapter, section, position):
         if chapter_descriptor is not None:
             save_child_position(course_module, chapter)
         else:
-            raise Http404('No chapter descriptor found with name {}'.format(chapter))
+            raise Http404(u'No chapter descriptor found with name {}'.format(chapter))
 
         chapter_module = course_module.get_child_by(lambda m: m.location.name == chapter)
         if chapter_module is None:
@@ -627,6 +630,7 @@ def jump_to(_request, course_id, location):
 
 @ensure_csrf_cookie
 @ensure_valid_course_key
+@require_student_data
 def course_info(request, course_id):
     """
     Display the course's info.html, or 404 if there is no such course.
@@ -698,6 +702,7 @@ def course_info(request, course_id):
 
 @ensure_csrf_cookie
 @ensure_valid_course_key
+@require_student_data
 def static_tab(request, course_id, tab_slug):
     """
     Display the courses tab with the given name.
@@ -832,7 +837,7 @@ def course_about(request, course_id):
                 in_cart = shoppingcart.models.PaidCourseRegistration.contained_in_order(cart, course_key) or \
                     shoppingcart.models.CourseRegCodeItem.contained_in_order(cart, course_key)
 
-            reg_then_add_to_cart_link = "{reg_url}?course_id={course_id}&enrollment_action=add_to_cart".format(
+            reg_then_add_to_cart_link = u"{reg_url}?course_id={course_id}&enrollment_action=add_to_cart".format(
                 reg_url=reverse('register_user'), course_id=urllib.quote(str(course_id)))
 
         course_price = get_cosmetic_display_price(course, registration_price)
@@ -883,6 +888,7 @@ def course_about(request, course_id):
 @login_required
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @ensure_valid_course_key
+@require_student_data
 def progress(request, course_id, student_id=None):
     """ Display the progress page. """
 
@@ -1045,7 +1051,7 @@ def _credit_course_requirements(course_key, student):
 
 @login_required
 @ensure_valid_course_key
-def submission_history(request, course_id, student_username, location):
+def submission_history(request, course_id, location):
     """Render an HTML fragment (meant for inclusion elsewhere) that renders a
     history of all state changes made by this user for this problem location.
     Right now this only works for problems because that's all
@@ -1062,17 +1068,21 @@ def submission_history(request, course_id, student_username, location):
     course = get_course_with_access(request.user, 'load', course_key)
     staff_access = bool(has_access(request.user, 'staff', course))
 
+    student_identifier = request.REQUEST.get('student_identifier')
+    if not student_identifier:
+        return HttpResponse(escape(_(u'No user identifier submitted.')))
+
     # Permission Denied if they don't have staff access and are trying to see
-    # somebody else's submission history.
-    if (student_username != request.user.username) and (not staff_access):
+    # somebody else's submission history (if nickname is not unique, MultipleUsersFound would be risen).
+    if (student_identifier not in (request.user.email, request.user.profile.nickname)) and (not staff_access):
         raise PermissionDenied
 
     user_state_client = DjangoXBlockUserStateClient()
     try:
-        history_entries = list(user_state_client.get_history(student_username, usage_key))
+        history_entries = list(user_state_client.get_history(student_identifier, usage_key))
     except DjangoXBlockUserStateClient.DoesNotExist:
         return HttpResponse(escape(_(u'User {username} has never accessed problem {location}').format(
-            username=student_username,
+            username=student_identifier,
             location=location
         )))
 
@@ -1108,7 +1118,7 @@ def submission_history(request, course_id, student_username, location):
     context = {
         'history_entries': history_entries,
         'scores': scores,
-        'username': student_username,
+        'nickname': student.profile.nickname or student.email,
         'location': location,
         'course_id': course_key.to_deprecated_string()
     }

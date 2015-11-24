@@ -35,6 +35,7 @@ class AutoAuthPage(PageObject):
         self._params = {}
 
         if username is not None:
+            self._params['nickname'] = username
             self._params['username'] = username
 
         if email is not None:

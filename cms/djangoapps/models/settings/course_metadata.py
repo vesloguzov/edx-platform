@@ -3,6 +3,7 @@ Django module for Course Metadata class -- manages advanced settings and related
 """
 from xblock.fields import Scope
 from xmodule.modulestore.django import modulestore
+from xmodule.tabs import CourseTabList
 from django.utils.translation import ugettext as _
 from django.conf import settings
 
@@ -201,6 +202,9 @@ class CourseMetadata(object):
         """
         for key, value in key_values.iteritems():
             setattr(descriptor, key, value)
+
+        if 'discussion_link' in key_values:
+            CourseTabList.update_discussion(descriptor)
 
         if save and len(key_values):
             modulestore().update_item(descriptor, user.id)

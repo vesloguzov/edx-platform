@@ -11,6 +11,8 @@ from urlparse import urljoin
 
 from pytz import UTC
 from requests import HTTPError
+import smtplib
+from boto.exception import BotoServerError  # this is a super-class of SESError and catches connection errors
 from ipware.ip import get_ip
 
 from django.conf import settings
@@ -444,7 +446,7 @@ def register_user(request, extra_context=None):
             settings.PLATFORM_NAME
         ),
         'selected_provider': '',
-        'username': '',
+        'nickname': '',
     }
 
     if extra_context is not None:
@@ -1021,6 +1023,10 @@ def change_enrollment(request, check_access=True):
                 CourseEnrollment.enroll(user, course_id, check_access=check_access)
             except Exception:
                 return HttpResponseBadRequest(_("Could not enroll"))
+            else:
+                if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL'):
+                    course = modulestore().get_course(course_id)
+                    send_enrollment_email(user, course, use_https_for_links=request.is_secure())
 
         # If we have more than one course mode or professional ed is enabled,
         # then send the user to the choose your track page.
@@ -1046,6 +1052,52 @@ def change_enrollment(request, check_access=True):
         return HttpResponse()
     else:
         return HttpResponseBadRequest(_("Enrollment action is invalid"))
+
+
+def send_enrollment_email(user, course, use_https_for_links=True):
+    """
+    Construct the email and then send it.
+    """
+    site_name = microsite.get_value('SITE_NAME', settings.SITE_NAME)
+    course_url = u'{protocol}://{site}{path}'.format(
+        protocol='https' if use_https_for_links else 'http',
+        site=site_name,
+        path=reverse('course_root', kwargs={'course_id': course.id.to_deprecated_string()})
+    )
+    course_about_url = None
+    if not settings.FEATURES.get('ENABLE_MKTG_SITE', False):
+        course_about_url = u'{protocol}://{site}{path}'.format(
+            protocol='https' if use_https_for_links else 'http',
+            site=site_name,
+            path=reverse('about_course', kwargs={'course_id': course.id.to_deprecated_string()})
+        )
+
+    context = {
+        'full_name': user.profile.name or user.profile.nickname_or_default,
+        'course': course,
+        'course_url': course_url,
+        'course_about_url': course_about_url,
+        'site_name': site_name,
+    }
+
+    subject = render_to_string('emails/enroll_email_subject.txt', context)
+    message = render_to_string('emails/enroll_email_message.txt', context)
+
+    # Remove leading and trailing whitespace from body
+    message = message.strip()
+
+    # Email subject *must not* contain newlines
+    subject = ''.join(subject.splitlines())
+    from_address = microsite.get_value(
+        'email_from_address',
+        settings.DEFAULT_FROM_EMAIL
+    )
+
+    try:
+        user.email_user(subject, message, from_address)
+    except (smtplib.SMTPException, BotoServerError):  # sadly need to handle diff. mail backends individually
+        log.error('Failed sending enrollment e-mail to user %s for course %s',
+                  user.username, course.id.to_deprecated_string())
 
 
 # Need different levels of logging
@@ -1324,10 +1376,10 @@ def manage_user_standing(request):
 
     all_disabled_users = [standing.user for standing in all_disabled_accounts]
 
-    headers = ['username', 'account_changed_by']
+    headers = ['email', 'account_changed_by']
     rows = []
     for user in all_disabled_users:
-        row = [user.username, user.standing.all()[0].changed_by]
+        row = [user.email, user.standing.all()[0].changed_by]
         rows.append(row)
 
     context = {'headers': headers, 'rows': rows}
@@ -1345,10 +1397,10 @@ def disable_account_ajax(request):
     """
     if not request.user.is_staff:
         raise Http404
-    username = request.POST.get('username')
+    email = request.POST.get('email')
     context = {}
-    if username is None or username.strip() == '':
-        context['message'] = _('Please enter a username')
+    if email is None or email.strip() == '':
+        context['message'] = _('Please enter an email')
         return JsonResponse(context, status=400)
 
     account_action = request.POST.get('account_action')
@@ -1356,11 +1408,11 @@ def disable_account_ajax(request):
         context['message'] = _('Please choose an option')
         return JsonResponse(context, status=400)
 
-    username = username.strip()
+    email = email.strip()
     try:
-        user = User.objects.get(username=username)
+        user = User.objects.get(email=email)
     except User.DoesNotExist:
-        context['message'] = _("User with username {} does not exist").format(username)
+        context['message'] = _("User with email {} does not exist").format(email)
         return JsonResponse(context, status=400)
     else:
         user_account, _success = UserStanding.objects.get_or_create(
@@ -1368,12 +1420,12 @@ def disable_account_ajax(request):
         )
         if account_action == 'disable':
             user_account.account_status = UserStanding.ACCOUNT_DISABLED
-            context['message'] = _("Successfully disabled {}'s account").format(username)
-            log.info(u"%s disabled %s's account", request.user, username)
+            context['message'] = _("Successfully disabled {}'s account").format(email)
+            log.info(u"{} disabled {}'s account".format(request.user, email))
         elif account_action == 'reenable':
             user_account.account_status = UserStanding.ACCOUNT_ENABLED
-            context['message'] = _("Successfully reenabled {}'s account").format(username)
-            log.info(u"%s reenabled %s's account", request.user, username)
+            context['message'] = _("Successfully reenabled {}'s account").format(email)
+            log.info(u"{} reenabled {}'s account".format(request.user, email))
         else:
             context['message'] = _("Unexpected account status")
             return JsonResponse(context, status=400)
@@ -1433,26 +1485,21 @@ def _do_create_account(form):
         raise ValidationError(form.errors)
 
     user = User(
-        username=form.cleaned_data["username"],
         email=form.cleaned_data["email"],
         is_active=False
     )
     user.set_password(form.cleaned_data["password"])
+
     registration = Registration()
 
     # TODO: Rearrange so that if part of the process fails, the whole process fails.
     # Right now, we can have e.g. no registration e-mail sent out and a zombie account
     try:
         with transaction.atomic():
-            user.save()
+            save_user_with_auto_username(user)
     except IntegrityError:
         # Figure out the cause of the integrity error
-        if len(User.objects.filter(username=user.username)) > 0:
-            raise AccountValidationError(
-                _("An account with the Public Username '{username}' already exists.").format(username=user.username),
-                field="username"
-            )
-        elif len(User.objects.filter(email=user.email)) > 0:
+        if len(User.objects.filter(email=user.email)) > 0:
             raise AccountValidationError(
                 _("An account with the Email '{email}' already exists.").format(email=user.email),
                 field="email"
@@ -1469,7 +1516,7 @@ def _do_create_account(form):
 
     profile_fields = [
         "name", "level_of_education", "gender", "mailing_address", "city", "country", "goals",
-        "year_of_birth"
+        "year_of_birth", "nickname",
     ]
     profile = UserProfile(
         user=user,
@@ -1485,6 +1532,13 @@ def _do_create_account(form):
         raise
 
     return (user, profile, registration)
+
+def save_user_with_auto_username(user):
+    user.username = 'new_user_%s' % uuid.uuid4().hex[:20]
+    user.save()
+    user.username = 'edx_user_%s' % user.id
+    user.save()
+    return user
 
 
 def create_account_with_params(request, params):
@@ -1570,7 +1624,7 @@ def create_account_with_params(request, params):
         data=params,
         extra_fields=extra_fields,
         extended_profile_fields=extended_profile_fields,
-        enforce_username_neq_password=True,
+        enforce_nickname_neq_password=True,
         enforce_password_policy=enforce_password_policy,
         tos_required=tos_required,
     )
@@ -1732,14 +1786,14 @@ def create_account_with_params(request, params):
     # TODO: there is no error checking here to see that the user actually logged in successfully,
     # and is not yet an active user.
     if new_user is not None:
-        AUDIT_LOG.info(u"Login success on new account creation - {0}".format(new_user.username))
+        AUDIT_LOG.info(u"Login success on new account creation - {0} ({1})".format(new_user.profile.nickname, new_user.email))
 
     if do_external_auth:
         eamap.user = new_user
         eamap.dtsignup = datetime.datetime.now(UTC)
         eamap.save()
-        AUDIT_LOG.info(u"User registered with external_auth %s", new_user.username)
-        AUDIT_LOG.info(u'Updated ExternalAuthMap for %s to be %s', new_user.username, eamap)
+        AUDIT_LOG.info(u"User registered with external_auth %s (%s)", user.profile.nickname, user.email)
+        AUDIT_LOG.info(u'Updated ExternalAuthMap for %s (%s) to be %s', user.profile.nickname, user.email, eamap)
 
         if settings.FEATURES.get('BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH'):
             log.info('bypassing activation email')
@@ -1811,10 +1865,10 @@ def auto_auth(request):
     unique_name = uuid.uuid4().hex[0:30]
 
     # Use the params from the request, otherwise use these defaults
-    username = request.GET.get('username', unique_name)
+    nickname = request.GET.get('nickname', unique_name)
     password = request.GET.get('password', unique_name)
     email = request.GET.get('email', unique_name + "@example.com")
-    full_name = request.GET.get('full_name', username)
+    full_name = request.GET.get('full_name', nickname)
     is_staff = request.GET.get('staff', None)
     is_superuser = request.GET.get('superuser', None)
     course_id = request.GET.get('course_id', None)
@@ -1830,7 +1884,7 @@ def auto_auth(request):
 
     form = AccountCreationForm(
         data={
-            'username': username,
+            'nickname': nickname,
             'email': email,
             'password': password,
             'name': full_name,
@@ -1845,7 +1899,7 @@ def auto_auth(request):
         user, profile, reg = _do_create_account(form)
     except AccountValidationError:
         # Attempt to retrieve the existing user.
-        user = User.objects.get(username=username)
+        user = User.objects.get(email=email)
         user.email = email
         user.set_password(password)
         user.save()
@@ -1882,7 +1936,7 @@ def auto_auth(request):
 
     # Log in as the user
     if login_when_done:
-        user = authenticate(username=username, password=password)
+        user = authenticate(username=user.username, password=password)
         login(request, user)
 
     create_comments_service_user(user)
@@ -1935,6 +1989,7 @@ def activate_account(request, key):
                             manual_enrollment_audit.enrolled_by, student[0].email, ALLOWEDTOENROLL_TO_ENROLLED,
                             manual_enrollment_audit.reason, enrollment
                         )
+            CourseEnrollment.enroll_pending(student[0])
 
         resp = render_to_response(
             "registration/activation_complete.html",

@@ -48,7 +48,7 @@ class PartitionService(object):
         Raises:
             ValueError if the user_partition_id isn't found.
         """
-        cache_key = "PartitionService.ugidfp.{}.{}.{}".format(
+        cache_key = u"PartitionService.ugidfp.{}.{}.{}".format(
             self._user.id, self._course_id, user_partition_id
         )
 
@@ -58,8 +58,8 @@ class PartitionService(object):
         user_partition = self._get_user_partition(user_partition_id)
         if user_partition is None:
             raise ValueError(
-                "Configuration problem!  No user_partition with id {0} "
-                "in course {1}".format(user_partition_id, self._course_id)
+                u"Configuration problem!  No user_partition with id {0} "
+                u"in course {1}".format(user_partition_id, self._course_id)
             )
 
         group = self.get_group(user_partition)

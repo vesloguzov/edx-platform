@@ -35,11 +35,11 @@ class LoginEnrollmentTestCase(TestCase):
         """
         self.email = 'foo@test.com'
         self.password = 'bar'
-        self.username = 'test'
+        self.nickname = 'test'
         self.user = self.create_account(
-            self.username,
+            self.nickname,
             self.email,
-            self.password,
+            self.password
         )
         self.activate_user(self.email)
         self.login(self.email, self.password)
@@ -77,13 +77,13 @@ class LoginEnrollmentTestCase(TestCase):
         # should redirect
         self.assert_request_status_code(302, reverse('logout'))
 
-    def create_account(self, username, email, password):
+    def create_account(self, nickname, email, password):
         """
         Create the account and check that it worked.
         """
         url = reverse('create_account')
         request_data = {
-            'username': username,
+            'nickname': nickname,
             'email': email,
             'password': password,
             'name': 'username',

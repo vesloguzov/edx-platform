@@ -50,12 +50,13 @@ def get_user_preference(requesting_user, preference_key, username=None):
 
 
 @intercept_errors(UserAPIInternalError, ignore_errors=[UserAPIRequestError])
-def get_user_preferences(requesting_user, username=None):
+def get_user_preferences(request, username=None):
     """Returns all user preferences as a JSON response.
 
     Args:
-        requesting_user (User): The user requesting the user preferences. Only the user with username
-            `username` or users with "is_staff" privileges can access the preferences.
+        request (HttpRequest): The request instance used to extract requesting user
+            and serialize preferences. Only the user with username `username`
+            or users with "is_staff" privileges can access the preferences.
         username (str): Optional username for which to look up the preferences. If not specified,
             `requesting_user.username` is assumed.
 

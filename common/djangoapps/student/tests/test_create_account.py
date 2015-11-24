@@ -44,30 +44,34 @@ class TestCreateAccount(TestCase):
 
     def setUp(self):
         super(TestCreateAccount, self).setUp()
-        self.username = "test_user"
         self.url = reverse("create_account")
         self.request_factory = RequestFactory()
         self.params = {
-            "username": self.username,
             "email": "test@example.org",
+            "nickname": "test",
             "password": "testpass",
             "name": "Test User",
             "honor_code": "true",
             "terms_of_service": "true",
         }
 
+    def test_create_account(self):
+        response = self.client.post(self.url, self.params)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.filter(email=self.params['email']).exists())
+
     @ddt.data("en", "eo")
     def test_default_lang_pref_saved(self, lang):
         with mock.patch("django.conf.settings.LANGUAGE_CODE", lang):
             response = self.client.post(self.url, self.params)
             self.assertEqual(response.status_code, 200)
-            user = User.objects.get(username=self.username)
+            user = User.objects.get(email=self.params['email'])
             self.assertEqual(get_user_preference(user, LANGUAGE_KEY), lang)
 
     @ddt.data("en", "eo")
     def test_header_lang_pref_saved(self, lang):
         response = self.client.post(self.url, self.params, HTTP_ACCEPT_LANGUAGE=lang)
-        user = User.objects.get(username=self.username)
+        user = User.objects.get(email=self.params['email'])
         self.assertEqual(response.status_code, 200)
         self.assertEqual(get_user_preference(user, LANGUAGE_KEY), lang)
 
@@ -78,7 +82,7 @@ class TestCreateAccount(TestCase):
         """
         response = self.client.post(self.url, self.params, HTTP_HOST="microsite.example.com")
         self.assertEqual(response.status_code, 200)
-        user = User.objects.get(username=self.username)
+        user = User.objects.get(email=self.params['email'])
         return user.profile
 
     def test_marketing_cookie(self):
@@ -269,7 +273,7 @@ class TestCreateAccount(TestCase):
         with mock.patch.dict("student.models.settings.FEATURES", {"ENABLE_DISCUSSION_EMAIL_DIGEST": digest_enabled}):
             response = self.client.post(self.url, self.params)
             self.assertEqual(response.status_code, 200)
-            user = User.objects.get(username=self.username)
+            user = User.objects.get(email=self.params['email'])
             preference = get_user_preference(user, NOTIFICATION_PREF_KEY)
             if digest_enabled:
                 self.assertIsNotNone(preference)
@@ -286,7 +290,7 @@ class TestCreateAccountValidation(TestCase):
         super(TestCreateAccountValidation, self).setUp()
         self.url = reverse("create_account")
         self.minimal_params = {
-            "username": "test_username",
+            "nickname": "test_nickname",
             "email": "test_email@example.com",
             "password": "test_password",
             "name": "Test Name",
@@ -319,32 +323,26 @@ class TestCreateAccountValidation(TestCase):
     def test_minimal_success(self):
         self.assert_success(self.minimal_params)
 
-    def test_username(self):
+    def test_nickname(self):
         params = dict(self.minimal_params)
 
-        def assert_username_error(expected_error):
+        def assert_nickname_error(expected_error):
             """
             Assert that requesting account creation results in the expected
             error
             """
-            self.assert_error(params, "username", expected_error)
+            self.assert_error(params, "nickname", expected_error)
 
         # Missing
-        del params["username"]
-        assert_username_error("Username must be minimum of two characters long")
+        del params["nickname"]
+        assert_nickname_error("Nickname must be minimum of two characters long")
 
         # Empty, too short
-        for username in ["", "a"]:
-            params["username"] = username
-            assert_username_error("Username must be minimum of two characters long")
+        for nickname in ["", "a"]:
+            params["nickname"] = nickname
+            assert_nickname_error("Nickname must be minimum of two characters long")
 
-        # Too long
-        params["username"] = "this_username_has_31_characters"
-        assert_username_error("Username cannot be more than 30 characters long")
-
-        # Invalid
-        params["username"] = "invalid username"
-        assert_username_error("Usernames must contain only letters, numbers, underscores (_), and hyphens (-).")
+        # Nickname may be longer then 30 characters and have spaces
 
     def test_email(self):
         params = dict(self.minimal_params)
@@ -395,8 +393,8 @@ class TestCreateAccountValidation(TestCase):
         # Password policy is tested elsewhere
 
         # Matching username
-        params["username"] = params["password"] = "test_username_and_password"
-        assert_password_error("Username and password fields cannot match")
+        params["nickname"] = params["password"] = "test_nickname_and_password"
+        assert_password_error("Nickname and password fields cannot match")
 
     def test_name(self):
         params = dict(self.minimal_params)
@@ -444,8 +442,7 @@ class TestCreateAccountValidation(TestCase):
         with override_settings(REGISTRATION_EXTRA_FIELDS={"honor_code": "optional"}):
             # Missing
             del params["honor_code"]
-            # Need to change username/email because user was created above
-            params["username"] = "another_test_username"
+            # Need to change email because user was created above
             params["email"] = "another_test_email@example.com"
             self.assert_success(params)
 
@@ -514,11 +511,10 @@ class TestCreateCommentsServiceUser(TransactionTestCase):
 
     def setUp(self):
         super(TestCreateCommentsServiceUser, self).setUp()
-        self.username = "test_user"
         self.url = reverse("create_account")
         self.params = {
-            "username": self.username,
             "email": "test@example.org",
+            "nickname": "test",
             "password": "testpass",
             "name": "Test User",
             "honor_code": "true",
@@ -530,10 +526,12 @@ class TestCreateCommentsServiceUser(TransactionTestCase):
         response = self.client.post(self.url, self.params)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(request.called)
+
+        user = User.objects.get(email=self.params['email'])
         args, kwargs = request.call_args
         self.assertEqual(args[0], 'put')
         self.assertTrue(args[1].startswith(TEST_CS_URL))
-        self.assertEqual(kwargs['data']['username'], self.params['username'])
+        self.assertEqual(kwargs['data']['username'], user.username)
 
     @mock.patch("student.models.Registration.register", side_effect=Exception)
     def test_cs_user_not_created(self, register, request):
@@ -543,6 +541,6 @@ class TestCreateCommentsServiceUser(TransactionTestCase):
         except:
             pass
         with self.assertRaises(User.DoesNotExist):
-            User.objects.get(username=self.username)
+            User.objects.get(email=self.params['email'])
         self.assertTrue(register.called)
         self.assertFalse(request.called)

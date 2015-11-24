@@ -12,7 +12,9 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.test.utils import override_settings
+from django.test.client import RequestFactory
 from dateutil.parser import parse as parse_datetime
+from django.core.urlresolvers import reverse
 
 from student.tests.factories import UserFactory
 
@@ -48,6 +50,8 @@ class TestPreferenceAPI(TestCase):
         self.test_preference_value = "test_value"
         set_user_preference(self.user, self.test_preference_key, self.test_preference_value)
 
+        self.request_factory = RequestFactory()
+
     def test_get_user_preference(self):
         """
         Verifies the basic behavior of get_user_preference.
@@ -81,21 +85,37 @@ class TestPreferenceAPI(TestCase):
         expected_user_preferences = {
             self.test_preference_key: self.test_preference_value,
         }
-        self.assertEqual(get_user_preferences(self.user), expected_user_preferences)
-        self.assertEqual(get_user_preferences(self.staff_user, username=self.user.username), expected_user_preferences)
+        request = self._preferences_request(self.user, self.user.username)
+        self.assertEqual(get_user_preferences(request), expected_user_preferences)
+
+        request = self._preferences_request(self.staff_user, self.user.username)
+        self.assertEqual(get_user_preferences(request, username=self.user.username), expected_user_preferences)
 
     def test_get_user_preferences_errors(self):
         """
         Verifies that get_user_preferences returns appropriate errors.
         """
         with self.assertRaises(UserNotFound):
-            get_user_preferences(self.user, username="no_such_user")
+            get_user_preferences(
+                self._preferences_request(self.user, 'no_such_user'),
+                username="no_such_user"
+            )
 
         with self.assertRaises(UserNotFound):
-            get_user_preferences(self.no_such_user)
+            get_user_preferences(
+                self._preferences_request(self.no_such_user, 'no_such_user')
+            )
 
         with self.assertRaises(UserNotAuthorized):
-            get_user_preferences(self.different_user, username=self.user.username)
+            get_user_preferences(
+                self._preferences_request(self.different_user, self.user.username),
+                username=self.user.username
+            )
+
+    def _preferences_request(self, requesting_user, username):
+        request = self.request_factory.get(reverse('preferences_api', args=[username]))
+        request.user=requesting_user
+        return request
 
     def test_set_user_preference(self):
         """

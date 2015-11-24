@@ -19,6 +19,15 @@ from openedx.core.djangoapps.self_paced.models import SelfPacedConfiguration
 if settings.DEBUG or settings.FEATURES.get('ENABLE_DJANGO_ADMIN_SITE'):
     admin.autodiscover()
 
+if settings.ROOT_URL_PREFIX:
+    url_django = url
+    def url(regex, *args, **kwargs):
+        """
+        Built-in url override to insert common url prefix
+        """
+        regex = r'^{}/{}'.format(settings.ROOT_URL_PREFIX[1:], regex[1:])
+        return url_django(regex, *args, **kwargs)
+
 # Use urlpatterns formatted as within the Django docs with first parameter "stuck" to the open parenthesis
 # pylint: disable=bad-continuation
 urlpatterns = (
@@ -32,6 +41,8 @@ urlpatterns = (
     url(r'^admin_dashboard$', 'dashboard.views.dashboard'),
 
     url(r'^email_confirm/(?P<key>[^/]*)$', 'student.views.confirm_email_change'),
+    url(r'^update_required_data$', 'required_student_data.views.update_required_data', name='update_required_data'),
+    url(r'^postpone_required_data_update$', 'required_student_data.views.postpone_required_data_update', name='postpone_required_data_update'),
     url(r'^event$', 'track.views.user_track'),
     url(r'^performance$', 'performance.views.performance_log'),
     url(r'^segmentio/event$', 'track.views.segmentio.segmentio_event'),
@@ -68,13 +79,14 @@ urlpatterns = (
     # Note: these are older versions of the User API that will eventually be
     # subsumed by api/user listed below.
     url(r'^user_api/', include('openedx.core.djangoapps.user_api.legacy_urls')),
+    url(r'^api/', include('api.urls')),
 
     url(r'^notifier_api/', include('notifier_api.urls')),
 
     url(r'^i18n/', include('django.conf.urls.i18n')),
 
     # Feedback Form endpoint
-    url(r'^submit_feedback$', 'util.views.submit_feedback'),
+    url(r'^submit_feedback$', 'util.views.submit_feedback', name='submit_feedback'),
 
     # Enrollment API RESTful endpoints
     url(r'^api/enrollment/v1/', include('enrollment.urls')),
@@ -137,12 +149,12 @@ urlpatterns += (
 js_info_dict = {
     'domain': 'djangojs',
     # We need to explicitly include external Django apps that are not in LOCALE_PATHS.
-    'packages': ('openassessment',),
+    'packages': ('openassessment', 'edx_sga'),
 }
 
 urlpatterns += (
     # Serve catalog of localized strings to be rendered by Javascript
-    url(r'^i18n.js$', 'django.views.i18n.javascript_catalog', js_info_dict),
+    url(r'^i18n.js$', 'django.views.i18n.javascript_catalog', js_info_dict, name="jsi18n"),
 )
 
 # sysadmin dashboard, to see what courses are loaded, to delete & load courses
@@ -535,13 +547,16 @@ if settings.COURSEWARE_ENABLED:
 
     if settings.FEATURES.get('ENABLE_STUDENT_HISTORY_VIEW'):
         urlpatterns += (
-            url(
-                r'^courses/{}/submission_history/(?P<student_username>[^/]*)/(?P<location>.*?)$'.format(
-                    settings.COURSE_ID_PATTERN
-                ),
+            url(r'^courses/{}/submission_history/(?P<location>.*?)$'.format(settings.COURSE_ID_PATTERN),
                 'courseware.views.submission_history',
                 name='submission_history'),
+    )
+    if settings.GRADES_DOWNLOAD['STORAGE_TYPE'] == 'protectedfs':
+        urlpatterns += (
+            url(r'^courses/{}/download_report/(?P<filename>[^/]*)/$'.format(settings.COURSE_ID_PATTERN),
+                'instructor.views.storage.serve_report', name='serve_report'),
         )
+
 
 
 if settings.COURSEWARE_ENABLED and settings.FEATURES.get('ENABLE_INSTRUCTOR_LEGACY_DASHBOARD'):
@@ -573,7 +588,8 @@ if settings.FEATURES.get('AUTH_USE_SHIB'):
 
 if settings.FEATURES.get('AUTH_USE_CAS'):
     urlpatterns += (
-        url(r'^cas-auth/login/$', 'external_auth.views.cas_login', name="cas-login"),
+        url(r'^cas-auth/login/$', 'django_cas.views.login', name="cas-login"),
+        url(r'^cas-auth/instant-login/$', 'django_cas.views.instant_login', name="cas-instant-login"),
         url(r'^cas-auth/logout/$', 'django_cas.views.logout', {'next_page': '/'}, name="cas-logout"),
     )
 

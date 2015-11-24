@@ -13,7 +13,7 @@
 
     <div class="item-metadata">
     <h3 class="user-name">
-      <span class="user-username"><%= user.username %></span>
+      <span class="user-nickname"><%= user.nickname %></span>
       <span class="user-email">
         <a class="action action-email" href="mailto:<%= user.email %>"
                 title="<%= viewHelpers.format(gettext("send an email message to {email}"), {email: user.email})%>">
@@ -41,7 +41,7 @@
         <li class="action action-delete <%=!allow_delete ? "is-disabled" : "" %> aria-disabled="<%=!allow_delete%>">
             <a href="#" class="delete remove-user action-icon" data-id="<%= user.email %>">
                 <i class="icon fa fa-trash-o"></i>
-                <span class="sr"><%= viewHelpers.format(gettext("Delete the user, {username}"), {username:user.username}) %></span>
+                <span class="sr"><%= viewHelpers.format(gettext("Delete the user, {username}"), {username:user.nickname}) %></span>
             </a>
         </li>
     </ul>

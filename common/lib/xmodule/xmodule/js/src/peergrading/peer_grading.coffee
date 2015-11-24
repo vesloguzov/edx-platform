@@ -54,6 +54,7 @@ class @PeerGrading
     location_to_fetch = $(event.target).data('location')
     data = {'location' : location_to_fetch}
     $.postWithPrefix "#{@ajax_url}problem", data, (response) =>
+    # $.post "#{@ajax_url}problem", data, (response) =>
       if response.success
         @peer_grading_outer_container.after(response.html).remove()
         backend = new PeerGradingProblemBackend(@ajax_url, false)

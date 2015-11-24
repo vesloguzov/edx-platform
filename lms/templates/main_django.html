@@ -18,35 +18,32 @@
   {% block main_vendor_js %}
   {% javascript 'main_vendor' %}
   {% endblock %}
+
   {% block headextra %}{% endblock %}
+  {% if HEADER_EXTRA_FILE %}
+    {% include HEADER_EXTRA_FILE %}
+  {% endif %}
+
   {% render_block "css" %}
 
+  {% include GOOGLE_ANALYTICS_FILE %}
   {% microsite_css_overrides_file %}
 
   <meta name="path_prefix" content="{{EDX_ROOT_URL}}">
+  <meta name="root_path_prefix" content="{{settings.ROOT_URL_PREFIX}}">
 </head>
 
 <body class="{% block bodyclass %}{% endblock %} lang_{{LANGUAGE_CODE}}">
   <div class="window-wrap" dir="${static.dir_rtl()}">
     <a class="nav-skip" href="{% block nav_skip %}#content{% endblock %}">{% trans "Skip to main content" %}</a>
     {% with course=request.course %}
-      {% if IS_EDX_DOMAIN %}
-        {% include "navigation-edx.html" %}
-      {% else %}
-        {% include "navigation.html" %}
-      {% endif %}
+      {% include HEADER_FILE %}
     {% endwith %}
     <div class="content-wrapper" id="content">
       {% block body %}{% endblock %}
       {% block bodyextra %}{% endblock %}
     </div>
-    {% if IS_REQUEST_IN_MICROSITE %}
-    {# For now we don't support overriden Django templates in microsites. Leave footer blank for now which is better than saying Edx.#}
-    {% elif IS_EDX_DOMAIN %}
-      {% include "footer-edx-v3.html" %}
-    {% else %}
-      {% include "footer.html" %}
-    {% endif %}
+    {% include FOOTER_FILE %}
 
   </div>
 

@@ -123,6 +123,10 @@ class CourseAccessRoleAdmin(admin.ModelAdmin):
         super(CourseAccessRoleAdmin, self).save_model(request, obj, form, change)
 
 
+
+
+
+
 class LinkedInAddToProfileConfigurationAdmin(admin.ModelAdmin):
     """Admin interface for the LinkedIn Add to Profile configuration. """
 
@@ -135,13 +139,20 @@ class LinkedInAddToProfileConfigurationAdmin(admin.ModelAdmin):
 
 class CourseEnrollmentAdmin(admin.ModelAdmin):
     """ Admin interface for the CourseEnrollment model. """
-    list_display = ('id', 'course_id', 'mode', 'user', 'is_active',)
+    list_display = ('id', 'course_id', 'mode', 'username', 'email', 'is_active',)
+    list_select_related = ('user',)
     list_filter = ('mode', 'is_active',)
     raw_id_fields = ('user',)
-    search_fields = ('course_id', 'mode', 'user__username',)
+    search_fields = ('course_id', 'mode', 'user__username', 'user__email')
 
     def queryset(self, request):
         return super(CourseEnrollmentAdmin, self).queryset(request).select_related('user')
+
+    def username(self, obj):
+        return obj.user.username
+
+    def email(self, obj):
+        return obj.user.email
 
     class Meta(object):
         model = CourseEnrollment
@@ -149,9 +160,9 @@ class CourseEnrollmentAdmin(admin.ModelAdmin):
 
 class UserProfileAdmin(admin.ModelAdmin):
     """ Admin interface for UserProfile model. """
-    list_display = ('user', 'name',)
-    raw_id_fields = ('user',)
-    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email', 'name',)
+    list_display = ('username', 'email', 'nickname', 'name', 'birthdate', 'city')
+    list_select_related = ('user',)
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email', 'name', 'nickname')
 
     def get_readonly_fields(self, request, obj=None):
         # The user field should not be editable for an existing user profile.
@@ -159,8 +170,15 @@ class UserProfileAdmin(admin.ModelAdmin):
             return self.readonly_fields + ('user',)
         return self.readonly_fields
 
+    def username(self, obj):
+        return obj.user.username
+
+    def email(self, obj):
+        return obj.user.email
+
     class Meta(object):
         model = UserProfile
+
 
 
 admin.site.register(UserTestGroup)

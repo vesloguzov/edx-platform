@@ -46,7 +46,7 @@ class HelperMethods(object):
         vertical = ItemFactory.create(
             category='vertical',
             parent_location=self.course.location,
-            display_name='Test Unit {}'.format(name_suffix)
+            display_name=u'Test Unit {}'.format(name_suffix)
         )
         c0_url = self.course.id.make_usage_key("vertical", "split_test_cond0")
         c1_url = self.course.id.make_usage_key("vertical", "split_test_cond1")
@@ -61,19 +61,19 @@ class HelperMethods(object):
         ItemFactory.create(
             parent_location=split_test.location,
             category="vertical",
-            display_name="Condition 0 vertical",
+            display_name=u"Condition 0 vertical{}".format(special_characters),
             location=c0_url,
         )
         ItemFactory.create(
             parent_location=split_test.location,
             category="vertical",
-            display_name="Condition 1 vertical",
+            display_name=u"Condition 1 vertical{}".format(special_characters),
             location=c1_url,
         )
         ItemFactory.create(
             parent_location=split_test.location,
             category="vertical",
-            display_name="Condition 2 vertical",
+            display_name=u"Condition 2 vertical{}".format(special_characters),
             location=c2_url,
         )
 
@@ -115,14 +115,25 @@ class HelperMethods(object):
 
         return vertical, problem
 
-    def _add_user_partitions(self, count=1, scheme_id="random"):
+    def _add_user_partitions(self, count=1, scheme_id="random", suffix=''):
         """
         Create user partitions for the course.
         """
+        def _name(*parts):
+            name = u' '.join(parts)
+            if suffix:
+                name += u' ' + suffix
+            return name
+
         partitions = [
             UserPartition(
-                i, 'Name ' + str(i), 'Description ' + str(i),
-                [Group(0, 'Group A'), Group(1, 'Group B'), Group(2, 'Group C')],
+                i,
+                _name('Name', str(i)),
+                _name('Description', str(i)),
+                [
+                    Group(0, _name('Group A')),
+                    Group(1, _name('Group B')),
+                    Group(2, _name('Group C'))],
                 scheme=None, scheme_id=scheme_id
             ) for i in xrange(count)
         ]
@@ -897,6 +908,39 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase, HelperMethods):
 
         actual = GroupConfiguration.get_content_groups_items_usage_info(self.store, self.course)
         self.assertEqual(actual.keys(), [0])
+
+    def test_usage_info_nonascii_names(self):
+        """
+        Test if group configurations json updated successfully with usage information.
+        """
+        suffix = u'ηοη-αςκιι'
+        self._add_user_partitions(count=1, suffix=suffix)
+        vertical, __ = self._create_content_experiment(
+            cid=0, name_suffix=suffix, special_characters=suffix
+        )
+
+        actual = GroupConfiguration.get_split_test_partitions_with_usage(self.store, self.course)
+
+        expected = [{
+            'id': 0,
+            'name': u'Name 0 ηοη-αςκιι',
+            'scheme': u'random',
+            'description': u'Description 0 ηοη-αςκιι',
+            'version': UserPartition.VERSION,
+            'groups': [
+                {'id': 0, 'name': u'Group A ηοη-αςκιι', 'version': 1},
+                {'id': 1, 'name': u'Group B ηοη-αςκιι', 'version': 1},
+                {'id': 2, 'name': u'Group C ηοη-αςκιι', 'version': 1},
+            ],
+            'usage': [{
+                'url': #'/container/{}'.format(vertical.location),
+                reverse_usage_url('container_handler', vertical.location),
+                'label': u'Test Unit ηοη-αςκιι / Test Content Experiment ηοη-αςκιιηοη-αςκιι',
+                'validation': None,
+            }],
+        }]
+
+        self.assertEqual(actual, expected)
 
 
 class GroupConfigurationsValidationTestCase(CourseTestCase, HelperMethods):

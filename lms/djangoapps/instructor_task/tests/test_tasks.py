@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Unit tests for LMS instructor-initiated background tasks.
 
@@ -27,6 +28,7 @@ from instructor_task.tasks import (
     reset_problem_attempts,
     delete_problem_state,
     generate_certificates,
+    calculate_grades_csv,
 )
 from instructor_task.tasks_helper import UpdateProblemModuleStateError
 
@@ -471,3 +473,51 @@ class TestCertificateGenerationnstructorTask(TestInstructorTasks):
             expected_attempted=1,
             expected_total=1
         )
+
+
+class TestCalculateGradesCSVInstructorTask(TestInstructorTasks):
+    """Tests instructor task that generates csv grade report."""
+    # state/problem does not influence grading, runs with no state/problem successfully
+    # TODO: check why starting with undefined course returnes Http404 instead of ItemNotFoundError
+
+    def test_calculate_grades_missing_current_task(self):
+        self._test_missing_current_task(calculate_grades_csv)
+
+    def test_calculate_grades_with_failure(self):
+        self._test_run_with_failure(calculate_grades_csv, 'We expected this to fail')
+
+    def test_calculate_grades_with_long_error_msg(self):
+        self._test_run_with_long_error_msg(calculate_grades_csv)
+
+    def test_calculate_grades_with_short_error_msg(self):
+        self._test_run_with_short_error_msg(calculate_grades_csv)
+
+    def test_generate_report_with_unicode_names(self):
+        input_state = json.dumps({'done': True})
+        num_students = 10
+        self._create_unicode_students_with_state(num_students, input_state)
+        task_entry = self._create_input_entry()
+        mock_instance = Mock()
+        mock_instance.calculate_grades_csv = Mock(return_value={'success': 'correct'})
+
+        with patch('instructor_task.tasks_helper.get_module_for_descriptor_internal') as mock_get_module:
+            with patch('instructor_task.models.LocalFSReportStore.store') as mock_store:
+                mock_get_module.return_value = mock_instance
+                self._run_task_with_mock_celery(calculate_grades_csv, task_entry.id, task_entry.task_id)
+
+        # check task status
+        entry = InstructorTask.objects.get(id=task_entry.id)
+        output = json.loads(entry.task_output)
+        self.assertEquals(entry.task_state, SUCCESS)
+
+        # Successful output
+        # self.assertEquals(output.get('attempted'), num_students + 1) # + 1 for instructor
+        # self.assertEquals(output.get('succeeded'), num_students + 1)
+        # self.assertEquals(output.get('total'), num_students + 1)
+        # self.assertEquals(output.get('action_name'), 'graded')
+
+    def _create_unicode_students_with_state(self, *args, **kwargs):
+        students = super(TestCalculateGradesCSVInstructorTask, self)._create_students_with_state(*args, **kwargs)
+        for student in students:
+            student.username = u'тестовый' + student.username
+            student.save()

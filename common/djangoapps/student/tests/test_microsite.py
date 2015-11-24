@@ -49,11 +49,12 @@ class TestMicrosite(TestCase):
     """Test for Account Creation from a white labeled Micro-Sites"""
     def setUp(self):
         super(TestMicrosite, self).setUp()
-        self.username = "test_user"
+        self.nickname = "test_user"
+        self.email = "test@example.org"
         self.url = reverse("create_account")
         self.params = {
-            "username": self.username,
-            "email": "test@example.org",
+            "nickname": self.nickname,
+            "email": self.email,
             "password": "testpass",
             "name": "Test User",
             "honor_code": "true",
@@ -104,7 +105,7 @@ class TestMicrosite(TestCase):
         """
         response = self.client.post(self.url, self.extended_params)
         self.assertEqual(response.status_code, 200)
-        user = User.objects.get(username=self.username)
+        user = User.objects.get(email=self.email)
         meta = json.loads(user.profile.meta)
         self.assertEqual(meta['address1'], 'foo')
         self.assertEqual(meta['state'], 'foo')

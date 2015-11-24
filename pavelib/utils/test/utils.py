@@ -69,7 +69,7 @@ def check_firefox_version():
     """
     Check that firefox is the correct version.
     """
-    expected_firefox_ver = "Mozilla Firefox 28.0"
+    expected_firefox_ver = "Mozilla Firefox 30.0"
     firefox_ver = subprocess.check_output("firefox --version", shell=True).strip()
     debian_location = 'https://s3.amazonaws.com/vagrant.testeng.edx.org/'
     debian_package = 'firefox_28.0%2Bbuild2-0ubuntu0.12.04.1_amd64.deb'

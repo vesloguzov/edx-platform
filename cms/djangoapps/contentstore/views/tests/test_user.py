@@ -6,9 +6,11 @@ import json
 from contentstore.tests.utils import CourseTestCase
 from contentstore.utils import reverse_course_url
 from django.contrib.auth.models import User
-from student.models import CourseEnrollment
+from student.models import CourseEnrollment, UserProfile
 from student.roles import CourseStaffRole, CourseInstructorRole
 from student import auth
+
+from student.models import UserProfile
 
 
 class UsersTestCase(CourseTestCase):
@@ -19,11 +21,13 @@ class UsersTestCase(CourseTestCase):
         self.ext_user.is_active = True
         self.ext_user.is_staff = False
         self.ext_user.save()
+        UserProfile.objects.create(user=self.ext_user)
         self.inactive_user = User.objects.create_user(
             "carl", "carl@comedycentral.com", "haha")
         self.inactive_user.is_active = False
         self.inactive_user.is_staff = False
         self.inactive_user.save()
+        UserProfile.objects.create(user=self.inactive_user)
 
         self.index_url = self.course_team_url()
         self.detail_url = self.course_team_url(email=self.ext_user.email)

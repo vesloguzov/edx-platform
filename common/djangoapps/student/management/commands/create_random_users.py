@@ -19,7 +19,7 @@ def make_random_form():
     identification = uuid.uuid4().hex[:8]
     return AccountCreationForm(
         data={
-            'username': 'user_{id}'.format(id=identification),
+            'nickname': 'user_{id}'.format(id=identification),
             'email': 'email_{id}@example.com'.format(id=identification),
             'password': '12345',
             'name': 'User {id}'.format(id=identification),

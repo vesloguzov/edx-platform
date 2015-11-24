@@ -97,7 +97,7 @@ def student_grades(student, request, course, keep_raw_scores=False, use_offline=
         return dict(
             raw_scores=[],
             section_breakdown=[],
-            msg='Error: no offline gradeset available for {}, {}'.format(student, course.id)
+            msg=u'Error: no offline gradeset available for {}, {}'.format(student, course.id)
         )
 
     gradeset = json.loads(ocg.gradeset)

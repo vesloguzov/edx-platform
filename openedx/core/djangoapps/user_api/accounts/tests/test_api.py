@@ -261,6 +261,7 @@ class AccountSettingsOnCreationTest(TestCase):
         # Expect all the values to be defaulted
         self.assertEqual(account_settings, {
             'username': self.USERNAME,
+            'nickname': u'',
             'email': self.EMAIL,
             'name': u'',
             'gender': None,

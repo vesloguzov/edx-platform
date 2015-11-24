@@ -38,7 +38,7 @@ from courseware.tests.factories import StudentModuleFactory
 from courseware.user_state_client import DjangoXBlockUserStateClient
 from edxmako.tests import mako_middleware_process_request
 from openedx.core.djangoapps.self_paced.models import SelfPacedConfiguration
-from student.models import CourseEnrollment
+from student.models import CourseEnrollment, UserProfile
 from student.tests.factories import AdminFactory, UserFactory, CourseEnrollmentFactory
 from util.tests.test_date_utils import fake_ugettext, fake_pgettext
 from util.url import reload_django_url_config
@@ -191,6 +191,7 @@ class ViewsTestCase(ModuleStoreTestCase):
 
         self.course_key = self.course.id
         self.user = UserFactory(username='dummy', password='123456', email='test@mit.edu')
+        UserProfile.objects.get_or_create(user=self.user)
         self.date = datetime(2013, 1, 22, tzinfo=UTC)
         self.enrollment = CourseEnrollment.enroll(self.user, self.course_key)
         self.enrollment.created = self.date
@@ -370,11 +371,29 @@ class ViewsTestCase(ModuleStoreTestCase):
 
         url = reverse('submission_history', kwargs={
             'course_id': self.course_key.to_deprecated_string(),
-            'student_username': 'dummy',
             'location': self.component.location.to_deprecated_string(),
-        })
+        }) + '?student_identifier=dummy'
         response = self.client.get(url)
         # Tests that we do not get an "Invalid x" response when passing correct arguments to view
+        self.assertFalse('Invalid' in response.content)
+
+    def test_submission_history_nonunique_id(self):
+        # log into a staff account
+        admin = AdminFactory()
+        nickname = 'nonunique_test'
+        UserFactory.create(profile__nickname=nickname)
+        UserFactory.create(profile__nickname=nickname)
+
+        self.client.login(username=admin.username, password='test')
+
+        url = reverse('submission_history', kwargs={
+            'course_id': self.course_key.to_deprecated_string(),
+            'location': self.component.location.to_deprecated_string(),
+        }) + '?student_identifier=%s' % nickname
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('Multiple' in response.content)
         self.assertFalse('Invalid' in response.content)
 
     def test_submission_history_xss(self):
@@ -386,18 +405,16 @@ class ViewsTestCase(ModuleStoreTestCase):
         # try it with an existing user and a malicious location
         url = reverse('submission_history', kwargs={
             'course_id': self.course_key.to_deprecated_string(),
-            'student_username': 'dummy',
             'location': '<script>alert("hello");</script>'
-        })
+        }) + '?student_identifier=dummy'
         response = self.client.get(url)
         self.assertFalse('<script>' in response.content)
 
         # try it with a malicious user and a non-existent location
         url = reverse('submission_history', kwargs={
             'course_id': self.course_key.to_deprecated_string(),
-            'student_username': '<script>alert("hello");</script>',
             'location': 'dummy'
-        })
+            }) + urlencode({'student_identifier': '<script>alert("hello");</script>'})
         response = self.client.get(url)
         self.assertFalse('<script>' in response.content)
 

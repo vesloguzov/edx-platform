@@ -13,6 +13,7 @@ from django.views.generic.base import View
 from django.utils.translation import ugettext as _
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.conf import settings
 
 from edxmako.shortcuts import render_to_response
 
@@ -24,6 +25,7 @@ from opaque_keys.edx.keys import CourseKey
 from util.db import outer_atomic
 from xmodule.modulestore.django import modulestore
 
+from student.views import send_enrollment_email
 from embargo import api as embargo_api
 
 
@@ -178,6 +180,8 @@ class ChooseModeView(View):
             # The user will have already been enrolled in the honor mode at this
             # point, so we just redirect them to the dashboard, thereby avoiding
             # hitting the database a second time attempting to enroll them.
+            if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL'):
+                send_enrollment_email(user, course, use_https_for_links=request.is_secure())
             return redirect(reverse('dashboard'))
 
         mode_info = allowed_modes[requested_mode]

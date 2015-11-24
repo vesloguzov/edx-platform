@@ -81,7 +81,7 @@ site_status_msg = get_site_status_msg(course_id)
         <a href="${reverse('dashboard')}" class="user-link">
           <span class="sr">${_("Dashboard for:")}</span>
           <div>
-          ${user.username}
+          ${user.profile.nickname_or_default}
           </div>
         </a>
       </li>
@@ -135,7 +135,7 @@ site_status_msg = get_site_status_msg(course_id)
           </li>
           % else:
           <li class="nav-global-04">
-            <a class="cta cta-register" href="/register${login_query()}">${_("Register")}</a>
+            <a class="cta cta-register" href="${reverse('register_user')}$${login_query()}">${_("Register")}</a>
           </li>
           % endif
 

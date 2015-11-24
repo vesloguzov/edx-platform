@@ -390,7 +390,7 @@ def perform_module_state_update(update_fcn, filter_fcn, _entry_id, course_id, ta
             elif update_status == UPDATE_STATUS_SKIPPED:
                 task_progress.skipped += 1
             else:
-                raise UpdateProblemModuleStateError("Unexpected update_status returned: {}".format(update_status))
+                raise UpdateProblemModuleStateError(u"Unexpected update_status returned: {}".format(update_status))
 
     return task_progress.update_task_state()
 
@@ -671,7 +671,7 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
     start_time = time()
     start_date = datetime.now(UTC)
     status_interval = 100
-    enrolled_students = CourseEnrollment.objects.users_enrolled_in(course_id)
+    enrolled_students = CourseEnrollment.objects.users_enrolled_in(course_id).select_related('profile__nickname')
     task_progress = TaskProgress(action_name, enrolled_students.count(), start_time)
 
     fmt = u'Task: {task_id}, InstructorTask ID: {entry_id}, Course: {course_id}, Input: {task_input}'
@@ -699,7 +699,7 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
     # Loop over all our students and build our CSV lists in memory
     header = None
     rows = []
-    err_rows = [["id", "username", "error_msg"]]
+    err_rows = [["id", "username", "nickname", "error_msg"]]
     current_step = {'step': 'Calculating Grades'}
 
     total_enrolled_students = enrolled_students.count()
@@ -736,7 +736,7 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
             if not header:
                 header = [section['label'] for section in gradeset[u'section_breakdown']]
                 rows.append(
-                    ["id", "email", "username", "grade"] + header + cohorts_header +
+                    ["id", "email", "username", "nickname", "grade"] + header + cohorts_header +
                     group_configs_header + teams_header +
                     ['Enrollment Track', 'Verification Status'] + certificate_info_header
                 )
@@ -786,14 +786,14 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
             # still have 100% for the course.
             row_percents = [percents.get(label, 0.0) for label in header]
             rows.append(
-                [student.id, student.email, student.username, gradeset['percent']] +
+                [student.id, student.email, student.username, student.profile.nickname_or_default, gradeset['percent']] +
                 row_percents + cohorts_group_name + group_configs_group_names + team_name +
                 [enrollment_mode] + [verification_status] + certificate_info
             )
         else:
             # An empty gradeset means we failed to grade a student.
             task_progress.failed += 1
-            err_rows.append([student.id, student.username, err_msg])
+            err_rows.append([student.id, student.username, student.profile.nickname_or_default, err_msg])
 
     TASK_LOG.info(
         u'%s, Task type: %s, Current step: %s, Grade calculation completed for students: %s/%s',

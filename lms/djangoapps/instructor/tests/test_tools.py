@@ -7,17 +7,23 @@ import mock
 import json
 import unittest
 
+import django.test
 from django.utils.timezone import utc
 from django.test.utils import override_settings
+from django.contrib.auth.models import User
 from nose.plugins.attrib import attr
 
 from courseware.field_overrides import OverrideFieldData  # pylint: disable=import-error
 from lms.djangoapps.ccx.tests.test_overrides import inject_field_overrides
 from student.tests.factories import UserFactory  # pylint: disable=import-error
+
 from xmodule.fields import Date
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from opaque_keys.edx.keys import CourseKey
+
+from courseware.models import StudentModule
+from student.tests.factories import UserFactory, UserProfileFactory
 
 from ..views import tools
 
@@ -85,6 +91,58 @@ class TestRequireStudentIdentifier(unittest.TestCase):
     def test_invalid_student_id(self):
         with self.assertRaises(tools.DashboardError):
             tools.require_student_from_identifier("invalid")
+
+
+@attr('shard_1')
+class TestRequireStudentEmailOrNickname(django.test.TestCase):
+    """
+    Test require_student_from_email_or_nickname
+    """
+    def setUp(self):
+        self.students = {
+            'unique': self._create_student('unique@example.com', 'unique'),
+            'nonunique': self._create_student('nonunique@example.com', 'nonunique'),
+            'nonunique_nickname': self._create_student('other@example.com', 'nonunique'),
+            'nickname_like_other_email': self._create_student('other1@example.com', 'nonunique@example.com'),
+        }
+
+    def tearDown(self):
+        User.objects.all().delete()
+
+    def test_unique_email(self):
+        self.assertEqual(
+            self.students['unique'],
+            tools.require_student_from_email_or_nickname(self.students['unique'].email)
+        )
+
+    def test_unique_nickname(self):
+        self.assertEqual(
+            self.students['unique'],
+            tools.require_student_from_email_or_nickname(self.students['unique'].profile.nickname)
+        )
+
+    def test_email_priority(self):
+        self.assertEqual(
+            self.students['nonunique'],
+            tools.require_student_from_email_or_nickname(
+                self.students['nickname_like_other_email'].profile.nickname
+            )
+        )
+
+    def test_invalid_id(self):
+        with self.assertRaises(tools.DashboardError):
+            tools.require_student_from_email_or_nickname("invalid")
+
+    def test_repetitive_nickname(self):
+        with self.assertRaises(tools.DashboardError):
+            tools.require_student_from_identifier(self.students['nonunique_nickname'].profile.nickname)
+
+    def _create_student(self, email, nickname):
+        student = UserFactory.create(email=email)
+        profile = UserProfileFactory.create(user=student)
+        profile.nickname = nickname
+        profile.save()
+        return student
 
 
 @attr('shard_1')

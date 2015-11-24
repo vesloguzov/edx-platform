@@ -10,6 +10,7 @@ from contentstore.tests.utils import AjaxEnabledTestClient
 from contentstore.utils import reverse_url, reverse_course_url
 from student.roles import CourseInstructorRole, CourseStaffRole, OrgStaffRole, OrgInstructorRole
 from student import auth
+from student.models import UserProfile
 
 
 class TestCourseAccess(ModuleStoreTestCase):
@@ -23,6 +24,8 @@ class TestCourseAccess(ModuleStoreTestCase):
         Create a pool of users w/o granting them any permissions
         """
         user_password = super(TestCourseAccess, self).setUp()
+        # create profile for user in ModuleStoreTestCase since it cannot create profile itself
+        UserProfile.objects.create(user=self.user)
 
         self.client = AjaxEnabledTestClient()
         self.client.login(username=self.user.username, password=user_password)
@@ -53,6 +56,7 @@ class TestCourseAccess(ModuleStoreTestCase):
             user = User.objects.create_user(username, email, 'foo')
             user.is_active = True
             user.save()
+            UserProfile.objects.create(user=user, nickname="nickname {}".format(i))
             users.append(user)
         return users
 

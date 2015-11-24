@@ -143,7 +143,7 @@ from microsite_configuration import microsite
 
 <section class="login container">
   <section role="main" class="content">
-    <form role="form" id="login-form" method="post" data-remote="true" action="/login_ajax" novalidate>
+    <form role="form" id="login-form" method="post" data-remote="true" action="${ reverse('login') }" novalidate>
 
       <!-- status messages -->
       <div role="alert" class="status message">

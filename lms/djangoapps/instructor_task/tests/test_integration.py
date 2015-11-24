@@ -514,7 +514,7 @@ class TestGradeReportConditionalContent(TestReportMixin, TestConditionalContent,
         self.verify_rows_in_csv(
             [
                 merge_dicts(
-                    {'id': str(student.id), 'username': student.username, 'email': student.email},
+                    {'id': str(student.id), 'nickname': student.profile.nickname_or_default, 'email': student.email},
                     grades,
                     user_partition_group(student)
                 )

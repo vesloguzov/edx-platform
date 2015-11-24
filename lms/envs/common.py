@@ -167,6 +167,9 @@ FEATURES = {
     #   for all Mongo-backed courses.
     'REQUIRE_COURSE_EMAIL_AUTH': True,
 
+    # Enables sending emails on enrollment
+    'SEND_ENROLLMENT_EMAIL': False,
+
     # enable analytics server.
     # WARNING: THIS SHOULD ALWAYS BE SET TO FALSE UNDER NORMAL
     # LMS OPERATION. See analytics.py for details about what
@@ -539,6 +542,9 @@ TEMPLATES = [
 
                 # Allows the open edX footer to be leveraged in Django Templates.
                 'edxmako.shortcuts.microsite_footer_context_processor',
+
+                # Provides filenames for include tag if theme or microsite is used
+                'edxmako.shortcuts.theme_context_processor',
             ],
             # Change 'debug' in your environment settings files - not here.
             'debug': False
@@ -566,9 +572,11 @@ STATIC_GRAB = False
 DEV_CONTENT = True
 
 EDX_ROOT_URL = ''
+# root prefix for lms instance, NOT used in ajaxPostWithPrefix
+ROOT_URL_PREFIX = ''
 
-LOGIN_REDIRECT_URL = EDX_ROOT_URL + '/login'
-LOGIN_URL = EDX_ROOT_URL + '/login'
+LOGIN_REDIRECT_URL = EDX_ROOT_URL + ROOT_URL_PREFIX + '/login'
+LOGIN_URL = EDX_ROOT_URL + ROOT_URL_PREFIX + '/login'
 
 COURSE_NAME = "6.002_Spring_2012"
 COURSE_NUMBER = "6.002x"
@@ -808,6 +816,7 @@ SESSION_SERIALIZER = 'django.contrib.sessions.serializers.PickleSerializer'
 
 # CMS base
 CMS_BASE = 'localhost:8001'
+LMS_BASE = 'localhost:8000'
 
 # Site info
 SITE_ID = 1
@@ -1423,6 +1432,7 @@ PIPELINE_CSS = {
             'js/vendor/CodeMirror/codemirror.css',
             'css/vendor/jquery.treeview.css',
             'css/vendor/ui-lightness/jquery-ui-1.8.22.custom.css',
+            'css/vendor/slickgrid/smoothness/jquery-ui-1.8.16.custom.css',
         ],
         'output_filename': 'css/lms-style-course-vendor.css',
     },
@@ -1569,6 +1579,13 @@ PIPELINE_JS = {
     'instructor_dash': {
         'source_filenames': instructor_dash_js,
         'output_filename': 'js/instructor_dash.js',
+    },
+    'modalform': {
+        'source_filenames': [
+            'js/jquery.basicmodal.js',
+            'js/jquery.ajaxform.js'],
+        'output_filename': 'js/modalform.js',
+        'test_order': 10,
     },
     'dashboard': {
         'source_filenames': dashboard_js,
@@ -2210,6 +2227,8 @@ REGISTRATION_EXTRA_FIELDS = {
     'country': 'hidden',
 }
 
+REQUIRE_STUDENT_DATA_FOR_COURSEWARE = False
+
 ########################## CERTIFICATE NAME ########################
 CERT_NAME_SHORT = "Certificate"
 CERT_NAME_LONG = "Certificate of Achievement"
@@ -2722,3 +2741,11 @@ PROCTORING_BACKEND_PROVIDER = {
     'options': {},
 }
 PROCTORING_SETTINGS = {}
+
+
+INSTALLED_APPS += (
+    'api',
+    'required_student_data',
+    'sync',
+)
+from .lektorium import *

@@ -106,7 +106,7 @@ class LTI20ModuleMixin(object):
         sha1 = hashlib.sha1()
         sha1.update(request.body)
         oauth_body_hash = unicode(base64.b64encode(sha1.digest()))  # pylint: disable=too-many-function-args
-        log.debug("[LTI] oauth_body_hash = {}".format(oauth_body_hash))
+        log.debug(u"[LTI] oauth_body_hash = {}".format(oauth_body_hash))
         client_key, client_secret = self.get_client_key_secret()
         client = Client(client_key, client_secret)
         params = client.get_oauth_params(None)
@@ -289,7 +289,7 @@ class LTI20ModuleMixin(object):
         try:
             self.verify_oauth_body_sign(request, content_type=LTI_2_0_JSON_CONTENT_TYPE)
         except (ValueError, LTIError) as err:
-            log.info("[LTI]: v2.0 result service -- OAuth body verification failed:  {}".format(err.message))
+            log.info(u"[LTI]: v2.0 result service -- OAuth body verification failed:  {}".format(err.message))
             raise LTIError(err.message)
 
     def parse_lti_2_0_result_json(self, json_str):
@@ -315,8 +315,8 @@ class LTI20ModuleMixin(object):
         try:
             json_obj = json.loads(json_str)
         except (ValueError, TypeError):
-            msg = "Supplied JSON string in request body could not be decoded: {}".format(json_str)
-            log.info("[LTI] {}".format(msg))
+            msg = u"Supplied JSON string in request body could not be decoded: {}".format(json_str)
+            log.info(u"[LTI] {}".format(msg))
             raise LTIError(msg)
 
         # the standard supports a list of objects, who knows why. It must contain at least 1 element, and the
@@ -325,24 +325,24 @@ class LTI20ModuleMixin(object):
             if isinstance(json_obj, list) and len(json_obj) >= 1 and isinstance(json_obj[0], dict):
                 json_obj = json_obj[0]
             else:
-                msg = ("Supplied JSON string is a list that does not contain an object as the first element. {}"
+                msg = (u"Supplied JSON string is a list that does not contain an object as the first element. {}"
                        .format(json_str))
-                log.info("[LTI] {}".format(msg))
+                log.info(u"[LTI] {}".format(msg))
                 raise LTIError(msg)
 
         # '@type' must be "Result"
         result_type = json_obj.get("@type")
         if result_type != "Result":
-            msg = "JSON object does not contain correct @type attribute (should be 'Result', is {})".format(result_type)
-            log.info("[LTI] {}".format(msg))
+            msg = u"JSON object does not contain correct @type attribute (should be 'Result', is {})".format(result_type)
+            log.info(u"[LTI] {}".format(msg))
             raise LTIError(msg)
 
         # '@context' must be present as a key
         REQUIRED_KEYS = ["@context"]  # pylint: disable=invalid-name
         for key in REQUIRED_KEYS:
             if key not in json_obj:
-                msg = "JSON object does not contain required key {}".format(key)
-                log.info("[LTI] {}".format(msg))
+                msg = u"JSON object does not contain required key {}".format(key)
+                log.info(u"[LTI] {}".format(msg))
                 raise LTIError(msg)
 
         # 'resultScore' is not present.  If this was a PUT this means it's actually a DELETE according
@@ -359,8 +359,8 @@ class LTI20ModuleMixin(object):
                 log.info("[LTI] {}".format(msg))
                 raise LTIError(msg)
         except (TypeError, ValueError) as err:
-            msg = "Could not convert resultScore to float: {}".format(err.message)
-            log.info("[LTI] {}".format(msg))
+            msg = u"Could not convert resultScore to float: {}".format(err.message)
+            log.info(u"[LTI] {}".format(msg))
             raise LTIError(msg)
 
         return score, json_obj.get('comment', "")

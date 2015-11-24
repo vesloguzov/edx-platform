@@ -45,7 +45,7 @@ from django.utils.http import urlquote_plus
       % endif
 
       <header class="progress-certificates">
-        <h1 class="progress-certificates-title">${_("Course Progress for Student '{username}' ({email})").format(username=student.username, email=student.email) | h}</h1>
+        <h1 class="progress-certificates-title">${_("Course Progress for Student '{username}' ({email})").format(username=student.profile.nickname_or_default, email=student.email) | h}</h1>
       </header>
 
       %if show_generate_cert_btn:

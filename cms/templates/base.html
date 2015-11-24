@@ -5,6 +5,7 @@ from django.utils.translation import ugettext as _
 from openedx.core.lib.js_utils import (
     escape_json_dumps, escape_js_string
 )
+from django.utils.formats import get_format
 %>
 <!doctype html>
 <!--[if lte IE 9]><html class="ie9 lte9" lang="${LANGUAGE_CODE}"><![endif]-->
@@ -43,7 +44,19 @@ from openedx.core.lib.js_utils import (
 
     <script type="text/javascript">
       window.baseUrl = "${escape_js_string(settings.STATIC_URL) | n}";
-      var require = {baseUrl: window.baseUrl};
+
+      var require = {
+          baseUrl: window.baseUrl,
+          config: {
+            'jquery.ui.datepickerDefaults': {
+              dateFormatPython: "${get_format('DATE_INPUT_FORMATS')[0]}",
+              defaults: <%include file="datepicker_defaults.html" />
+            },
+            'js/views/course_info_update': {
+              dateFormat: "${settings.COURSE_UPDATE_DATE_FORMAT}"
+            }
+          }
+      }
     </script>
     <script type="text/javascript" src="${static.url("js/vendor/require.js")}"></script>
     <script type="text/javascript" src="${static.url("cms/js/require-config.js")}"></script>

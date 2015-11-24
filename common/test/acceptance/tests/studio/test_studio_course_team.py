@@ -13,16 +13,16 @@ from ...pages.studio.index import DashboardPage
 @attr('shard_2')
 class CourseTeamPageTest(StudioCourseTest):
     """ As a course author, I want to be able to add others to my team """
-    def _make_user(self, username):
+    def _make_user(self, nickname):
         """ Registers user and returns user representation dictionary as expected by `log_in` function """
         user = {
-            'username': username,
-            'email': username + "@example.com",
-            'password': username + '123'
+            'nickname': nickname,
+            'email': nickname + "@example.com",
+            'password': nickname + '123'
         }
         AutoAuthPage(
             self.browser, no_login=True,
-            username=user.get('username'), email=user.get('email'), password=user.get('password')
+            username=user.get('nickname'), email=user.get('email'), password=user.get('password')
         ).visit()
         return user
 
@@ -74,12 +74,12 @@ class CourseTeamPageTest(StudioCourseTest):
         """ Checks if specified user present on Course Team page """
         if present:
             self.page.wait_for(
-                lambda: user.get('username') in self.page.usernames,
+                lambda: user.get('emails') in self.page.emails,
                 description="Wait for user to be present"
             )
         else:
             self.page.wait_for(
-                lambda: user.get('username') not in self.page.usernames,
+                lambda: user.get('emails') not in self.page.emails,
                 description="Wait for user to be absent"
             )
 

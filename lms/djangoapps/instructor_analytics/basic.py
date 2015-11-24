@@ -26,7 +26,7 @@ from certificates.models import CertificateStatuses
 
 
 STUDENT_FEATURES = ('id', 'username', 'first_name', 'last_name', 'is_staff', 'email')
-PROFILE_FEATURES = ('name', 'language', 'location', 'year_of_birth', 'gender',
+PROFILE_FEATURES = ('nickname', 'name', 'language', 'location', 'year_of_birth', 'gender',
                     'level_of_education', 'mailing_address', 'goals', 'meta')
 ORDER_ITEM_FEATURES = ('list_price', 'unit_cost', 'status')
 ORDER_FEATURES = ('purchase_time',)
@@ -210,7 +210,7 @@ def enrolled_students_features(course_key, features):
     students = User.objects.filter(
         courseenrollment__course_id=course_key,
         courseenrollment__is_active=1,
-    ).order_by('username').select_related('profile')
+    ).order_by('profile__nickname').select_related('profile')
 
     if include_cohort_column:
         students = students.prefetch_related('course_groups')
@@ -429,7 +429,7 @@ def course_registration_features(features, registration_codes, csv_type):
             course_registration_dict['customer_reference_number'] = sale_invoice.customer_reference_number
             course_registration_dict['internal_reference'] = sale_invoice.internal_reference
 
-        course_registration_dict['redeem_code_url'] = 'http://{base_url}{redeem_code_url}'.format(
+        course_registration_dict['redeem_code_url'] = u'http://{base_url}{redeem_code_url}'.format(
             base_url=site_name,
             redeem_code_url=reverse('register_code_redemption',
                                     kwargs={'registration_code': registration_code.code})

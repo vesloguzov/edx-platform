@@ -35,7 +35,7 @@ from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from ..accounts.api import get_account_settings
 from ..accounts import (
     NAME_MAX_LENGTH, EMAIL_MIN_LENGTH, EMAIL_MAX_LENGTH, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH,
-    USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH
+    NICKNAME_MIN_LENGTH, NICKNAME_MAX_LENGTH
 )
 from ..models import UserOrgTag
 from ..tests.factories import UserPreferenceFactory
@@ -833,7 +833,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
 
     maxDiff = None
 
-    USERNAME = "bob"
+    NICKNAME = "bob"
     EMAIL = "bob@example.com"
     PASSWORD = "password"
     NAME = "Bob Smith"
@@ -902,15 +902,15 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         self._assert_reg_field(
             no_extra_fields_setting,
             {
-                u"name": u"username",
+                u"name": u"nickname",
                 u"type": u"text",
                 u"required": True,
                 u"label": u"Public username",
                 u"placeholder": u"JaneDoe",
                 u"instructions": u"The name that will identify you in your courses - <strong>(cannot be changed later)</strong>",  # pylint: disable=line-too-long
                 u"restrictions": {
-                    "min_length": USERNAME_MIN_LENGTH,
-                    "max_length": USERNAME_MAX_LENGTH
+                    "min_length": NICKNAME_MIN_LENGTH,
+                    "max_length": NICKNAME_MAX_LENGTH
                 },
             }
         )
@@ -985,11 +985,11 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
                 }
             )
 
-            # Username should be filled in
+            # Nickname should be filled in
             self._assert_reg_field(
                 no_extra_fields_setting,
                 {
-                    u"name": u"username",
+                    u"name": u"nickname",
                     u"defaultValue": u"Bob123",
                     u"type": u"text",
                     u"required": True,
@@ -997,8 +997,8 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
                     u"placeholder": u"JaneDoe",
                     u"instructions": u"The name that will identify you in your courses - <strong>(cannot be changed later)</strong>",  # pylint: disable=line-too-long
                     u"restrictions": {
-                        "min_length": USERNAME_MIN_LENGTH,
-                        "max_length": USERNAME_MAX_LENGTH
+                        "min_length": NICKNAME_MIN_LENGTH,
+                        "max_length": NICKNAME_MAX_LENGTH
                     }
                 }
             )
@@ -1329,7 +1329,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         self.assertEqual(field_names, [
             "email",
             "name",
-            "username",
+            "nickname",
             "password",
             "city",
             "country",
@@ -1346,7 +1346,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         response = self.client.post(self.url, {
             "email": self.EMAIL,
             "name": self.NAME,
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
             "honor_code": "true",
         })
@@ -1354,13 +1354,13 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         self.assertIn(settings.EDXMKTG_LOGGED_IN_COOKIE_NAME, self.client.cookies)
         self.assertIn(settings.EDXMKTG_USER_INFO_COOKIE_NAME, self.client.cookies)
 
-        user = User.objects.get(username=self.USERNAME)
+        user = User.objects.get(email=self.EMAIL)
         request = RequestFactory().get('/url')
         request.user = user
         account_settings = get_account_settings(request)
 
-        self.assertEqual(self.USERNAME, account_settings["username"])
         self.assertEqual(self.EMAIL, account_settings["email"])
+        self.assertEqual(self.NICKNAME, account_settings["nickname"])
         self.assertFalse(account_settings["is_active"])
         self.assertEqual(self.NAME, account_settings["name"])
 
@@ -1382,7 +1382,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         response = self.client.post(self.url, {
             "email": self.EMAIL,
             "name": self.NAME,
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
             "level_of_education": self.EDUCATION,
             "mailing_address": self.ADDRESS,
@@ -1394,11 +1394,12 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         self.assertHttpOK(response)
 
         # Verify the user's account
-        user = User.objects.get(username=self.USERNAME)
+        user = User.objects.get(email=self.EMAIL)
         request = RequestFactory().get('/url')
         request.user = user
         account_settings = get_account_settings(request)
 
+        self.assertEqual(self.NICKNAME, account_settings["nickname"])
         self.assertEqual(account_settings["level_of_education"], self.EDUCATION)
         self.assertEqual(account_settings["mailing_address"], self.ADDRESS)
         self.assertEqual(account_settings["year_of_birth"], int(self.YEAR_OF_BIRTH))
@@ -1410,7 +1411,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         response = self.client.post(self.url, {
             "email": self.EMAIL,
             "name": self.NAME,
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
             "honor_code": "true",
         })
@@ -1430,8 +1431,8 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         {"email": ""},
         {"email": "invalid"},
         {"name": ""},
-        {"username": ""},
-        {"username": "a"},
+        {"nickname": ""},
+        {"nickname": "a"},
         {"password": ""},
     )
     def test_register_invalid_input(self, invalid_fields):
@@ -1439,7 +1440,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         data = {
             "email": self.EMAIL,
             "name": self.NAME,
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
         }
 
@@ -1451,12 +1452,12 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         self.assertHttpBadRequest(response)
 
     @override_settings(REGISTRATION_EXTRA_FIELDS={"country": "required"})
-    @ddt.data("email", "name", "username", "password", "country")
+    @ddt.data("email", "name", "nickname", "password", "country")
     def test_register_missing_required_field(self, missing_field):
         data = {
             "email": self.EMAIL,
             "name": self.NAME,
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
             "country": self.COUNTRY,
         }
@@ -1472,7 +1473,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         response = self.client.post(self.url, {
             "email": self.EMAIL,
             "name": self.NAME,
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
             "honor_code": "true",
         })
@@ -1482,7 +1483,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         response = self.client.post(self.url, {
             "email": self.EMAIL,
             "name": "Someone Else",
-            "username": "someone_else",
+            "nickname": "someone_else",
             "password": self.PASSWORD,
             "honor_code": "true",
         })
@@ -1507,42 +1508,37 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         response = self.client.post(self.url, {
             "email": self.EMAIL,
             "name": self.NAME,
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
             "honor_code": "true",
         })
         self.assertHttpOK(response)
 
-        # Try to create a second user with the same username
+        # Try to create a second user with the same nickname
         response = self.client.post(self.url, {
             "email": "someone+else@example.com",
             "name": "Someone Else",
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
             "honor_code": "true",
         })
-        self.assertEqual(response.status_code, 409)
-        response_json = json.loads(response.content)
-        self.assertEqual(
-            response_json,
-            {
-                "username": [{
-                    "user_message": (
-                        "It looks like {} belongs to an existing account. "
-                        "Try again with a different username."
-                    ).format(
-                        self.USERNAME
-                    )
-                }]
-            }
-        )
+        self.assertHttpOK(response)
 
-    def test_register_duplicate_username_and_email(self):
+        # Verify the user's account
+        user = User.objects.get(email=self.EMAIL)
+        account_settings = get_account_settings(user)
+        self.assertEqual(self.NICKNAME, account_settings["nickname"])
+        self.assertEqual(account_settings["name"], self.NAME)
+
+    def test_register_duplicate_nickname_and_email(self):
+        """
+        Test that error appears for email only
+        """
         # Register the first user
         response = self.client.post(self.url, {
             "email": self.EMAIL,
             "name": self.NAME,
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
             "honor_code": "true",
         })
@@ -1552,7 +1548,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         response = self.client.post(self.url, {
             "email": self.EMAIL,
             "name": "Someone Else",
-            "username": self.USERNAME,
+            "nickname": self.NICKNAME,
             "password": self.PASSWORD,
             "honor_code": "true",
         })
@@ -1561,14 +1557,6 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         self.assertEqual(
             response_json,
             {
-                "username": [{
-                    "user_message": (
-                        "It looks like {} belongs to an existing account. "
-                        "Try again with a different username."
-                    ).format(
-                        self.USERNAME
-                    )
-                }],
                 "email": [{
                     "user_message": (
                         "It looks like {} belongs to an existing account. "
@@ -1594,7 +1582,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
         self.assertEqual(
             response_json,
             {
-                "username": [{"user_message": "Username must be minimum of two characters long"}],
+                "nickname": [{"user_message": "Nickname must be minimum of two characters long"}],
                 "password": [{"user_message": "A valid password is required"}],
             }
         )
@@ -1675,7 +1663,7 @@ class ThirdPartyRegistrationTestMixin(ThirdPartyOAuthTestMixin):
             "client_id": self.client_id,
             "honor_code": "true",
             "country": "US",
-            "username": user.username if user else "test_username",
+            "nickname": user.profile.nickname if user else "test_username",
             "name": user.first_name if user else "test name",
             "email": user.email if user else "test@test.com",
         }
@@ -1684,9 +1672,8 @@ class ThirdPartyRegistrationTestMixin(ThirdPartyOAuthTestMixin):
         """Assert that the given response was an error with the given status_code and error code."""
         self.assertEqual(response.status_code, 409)
         errors = json.loads(response.content)
-        for conflict_attribute in ["username", "email"]:
-            self.assertIn(conflict_attribute, errors)
-            self.assertIn("belongs to an existing account", errors[conflict_attribute][0]["user_message"])
+        self.assertIn("email", errors)
+        self.assertIn("belongs to an existing account", errors["email"][0]["user_message"])
         self.assertNotIn("partial_pipeline", self.client.session)
 
     def _assert_access_token_error(self, response, expected_error_message):
@@ -1699,9 +1686,9 @@ class ThirdPartyRegistrationTestMixin(ThirdPartyOAuthTestMixin):
         )
         self.assertNotIn("partial_pipeline", self.client.session)
 
-    def _verify_user_existence(self, user_exists, social_link_exists, user_is_active=None, username=None):
+    def _verify_user_existence(self, user_exists, social_link_exists, user_is_active=None, email=None):
         """Verifies whether the user object exists."""
-        users = User.objects.filter(username=(username if username else "test_username"))
+        users = User.objects.filter(email=(email if email else "test@test.com"))
         self.assertEquals(users.exists(), user_exists)
         if user_exists:
             self.assertEquals(users[0].is_active, user_is_active)
@@ -1726,7 +1713,7 @@ class ThirdPartyRegistrationTestMixin(ThirdPartyOAuthTestMixin):
         response = self.client.post(self.url, self.data(user))
         self._assert_existing_user_error(response)
         self._verify_user_existence(
-            user_exists=True, social_link_exists=False, user_is_active=True, username=user.username
+            user_exists=True, social_link_exists=False, user_is_active=True, email=user.email
         )
 
     def test_unlinked_inactive_user(self):
@@ -1734,7 +1721,7 @@ class ThirdPartyRegistrationTestMixin(ThirdPartyOAuthTestMixin):
         response = self.client.post(self.url, self.data(user))
         self._assert_existing_user_error(response)
         self._verify_user_existence(
-            user_exists=True, social_link_exists=False, user_is_active=False, username=user.username
+            user_exists=True, social_link_exists=False, user_is_active=False, email=user.email
         )
 
     def test_user_already_registered(self):
@@ -1744,7 +1731,7 @@ class ThirdPartyRegistrationTestMixin(ThirdPartyOAuthTestMixin):
         response = self.client.post(self.url, self.data(user))
         self._assert_existing_user_error(response)
         self._verify_user_existence(
-            user_exists=True, social_link_exists=True, user_is_active=True, username=user.username
+            user_exists=True, social_link_exists=True, user_is_active=True, email=user.email
         )
 
     def test_social_user_conflict(self):
@@ -1754,7 +1741,7 @@ class ThirdPartyRegistrationTestMixin(ThirdPartyOAuthTestMixin):
         response = self.client.post(self.url, self.data())
         self._assert_access_token_error(response, "The provided access_token is already associated with another user.")
         self._verify_user_existence(
-            user_exists=True, social_link_exists=True, user_is_active=True, username=user.username
+            user_exists=True, social_link_exists=True, user_is_active=True, email=user.email
         )
 
     def test_invalid_token(self):

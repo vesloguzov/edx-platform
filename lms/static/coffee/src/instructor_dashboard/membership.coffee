@@ -125,7 +125,7 @@ class AuthListWidget extends MemberListWidget
               return @show_errors error unless error is null
               @clear_errors()
               @reload_list()
-        @add_row [member.username, member.email, $revoke_btn]
+        @add_row [member.nickname, member.email, $revoke_btn]
 
   # clear error display
   clear_errors: -> @$error_section?.text ''
@@ -149,12 +149,12 @@ class AuthListWidget extends MemberListWidget
   # (add or remove them from the list)
   # `action` can be 'allow' or 'revoke'
   # `cb` is called with cb(error, data)
-  modify_member_access: (unique_student_identifier, action, cb) ->
+  modify_member_access: (student_identifier, action, cb) ->
     $.ajax
       dataType: 'json'
       url: @modify_endpoint
       data:
-        unique_student_identifier: unique_student_identifier
+        student_identifier: student_identifier
         rolename: @rolename
         action: action
       success: (data) => @member_response data
@@ -165,10 +165,13 @@ class AuthListWidget extends MemberListWidget
     @clear_input()
     if data.userDoesNotExist
       msg = gettext("Could not find a user with username or email address '<%= identifier %>'.")
-      @show_errors _.template(msg, {identifier: data.unique_student_identifier})
+      @show_errors _.template(msg, {identifier: data.student_identifier})
+    else if data.multipleUsers
+      msg = gettext("Multiple users match nickname: '<%= username %>'; use an email instead.")
+      @show_errors _.template(msg, {username: data.student_identifier})
     else if data.inactiveUser
       msg = gettext("Error: User '<%= username %>' has not yet activated their account. Users must create and activate their accounts before they can be assigned a role.")
-      @show_errors _.template(msg, {username: data.unique_student_identifier})
+      @show_errors _.template(msg, {username: data.student_identifier})
     else if data.removingSelfAsInstructor
       @show_errors gettext "Error: You cannot remove yourself from the Instructor group!"
     else
@@ -273,7 +276,7 @@ class @AutoEnrollmentViaCsv
 class BetaTesterBulkAddition
   constructor: (@$container) ->
     # gather elements
-    @$identifier_input       = @$container.find("textarea[name='student-ids-for-beta']")
+    @$identifier_input       = @$container.find("textarea[name='student-emails-for-beta']")
     @$btn_beta_testers       = @$container.find("input[name='beta-testers']")
     @$checkbox_autoenroll    = @$container.find("input[name='auto-enroll']")
     @$checkbox_emailstudents = @$container.find("input[name='email-students-beta']")
@@ -319,9 +322,12 @@ class BetaTesterBulkAddition
     errors = []
     successes = []
     no_users = []
+    nonunique_nickname = []
     for student_results in data_from_server.results
       if student_results.userDoesNotExist
         no_users.push student_results
+      else if student_results.nonuniqueNickname
+        nonunique_nickname.push student_results
       else if student_results.error
         errors.push student_results
       else
@@ -359,13 +365,17 @@ class BetaTesterBulkAddition
       `// Translators: A list of identifiers (which are email addresses and/or usernames) appears after this sentence`
       render_list gettext("Could not find users associated with the following identifiers:"), (sr.identifier for sr in no_users)
 
+    if nonunique_nickname.length
+      `// Translators: A list of identifiers (which are email addresses and/or usernames) appears after this sentence`
+      render_list gettext("The following nicknames are not unique, use emails instead:"), (sr.identifier for sr in nonunique_nickname)
+
 # Wrapper for the batch enrollment subsection.
 # This object handles buttons, success and failure reporting,
 # and server communication.
 class BatchEnrollment
   constructor: (@$container) ->
     # gather elements
-    @$identifier_input       = @$container.find("textarea[name='student-ids']")
+    @$identifier_input       = @$container.find("textarea[name='student-emails']")
     @$enrollment_button      = @$container.find(".enrollment-button")
     @$is_course_white_label  = @$container.find("#is_course_white_label").val()
     @$reason_field           = @$container.find("textarea[name='reason-field']")
@@ -423,6 +433,8 @@ class BatchEnrollment
     #
     # invalid identifiers
     invalid_identifier = []
+    # nonunique_nicknames
+    nonunique_nickname = []
     # students for which there was an error during the action
     errors = []
     # students who are now enrolled in the course
@@ -466,6 +478,9 @@ class BatchEnrollment
       if student_results.invalidIdentifier
         invalid_identifier.push student_results
 
+      else if student_results.nonuniqueNickname
+        nonunique_nickname.push student_results
+
       else if student_results.error
         errors.push student_results
 
@@ -503,6 +518,9 @@ class BatchEnrollment
 
     if invalid_identifier.length
       render_list gettext("The following email addresses and/or usernames are invalid:"), (sr.identifier for sr in invalid_identifier)
+
+    if nonunique_nickname.length
+      render_list gettext("The following nicknames are not unique, use emails instead:"), (sr.identifier for sr in nonunique_nickname)
 
     if errors.length
       errors_label = do ->

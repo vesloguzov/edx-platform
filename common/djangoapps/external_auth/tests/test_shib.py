@@ -312,7 +312,7 @@ class ShibSPTest(SharedModuleStoreTestCase):
         # Then we have the user answer the registration form
         # These are unicode because request.POST returns unicode
         postvars = {'email': u'post_email@stanford.edu',
-                    'username': u'post_username',  # django usernames can't be unicode
+                    'nickname': u'post_nickname',
                     'password': u'post_pássword',
                     'name': u'post_náme',
                     'terms_of_service': u'true',
@@ -336,18 +336,18 @@ class ShibSPTest(SharedModuleStoreTestCase):
         self.assertEquals(method_name, 'info')
         self.assertEquals(len(args), 1)
         self.assertIn(u'Login success on new account creation', args[0])
-        self.assertIn(u'post_username', args[0])
+        self.assertIn(u'post_nickname', args[0])
         method_name, args, _kwargs = audit_log_calls[1]
         self.assertEquals(method_name, 'info')
-        self.assertEquals(len(args), 2)
+        self.assertEquals(len(args), 3)
         self.assertIn(u'User registered with external_auth', args[0])
-        self.assertEquals(u'post_username', args[1])
+        self.assertEquals(u'post_nickname', args[1])
         method_name, args, _kwargs = audit_log_calls[2]
         self.assertEquals(method_name, 'info')
-        self.assertEquals(len(args), 3)
+        self.assertEquals(len(args), 4)
         self.assertIn(u'Updated ExternalAuthMap for ', args[0])
-        self.assertEquals(u'post_username', args[1])
-        self.assertEquals(u'test_user@stanford.edu', args[2].external_id)
+        self.assertEquals(u'post_nickname', args[1])
+        self.assertEquals(u'test_user@stanford.edu', args[3].external_id)
 
         # check that the created user has the right email, either taken from shib or user input
         if mail:

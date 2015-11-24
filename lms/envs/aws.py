@@ -117,6 +117,10 @@ STATIC_ROOT_BASE = ENV_TOKENS.get('STATIC_ROOT_BASE', None)
 if STATIC_ROOT_BASE:
     STATIC_ROOT = path(STATIC_ROOT_BASE)
 
+ROOT_URL_PREFIX = ENV_TOKENS.get('LMS_ROOT_URL_PREFIX', ROOT_URL_PREFIX)
+
+LOGIN_REDIRECT_URL = EDX_ROOT_URL + ROOT_URL_PREFIX + '/accounts/login'
+LOGIN_URL = EDX_ROOT_URL + ROOT_URL_PREFIX + '/accounts/login'
 
 # STATIC_URL_BASE specifies the base url to use for static files
 STATIC_URL_BASE = ENV_TOKENS.get('STATIC_URL_BASE', None)
@@ -125,6 +129,8 @@ if STATIC_URL_BASE:
     STATIC_URL = STATIC_URL_BASE.encode('ascii')
     if not STATIC_URL.endswith("/"):
         STATIC_URL += "/"
+
+STATIC_URL = ROOT_URL_PREFIX + STATIC_URL
 
 # DEFAULT_COURSE_ABOUT_IMAGE_URL specifies the default image to show for courses that don't provide one
 DEFAULT_COURSE_ABOUT_IMAGE_URL = ENV_TOKENS.get('DEFAULT_COURSE_ABOUT_IMAGE_URL', DEFAULT_COURSE_ABOUT_IMAGE_URL)
@@ -170,6 +176,7 @@ for feature, value in ENV_FEATURES.items():
     FEATURES[feature] = value
 
 CMS_BASE = ENV_TOKENS.get('CMS_BASE', 'studio.edx.org')
+LMS_BASE = ENV_TOKENS.get('LMS_BASE', 'edx.org')
 
 ALLOWED_HOSTS = [
     # TODO: bbeggs remove this before prod, temp fix to get load testing running
@@ -265,6 +272,7 @@ for feature, value in ENV_FEATURES.items():
 
 WIKI_ENABLED = ENV_TOKENS.get('WIKI_ENABLED', WIKI_ENABLED)
 local_loglevel = ENV_TOKENS.get('LOCAL_LOGLEVEL', 'INFO')
+REQUIRE_STUDENT_DATA_FOR_COURSEWARE = FEATURES.get('REQUIRE_STUDENT_DATA_FOR_COURSEWARE', REQUIRE_STUDENT_DATA_FOR_COURSEWARE)
 
 LOGGING = get_logger_config(LOG_DIR,
                             logging_env=ENV_TOKENS['LOGGING_ENV'],
@@ -323,6 +331,13 @@ if FEATURES.get('AUTH_USE_CAS'):
     )
     INSTALLED_APPS += ('django_cas',)
     MIDDLEWARE_CLASSES += ('django_cas.middleware.CASMiddleware',)
+
+    CAS_INSTANT_LOGIN = ENV_TOKENS.get('CAS_INSTANT_LOGIN', False)
+    if CAS_INSTANT_LOGIN:
+        MIDDLEWARE_CLASSES += ('django_cas.middleware.CASInstantLoginMiddleware',)
+    if 'CAS_INSTANT_LOGIN_TIMEOUT' in ENV_TOKENS:
+        CAS_INSTANT_LOGIN_TIMEOUT = ENV_TOKENS.get('CAS_INSTANT_LOGIN_TIMEOUT')
+
     CAS_ATTRIBUTE_CALLBACK = ENV_TOKENS.get('CAS_ATTRIBUTE_CALLBACK', None)
     if CAS_ATTRIBUTE_CALLBACK:
         import importlib

@@ -33,7 +33,7 @@ class CourseActionStateManager(models.Manager):
         objects = self.find_all(exclude_args=exclude_args, **kwargs)
         if len(objects) == 0:
             raise CourseActionStateItemNotFoundError(
-                "No entry found for action {action} with filter {filter}, excluding {exclude}".format(
+                u"No entry found for action {action} with filter {filter}, excluding {exclude}".format(
                     action=self.ACTION,  # pylint: disable=no-member
                     filter=kwargs,
                     exclude=exclude_args,
@@ -72,7 +72,7 @@ class CourseActionUIStateManager(CourseActionStateManager):
                 state_object.created_user = user
             else:
                 raise CourseActionStateItemNotFoundError(
-                    "Cannot update non-existent entry for course_key {course_key} and action {action}".format(
+                    u"Cannot update non-existent entry for course_key {course_key} and action {action}".format(
                         action=self.ACTION,  # pylint: disable=no-member
                         course_key=course_key,
                     ))

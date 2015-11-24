@@ -30,7 +30,7 @@ def lc_choose(index, *args):
     if len(args):
         return args[0]
     raise Exception(
-        "loncapa_check.lc_choose error, index={index}, args={args}".format(
+        u"loncapa_check.lc_choose error, index={index}, args={args}".format(
             index=index,
             args=args,
         )

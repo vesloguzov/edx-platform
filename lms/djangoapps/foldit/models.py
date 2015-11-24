@@ -101,7 +101,7 @@ class PuzzleComplete(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
-        return "PuzzleComplete({0}, id={1}, set={2}, subset={3}, created={4})".format(
+        return u"PuzzleComplete({0}, id={1}, set={2}, subset={3}, created={4})".format(
             self.user.username, self.puzzle_id,
             self.puzzle_set, self.puzzle_subset,
             self.created)

@@ -92,7 +92,8 @@ class XQueueCertInterface(object):
             requests_auth = None
 
         if request is None:
-            factory = RequestFactory()
+            # HTTP_HOST set to localhost to correspond safe ALLOWED_HOSTS setting
+            factory = RequestFactory(HTTP_HOST='127.0.0.1')
             self.request = factory.get('/')
         else:
             self.request = request
@@ -272,7 +273,7 @@ class XQueueCertInterface(object):
                 cert_mode = GeneratedCertificate.MODES.honor
             else:
                 # honor code and audit students
-                template_pdf = "certificate-template-{id.org}-{id.course}.pdf".format(id=course_id)
+                template_pdf = u"certificate-template-{id.org}-{id.course}.pdf".format(id=course_id)
             if forced_grade:
                 grade['grade'] = forced_grade
 

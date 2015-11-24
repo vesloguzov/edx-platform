@@ -33,7 +33,7 @@ from .helpers import FormDescription, shim_student_view, require_post_params
 from .models import UserPreference, UserProfile
 from .accounts import (
     NAME_MAX_LENGTH, EMAIL_MIN_LENGTH, EMAIL_MAX_LENGTH, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH,
-    USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH
+    NICKNAME_MIN_LENGTH, NICKNAME_MAX_LENGTH
 )
 from .accounts.api import check_account_exists
 from .serializers import UserSerializer, UserPreferenceSerializer
@@ -154,7 +154,7 @@ class LoginSessionView(APIView):
 class RegistrationView(APIView):
     """HTTP end-points for creating a new user. """
 
-    DEFAULT_FIELDS = ["email", "name", "username", "password"]
+    DEFAULT_FIELDS = ["email", "name", "nickname", "password"]
 
     EXTRA_FIELDS = [
         "city",
@@ -373,8 +373,8 @@ class RegistrationView(APIView):
             required=required
         )
 
-    def _add_username_field(self, form_desc, required=True):
-        """Add a username field to a form description.
+    def _add_nickname_field(self, form_desc, required=True):
+        """Add a nickname field to a form description.
 
         Arguments:
             form_desc: A form description
@@ -385,27 +385,27 @@ class RegistrationView(APIView):
         """
         # Translators: This label appears above a field on the registration form
         # meant to hold the user's public username.
-        username_label = _(u"Public username")
+        nickname_label = _(u"Public username")
 
         # Translators: These instructions appear on the registration form, immediately
         # below a field meant to hold the user's public username.
-        username_instructions = _(
+        nickname_instructions = _(
             u"The name that will identify you in your courses - "
             "{bold_start}(cannot be changed later){bold_end}"
         ).format(bold_start=u'<strong>', bold_end=u'</strong>')
 
         # Translators: This example username is used as a placeholder in
         # a field on the registration form meant to hold the user's username.
-        username_placeholder = _(u"JaneDoe")
+        nickname_placeholder = _(u"JaneDoe")
 
         form_desc.add_field(
-            "username",
-            label=username_label,
-            instructions=username_instructions,
-            placeholder=username_placeholder,
+            "nickname",
+            label=nickname_label,
+            instructions=nickname_instructions,
+            placeholder=nickname_placeholder,
             restrictions={
-                "min_length": USERNAME_MIN_LENGTH,
-                "max_length": USERNAME_MAX_LENGTH,
+                "min_length": NICKNAME_MIN_LENGTH,
+                "max_length": NICKNAME_MAX_LENGTH,
             },
             required=required
         )
@@ -727,7 +727,7 @@ class RegistrationView(APIView):
                 current_provider = third_party_auth.provider.Registry.get_from_pipeline(running_pipeline)
 
                 if current_provider:
-                    # Override username / email / full name
+                    # Override username-nickname / email / full name
                     field_overrides = current_provider.get_register_form_data(
                         running_pipeline.get('kwargs')
                     )
@@ -894,7 +894,7 @@ class UpdateEmailOptInPreference(APIView):
         except InvalidKeyError:
             return HttpResponse(
                 status=400,
-                content="No course '{course_id}' found".format(course_id=course_id),
+                content=u"No course '{course_id}' found".format(course_id=course_id),
                 content_type="text/plain"
             )
         # Only check for true. All other values are False.

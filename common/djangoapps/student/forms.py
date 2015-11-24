@@ -103,7 +103,7 @@ class TrueField(forms.BooleanField):
     widget = TrueCheckbox
 
 
-_USERNAME_TOO_SHORT_MSG = _("Username must be minimum of two characters long")
+_NICKNAME_TOO_SHORT_MSG = _("Nickname must be minimum of two characters long")
 _EMAIL_INVALID_MSG = _("A properly formatted e-mail is required")
 _PASSWORD_INVALID_MSG = _("A valid password is required")
 _NAME_TOO_SHORT_MSG = _("Your legal name must be a minimum of two characters long")
@@ -115,13 +115,12 @@ class AccountCreationForm(forms.Form):
     validation, not rendering.
     """
     # TODO: Resolve repetition
-    username = forms.SlugField(
+    nickname = forms.CharField(
         min_length=2,
-        max_length=30,
         error_messages={
-            "required": _USERNAME_TOO_SHORT_MSG,
+            "required": _NICKNAME_TOO_SHORT_MSG,
             "invalid": _("Usernames must contain only letters, numbers, underscores (_), and hyphens (-)."),
-            "min_length": _USERNAME_TOO_SHORT_MSG,
+            "min_length": _NICKNAME_TOO_SHORT_MSG,
             "max_length": _("Username cannot be more than %(limit_value)s characters long"),
         }
     )
@@ -153,7 +152,7 @@ class AccountCreationForm(forms.Form):
             data=None,
             extra_fields=None,
             extended_profile_fields=None,
-            enforce_username_neq_password=False,
+            enforce_nickname_neq_password=False,
             enforce_password_policy=False,
             tos_required=True
     ):
@@ -161,7 +160,7 @@ class AccountCreationForm(forms.Form):
 
         extra_fields = extra_fields or {}
         self.extended_profile_fields = extended_profile_fields or {}
-        self.enforce_username_neq_password = enforce_username_neq_password
+        self.enforce_nickname_neq_password = enforce_nickname_neq_password
         self.enforce_password_policy = enforce_password_policy
         if tos_required:
             self.fields["terms_of_service"] = TrueField(
@@ -211,11 +210,11 @@ class AccountCreationForm(forms.Form):
         """Enforce password policies (if applicable)"""
         password = self.cleaned_data["password"]
         if (
-                self.enforce_username_neq_password and
-                "username" in self.cleaned_data and
-                self.cleaned_data["username"] == password
+                self.enforce_nickname_neq_password and
+                "nickname" in self.cleaned_data and
+                self.cleaned_data["nickname"] == password
         ):
-            raise ValidationError(_("Username and password fields cannot match"))
+            raise ValidationError(_("Nickname and password fields cannot match"))
         if self.enforce_password_policy:
             try:
                 validate_password_length(password)

@@ -49,12 +49,15 @@ class CertificateTemplateAssetAdmin(admin.ModelAdmin):
 
 
 class GeneratedCertificateAdmin(admin.ModelAdmin):
-    """
-    Django admin customizations for GeneratedCertificate model
-    """
-    search_fields = ('course_id', 'user__username')
-    list_display = ('id', 'course_id', 'mode', 'user')
+    list_select_related = ('user',)
+    list_display = ('id', 'username', 'email', 'course_id', 'mode', 'download_url',)
+    search_fields = ('user__username', 'user__email', 'course_id',)
 
+    def username(self, obj):
+        return obj.user.username
+
+    def email(self, obj):
+        return obj.user.email
 
 admin.site.register(CertificateGenerationConfiguration)
 admin.site.register(CertificateHtmlViewConfiguration, ConfigurationModelAdmin)

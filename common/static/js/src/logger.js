@@ -7,9 +7,10 @@
 
         sendRequest = function(data, options) {
             var request = $.ajaxWithPrefix ? $.ajaxWithPrefix : $.ajax;
+            var root_path_prefix = $("meta[name='root_path_prefix']").attr('content') || '';
 
             options = $.extend(true, {
-                'url': '/event',
+                'url': root_path_prefix + '/event',
                 'type': 'POST',
                 'data': data,
                 'async': true

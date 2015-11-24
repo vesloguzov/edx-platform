@@ -42,6 +42,11 @@ class Command(TrackedCommand):
                     dest='name',
                     default=None,
                     help='Name, defaults to "user" in the email'),
+        make_option('-k', '--nickname',
+                    metavar='NICKNAME',
+                    dest='nickname',
+                    default=None,
+                    help='Nickname, defaults to name or "user" in the email'),
         make_option('-p', '--password',
                     metavar='PASSWORD',
                     dest='password',
@@ -67,10 +72,13 @@ class Command(TrackedCommand):
     def handle(self, *args, **options):
         username = options['username']
         name = options['name']
+        nickname = options['nickname']
         if not username:
             username = options['email'].split('@')[0]
         if not name:
             name = options['email'].split('@')[0]
+        if not nickname:
+            nickname = name
 
         # parse out the course into a coursekey
         if options['course']:
@@ -83,7 +91,7 @@ class Command(TrackedCommand):
 
         form = AccountCreationForm(
             data={
-                'username': username,
+                'nickname': options['nickname'],
                 'email': options['email'],
                 'password': options['password'],
                 'name': name,
@@ -97,6 +105,8 @@ class Command(TrackedCommand):
         translation.activate(settings.LANGUAGE_CODE)
         try:
             user, _, reg = _do_create_account(form)
+            user.username = username
+            user.save()
             if options['staff']:
                 user.is_staff = True
                 user.save()

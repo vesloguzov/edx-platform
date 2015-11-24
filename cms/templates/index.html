@@ -43,6 +43,21 @@
   <section class="content">
     <article class="content-primary" role="main">
 
+      <div class="introduction">
+        <h2 class="title">${_("Welcome, {0}!").format(user.profile.nickname_or_default)}</h2>
+
+        %if len(courses) > 0:
+        <div class="copy">
+          <p>${_("Here are all of the courses you currently have access to in Studio:")}</p>
+        </div>
+
+        %else:
+        <div class="copy">
+          <p>${_("You currently aren't associated with any Studio Courses.")}</p>
+        </div>
+        %endif
+      </div>
+
       % if course_creator_status=='granted':
       <div class="wrapper-create-element wrapper-create-course">
         <form class="form-create create-course course-info" id="create-course-form" name="create-course-form">
@@ -543,7 +558,7 @@ help_link_end = '</a>'
   <section class="content">
     <article class="content-primary" role="main">
       <div class="introduction">
-        <h2 class="title">${_("Thanks for signing up, %(name)s!") % dict(name= user.username)}</h2>
+        <h2 class="title">${_("Thanks for signing up, %(name)s!") % dict(name= user.profile.nickname_or_default)}</h2>
       </div>
 
       <div class="notice notice-incontext notice-instruction notice-instruction-verification">

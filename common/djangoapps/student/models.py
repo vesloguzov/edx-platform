@@ -226,6 +226,14 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, unique=True, db_index=True, related_name='profile')
     name = models.CharField(blank=True, max_length=255, db_index=True)
 
+    # name visible to other users - we only insist it exists but we con't care if it's repetitive like 'anonymous'
+    nickname = models.CharField(blank=True, max_length=255, db_index=True, default='')
+
+    # fields required for synchronization
+    first_name = models.CharField(blank=True, default='', max_length=255)
+    last_name = models.CharField(blank=True, default='', max_length=255)
+    birthdate = models.DateField(blank=True, null=True)
+
     meta = models.TextField(blank=True)  # JSON dictionary for future expansion
     courseware = models.CharField(blank=True, max_length=255, default='course.xml')
 
@@ -304,6 +312,10 @@ class UserProfile(models.Model):
         """ Convenience method that returns the human readable gender. """
         if self.gender:
             return self.__enumerable_to_display(self.GENDER_CHOICES, self.gender)
+
+    @property
+    def nickname_or_default(self):
+        return self.nickname or _('anonymous')
 
     def get_meta(self):  # pylint: disable=missing-docstring
         js_str = self.meta
@@ -918,7 +930,7 @@ class CourseEnrollment(models.Model):
 
     def __unicode__(self):
         return (
-            "[CourseEnrollment] {}: {} ({}); active: ({})"
+            u"[CourseEnrollment] {}: {} ({}); active: ({})"
         ).format(self.user, self.course_id, self.created, self.is_active)
 
     @classmethod
@@ -1201,6 +1213,25 @@ class CourseEnrollment(models.Model):
             if ignore_errors:
                 return None
             raise
+
+    @classmethod
+    def enroll_pending(cls, user):
+        """
+        Enroll a user in course he was enrolled by email. This saves immediately.
+
+        Returns a CoursewareEnrollment object.
+
+        `user` is a Django User object. If it hasn't been saved yet (no `.id`
+               attribute), this method will automatically save it before
+               adding an enrollment for it.
+
+        `course_id` is our usual course_id string (e.g. "edX/Test101/2013_Fall)
+
+        """
+        pending_enrollments = CourseEnrollmentAllowed.objects.filter(email=user.email)
+        for pending_enrollment in pending_enrollments:
+            if pending_enrollment.auto_enroll:
+                cls.enroll(user, pending_enrollment.course_id)
 
     @classmethod
     def unenroll(cls, user, course_id, skip_refund=False):
@@ -1587,7 +1618,7 @@ class CourseAccessRole(models.Model):
         return self._key < other._key  # pylint: disable=protected-access
 
     def __unicode__(self):
-        return "[CourseAccessRole] user: {}   role: {}   org: {}   course: {}".format(self.user.username, self.role, self.org, self.course_id)
+        return u"[CourseAccessRole] user: {}   role: {}   org: {}   course: {}".format(self.user.username, self.role, self.org, self.course_id)
 
 
 #### Helper methods for use from python manage.py shell and other classes.
@@ -1830,7 +1861,7 @@ class LinkedInAddToProfileConfiguration(ConfigurationModel):
         """Name of the certification, for display on LinkedIn. """
         return self.MODE_TO_CERT_NAME.get(
             cert_mode,
-            _(u"{platform_name} Certificate for {course_name}")
+            _("{platform_name} Certificate for {course_name}")
         ).format(
             platform_name=settings.PLATFORM_NAME,
             course_name=course_name

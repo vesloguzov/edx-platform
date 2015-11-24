@@ -5,13 +5,13 @@
             <label for="start_date" class="label"><%= gettext('Release Date:') %></label>
             <input type="text" id="start_date" name="start_date"
               value=""
-              placeholder="MM/DD/YYYY" class="start-date release-date date input input-text" autocomplete="off" />
+              placeholder="<%= gettext('MM/DD/YYYY') %>" class="start-date release-date date input input-text" autocomplete="off" />
         </li>
         <li class="field field-text field-start-time field-release-time">
             <label for="start_time" class="label"><%= gettext('Release Time in UTC:') %></label>
             <input type="text" id="start_time" name="start_time"
               value=""
-              placeholder="HH:MM" class="start-time release-time time input input-text" autocomplete="off" />
+              placeholder="<%= gettext('HH:MM') %>" class="start-time release-time time input input-text" autocomplete="off" />
         </li>
     </ul>
 

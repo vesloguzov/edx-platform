@@ -149,7 +149,7 @@ def _get_course_email_context(course):
     course_id = course.id.to_deprecated_string()
     course_title = course.display_name
     course_end_date = get_default_time_display(course.end)
-    course_url = 'https://{}{}'.format(
+    course_url = u'https://{}{}'.format(
         settings.SITE_NAME,
         reverse('course_root', kwargs={'course_id': course_id})
     )
@@ -159,8 +159,8 @@ def _get_course_email_context(course):
         'course_url': course_url,
         'course_image_url': image_url,
         'course_end_date': course_end_date,
-        'account_settings_url': 'https://{}{}'.format(settings.SITE_NAME, reverse('account_settings')),
-        'email_settings_url': 'https://{}{}'.format(settings.SITE_NAME, reverse('dashboard')),
+        'account_settings_url': u'https://{}{}'.format(settings.SITE_NAME, reverse('account_settings')),
+        'email_settings_url': u'https://{}{}'.format(settings.SITE_NAME, reverse('dashboard')),
         'platform_name': settings.PLATFORM_NAME,
     }
     return email_context
@@ -628,7 +628,7 @@ def _send_course_email(entry_id, email_id, to_list, global_email_context, subtas
             total_recipients_failed,
             total_recipients
         )
-        duplicate_recipients = ["{0} ({1})".format(email, repetition)
+        duplicate_recipients = [u"{0} ({1})".format(email, repetition)
                                 for email, repetition in recipients_info.most_common() if repetition > 1]
         if duplicate_recipients:
             log.info(

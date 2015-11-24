@@ -7,6 +7,7 @@ from mock import patch
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.core import mail
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 from util.testing import UrlResetMixin
@@ -185,13 +186,29 @@ class EnrollmentTest(UrlResetMixin, ModuleStoreTestCase):
         resp = self._change_enrollment('not_an_action')
         self.assertEqual(resp.status_code, 400)
 
+    @patch.dict('django.conf.settings.FEATURES', {'SEND_ENROLLMENT_EMAIL': True})
+    def test_email_on_enroll(self):
+        self._change_enrollment('enroll')
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(
+            mail.outbox[0].subject,
+            'You have enrolled in {}'.format(self.course.display_name)
+        )
+        self.assertIn(
+            reverse('course_root', kwargs={'course_id': self.course.id.to_deprecated_string()}),
+            mail.outbox[0].body
+        )
+
     def test_with_invalid_course_id(self):
         CourseEnrollment.enroll(self.user, self.course.id, mode="honor")
         resp = self._change_enrollment('unenroll', course_id="edx/")
         self.assertEqual(resp.status_code, 400)
 
+
     def _change_enrollment(self, action, course_id=None, email_opt_in=None):
-        """Change the student's enrollment status in a course.
+        """
+        Change the student's enrollment status in a course.
 
         Args:
             action (str): The action to perform (either "enroll" or "unenroll")

@@ -11,7 +11,7 @@ import pytz
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.utils.translation import ugettext as _, ugettext_noop
+from django.utils.translation import pgettext, ugettext as _, ugettext_noop
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.cache import cache_control
 from edxmako.shortcuts import render_to_response
@@ -362,7 +362,7 @@ def _section_course_info(course, access):
 
     section_data = {
         'section_key': 'course_info',
-        'section_display_name': _('Course Info'),
+        'section_display_name': pgettext('Instructor dashboard title', 'Course Info'),
         'access': access,
         'course_id': course_key,
         'course_display_name': course.display_name,
@@ -387,7 +387,7 @@ def _section_course_info(course, access):
 
     try:
         sorted_cutoffs = sorted(course.grade_cutoffs.items(), key=lambda i: i[1], reverse=True)
-        advance = lambda memo, (letter, score): "{}: {}, ".format(letter, score) + memo
+        advance = lambda memo, (letter, score): u"{}: {}, ".format(letter, score) + memo
         section_data['grade_cutoffs'] = reduce(advance, sorted_cutoffs, "")[:-2]
     except Exception:  # pylint: disable=broad-except
         section_data['grade_cutoffs'] = "Not Available"
@@ -584,7 +584,7 @@ def _section_send_email(course, access):
 
 def _get_dashboard_link(course_key):
     """ Construct a URL to the external analytics dashboard """
-    analytics_dashboard_url = '{0}/courses/{1}'.format(settings.ANALYTICS_DASHBOARD_URL, unicode(course_key))
+    analytics_dashboard_url = u'{0}/courses/{1}'.format(settings.ANALYTICS_DASHBOARD_URL, unicode(course_key))
     link = u"<a href=\"{0}\" target=\"_blank\">{1}</a>".format(analytics_dashboard_url,
                                                                settings.ANALYTICS_DASHBOARD_NAME)
     return link

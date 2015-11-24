@@ -129,8 +129,8 @@ class PeerGradingModule(PeerGradingFields, XModule):
         if self.use_for_single_location_local:
             linked_descriptors = self.descriptor.get_required_module_descriptors()
             if len(linked_descriptors) == 0:
-                error_msg = "Peer grading module {0} is trying to use single problem mode without "
-                "a location specified.".format(self.location)
+                error_msg = u"Peer grading module {0} is trying to use single problem mode without "
+                u"a location specified.".format(self.location)
                 log.error(error_msg)
                 # Change module over to panel mode from single problem mode.
                 self.use_for_single_location_local = False
@@ -140,7 +140,7 @@ class PeerGradingModule(PeerGradingFields, XModule):
         try:
             self.timeinfo = TimeInfo(self.due, self.graceperiod)
         except Exception:
-            log.error("Error parsing due date information in location {0}".format(self.location))
+            log.error(u"Error parsing due date information in location {0}".format(self.location))
             raise
 
         self.display_due_date = self.timeinfo.display_due_date
@@ -212,7 +212,7 @@ class PeerGradingModule(PeerGradingFields, XModule):
 
         if dispatch not in handlers:
             # This is a dev_facing_error
-            log.error("Cannot find {0} in handlers in handle_ajax function for open_ended_module.py".format(dispatch))
+            log.error(u"Cannot find {0} in handlers in handle_ajax function for open_ended_module.py".format(dispatch))
             # This is a dev_facing_error
             return json.dumps({'error': 'Error handling action.  Please try again.', 'success': False})
 
@@ -261,7 +261,7 @@ class PeerGradingModule(PeerGradingFields, XModule):
             success, response = self.query_data_for_location(self.link_to_location)
             if not success:
                 log.exception(
-                    "No instance data found and could not get data from controller for loc {0} student {1}".format(
+                    u"No instance data found and could not get data from controller for loc {0} student {1}".format(
                         self.system.location.to_deprecated_string(), self.system.anonymous_student_id
                     ))
                 return None
@@ -519,11 +519,11 @@ class PeerGradingModule(PeerGradingFields, XModule):
             return self.descriptor.system.load_item(location)
         except ItemNotFoundError:
             # The linked problem doesn't exist.
-            log.error("Problem {0} does not exist in this course.".format(location))
+            log.error(u"Problem {0} does not exist in this course.".format(location))
             raise
         except NoPathToItem:
             # The linked problem does not have a path to it (ie is in a draft or other strange state).
-            log.error("Cannot find a path to problem {0} in this course.".format(location))
+            log.error(u"Cannot find a path to problem {0} in this course.".format(location))
             raise
 
     def peer_grading(self, _data=None):
@@ -571,7 +571,7 @@ class PeerGradingModule(PeerGradingFields, XModule):
                 try:
                     problem_timeinfo = TimeInfo(problem['due'], grace_period)
                 except Exception:
-                    log.error("Malformed due date or grace period string for location {0}".format(problem_location))
+                    log.error(u"Malformed due date or grace period string for location {0}".format(problem_location))
                     raise
                 if self._closed(problem_timeinfo):
                     problem['closed'] = True
@@ -698,9 +698,9 @@ class PeerGradingDescriptor(PeerGradingFields, RawDescriptor):
                 linked_module = self.system.load_item(self.link_to_location)
                 return [linked_module]
             except (NoPathToItem, ItemNotFoundError):
-                error_message = ("Cannot find the combined open ended module "
-                                 "at location {0} being linked to from peer "
-                                 "grading module {1}").format(self.link_to_location, self.location)
+                error_message = (u"Cannot find the combined open ended module "
+                                 u"at location {0} being linked to from peer "
+                                 u"grading module {1}").format(self.link_to_location, self.location)
                 log.error(error_message)
                 return []
         else:

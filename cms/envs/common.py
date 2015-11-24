@@ -1013,7 +1013,6 @@ ADVANCED_COMPONENT_TYPES = [
     'peergrading',
     'notes',
     'schoolyourself_review',
-    'schoolyourself_lesson',
 
     # Google Drive embedded components. These XBlocks allow one to
     # embed public google drive documents and calendars within edX units
@@ -1050,6 +1049,12 @@ ADVANCED_PROBLEM_TYPES = [
     },
 ]
 
+
+#date format the api will be formatting the datetime values
+API_DATE_FORMAT = '%Y-%m-%d'
+
+# date format for course update page (jquery.datepicker format)
+COURSE_UPDATE_DATE_FORMAT = 'MM d, yy'
 
 # Files and Uploads type filter values
 
@@ -1115,3 +1120,5 @@ PROCTORING_BACKEND_PROVIDER = {
     'options': {},
 }
 PROCTORING_SETTINGS = {}
+
+from lektorium import *

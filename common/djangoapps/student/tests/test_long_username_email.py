@@ -11,7 +11,7 @@ class TestLongUsernameEmail(TestCase):
         super(TestLongUsernameEmail, self).setUp()
         self.url = reverse('create_account')
         self.url_params = {
-            'username': 'username',
+            'nickname': 'nickname',
             'email': 'foo_bar' + '@bar.com',
             'name': 'foo bar',
             'password': '123',
@@ -19,22 +19,16 @@ class TestLongUsernameEmail(TestCase):
             'honor_code': 'true',
         }
 
-    def test_long_username(self):
+    def test_long_nickname(self):
         """
         Test username cannot be more than 30 characters long.
         """
 
-        self.url_params['username'] = 'username' * 4
+        self.url_params['nickname'] = 'nickname' * 4
         response = self.client.post(self.url, self.url_params)
 
-        # Status code should be 400.
-        self.assertEqual(response.status_code, 400)
-
-        obj = json.loads(response.content)
-        self.assertEqual(
-            obj['value'],
-            "Username cannot be more than 30 characters long",
-        )
+        # Status code should be 200.
+        self.assertEqual(response.status_code, 200)
 
     def test_long_email(self):
         """

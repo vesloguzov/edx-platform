@@ -174,6 +174,8 @@ class GeneratedCertificate(models.Model):
     class Meta(object):
         unique_together = (('user', 'course_id'),)
         app_label = "certificates"
+        verbose_name = _('certificate')
+        verbose_name_plural = _('certificates')
 
     @classmethod
     def certificate_for_student(cls, student, course_id):

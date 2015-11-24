@@ -255,13 +255,13 @@ def get_processor_decline_html(params):
         "Contact us with payment-related questions at {email}."
     )
     formatted = msg.format(
-        decision_text='<span class="decision">{}</span>'.format(params['decision']),
-        reason_text='<span class="reason">{code}:{msg}</span>'.format(
+        decision_text=u'<span class="decision">{}</span>'.format(params['decision']),
+        reason_text=u'<span class="reason">{code}:{msg}</span>'.format(
             code=params['reasonCode'], msg=REASONCODE_MAP[params['reasonCode']],
         ),
         email=payment_support_email,
     )
-    return '<p class="error_msg">{}</p>'.format(formatted)
+    return u'<p class="error_msg">{}</p>'.format(formatted)
 
 
 def get_processor_exception_html(exception):
@@ -280,12 +280,12 @@ def get_processor_exception_html(exception):
             "Contact us with payment-specific questions at {email}."
         )
         formatted = msg.format(
-            error_message='<span class="exception_msg">{msg}</span>'.format(
+            error_message=u'<span class="exception_msg">{msg}</span>'.format(
                 msg=exception.message,
             ),
             email=payment_support_email,
         )
-        return '<p class="error_msg">{}</p>'.format(formatted)
+        return u'<p class="error_msg">{}</p>'.format(formatted)
     elif isinstance(exception, CCProcessorWrongAmountException):
         msg = _(
             "Sorry! Due to an error your purchase was charged for "
@@ -295,12 +295,12 @@ def get_processor_exception_html(exception):
             "Contact us with payment-specific questions at {email}."
         )
         formatted = msg.format(
-            error_message='<span class="exception_msg">{msg}</span>'.format(
+            error_message=u'<span class="exception_msg">{msg}</span>'.format(
                 msg=exception.message,
             ),
             email=payment_support_email,
         )
-        return '<p class="error_msg">{}</p>'.format(formatted)
+        return u'<p class="error_msg">{}</p>'.format(formatted)
     elif isinstance(exception, CCProcessorSignatureException):
         msg = _(
             "Sorry! Our payment processor sent us back a corrupted message "
@@ -313,12 +313,12 @@ def get_processor_exception_html(exception):
             "Contact us with payment-specific questions at {email}."
         )
         formatted = msg.format(
-            error_message='<span class="exception_msg">{msg}</span>'.format(
+            error_message=u'<span class="exception_msg">{msg}</span>'.format(
                 msg=exception.message,
             ),
             email=payment_support_email,
         )
-        return '<p class="error_msg">{}</p>'.format(formatted)
+        return u'<p class="error_msg">{}</p>'.format(formatted)
 
     # fallthrough case, which basically never happens
     return '<p class="error_msg">EXCEPTION!</p>'

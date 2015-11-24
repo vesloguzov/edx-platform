@@ -1,4 +1,3 @@
-// lms - course - base
 // ====================
 
 // Table of Contents
@@ -34,6 +33,11 @@
 
 // +Resets - Old, Body
 // ====================
+
+html {
+  background-image: $course-bg-image;
+  background-color: $course-bg-color;
+}
 
 body {
   min-height: 100%;
