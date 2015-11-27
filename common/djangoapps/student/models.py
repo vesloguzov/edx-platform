@@ -23,7 +23,7 @@ import uuid
 
 import analytics
 from config_models.models import ConfigurationModel
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext, ugettext_lazy as _
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -315,7 +315,7 @@ class UserProfile(models.Model):
 
     @property
     def nickname_or_default(self):
-        return self.nickname or _('anonymous')
+        return self.nickname or ugettext('anonymous')
 
     def get_meta(self):  # pylint: disable=missing-docstring
         js_str = self.meta

@@ -172,12 +172,13 @@ class ProviderConfig(ConfigurationModel):
         # technically a data race between the creation of this value and the
         # creation of the user object, so it is still possible for users to get
         # an error on submit.
-        suggested_username = pipeline_kwargs.get('username')
+        # lektorium: we enjoy repeatable nicknames =)
+        suggested_nickname = pipeline_kwargs.get('username')
 
         return {
             'email': details.get('email', ''),
             'name': details.get('fullname', ''),
-            'username': suggested_username,
+            'nickname': suggested_nickname,
         }
 
     def get_authentication_backend(self):

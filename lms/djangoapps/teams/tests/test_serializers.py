@@ -57,8 +57,9 @@ class MembershipSerializerTestCase(SerializerTestCase):
         }).data
         username = self.user.username
         self.assertEqual(data['user'], {
-            'url': 'http://testserver/api/user/v1/accounts/' + username,
+            'url': u'http://testserver/api/user/v1/accounts/' + username,
             'username': username,
+            'nickname': self.user.profile.nickname,
             'profile_image': {
                 'image_url_full': 'http://testserver/static/default_500.png',
                 'image_url_large': 'http://testserver/static/default_120.png',

@@ -142,6 +142,7 @@ class TestRequireStudentEmailOrNickname(django.test.TestCase):
         profile = UserProfileFactory.create(user=student)
         profile.nickname = nickname
         profile.save()
+        student.profile = profile
         return student
 
 

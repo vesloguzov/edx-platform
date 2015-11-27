@@ -159,8 +159,9 @@ class TestAccountAPI(UserAPITestCase):
         Verify that the shareable fields from the account are returned
         """
         data = response.data
-        self.assertEqual(7, len(data))
+        self.assertEqual(8, len(data))
         self.assertEqual(self.user.username, data["username"])
+        self.assertEqual("nick", data["nickname"])
         self.assertEqual("US", data["country"])
         self._verify_profile_image_data(data, True)
         self.assertIsNone(data["time_zone"])
@@ -173,7 +174,7 @@ class TestAccountAPI(UserAPITestCase):
         Verify that only the public fields are returned if a user does not want to share account fields
         """
         data = response.data
-        self.assertEqual(3, len(data))
+        self.assertEqual(4, len(data))
         self.assertEqual(self.user.username, data["username"])
         self._verify_profile_image_data(data, not requires_parental_consent)
         self.assertEqual(account_privacy, data["account_privacy"])
@@ -681,7 +682,7 @@ class TestAccountAPI(UserAPITestCase):
         response = self.send_get(client)
         if has_full_access:
             data = response.data
-            self.assertEqual(16, len(data))
+            self.assertEqual(17, len(data))
             self.assertEqual(self.user.username, data["username"])
             self.assertEqual(self.user.first_name + " " + self.user.last_name, data["name"])
             self.assertEqual(self.user.email, data["email"])

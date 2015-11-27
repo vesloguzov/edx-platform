@@ -440,7 +440,7 @@ class MatlabTest(unittest.TestCase):
             'tabsize': int(self.tabsize),
             'button_enabled': True,
             'queue_len': '3',
-            'matlab_editor_js': '/dummy-static/js/vendor/CodeMirror/octave.js',
+            'matlab_editor_js': u'/dummy-static/js/vendor/CodeMirror/octave.js',
         }
 
         self.assertEqual(context, expected)

@@ -22,7 +22,7 @@ from student.tests.factories import UserFactory
 
 from models.settings.course_metadata import CourseMetadata
 from xmodule.fields import Date
-from xmodule.tabs import InvalidTabsException, DiscussionTab, ExternalDiscussionTab
+from xmodule.tabs import InvalidTabsException
 
 from .utils import CourseTestCase
 from xmodule.modulestore.django import modulestore
@@ -1071,7 +1071,7 @@ class CourseMetadataEditingTest(CourseTestCase):
         """
         Test that changing of discussion link results in tabs updating
         """
-        self.assertIsInstance(self._get_discussion_tab(self.course), DiscussionTab, 'Initial discussion tab is not internal DiscussionTab')
+        self.assertEquals(self._get_discussion_tab(self.course).type, 'discussion', 'Initial discussion tab is not internal Discussion Tab')
         test_model = CourseMetadata.update_from_json(
             self.course,
             {
@@ -1081,11 +1081,11 @@ class CourseMetadataEditingTest(CourseTestCase):
         )
         # fetch course from database to ensure tabs are generated/fetched correctly for the next request
         fresh = modulestore().get_course(self.course.id)
-        self.assertNotIsInstance(self._get_discussion_tab(fresh), DiscussionTab,
+        self.assertNotEqual(self._get_discussion_tab(fresh).type, 'discussion',
             'Discussion link not updated')
         self.assertIsNotNone(self._get_discussion_tab(fresh),
             'Discussion link not generated')
-        self.assertIsInstance(self._get_discussion_tab(fresh), ExternalDiscussionTab,
+        self.assertEqual(self._get_discussion_tab(fresh).type, 'external_discussion',
             'Changing of discussion links not followed by tabs updating')
 
     def test_restore_builtin_discussion_link(self):
@@ -1093,7 +1093,8 @@ class CourseMetadataEditingTest(CourseTestCase):
         Test that setting of discussion link to empty string
         results in restoring of builtin discussion tab.
         """
-        self.assertIsInstance(self._get_discussion_tab(self.course), DiscussionTab, 'Initial discussion tab is not internal DiscussionTab')
+        self.assertEqual(self._get_discussion_tab(self.course).type, 'discussion',
+            'Initial discussion tab is not internal Discussion Tab')
         test_model = CourseMetadata.update_from_json(
             self.course,
             {
@@ -1103,7 +1104,7 @@ class CourseMetadataEditingTest(CourseTestCase):
         )
         # fetch course from database to ensure tabs are generated/fetched correctly for the next request
         fresh = modulestore().get_course(self.course.id)
-        self.assertIsInstance(self._get_discussion_tab(fresh), ExternalDiscussionTab,
+        self.assertEqual(self._get_discussion_tab(fresh).type, 'external_discussion',
             'Changing of discussion links not followed by tabs updating')
         # remove discussion link value
         test_model = CourseMetadata.update_from_json(
@@ -1115,12 +1116,12 @@ class CourseMetadataEditingTest(CourseTestCase):
         )
         # fetch course from database to ensure tabs are generated/fetched correctly for the next request
         fresh = modulestore().get_course(self.course.id)
-        self.assertIsInstance(self._get_discussion_tab(fresh), DiscussionTab,
+        self.assertEqual(self._get_discussion_tab(fresh).type, 'discussion',
             'Changing of discussion links to null not followed by tabs updating: %s' % self._get_discussion_tab(fresh))
 
     def _get_discussion_tab(self, course):
         for tab in course.tabs:
-            if isinstance(tab, (DiscussionTab, ExternalDiscussionTab)):
+            if tab.type.endswith('discussion'):
                 return tab
 
     @override_settings(FEATURES={'CERTIFICATES_HTML_VIEW': True})
@@ -1231,14 +1232,14 @@ class CourseEnrollmentEndFieldTest(CourseTestCase):
     NOT_EDITABLE_DATE_WRAPPER = "<div class=\"field date is-not-editable\" id=\"field-enrollment-end-date\">"
     NOT_EDITABLE_TIME_WRAPPER = "<div class=\"field time is-not-editable\" id=\"field-enrollment-end-time\">"
     NOT_EDITABLE_DATE_FIELD = "<input type=\"text\" class=\"end-date date end\" \
-id=\"course-enrollment-end-date\" placeholder=\"MM/DD/YYYY\" autocomplete=\"off\" readonly aria-readonly=\"true\" />"
+id=\"course-enrollment-end-date\" placeholder=\"YYYY-MM-DD\" autocomplete=\"off\" readonly aria-readonly=\"true\" />"
     NOT_EDITABLE_TIME_FIELD = "<input type=\"text\" class=\"time end\" id=\"course-enrollment-end-time\" \
 value=\"\" placeholder=\"HH:MM\" autocomplete=\"off\" readonly aria-readonly=\"true\" />"
 
     EDITABLE_DATE_WRAPPER = "<div class=\"field date \" id=\"field-enrollment-end-date\">"
     EDITABLE_TIME_WRAPPER = "<div class=\"field time \" id=\"field-enrollment-end-time\">"
     EDITABLE_DATE_FIELD = "<input type=\"text\" class=\"end-date date end\" \
-id=\"course-enrollment-end-date\" placeholder=\"MM/DD/YYYY\" autocomplete=\"off\"  />"
+id=\"course-enrollment-end-date\" placeholder=\"YYYY-MM-DD\" autocomplete=\"off\"  />"
     EDITABLE_TIME_FIELD = "<input type=\"text\" class=\"time end\" \
 id=\"course-enrollment-end-time\" value=\"\" placeholder=\"HH:MM\" autocomplete=\"off\"  />"
 

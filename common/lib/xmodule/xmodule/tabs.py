@@ -350,6 +350,24 @@ class CourseTabList(List):
         return None
 
     @staticmethod
+    def update_discussion(course):
+        """
+        Update the discussion tab depending on course discussion_link.
+        Does not save changes to database.
+        """
+
+        # the discussion_link setting overrides everything else, even if there is a discussion tab in the course tabs
+        if course.discussion_link:
+            discussion_tab = CourseTab.load(
+                'external_discussion', name=_('External Discussion'), link=course.discussion_link
+            )
+        else:
+            discussion_tab = CourseTab.load('discussion')
+
+        get_tab = lambda tab: discussion_tab if tab.type in ('discussion', 'external_discussion') else tab
+        course.tabs = [get_tab(tab) for tab in course.tabs]
+
+    @staticmethod
     def get_tab_by_slug(tab_list, url_slug):
         """
         Look for a tab with the specified 'url_slug'.  Returns the tab or None if not found.

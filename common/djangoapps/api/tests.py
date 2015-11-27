@@ -7,7 +7,7 @@ Replace this with more appropriate tests for your application.
 """
 import json
 import datetime
-from unittest import skipIf, skipUnless
+from unittest import skipIf, skipUnless, skip
 from mock import patch
 
 from django.test import TestCase
@@ -62,7 +62,7 @@ class UserSerializerTest(TestCase):
 
     def test_repetitive_user_not_valid(self):
         serializer = UserSerializer(data={'uid': self.user.username})
-        self.assertFalse(serializer.is_valid())
+        self.assertFalse(serializer.is_valid(), 'Validation unexpectedly succeded')
 
     def test_create(self):
         data = {
@@ -76,7 +76,8 @@ class UserSerializerTest(TestCase):
             'city': 'Test city'
         }
         serializer = UserSerializer(data=data)
-        self.assertTrue(serializer.is_valid())
+        self.assertTrue(serializer.is_valid(),
+            'Validation on creaion failed: %s' % serializer.errors)
 
         new_user = serializer.save()
         self.assertEquals(new_user.username, serializer.data['uid'])
@@ -94,7 +95,8 @@ class UserSerializerTest(TestCase):
             'last_name': 'Test surname',
         }
         serializer = UserSerializer(self.user, data=data)
-        self.assertTrue(serializer.is_valid())
+        self.assertTrue(serializer.is_valid(),
+            'Validation on update failed: %s' % serializer.errors)
 
         serializer.save()
         updated_user = User.objects.get(id=self.user.id)
@@ -106,15 +108,22 @@ class UserSerializerTest(TestCase):
         self.assertEquals(updated_user.profile.last_name, data['last_name'])
 
     def test_optional_fields(self):
-        data = {'uid': 'test2'}
+        data = {'uid': 'test2', 'email': 'test2@example.com'}
         serializer = UserSerializer(data=data)
-        self.assertTrue(serializer.is_valid())
+        self.assertTrue(serializer.is_valid(),
+            'Validation on update failed: %s' % serializer.errors)
 
     def test_required_fields(self):
         data = {}
         serializer = UserSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
+        self.assertFalse(serializer.is_valid(), 'Validation unexpectedly succeded')
         self.assertIn('uid', serializer.errors)
+
+    def test_email_required_on_creation(self):
+        data = {'uid': 'testx'}
+        serializer = UserSerializer(data=data)
+        self.assertFalse(serializer.is_valid(), 'Validation unexpectedly succeded')
+        self.assertIn('email', serializer.errors)
 
     def test_partial_update(self):
         """
@@ -129,7 +138,8 @@ class UserSerializerTest(TestCase):
         profile.save()
 
         serializer = UserSerializer(self.user, data=data, partial=True)
-        self.assertTrue(serializer.is_valid())
+        self.assertTrue(serializer.is_valid(),
+            'Validation on update failed: %s' % serializer.errors)
         updated_user = serializer.save()
         self.assertEqual(updated_user.profile.nickname, data['nickname'])
         self.assertEqual(updated_user.profile.name, 'not-to-be-changed')
@@ -144,7 +154,8 @@ class UserSerializerTest(TestCase):
         profile.save()
 
         serializer = UserSerializer(self.user, data=data)
-        self.assertTrue(serializer.is_valid())
+        self.assertTrue(serializer.is_valid(),
+            'Validation on update failed: %s' % serializer.errors)
         updated_user = serializer.save()
         self.assertEqual(updated_user.profile.name, '')
 
@@ -154,7 +165,17 @@ class UserSerializerTest(TestCase):
             'email': self.user.email,
         }
         serializer = UserSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
+        self.assertFalse(serializer.is_valid(), 'Validation unexpectedly succeded')
+
+    def test_invalid_uid(self):
+        data = {
+            'uid': 'restricted+symbols in uid',
+            'email': 'test@example.com',
+        }
+        serializer = UserSerializer(data=data)
+        self.assertFalse(serializer.is_valid(), 'Validation unexpectedly succeded')
+        self.assertIn('uid', serializer.errors)
+
 
 
 @skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
@@ -214,6 +235,7 @@ class UserViewSetTest(APITest):
             response = self._request_with_auth('post', self.list_url, data)
             self.assertEqual(response.status_code, 400)
 
+    @skip('Removed from framework upstream, may be fixed with mixin')
     def test_put_create(self):
         data = {
             'uid': '123',
@@ -227,6 +249,8 @@ class UserViewSetTest(APITest):
         }
         response = self._request_with_auth('put', data=data,
                     path=reverse('profile-detail', kwargs={'username': data['uid']}))
+        print 'URL:', reverse('profile-detail', kwargs={'username': data['uid']})
+        print "USERS:", User.objects.all()
         self.assertEquals(response.status_code, 201)
 
         user = User.objects.get(username=data['uid'])
@@ -238,13 +262,12 @@ class UserViewSetTest(APITest):
             else:
                 self.assertEquals(getattr(user.profile, field_name), data[field_name])
 
-    def test_put_fail_on_duplicate_email(self):
+    def test_creation_fails_on_duplicate_email(self):
         data = {
             'uid': '123',
             'email': self.user.email
         }
-        response = self._request_with_auth('put', data=data,
-                    path=reverse('profile-detail', kwargs={'username': data['uid']}))
+        response = self._request_with_auth('post', data=data, path=reverse('profile-list'))
         self.assertEquals(response.status_code, 400)
 
     # TODO: test various variants of patch data
@@ -270,6 +293,9 @@ class UserViewSetTest(APITest):
         self.assertEqual(user.email, self.user.email)
 
     def test_enroll_pending(self):
+        """
+        Test enrollment of not-yet registered user
+        """
         data = {
             'uid': 'new_test',
             'email': 'new_test@example.com',
@@ -277,8 +303,8 @@ class UserViewSetTest(APITest):
         course = CourseFactory.create()
         enroll_email(course.id, data['email'], auto_enroll=True)
 
-        response = self._request_with_auth('put', data=data,
-                    path=reverse('profile-detail', kwargs={'username': data['uid']}))
+        # create user and check enrollment
+        self._request_with_auth('post', data=data, path=reverse('profile-list'))
         user = User.objects.get(username=data['uid'])
         self.assertTrue(CourseEnrollment.is_enrolled(user, course.id))
 

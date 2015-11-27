@@ -7,6 +7,7 @@ from django.core.urlresolvers import reverse
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from student.models import UserProfile, CourseEnrollment
 from courseware.courses import course_image_url
@@ -23,12 +24,14 @@ class UserSerializer(serializers.ModelSerializer):
     Represents username as uid (since it's a technical field),
     profile.name as name
     """
-    uid = serializers.CharField(source='username', required=True)
+    uid = serializers.CharField(source='username', required=True, validators=[UniqueValidator(queryset=User.objects)])
+    email = serializers.EmailField(required=False, validators=[UniqueValidator(queryset=User.objects)])
+
     name = serializers.CharField(source='profile.name', default='', max_length=255, required=False)
     nickname = serializers.CharField(source='profile.nickname', default='', max_length=255, required=False)
     first_name = serializers.CharField(source='profile.first_name', default='', max_length=255, required=False)
     last_name = serializers.CharField(source='profile.last_name', default='', max_length=255, required=False)
-    birthdate = serializers.DateField(source='profile.birthdate', default='', required=False)
+    birthdate = serializers.DateField(source='profile.birthdate', default=None, required=False)
     city = serializers.CharField(source='profile.city', default='', required=False)
 
     class Meta:
@@ -36,78 +39,65 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('uid', 'email', 'name', 'nickname', 'first_name', 'last_name', 'birthdate', 'city')
         lookup_field = 'uid'
 
-    def validate_uid(self, attrs, source):
+    def validate_uid(self, value):
         """
         Validate additional uid constraints since uniqueness and presence are validated automatically
         """
-        value = attrs.get(source)
         if value and not UID_REGEX.match(value):
             raise serializers.ValidationError(_('UID must consist of letters, digits, ".", "_" and "-"'))
-        return attrs
+        return value
 
-    def validate_email(self, attrs, source):
+    def validate(self, data):
         """
-        Validate uniqueness of the email
+        Validate email presense on object creation
         """
-        uid = attrs.get('username')
-        email = attrs.get('email', '')
-        # since the uid could be absent in case of other errors, we need to check for it
-        if uid and User.objects.filter(email=email).exclude(username=uid).exists():
-            raise serializers.ValidationError(_('Duplicate email "{}"').format(email))
-        return attrs
+        if not self.instance and not data.get('email', False):
+            raise serializers.ValidationError({'email': self.error_messages['required']})
+        return data
 
-    def restore_object(self, attrs, instance=None):
-        profile_data = self._pop_profile_data(attrs)
-        instance = super(UserSerializer, self).restore_object(attrs, instance)
-        instance._profile_data = profile_data
-        return instance
+    def create(self, validated_data):
+        data = validated_data.copy()
+        profile_data = data.pop('profile')
+        user = User.objects.create(**data)
+        # bind updated profile to user for correct patch response
+        user.profile = UserProfile.objects.create(user=user, **profile_data)
+        CourseEnrollment.enroll_pending(user)
+        return user
 
-    def save_object(self, obj, **kwargs):
-        profile_data = self.object._profile_data
-        del(self.object._profile_data)
+    def update(self, instance, validated_data):
+        data = validated_data.copy()
+        profile_data = data.pop('profile')
 
-        created = not obj.pk
-        super(UserSerializer, self).save_object(obj, **kwargs)
-
-        profile, _ = UserProfile.objects.get_or_create(user=self.object)
+        user = super(UserSerializer, self).update(instance, data)
+        profile = UserProfile.objects.get(user=user)
         for field, value in profile_data.items():
             setattr(profile, field, value)
         profile.save()
         # bind updated profile to user for correct patch response
-        self.object.profile = profile
-
-        if created:
-            CourseEnrollment.enroll_pending(obj)
-
-    def _pop_profile_data(self, attrs):
-        profile_data = {}
-        for source in attrs.keys():
-            if source.startswith('profile.'):
-                profile_field_name = source.split('.')[-1]
-                profile_data[profile_field_name] = attrs.pop(source, None)
-        return profile_data
+        user.profile = profile
+        return user
 
 
 class CourseSerializer(serializers.Serializer):
     course_id = serializers.CharField(source='id')
     name = serializers.CharField(source='display_name')
-    description = serializers.SerializerMethodField('get_description')
+    description = serializers.SerializerMethodField()
 
     start = serializers.DateTimeField()
     end = serializers.DateTimeField()
     enrollment_start = serializers.DateTimeField()
     enrollment_end = serializers.DateTimeField()
 
-    lowest_passing_grade = serializers.CharField(source='lowest_passing_grade')
+    lowest_passing_grade = serializers.CharField()
 
     # categories???
     # student_count = serializers.IntegerField()
     # staff ???
     # registration_possible, ...
 
-    image = serializers.SerializerMethodField('get_image_url')
-    about_url = serializers.SerializerMethodField('get_about_course_url')
-    root_url = serializers.SerializerMethodField('get_root_course_url')
+    image = serializers.SerializerMethodField()
+    about_url = serializers.SerializerMethodField()
+    root_url = serializers.SerializerMethodField()
     last_modification = serializers.DateTimeField(source='_edit_info.edited_on')
 
     def get_description(self, course):
@@ -118,16 +108,16 @@ class CourseSerializer(serializers.Serializer):
             description = ''
         return description
 
-    def get_image_url(self, course):
+    def get_image(self, course):
         url = course_image_url(course)
         return self._get_absolute_url(url)
 
-    def get_about_course_url(self, course):
+    def get_about_url(self, course):
         url = reverse('about_course',
                 kwargs={'course_id': course.id.to_deprecated_string()})
         return self._get_absolute_url(url)
 
-    def get_root_course_url(self, course):
+    def get_root_url(self, course):
         url = reverse('course_root',
                 kwargs={'course_id': course.id.to_deprecated_string()})
         return self._get_absolute_url(url)
@@ -137,8 +127,8 @@ class CourseSerializer(serializers.Serializer):
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
-    grade = serializers.SerializerMethodField('get_grade')
-    certificate_url = serializers.SerializerMethodField('get_certificate_url')
+    grade = serializers.SerializerMethodField()
+    certificate_url = serializers.SerializerMethodField()
 
     class Meta:
         model = CourseEnrollment

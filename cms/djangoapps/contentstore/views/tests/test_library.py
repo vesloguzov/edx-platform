@@ -33,9 +33,16 @@ class UnitTestLibraries(ModuleStoreTestCase):
     def setUp(self):
         user_password = super(UnitTestLibraries, self).setUp()
         self.user.profile = UserProfileFactory(user=self.user)
+        self.user.save()
 
         self.client = AjaxEnabledTestClient()
         self.client.login(username=self.user.username, password=user_password)
+
+    def create_non_staff_user(self):
+        user, password = super(UnitTestLibraries, self).create_non_staff_user()
+        user.profile = UserProfileFactory(user=user)
+        user.save()
+        return user, password
 
     ######################################################
     # Tests for /library/ - list and create libraries:
@@ -227,4 +234,4 @@ class UnitTestLibraries(ModuleStoreTestCase):
         # Now extra_user should apear in the list:
         response = self.client.get(manage_users_url)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(extra_user.username, response.content)
+        self.assertIn(extra_user.email, response.content)

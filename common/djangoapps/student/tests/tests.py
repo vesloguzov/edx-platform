@@ -17,6 +17,7 @@ from django.contrib.auth.models import User, AnonymousUser
 from django.core.urlresolvers import reverse
 from django.test import TestCase
 from django.test.client import Client
+from django.test.utils import override_settings
 
 from student.models import (
     anonymous_id_for_user, user_by_anonymous_id, CourseEnrollment,
@@ -991,6 +992,7 @@ class DashboardTestXSeriesPrograms(ModuleStoreTestCase, ProgramsApiConfigMixin):
                     parse_data
                 )
 
+    @override_settings(CERT_NAME_LONG="Certificate of Achievement")
     def test_program_courses_on_dashboard_without_configuration(self):
         """If programs configuration is disabled then the xseries upsell messages
         will not appear on student dashboard.
@@ -1099,6 +1101,7 @@ class DashboardTestXSeriesPrograms(ModuleStoreTestCase, ProgramsApiConfigMixin):
 
     @patch('student.views.log.warning')
     @ddt.data('', 'course_codes', 'marketing_slug', 'name')
+    @override_settings(CERT_NAME_LONG="Certificate of Achievement")
     def test_program_courses_with_invalid_data(self, key_remove, log_warn):
         """Test programs with invalid responses."""
 

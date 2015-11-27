@@ -3,6 +3,7 @@ import re
 import urllib
 import textwrap
 from functools import partial
+from unittest import skipUnless
 
 from nose.tools import assert_equals, assert_true, assert_false  # pylint: disable=no-name-in-module
 from static_replace import (
@@ -13,6 +14,8 @@ from static_replace import (
     make_static_urls_absolute
 )
 from mock import patch, Mock
+
+from django.conf import settings
 
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from xmodule.modulestore.mongo import MongoModuleStore
@@ -170,6 +173,7 @@ def test_regex():
         assert_false(re.match(regex, s))
 
 
+@skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @patch('static_replace.modulestore')
 def test_static_url_in_problem(mock_modulestore):
     """Check static unicode urls in problems are rendered correctly"""

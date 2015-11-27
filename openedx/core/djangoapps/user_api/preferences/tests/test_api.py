@@ -85,37 +85,21 @@ class TestPreferenceAPI(TestCase):
         expected_user_preferences = {
             self.test_preference_key: self.test_preference_value,
         }
-        request = self._preferences_request(self.user, self.user.username)
-        self.assertEqual(get_user_preferences(request), expected_user_preferences)
-
-        request = self._preferences_request(self.staff_user, self.user.username)
-        self.assertEqual(get_user_preferences(request, username=self.user.username), expected_user_preferences)
+        self.assertEqual(get_user_preferences(self.user), expected_user_preferences)
+        self.assertEqual(get_user_preferences(self.staff_user, username=self.user.username), expected_user_preferences)
 
     def test_get_user_preferences_errors(self):
         """
         Verifies that get_user_preferences returns appropriate errors.
         """
         with self.assertRaises(UserNotFound):
-            get_user_preferences(
-                self._preferences_request(self.user, 'no_such_user'),
-                username="no_such_user"
-            )
+            get_user_preferences(self.user, username="no_such_user")
 
         with self.assertRaises(UserNotFound):
-            get_user_preferences(
-                self._preferences_request(self.no_such_user, 'no_such_user')
-            )
+            get_user_preferences(self.no_such_user)
 
         with self.assertRaises(UserNotAuthorized):
-            get_user_preferences(
-                self._preferences_request(self.different_user, self.user.username),
-                username=self.user.username
-            )
-
-    def _preferences_request(self, requesting_user, username):
-        request = self.request_factory.get(reverse('preferences_api', args=[username]))
-        request.user=requesting_user
-        return request
+            get_user_preferences(self.different_user, username=self.user.username)
 
     def test_set_user_preference(self):
         """

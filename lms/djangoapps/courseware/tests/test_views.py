@@ -393,8 +393,8 @@ class ViewsTestCase(ModuleStoreTestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue('Multiple' in response.content)
-        self.assertFalse('Invalid' in response.content)
+        self.assertIn('Multiple', response.content)
+        self.assertNotIn('Invalid', response.content)
 
     def test_submission_history_xss(self):
         # log into a staff account
@@ -445,10 +445,9 @@ class ViewsTestCase(ModuleStoreTestCase):
 
         url = reverse('submission_history', kwargs={
             'course_id': unicode(self.course_key),
-            'student_username': admin.username,
             'location': unicode(usage_key),
         })
-        response = self.client.get(url)
+        response = self.client.get(url, {'student_identifier': admin.email})
         response_content = HTMLParser().unescape(response.content)
 
         # We have update the state 4 times: twice to change content, and twice
@@ -835,7 +834,7 @@ class ProgressPageTests(ModuleStoreTestCase):
         self.assertContains(resp, u"Download Your Certificate")
 
     @ddt.data(
-        *itertools.product(((38, 4, True), (38, 4, False)), (True, False))
+        *itertools.product(((39, 4, True), (39, 4, False)), (True, False))
     )
     @ddt.unpack
     def test_query_counts(self, (sql_calls, mongo_calls, self_paced), self_paced_enabled):

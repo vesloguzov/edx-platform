@@ -36,7 +36,7 @@ from external_auth.models import ExternalAuthMap
 from courseware.masquerade import get_masquerade_role, is_masquerading_as_student
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from student import auth
-from student.models import CourseEnrollmentAllowed
+from student.models import CourseEnrollment, CourseEnrollmentAllowed
 from student.roles import (
     CourseBetaTesterRole,
     CourseInstructorRole,

@@ -92,11 +92,11 @@ class TestRawGradeCSV(TestSubmittingProblems):
             ],
             'data': [
                 [
-                    1, u'u1', u'username', u'view@test.com', '', 0.0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    1, u'edx_user_1', u'username', u'view@test.com', '', 0.0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 ],
                 [
-                    2, u'u2', u'username', u'view2@test.com', '', 0.3333333333333333, 0, 0, 0,
+                    2, u'edx_user_2', u'username', u'view2@test.com', '', 0.3333333333333333, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0, 0.03333333333333333, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0
                 ]
@@ -142,11 +142,11 @@ class TestRawGradeCSV(TestSubmittingProblems):
         elif get_raw_scores:
             expected_data["data"] = [
                 [
-                    1, u'u1', u'username', u'view@test.com',
+                    1, u'edx_user_1', u'username', u'view@test.com',
                     '', None, None, None
                 ],
                 [
-                    2, u'u2', u'username', u'view2@test.com',
+                    2, u'edx_user_2', u'username', u'view2@test.com',
                     '', 0.0, 1.0, 0.0
                 ],
             ]

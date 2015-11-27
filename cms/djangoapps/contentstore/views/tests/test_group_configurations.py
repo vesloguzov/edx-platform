@@ -938,6 +938,8 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase, HelperMethods):
                 'label': u'Test Unit ηοη-αςκιι / Test Content Experiment ηοη-αςκιιηοη-αςκιι',
                 'validation': None,
             }],
+            'parameters': {},
+            'active': True,
         }]
 
         self.assertEqual(actual, expected)

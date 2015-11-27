@@ -26,16 +26,12 @@ class RequiredStudentDataTest(ModuleStoreTestCase):
     """
     Tests for required student data form
     """
-    @classmethod
-    def setUpClass(cls):
-        cls.postpone_url = reverse('postpone_required_data_update')
-        cls.update_url = reverse('update_required_data')
-        cls.data = {
-            'first_name': 'test',
-            'last_name': 'test',
-            'birthdate': '2014-07-28',
-            'city': 'Capital',
-        }
+    DATA = {
+        'first_name': 'test',
+        'last_name': 'test',
+        'birthdate': '2014-07-28',
+        'city': 'Capital',
+    }
 
     def setUp(self):
         super(RequiredStudentDataTest, self).setUp()
@@ -51,9 +47,8 @@ class RequiredStudentDataTest(ModuleStoreTestCase):
         self.client = Client()
         self.client.login(username=self.user.username, password='test')
 
-    def tearDown(self):
-        self.client.logout()
-        User.objects.all().delete()
+        self.postpone_url = reverse('postpone_required_data_update')
+        self.update_url = reverse('update_required_data')
 
     def test_form_rendered(self):
         '''Test whether form appears for user having no required information'''
@@ -74,25 +69,25 @@ class RequiredStudentDataTest(ModuleStoreTestCase):
 
     def test_update_all_required_fields(self):
         '''Test whether form does not appear after complete update action'''
-        self.client.post(self.update_url, self.data)
+        self.client.post(self.update_url, self.DATA)
         self.assertFalse(self._form_appears())
 
     def test_updated_fields(self):
         '''Test form fields are saved correctly'''
-        self.client.post(self.update_url, self.data)
         profile = self.user.profile
-        self.assertEqual(profile.first_name, self.data['first_name'])
-        self.assertEqual(profile.last_name, self.data['last_name'])
-        self.assertEqual(profile.city, self.data['city'])
+        self.user.profile.refresh_from_db()
+        self.assertEqual(profile.first_name, self.DATA['first_name'])
+        self.assertEqual(profile.last_name, self.DATA['last_name'])
+        self.assertEqual(profile.city, self.DATA['city'])
         self.assertEqual(
             profile.birthdate and profile.birthdate.strftime('%Y-%m-%d'),
-            self.data['birthdate']
+            self.DATA['birthdate']
         )
 
     @ddt.data('first_name', 'last_name')
     @override_settings(USER_DATA_REQUEST_TIMEOUT=datetime.timedelta(seconds=1))
     def test_allow_one_part_of_name(self, name_part):
-        data = self.data.copy()
+        data = self.DATA.copy()
         data[name_part] = ''
         response = self.client.post(self.update_url, data)
         sleep(2)
@@ -100,7 +95,7 @@ class RequiredStudentDataTest(ModuleStoreTestCase):
 
     def test_invalid_birthdate(self):
         '''Test wheter response with errors list is returned on invalid birthdate'''
-        data = self.data.copy()
+        data = self.DATA.copy()
         data['birthdate'] = 'invalid'
         response = self.client.post(self.update_url, data)
 
@@ -111,7 +106,7 @@ class RequiredStudentDataTest(ModuleStoreTestCase):
     @override_settings(USER_DATA_REQUEST_TIMEOUT=datetime.timedelta(seconds=1))
     def test_partial_update_postponed(self, missing_field):
         '''Test wheter partial update is processed but request is fired again'''
-        data = self.data.copy()
+        data = self.DATA.copy()
         data[missing_field] = ''
         response = self.client.post(self.update_url, data)
         self.assertEqual(response.status_code, 200)
@@ -122,7 +117,7 @@ class RequiredStudentDataTest(ModuleStoreTestCase):
     @override_settings(USER_DATA_REQUEST_TIMEOUT=datetime.timedelta(seconds=1))
     def test_request_after_data_removal(self):
         '''Test repetitive request after data removal'''
-        response = self.client.post(self.update_url, self.data)
+        response = self.client.post(self.update_url, self.DATA)
         sleep(2)
         self.assertFalse(self._form_appears())
 
@@ -143,4 +138,5 @@ class RequiredStudentDataTest(ModuleStoreTestCase):
     def _form_appears(self):
         url = reverse('info', args=[self.course.id.to_deprecated_string()])
         response = self.client.get(url)
+        # print response.content
         return 'required_student_data_form' in response.content

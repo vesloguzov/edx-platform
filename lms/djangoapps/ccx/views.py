@@ -563,7 +563,7 @@ def ccx_gradebook(request, course, ccx=None):
 
         student_info = [
             {
-                'username': student.username,
+                'nickname': student.profile.nickname_or_default,
                 'id': student.id,
                 'email': student.email,
                 'grade_summary': student_grades(student, request, course),

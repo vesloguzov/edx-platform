@@ -136,7 +136,7 @@ class TestCreateAccount(TestCase):
 
         expected_payload = {
             'email': self.params['email'],
-            'username': self.params['username'],
+            'username': 'edx_user_1',
             'name': self.params['name'],
             'age': 0,
             'education': 'Associate degree',

@@ -1503,7 +1503,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
             }
         )
 
-    def test_register_duplicate_username(self):
+    def test_register_duplicate_nickname(self):
         # Register the first user
         response = self.client.post(self.url, {
             "email": self.EMAIL,
@@ -1523,10 +1523,13 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
             "honor_code": "true",
         })
         self.assertHttpOK(response)
+        response_json = json.loads(response.content)
 
         # Verify the user's account
         user = User.objects.get(email=self.EMAIL)
-        account_settings = get_account_settings(user)
+        request = RequestFactory().get('/url')
+        request.user = user
+        account_settings = get_account_settings(request)
         self.assertEqual(self.NICKNAME, account_settings["nickname"])
         self.assertEqual(account_settings["name"], self.NAME)
 

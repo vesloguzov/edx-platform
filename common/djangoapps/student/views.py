@@ -1850,14 +1850,14 @@ def auto_auth(request):
     settings.FEATURES['AUTOMATIC_AUTH_FOR_TESTING'] is true.
 
     Accepts the following querystring parameters:
-    * `username`, `email`, and `password` for the user account
-    * `full_name` for the user profile (the user's full name; defaults to the username)
+    * `nickname`, `email`, and `password` for the user account
+    * `full_name` for the user profile (the user's full name; defaults to the nickname)
     * `staff`: Set to "true" to make the user global staff.
     * `course_id`: Enroll the student in the course with `course_id`
     * `roles`: Comma-separated list of roles to grant the student in the course with `course_id`
     * `no_login`: Define this to create the user but not login
 
-    If username, email, or password are not provided, use
+    If nickname, email, or password are not provided, use
     randomly generated credentials.
     """
 
@@ -1896,6 +1896,12 @@ def auto_auth(request):
     # If successful, this will return a tuple containing
     # the new user object.
     try:
+        # Do the email check since test database does not have email unique constraint
+        if len(User.objects.filter(email=email)) > 0:
+            raise AccountValidationError(
+                _("An account with the Email '{email}' already exists.").format(email=email),
+                field="email"
+            )
         user, profile, reg = _do_create_account(form)
     except AccountValidationError:
         # Attempt to retrieve the existing user.
@@ -1946,7 +1952,7 @@ def auto_auth(request):
     if request.META.get('HTTP_ACCEPT') == 'application/json':
         response = JsonResponse({
             'created_status': u"Logged in" if login_when_done else "Created",
-            'username': username,
+            'nickname': nickname,
             'email': email,
             'password': password,
             'user_id': user.id,  # pylint: disable=no-member
@@ -1955,7 +1961,7 @@ def auto_auth(request):
     else:
         success_msg = u"{} user {} ({}) with password {} and user_id {}".format(
             u"Logged in" if login_when_done else "Created",
-            username, email, password, user.id  # pylint: disable=no-member
+            user.username, email, password, user.id  # pylint: disable=no-member
         )
         response = HttpResponse(success_msg)
     response.set_cookie('csrftoken', csrf(request)['csrf_token'])

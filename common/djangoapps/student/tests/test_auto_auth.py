@@ -52,8 +52,8 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
         self.assertFalse(user.profile.requires_parental_consent())
 
     def test_create_same_user(self):
-        self._auto_auth(email='test@example.com')
-        self._auto_auth(email='test@example.com')
+        self._auto_auth({'email': 'test@example.com'})
+        self._auto_auth({'email': 'test@example.com'})
         self.assertEqual(User.objects.count(), 1)
 
     def test_create_multiple_users(self):
@@ -75,7 +75,7 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
             'email': 'robot@edx.org',
             'full_name': "Robot Name"
         }
-        self._auto_auth(**data)
+        self._auto_auth(data)
 
         # Check that the user has the correct info
         user = User.objects.get(email=data['email'])
@@ -93,12 +93,12 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
 
         # Create a staff user
         email='test@example.com'
-        self._auto_auth(email=email, staff='true')
+        self._auto_auth({'email': email, 'staff': 'true'})
         user = User.objects.get(email=email)
         self.assertTrue(user.is_staff)
 
         # Revoke staff privileges
-        self._auto_auth(email=email, staff='false')
+        self._auto_auth({'email': email, 'staff': 'false'})
         user = User.objects.get(email=email)
         self.assertFalse(user.is_staff)
 
@@ -107,7 +107,7 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
     def test_course_enrollment(self, course_id, course_key):
 
         # Create a user and enroll in a course
-        self._auto_auth(nickname='test', course_id=course_id)
+        self._auto_auth({'nickname': 'test', 'course_id': course_id})
 
         # Check that a course enrollment was created for the user
         self.assertEqual(CourseEnrollment.objects.count(), 1)
@@ -120,10 +120,10 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
 
         # Create a user and enroll in a course
         email = 'test@example.com'
-        self._auto_auth(email=email, course_id=course_id)
+        self._auto_auth({'email': email, 'course_id': course_id})
 
         # Make the same call again, re-enrolling the student in the same course
-        self._auto_auth(email=email, course_id=course_id)
+        self._auto_auth({'email': email, 'course_id': course_id})
 
         # Check that only one course enrollment was created for the user
         self.assertEqual(CourseEnrollment.objects.count(), 1)
@@ -139,14 +139,14 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
 
         # Student role is assigned by default on course enrollment.
         email = 'student@example.com'
-        self._auto_auth(email=email, course_id=course_id)
+        self._auto_auth({'email': email, 'course_id': course_id})
         user = User.objects.get(email=email)
         user_roles = user.roles.all()
         self.assertEqual(len(user_roles), 1)
         self.assertEqual(user_roles[0], course_roles[FORUM_ROLE_STUDENT])
 
         email = 'moderator@example.com'
-        self._auto_auth(email=email, course_id=course_id, roles='Moderator')
+        self._auto_auth({'email': email, 'course_id': course_id, 'roles': 'Moderator'})
         user = User.objects.get(email=email)
         user_roles = user.roles.all()
         self.assertEqual(
@@ -156,8 +156,10 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
 
         # check multiple roles work.
         email = 'admin@example.com'
-        self._auto_auth(email=email, course_id=course_id,
-                        roles='{},{}'.format(FORUM_ROLE_MODERATOR, FORUM_ROLE_ADMINISTRATOR))
+        self._auto_auth({
+            'email': email, 'course_id': course_id,
+            'roles': '{},{}'.format(FORUM_ROLE_MODERATOR, FORUM_ROLE_ADMINISTRATOR)
+        })
         user = User.objects.get(email=email)
         user_roles = user.roles.all()
         self.assertEqual(
@@ -172,9 +174,9 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
         """Verify that we can get JSON back from the auto_auth page."""
         response = self._auto_auth(HTTP_ACCEPT='application/json')
         response_data = json.loads(response.content)
-        for key in ['created_status', 'username', 'email', 'password', 'user_id', 'anonymous_id']:
+        for key in ['created_status', 'nickname', 'email', 'password', 'user_id', 'anonymous_id']:
             self.assertIn(key, response_data)
-        user = User.objects.get(username=response_data['username'])
+        user = User.objects.get(email=response_data['email'])
         self.assertDictContainsSubset(
             {
                 'created_status': "Logged in",
