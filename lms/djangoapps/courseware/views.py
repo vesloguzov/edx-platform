@@ -1076,10 +1076,16 @@ def submission_history(request, course_id, location):
     # somebody else's submission history (if nickname is not unique, MultipleUsersFound would be risen).
     if (student_identifier not in (request.user.email, request.user.profile.nickname)) and (not staff_access):
         raise PermissionDenied
+    try:
+        student = get_student_from_email_or_nickname(student_identifier)
+    except User.DoesNotExist:
+        return HttpResponse(escape(_("User does not exist.")))
+    except User.MultipleObjectsReturned:
+        return HttpResponse(escape(_('Multiple users found, use email instead')))
 
     user_state_client = DjangoXBlockUserStateClient()
     try:
-        history_entries = list(user_state_client.get_history(student_identifier, usage_key))
+        history_entries = list(user_state_client.get_history(student.username, usage_key))
     except DjangoXBlockUserStateClient.DoesNotExist:
         return HttpResponse(escape(_(u'User {username} has never accessed problem {location}').format(
             username=student_identifier,
@@ -1090,7 +1096,7 @@ def submission_history(request, course_id, location):
     # the scores instead, it will have to do.
     scores = list(StudentModuleHistory.objects.filter(
         student_module__module_state_key=usage_key,
-        student_module__student__username=student_username,
+        student_module__student__username=student.username,
         student_module__course_id=course_key
     ).order_by('-id'))
 
@@ -1101,7 +1107,7 @@ def submission_history(request, course_id, location):
             "%d scores were found, and %d history entries were found. "
             "Matching scores to history entries by date for display.",
             course_id,
-            student_username,
+            student.username,
             location,
             len(scores),
             len(history_entries),

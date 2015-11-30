@@ -183,11 +183,11 @@ class @StudentAdmin
 
    # reset entrance exam attempts for student
     @$btn_reset_entrance_exam_attempts.click =>
-      unique_student_identifier = @$field_entrance_exam_student_select_grade.val()
-      if not unique_student_identifier
+      student_identifier = @$field_entrance_exam_student_select_grade.val()
+      if not student_identifier
         return @$request_response_error_ee.text gettext("Please enter a student email address or username.")
       send_data =
-        unique_student_identifier: unique_student_identifier
+        student_identifier: student_identifier
         delete_module: false
 
       $.ajax
@@ -196,20 +196,20 @@ class @StudentAdmin
         data: send_data
         success: @clear_errors_then ->
           success_message = gettext("Entrance exam attempts is being reset for student '{student_id}'.")
-          full_success_message = interpolate_text(success_message, {student_id: unique_student_identifier})
+          full_success_message = interpolate_text(success_message, {student_id: student_identifier})
           alert full_success_message
         error: std_ajax_err =>
           error_message = gettext("Error resetting entrance exam attempts for student '{student_id}'. Make sure student identifier is correct.")
-          full_error_message = interpolate_text(error_message, {student_id: unique_student_identifier})
+          full_error_message = interpolate_text(error_message, {student_id: student_identifier})
           @$request_response_error_ee.text full_error_message
 
    # start task to rescore entrance exam for student
     @$btn_rescore_entrance_exam.click =>
-      unique_student_identifier = @$field_entrance_exam_student_select_grade.val()
-      if not unique_student_identifier
+      student_identifier = @$field_entrance_exam_student_select_grade.val()
+      if not student_identifier
         return @$request_response_error_ee.text gettext("Please enter a student email address or username.")
       send_data =
-        unique_student_identifier: unique_student_identifier
+        student_identifier: student_identifier
 
       $.ajax
         dataType: 'json'
@@ -217,23 +217,23 @@ class @StudentAdmin
         data: send_data
         success: @clear_errors_then ->
           success_message = gettext("Started entrance exam rescore task for student '{student_id}'. Click the 'Show Background Task History for Student' button to see the status of the task.")
-          full_success_message = interpolate_text(success_message, {student_id: unique_student_identifier})
+          full_success_message = interpolate_text(success_message, {student_id: student_identifier})
           alert full_success_message
         error: std_ajax_err =>
           error_message = gettext("Error starting a task to rescore entrance exam for student '{student_id}'. Make sure that entrance exam has problems in it and student identifier is correct.")
-          full_error_message = interpolate_text(error_message, {student_id: unique_student_identifier})
+          full_error_message = interpolate_text(error_message, {student_id: student_identifier})
           @$request_response_error_ee.text full_error_message
 
   # Mark a student to skip entrance exam
     @$btn_skip_entrance_exam.click =>
-      unique_student_identifier = @$field_entrance_exam_student_select_grade.val()
-      if not unique_student_identifier
+      student_identifier = @$field_entrance_exam_student_select_grade.val()
+      if not student_identifier
         return @$request_response_error_ee.text gettext("Enter a student's username or email address.")
       confirm_message = gettext("Do you want to allow this student ('{student_id}') to skip the entrance exam?")
-      full_confirm_message = interpolate_text(confirm_message, {student_id: unique_student_identifier})
+      full_confirm_message = interpolate_text(confirm_message, {student_id: student_identifier})
       if window.confirm full_confirm_message
         send_data =
-          unique_student_identifier: unique_student_identifier
+          student_identifier: student_identifier
 
         $.ajax
           dataType: 'json'
@@ -248,11 +248,11 @@ class @StudentAdmin
 
    # delete student state for entrance exam
     @$btn_delete_entrance_exam_state.click =>
-      unique_student_identifier = @$field_entrance_exam_student_select_grade.val()
-      if not unique_student_identifier
+      student_identifier = @$field_entrance_exam_student_select_grade.val()
+      if not student_identifier
         return @$request_response_error_ee.text gettext("Please enter a student email address or username.")
       send_data =
-        unique_student_identifier: unique_student_identifier
+        student_identifier: student_identifier
         delete_module: true
 
       $.ajax
@@ -261,20 +261,20 @@ class @StudentAdmin
         data: send_data
         success: @clear_errors_then ->
           success_message = gettext("Entrance exam state is being deleted for student '{student_id}'.")
-          full_success_message = interpolate_text(success_message, {student_id: unique_student_identifier})
+          full_success_message = interpolate_text(success_message, {student_id: student_identifier})
           alert full_success_message
         error: std_ajax_err =>
           error_message = gettext("Error deleting entrance exam state for student '{student_id}'. Make sure student identifier is correct.")
-          full_error_message = interpolate_text(error_message, {student_id: unique_student_identifier})
+          full_error_message = interpolate_text(error_message, {student_id: student_identifier})
           @$request_response_error_ee.text full_error_message
 
     # list entrance exam task history for student
     @$btn_entrance_exam_task_history.click =>
-      unique_student_identifier = @$field_entrance_exam_student_select_grade.val()
-      if not unique_student_identifier
+      student_identifier = @$field_entrance_exam_student_select_grade.val()
+      if not student_identifier
         return @$request_response_error_ee.text gettext("Enter a student's username or email address.")
       send_data =
-        unique_student_identifier: unique_student_identifier
+        student_identifier: student_identifier
 
       $.ajax
         dataType: 'json'
@@ -284,7 +284,7 @@ class @StudentAdmin
           create_task_list_table @$table_entrance_exam_task_history, data.tasks
         error: std_ajax_err =>
           error_message = gettext("Error getting entrance exam task history for student '{student_id}'. Make sure student identifier is correct.")
-          full_error_message = interpolate_text(error_message, {student_id: unique_student_identifier})
+          full_error_message = interpolate_text(error_message, {student_id: student_identifier})
           @$request_response_error_ee.text full_error_message
 
     # start task to reset attempts on problem for all students

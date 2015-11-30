@@ -819,7 +819,7 @@ def modify_access(request, course_id):
     # silently when we try to add an inactive user.
     if not user.is_active:
         response_payload = {
-            'student_identifier': user.profile.nickname or user.email,
+            'student_identifier': identifier,
             'inactiveUser': True,
         }
         return JsonResponse(response_payload)
@@ -1945,7 +1945,7 @@ def reset_student_attempts_for_entrance_exam(request, course_id):  # pylint: dis
     entrance exam. Limited to staff access. Some sub-methods limited to instructor access.
 
     Following are possible query parameters
-        - unique_student_identifier is an email or username
+        - student_identifier is an email or nickname
         - all_students is a boolean
             requires instructor access
             mutually exclusive with delete_module
@@ -1963,17 +1963,17 @@ def reset_student_attempts_for_entrance_exam(request, course_id):  # pylint: dis
             _("Course has no entrance exam section.")
         )
 
-    student_identifier = request.GET.get('unique_student_identifier', None)
+    student_identifier = request.GET.get('student_identifier', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_identifier(student_identifier)
+        student = get_student_from_email_or_nickname(student_identifier)
     all_students = request.GET.get('all_students', False) in ['true', 'True', True]
     delete_module = request.GET.get('delete_module', False) in ['true', 'True', True]
 
     # parameter combinations
     if all_students and student:
         return HttpResponseBadRequest(
-            _("all_students and unique_student_identifier are mutually exclusive.")
+            _("all_students and student_identifier are mutually exclusive.")
         )
     if all_students and delete_module:
         return HttpResponseBadRequest(
@@ -2065,20 +2065,20 @@ def rescore_entrance_exam(request, course_id):
     Optionally deletes student state for a problem. Limited to instructor access.
 
     Takes either of the following query parameters
-        - unique_student_identifier is an email or username
+        - student_identifier is an email or username
         - all_students is a boolean
 
-    all_students and unique_student_identifier cannot both be present.
+    all_students and student_identifier cannot both be present.
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     course = get_course_with_access(
         request.user, 'staff', course_id, depth=None
     )
 
-    student_identifier = request.GET.get('unique_student_identifier', None)
+    student_identifier = request.GET.get('student_identifier', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_identifier(student_identifier)
+        student = get_student_from_email_or_nickname(student_identifier)
 
     all_students = request.GET.get('all_students') in ['true', 'True', True]
 
@@ -2089,7 +2089,7 @@ def rescore_entrance_exam(request, course_id):
 
     if all_students and student:
         return HttpResponseBadRequest(
-            _("Cannot rescore with all_students and unique_student_identifier.")
+            _("Cannot rescore with all_students and student_identifier.")
         )
 
     try:
@@ -2196,14 +2196,14 @@ def list_entrance_exam_instructor_tasks(request, course_id):  # pylint: disable=
     List entrance exam related instructor tasks.
 
     Takes either of the following query parameters
-        - unique_student_identifier is an email or username
+        - student_identifier is an email or username
         - all_students is a boolean
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     course = get_course_by_id(course_id)
-    student = request.GET.get('unique_student_identifier', None)
+    student = request.GET.get('student_identifier', None)
     if student is not None:
-        student = get_student_from_identifier(student)
+        student = get_student_from_email_or_nickname(student)
 
     try:
         entrance_exam_key = course_id.make_usage_key_from_deprecated_string(course.entrance_exam_id)
@@ -2526,7 +2526,7 @@ def change_due_date(request, course_id):
     Grants a due date extension to a student for a particular unit.
     """
     course = get_course_by_id(SlashSeparatedCourseKey.from_deprecated_string(course_id))
-    student = require_student_from_identifier(request.GET.get('student'))
+    student = require_student_from_email_or_nickname(request.GET.get('student'))
     unit = find_unit(course, request.GET.get('url'))
     due_date = parse_datetime(request.GET.get('due_datetime'))
     set_due_date_extension(course, unit, student, due_date)
@@ -2547,7 +2547,7 @@ def reset_due_date(request, course_id):
     Rescinds a due date extension for a student on a particular unit.
     """
     course = get_course_by_id(SlashSeparatedCourseKey.from_deprecated_string(course_id))
-    student = require_student_from_identifier(request.GET.get('student'))
+    student = require_student_from_email_or_nickname(request.GET.get('student'))
     unit = find_unit(course, request.GET.get('url'))
     set_due_date_extension(course, unit, student, None)
     if not getattr(unit, "due", None):
@@ -2587,7 +2587,7 @@ def show_student_extensions(request, course_id):
     Shows all of the due date extensions granted to a particular student in a
     particular course.
     """
-    student = require_student_from_identifier(request.GET.get('student'))
+    student = require_student_from_email_or_nickname(request.GET.get('student'))
     course = get_course_by_id(SlashSeparatedCourseKey.from_deprecated_string(course_id))
     return JsonResponse(dump_student_extensions(course, student))
 
@@ -2724,11 +2724,11 @@ def spoc_gradebook(request, course_id):
 def mark_student_can_skip_entrance_exam(request, course_id):  # pylint: disable=invalid-name
     """
     Mark a student to skip entrance exam.
-    Takes `unique_student_identifier` as required POST parameter.
+    Takes `student_identifier` as required POST parameter.
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-    student_identifier = request.POST.get('unique_student_identifier')
-    student = get_student_from_identifier(student_identifier)
+    student_identifier = request.POST.get('student_identifier')
+    student = get_student_from_email_or_nickname(student_identifier)
 
     __, created = EntranceExamConfiguration.objects.get_or_create(user=student, course_id=course_id)
     if created:

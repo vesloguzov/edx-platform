@@ -40,12 +40,12 @@ from django_comment_common.models import FORUM_ROLE_COMMUNITY_TA
 from django_comment_common.utils import seed_permissions_roles
 from microsite_configuration import microsite
 from shoppingcart.models import (
-RegistrationCodeRedemption, Order, CouponRedemption,
-PaidCourseRegistration, Coupon, Invoice, CourseRegistrationCode, CourseRegistrationCodeInvoiceItem,
-InvoiceTransaction)
+    RegistrationCodeRedemption, Order, CouponRedemption,
+    PaidCourseRegistration, Coupon, Invoice, CourseRegistrationCode, CourseRegistrationCodeInvoiceItem,
+    InvoiceTransaction)
 from shoppingcart.pdf import PDFInvoice
 from student.models import (
-    CourseEnrollment, CourseEnrollmentAllowed, NonExistentCourseError, UserProfile
+    CourseEnrollment, CourseEnrollmentAllowed, NonExistentCourseError, UserProfile,
     ManualEnrollmentAudit, UNENROLLED_TO_ENROLLED, ENROLLED_TO_UNENROLLED,
     ALLOWEDTOENROLL_TO_UNENROLLED, ENROLLED_TO_ENROLLED, UNENROLLED_TO_ALLOWEDTOENROLL,
     UNENROLLED_TO_UNENROLLED, ALLOWEDTOENROLL_TO_ENROLLED
@@ -254,7 +254,7 @@ class TestInstructorAPIDenyLevels(SharedModuleStoreTestCase, LoginEnrollmentTest
             ('modify_access', {'student_identifier': self.user.email, 'rolename': 'beta', 'action': 'allow'}),
             ('list_course_role_members', {'rolename': 'beta'}),
             ('rescore_problem',
-             {'problem_to_reset': self.problem_urlname, 'unique_student_identifier': self.user.email}),
+             {'problem_to_reset': self.problem_urlname, 'student_identifier': self.user.email}),
         ]
 
     def _access_endpoint(self, endpoint, args, status_code, msg):
@@ -1807,9 +1807,9 @@ class TestInstructorAPILevelsAccess(SharedModuleStoreTestCase, LoginEnrollmentTe
         self.instructor = InstructorFactory(course_key=self.course.id)
         self.client.login(username=self.instructor.username, password='test')
 
-        self.other_instructor = InstructorFactory(course_key=self.course.id)
-        self.other_staff = StaffFactory(course_key=self.course.id)
-        self.other_user = UserFactory()
+        self.other_instructor = InstructorFactory(course_key=self.course.id, profile__nickname='other instructor')
+        self.other_staff = StaffFactory(course_key=self.course.id, profile__nickname='other staff')
+        self.other_user = UserFactory(profile__nickname='student')
 
     def test_modify_access_noparams(self):
         """ Test missing all query parameters. """
@@ -1880,17 +1880,18 @@ class TestInstructorAPILevelsAccess(SharedModuleStoreTestCase, LoginEnrollmentTe
         self.assertTrue(res_json.get('success'))
 
     def test_modify_access_with_nonunique_nickname(self):
-        UserProfile.objects.filter(user=self.other_staff).update(nickname='other user')
-        UserProfile.objects.filter(user=self.other_user).update(nickname='other user')
+        nonunique_nickname = 'other user'
+        UserProfile.objects.filter(user=self.other_staff).update(nickname=nonunique_nickname)
+        UserProfile.objects.filter(user=self.other_user).update(nickname=nonunique_nickname)
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student_identifier': self.other_user.profile.nickname,
+            'student_identifier': nonunique_nickname,
             'rolename': 'staff',
             'action': 'revoke',
         })
         self.assertEqual(response.status_code, 200)
         expected = {
-            u'student_identifier': self.other_user.profile.nickname,
+            u'student_identifier': nonunique_nickname,
             u'multipleUsers': True,
         }
         res_json = json.loads(response.content)
@@ -2030,10 +2031,6 @@ class TestInstructorAPILevelsAccess(SharedModuleStoreTestCase, LoginEnrollmentTe
         """
         Test update forum role membership with user's nickname.
         """
-        # Set unique nickname for other_user
-        UserProfile.objects.filter(user=self.other_user).update(nickname='forum guru')
-        UserProfile.objects.filter(user=self.instructor).update(nickname='forum guru 2')
-
         # Seed forum roles for course.
         seed_permissions_roles(self.course.id)
 
@@ -2067,7 +2064,6 @@ class TestInstructorAPILevelsAccess(SharedModuleStoreTestCase, LoginEnrollmentTe
         Get student_identifier, rolename and action and update forum role.
         """
         response = self._update_forum_role_membership(student_identifier, rolename, action)
-        print response
 
         # Status code should be 200.
         self.assertEqual(response.status_code, 200)
@@ -2081,7 +2077,7 @@ class TestInstructorAPILevelsAccess(SharedModuleStoreTestCase, LoginEnrollmentTe
     def assert_update_forum_role_membership_fail(self, student_identifier, rolename, action):
         """
         Test update forum role membership.
-        Get unique_student_identifier, rolename and action and update forum role.
+        Get student_identifier, rolename and action and update forum role.
         """
         response = self._update_forum_role_membership(student_identifier, rolename, action)
 
@@ -3015,7 +3011,7 @@ class TestInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginEnrollmentTes
         )
 
     def test_reset_student_attempts_nonsense(self):
-        """ Test failure with both unique_student_identifier and all_students. """
+        """ Test failure with both student_identifier and all_students. """
         url = reverse('reset_student_attempts', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
             'problem_to_reset': self.problem_urlname,
@@ -3073,7 +3069,7 @@ class TestInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginEnrollmentTes
         """ Test course has entrance exam id set while re-scoring. """
         url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 400)
 
@@ -3163,7 +3159,7 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         url = reverse('reset_student_attempts_for_entrance_exam',
                       kwargs={'course_id': unicode(self.course.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 200)
         # make sure problem attempts have been reset.
@@ -3191,7 +3187,7 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         url = reverse('reset_student_attempts_for_entrance_exam',
                       kwargs={'course_id': unicode(self.course_with_invalid_ee.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 400)
 
@@ -3200,7 +3196,7 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         url = reverse('reset_student_attempts_for_entrance_exam',
                       kwargs={'course_id': unicode(self.course.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
             'delete_module': True,
         })
         self.assertEqual(response.status_code, 200)
@@ -3216,17 +3212,17 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         url = reverse('reset_student_attempts_for_entrance_exam',
                       kwargs={'course_id': unicode(self.course.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
             'delete_module': True,
         })
         self.assertEqual(response.status_code, 403)
 
     def test_entrance_exam_reset_student_attempts_nonsense(self):
-        """ Test failure with both unique_student_identifier and all_students. """
+        """ Test failure with both student_identifier and all_students. """
         url = reverse('reset_student_attempts_for_entrance_exam',
                       kwargs={'course_id': unicode(self.course.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
             'all_students': True,
         })
         self.assertEqual(response.status_code, 400)
@@ -3236,7 +3232,7 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         """ Test re-scoring of entrance exam for single student. """
         url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 200)
         self.assertTrue(act.called)
@@ -3253,7 +3249,7 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         """ Test re-scoring with both all students and single student parameters. """
         url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
             'all_students': True,
         })
         self.assertEqual(response.status_code, 400)
@@ -3262,7 +3258,7 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         """ Test re-scoring of entrance exam with invalid exam. """
         url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course_with_invalid_ee.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 400)
 
@@ -3271,13 +3267,13 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         # create a re-score entrance exam task
         url = reverse('rescore_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 200)
 
         url = reverse('list_entrance_exam_instructor_tasks', kwargs={'course_id': unicode(self.course.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 200)
 
@@ -3301,7 +3297,7 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         url = reverse('list_entrance_exam_instructor_tasks',
                       kwargs={'course_id': unicode(self.course_with_invalid_ee.id)})
         response = self.client.get(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 400)
 
@@ -3310,7 +3306,7 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
         # create a re-score entrance exam task
         url = reverse('mark_student_can_skip_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
         response = self.client.post(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
         self.assertEqual(response.status_code, 200)
         # check response
@@ -3319,7 +3315,7 @@ class TestEntranceExamInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginE
 
         # post again with same student
         response = self.client.post(url, {
-            'unique_student_identifier': self.student.email,
+            'student_identifier': self.student.email,
         })
 
         # This time response message should be different
@@ -3851,7 +3847,7 @@ class TestDueDateExtensions(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
     def test_change_due_date(self):
         url = reverse('change_due_date', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student': self.user1.username,
+            'student': self.user1.email,
             'url': self.week1.location.to_deprecated_string(),
             'due_datetime': '12/30/2013 00:00'
         })
@@ -3862,7 +3858,7 @@ class TestDueDateExtensions(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
     def test_change_to_invalid_due_date(self):
         url = reverse('change_due_date', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student': self.user1.username,
+            'student': self.user1.email,
             'url': self.week1.location.to_deprecated_string(),
             'due_datetime': '01/01/2009 00:00'
         })
@@ -3875,7 +3871,7 @@ class TestDueDateExtensions(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
     def test_change_nonexistent_due_date(self):
         url = reverse('change_due_date', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student': self.user1.username,
+            'student': self.user1.email,
             'url': self.week3.location.to_deprecated_string(),
             'due_datetime': '12/30/2013 00:00'
         })
@@ -3889,7 +3885,7 @@ class TestDueDateExtensions(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
         self.test_change_due_date()
         url = reverse('reset_due_date', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student': self.user1.username,
+            'student': self.user1.email,
             'url': self.week1.location.to_deprecated_string(),
         })
         self.assertEqual(response.status_code, 200, response.content)
@@ -3901,7 +3897,7 @@ class TestDueDateExtensions(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
     def test_reset_nonexistent_extension(self):
         url = reverse('reset_due_date', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student': self.user1.username,
+            'student': self.user1.email,
             'url': self.week1.location.to_deprecated_string(),
         })
         self.assertEqual(response.status_code, 400, response.content)
@@ -3918,7 +3914,7 @@ class TestDueDateExtensions(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
         # Now, week1's normal due date is deleted but the extension still exists.
         url = reverse('reset_due_date', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.get(url, {
-            'student': self.user1.username,
+            'student': self.user1.email,
             'url': self.week1.location.to_deprecated_string(),
         })
         self.assertEqual(response.status_code, 200, response.content)
@@ -3945,7 +3941,7 @@ class TestDueDateExtensions(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
         self.test_change_due_date()
         url = reverse('show_student_extensions',
                       kwargs={'course_id': self.course.id.to_deprecated_string()})
-        response = self.client.get(url, {'student': self.user1.username})
+        response = self.client.get(url, {'student': self.user1.email})
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(json.loads(response.content), {
             u'data': [{u'Extended Due Date': u'2013-12-30 00:00',

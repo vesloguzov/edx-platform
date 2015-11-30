@@ -3,7 +3,7 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
         //'coffee/src/instructor_dashboard/student_admin'
         'use strict';
         describe("edx.instructor_dashboard.student_admin.StudentAdmin", function() {
-            var studentadmin, dashboard_api_url, unique_student_identifier, alert_msg;
+            var studentadmin, dashboard_api_url, student_identifier, alert_msg;
 
             beforeEach(function() {
                 loadFixtures('js/fixtures/instructor_dashboard/student_admin.html');
@@ -15,7 +15,7 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
                 };
                 studentadmin = new window.StudentAdmin($('#student_admin'));
                 dashboard_api_url = '/courses/PU/FSc/2014_T4/instructor/api';
-                unique_student_identifier = "test@example.com";
+                student_identifier = "test@example.com";
                 alert_msg = '';
                 spyOn(window, 'alert').andCallFake(function(message) {
                     alert_msg = message;
@@ -30,17 +30,17 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
 
                 var success_message = gettext("Entrance exam attempts is being reset for student '{student_id}'.");
                 var full_success_message = interpolate_text(success_message, {
-                  student_id: unique_student_identifier
+                  student_id: student_identifier
                 });
 
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
 
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_reset_entrance_exam_attempts.click();
                 // Verify that the client contacts the server to start instructor task
                 var params = $.param({
-                    unique_student_identifier: unique_student_identifier,
+                    student_identifier: student_identifier,
                     delete_module: false
                 });
                 var url = dashboard_api_url + '/reset_student_attempts_for_entrance_exam?' + params;
@@ -56,11 +56,11 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
             it('shows an error when resetting of entrance exam fails', function() {
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_reset_entrance_exam_attempts.click();
                 // Verify that the client contacts the server to start instructor task
                 var params = $.param({
-                    unique_student_identifier: unique_student_identifier,
+                    student_identifier: student_identifier,
                     delete_module: false
                 });
                 var url = dashboard_api_url + '/reset_student_attempts_for_entrance_exam?' + params;
@@ -71,7 +71,7 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
 
                 var error_message = gettext("Error resetting entrance exam attempts for student '{student_id}'. Make sure student identifier is correct.");
                 var full_error_message = interpolate_text(error_message, {
-                  student_id: unique_student_identifier
+                  student_id: student_identifier
                 });
                 expect(studentadmin.$request_response_error_ee.text()).toEqual(full_error_message);
             });
@@ -84,17 +84,17 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
                 var success_message = gettext("Started entrance exam rescore task for student '{student_id}'." +
                     " Click the 'Show Background Task History for Student' button to see the status of the task.");
                 var full_success_message = interpolate_text(success_message, {
-                  student_id: unique_student_identifier
+                  student_id: student_identifier
                 });
 
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
 
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_rescore_entrance_exam.click();
                 // Verify that the client contacts the server to start instructor task
                 var params = $.param({
-                    unique_student_identifier: unique_student_identifier
+                    student_identifier: student_identifier
                 });
                 var url = dashboard_api_url + '/rescore_entrance_exam?' + params;
                 AjaxHelpers.expectJsonRequest(requests, 'GET', url);
@@ -109,11 +109,11 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
             it('shows an error when entrance exam rescoring fails', function() {
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_rescore_entrance_exam.click();
                 // Verify that the client contacts the server to start instructor task
                 var params = $.param({
-                    unique_student_identifier: unique_student_identifier
+                    student_identifier: student_identifier
                 });
                 var url = dashboard_api_url + '/rescore_entrance_exam?' + params;
                 AjaxHelpers.expectJsonRequest(requests, 'GET', url);
@@ -124,7 +124,7 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
                 var error_message = gettext("Error starting a task to rescore entrance exam for student '{student_id}'." +
                     " Make sure that entrance exam has problems in it and student identifier is correct.");
                 var full_error_message = interpolate_text(error_message, {
-                  student_id: unique_student_identifier
+                  student_id: student_identifier
                 });
                 expect(studentadmin.$request_response_error_ee.text()).toEqual(full_error_message);
             });
@@ -136,18 +136,18 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
 
                 var success_message = "This student ('{student_id}') will skip the entrance exam.";
                 var full_success_message = interpolate_text(success_message, {
-                  student_id: unique_student_identifier
+                  student_id: student_identifier
                 });
 
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
 
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_skip_entrance_exam.click();
                 // Verify that the client contacts the server to start instructor task
                 var url = dashboard_api_url + '/mark_student_can_skip_entrance_exam';
                 AjaxHelpers.expectRequest(requests, 'POST', url, $.param({
-                    'unique_student_identifier': unique_student_identifier
+                    'student_identifier': student_identifier
                 }));
 
                 // Simulate a success response from the server
@@ -160,12 +160,12 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
             it('shows an error when skip entrance exam fails', function() {
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_skip_entrance_exam.click();
                 // Verify that the client contacts the server to start instructor task
                 var url = dashboard_api_url + '/mark_student_can_skip_entrance_exam';
                 AjaxHelpers.expectRequest(requests, 'POST', url, $.param({
-                    'unique_student_identifier': unique_student_identifier
+                    'student_identifier': student_identifier
                 }));
 
                 // Simulate an error response from the server
@@ -182,17 +182,17 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
 
                 var success_message = gettext("Entrance exam state is being deleted for student '{student_id}'.");
                 var full_success_message = interpolate_text(success_message, {
-                  student_id: unique_student_identifier
+                  student_id: student_identifier
                 });
 
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
 
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_delete_entrance_exam_state.click();
                 // Verify that the client contacts the server to start instructor task
                 var params = $.param({
-                    unique_student_identifier: unique_student_identifier,
+                    student_identifier: student_identifier,
                     delete_module: true
                 });
                 var url = dashboard_api_url + '/reset_student_attempts_for_entrance_exam?' + params;
@@ -208,11 +208,11 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
             it('shows an error when delete student state for entrance exam fails', function() {
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_delete_entrance_exam_state.click();
                 // Verify that the client contacts the server to start instructor task
                 var params = $.param({
-                    unique_student_identifier: unique_student_identifier,
+                    student_identifier: student_identifier,
                     delete_module: true
                 });
                 var url = dashboard_api_url + '/reset_student_attempts_for_entrance_exam?' + params;
@@ -224,7 +224,7 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
                 var error_message = gettext("Error deleting entrance exam state for student '{student_id}'. " +
                     "Make sure student identifier is correct.");
                 var full_error_message = interpolate_text(error_message, {
-                  student_id: unique_student_identifier
+                  student_id: student_identifier
                 });
                 expect(studentadmin.$request_response_error_ee.text()).toEqual(full_error_message);
             });
@@ -236,17 +236,17 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
 
                 var success_message = gettext("Entrance exam state is being deleted for student '{student_id}'.");
                 var full_success_message = interpolate_text(success_message, {
-                  student_id: unique_student_identifier
+                  student_id: student_identifier
                 });
 
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
 
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_entrance_exam_task_history.click();
                 // Verify that the client contacts the server to start instructor task
                 var params = $.param({
-                    unique_student_identifier: unique_student_identifier
+                    student_identifier: student_identifier
                 });
                 var url = dashboard_api_url + '/list_entrance_exam_instructor_tasks?' + params;
                 AjaxHelpers.expectJsonRequest(requests, 'GET', url);
@@ -273,11 +273,11 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
             it('shows an error when listing entrance exam task history fails', function() {
                 // Spy on AJAX requests
                 var requests = AjaxHelpers.requests(this);
-                studentadmin.$field_entrance_exam_student_select_grade.val(unique_student_identifier)
+                studentadmin.$field_entrance_exam_student_select_grade.val(student_identifier)
                 studentadmin.$btn_entrance_exam_task_history.click();
                 // Verify that the client contacts the server to start instructor task
                 var params = $.param({
-                    unique_student_identifier: unique_student_identifier
+                    student_identifier: student_identifier
                 });
                 var url = dashboard_api_url + '/list_entrance_exam_instructor_tasks?' + params;
                 AjaxHelpers.expectJsonRequest(requests, 'GET', url);
@@ -288,7 +288,7 @@ define(['jquery', 'coffee/src/instructor_dashboard/student_admin', 'common/js/sp
                 var error_message = gettext("Error getting entrance exam task history for student '{student_id}'. " +
                     "Make sure student identifier is correct.");
                 var full_error_message = interpolate_text(error_message, {
-                  student_id: unique_student_identifier
+                  student_id: student_identifier
                 });
                 expect(studentadmin.$request_response_error_ee.text()).toEqual(full_error_message);
             });
