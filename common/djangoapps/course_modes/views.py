@@ -228,6 +228,8 @@ class ChooseModeView(View):
             return 'verified'
         if 'honor_mode' in request_dict:
             return 'honor'
+        if 'audit_mode' in request_dict:
+            return 'audit'
         else:
             return None
 

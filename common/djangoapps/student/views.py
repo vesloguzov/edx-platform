@@ -1019,9 +1019,11 @@ def change_enrollment(request, check_access=True):
             # will NOT try to look up the course enrollment model
             # by its slug.  If they do, it's possible (based on the state of the database)
             # for no such model to exist, even though we've set the enrollment type
-            # to "honor".
+            # to "audit".
             try:
-                CourseEnrollment.enroll(user, course_id, check_access=check_access)
+                enroll_mode = CourseMode.auto_enroll_mode(course_id, available_modes)
+                if enroll_mode:
+                    CourseEnrollment.enroll(user, course_id, check_access=check_access, mode=enroll_mode)
             except Exception:
                 return HttpResponseBadRequest(_("Could not enroll"))
             else:

@@ -290,12 +290,9 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
         VerificationDeadline.set_deadline(self.course.id, deadline)
 
     BANNER_ALT_MESSAGES = {
-        None: "Honor",
         VERIFY_STATUS_NEED_TO_VERIFY: "ID verification pending",
         VERIFY_STATUS_SUBMITTED: "ID verification pending",
         VERIFY_STATUS_APPROVED: "ID Verified Ribbon/Badge",
-        VERIFY_STATUS_MISSED_DEADLINE: "Honor",
-        VERIFY_STATUS_NEED_TO_REVERIFY: "Honor"
     }
 
     NOTIFICATION_MESSAGES = {
@@ -334,7 +331,9 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
         self.assertContains(response, unicode(self.course.id))
 
         # Verify that the correct banner is rendered on the dashboard
-        self.assertContains(response, self.BANNER_ALT_MESSAGES[status])
+        alt_text = self.BANNER_ALT_MESSAGES.get(status)
+        if alt_text:
+            self.assertContains(response, alt_text)
 
         # Verify that the correct banner color is rendered
         self.assertContains(
