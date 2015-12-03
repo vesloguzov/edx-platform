@@ -1,6 +1,7 @@
 # Factories are self documenting
 # pylint: disable=missing-docstring
 import factory
+from uuid import uuid4
 from django.core.files.base import ContentFile
 from factory.django import DjangoModelFactory, ImageField
 
@@ -21,6 +22,7 @@ class GeneratedCertificateFactory(DjangoModelFactory):
     status = CertificateStatuses.unavailable
     mode = GeneratedCertificate.MODES.honor
     name = ''
+    verify_uuid = uuid4().hex
 
 
 class CertificateWhitelistFactory(DjangoModelFactory):
@@ -38,6 +40,11 @@ class BadgeAssertionFactory(DjangoModelFactory):
         model = BadgeAssertion
 
     mode = 'honor'
+    data = {
+        'image': 'http://www.example.com/image.png',
+        'json': {'id': 'http://www.example.com/assertion.json'},
+        'issuer': 'http://www.example.com/issuer.json',
+    }
 
 
 class BadgeImageConfigurationFactory(DjangoModelFactory):
@@ -75,7 +82,8 @@ class CertificateHtmlViewConfigurationFactory(DjangoModelFactory):
             },
             "honor": {
                 "certificate_type": "Honor Code",
-                "certificate_title": "Certificate of Achievement"
+                "certificate_title": "Certificate of Achievement",
+                "logo_url": "http://www.edx.org/honor_logo.png"
             },
             "verified": {
                 "certificate_type": "Verified",
