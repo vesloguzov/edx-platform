@@ -50,7 +50,7 @@ class HtmlComponentEditorView(ComponentEditorView):
         editor = self.q(css=self._bounded_selector(selector))[0]
         ActionChains(self.browser).click(editor).\
             send_keys([Keys.CONTROL, 'a']).key_up(Keys.CONTROL).\
-            send_keys(content).perform()
+            senf_keys(Keys.DELETE).send_keys(content).perform()
 
     def set_raw_content(self, content):
         """Types content in raw html mode, leaving the component open.

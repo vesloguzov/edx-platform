@@ -314,7 +314,7 @@ class RegisterFromCombinedPageTest(UniqueCourseTest):
         # Now the form should be pre-filled with the data from the Dummy provider:
         self.assertEqual(self.register_page.email_value, "adama@fleet.colonies.gov")
         self.assertEqual(self.register_page.full_name_value, "William Adama")
-        self.assertIn("Galactica1", self.register_page.username_value)
+        self.assertIn("Galactica1", self.register_page.nickname_value)
 
         # Set country, accept the terms, and submit the form:
         self.register_page.register(country="US", terms_of_service=True)

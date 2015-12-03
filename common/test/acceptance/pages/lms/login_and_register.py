@@ -295,9 +295,9 @@ class CombinedLoginAndRegisterPage(PageObject):
         return self.q(css="#register-name").attrs('value')[0]
 
     @property
-    def username_value(self):
+    def nickname_value(self):
         """ Current value of the username form field """
-        return self.q(css="#register-username").attrs('value')[0]
+        return self.q(css="#register-nickname").attrs('value')[0]
 
     @property
     def errors(self):

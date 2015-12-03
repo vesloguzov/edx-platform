@@ -1865,6 +1865,7 @@ def auto_auth(request):
     unique_name = uuid.uuid4().hex[0:30]
 
     # Use the params from the request, otherwise use these defaults
+    username = request.GET.get('username', unique_name)
     nickname = request.GET.get('nickname', unique_name)
     password = request.GET.get('password', unique_name)
     email = request.GET.get('email', unique_name + "@example.com")
@@ -1912,6 +1913,10 @@ def auto_auth(request):
         profile = UserProfile.objects.get(user=user)
         reg = Registration.objects.get(user=user)
 
+    # Override username if explicitly sent
+    if username:
+        user.username = username
+        user.save()
     # Set the user's global staff bit
     if is_staff is not None:
         user.is_staff = (is_staff == "true")
