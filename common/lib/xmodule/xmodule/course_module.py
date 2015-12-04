@@ -757,8 +757,7 @@ class CourseFields(object):
     discussion_link = String(
         display_name=_("Discussion Forum External Link"),
         help=_("Allows specification of an external link to replace discussion forums."),
-        scope=Scope.settings,
-        deprecated=True
+        scope=Scope.settings
     )
 
     # TODO: same as above, intended to let internal CS50 hide the progress tab
