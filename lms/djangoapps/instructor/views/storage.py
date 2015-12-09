@@ -3,7 +3,7 @@ Report storage views
 """
 import os.path
 
-from django_future.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.cache import cache_control
 from django.http import HttpResponse, HttpResponseForbidden, Http404
 from django.conf import settings
