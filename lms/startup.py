@@ -34,14 +34,14 @@ def run():
     if settings.FEATURES.get('ENABLE_THIRD_PARTY_AUTH', False):
         enable_third_party_auth()
 
+    if settings.FEATURES.get('USE_CUSTOM_THEME', False):
+        enable_stanford_theme()
+
     django.setup()
 
     autostartup()
 
     add_mimetypes()
-
-    if settings.FEATURES.get('USE_CUSTOM_THEME', False):
-        enable_stanford_theme()
 
     if settings.FEATURES.get('USE_MICROSITES', False):
         enable_microsites()
@@ -107,7 +107,7 @@ def enable_stanford_theme():
 
     # Include the theme's templates in the template search paths
     Engine.get_default().dirs.insert(0, theme_root / 'templates')
-    edxmako.paths.add_lookup('main', theme_root / 'templates', prepend=True)
+    settings.MAKO_TEMPLATES['main'].insert(0, theme_root / 'templates')
 
     # Namespace the theme's static files to 'themes/<theme_name>' to
     # avoid collisions with default edX static files

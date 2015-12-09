@@ -21,14 +21,14 @@ def run():
     """
     third_party_auth.patch()
 
+    if settings.FEATURES.get('USE_CUSTOM_THEME', False):
+        enable_theme()
+
     django.setup()
 
     autostartup()
 
     add_mimetypes()
-
-    if settings.FEATURES.get('USE_CUSTOM_THEME', False):
-        enable_theme()
 
     # In order to allow descriptors to use a handler url, we need to
     # monkey-patch the x_module library.
