@@ -295,16 +295,33 @@ def has_html_certificates_enabled(course_key, course=None):
             of one.
         course (CourseDescriptor|CourseOverview): A course.
     """
-    html_certificates_enabled = False
-    try:
+    # If the feature is disabled, then immediately return a False
+    if not settings.FEATURES.get('CERTIFICATES_HTML_VIEW', False):
+        return False
+
+    # If we don't have a course object, we'll need to assemble one
+    if not course:
+        # Initialize a course key if necessary
         if not isinstance(course_key, CourseKey):
-            course_key = CourseKey.from_string(course_key)
-        course = course if course else CourseOverview.get_from_id(course_key)
-        if settings.FEATURES.get('CERTIFICATES_HTML_VIEW', False) and course.cert_html_view_enabled:
-            html_certificates_enabled = True
-    except:  # pylint: disable=bare-except
-        pass
-    return html_certificates_enabled
+            try:
+                course_key = CourseKey.from_string(course_key)
+            except InvalidKeyError:
+                log.warning(
+                    ('Unable to parse course_key "%s"', course_key),
+                    exc_info=True
+                )
+                return False
+        # Pull the course data from the cache
+        try:
+            course = CourseOverview.get_from_id(course_key)
+        except:  # pylint: disable=bare-except
+            log.warning(
+                ('Unable to load CourseOverview object for course_key "%s"', unicode(course_key)),
+                exc_info=True
+            )
+
+    # Return the flag on the course object
+    return course.cert_html_view_enabled if course else False
 
 
 def example_certificates_status(course_key):
@@ -348,7 +365,7 @@ def get_certificate_url(user_id=None, course_id=None, uuid=None):
     new uuid based cert url url otherwise old url.
     """
     url = ""
-    if settings.FEATURES.get('CERTIFICATES_HTML_VIEW', False):
+    if has_html_certificates_enabled(course_id):
         if uuid:
             url = reverse(
                 'certificates:render_cert_by_uuid',

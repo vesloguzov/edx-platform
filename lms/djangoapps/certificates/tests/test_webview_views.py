@@ -177,7 +177,7 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         Test: LinkedIn share URL.
         """
         self._add_course_certificates(count=1, signatory_count=1, is_active=True)
-        test_url = get_certificate_url(uuid=self.cert.verify_uuid)
+        test_url = get_certificate_url(course_id=self.course.id, uuid=self.cert.verify_uuid)
         response = self.client.get(test_url)
         self.assertEqual(response.status_code, 200)
         self.assertIn(urllib.quote_plus(self.request.build_absolute_uri(test_url)), response.content)
@@ -189,7 +189,7 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         Test: LinkedIn share URL should not be visible when called from within a microsite (for now)
         """
         self._add_course_certificates(count=1, signatory_count=1, is_active=True)
-        test_url = get_certificate_url(uuid=self.cert.verify_uuid)
+        test_url = get_certificate_url(course_id=self.cert.course_id, uuid=self.cert.verify_uuid)
         response = self.client.get(test_url)
         self.assertEqual(response.status_code, 200)
         # the URL should not be present
@@ -509,6 +509,7 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
             user_id=self.user.id,
             course_id=unicode(self.course.id)
         )
+
         response = self.client.get(test_url)
         self.assertIn('course_title_0', response.content)
         self.assertIn('Signatory_Name 0', response.content)
@@ -555,6 +556,7 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
             user_id=self.user.id,
             course_id=unicode(self.course.id)
         )
+
         self.course.display_coursenumber = "overridden_number"
         self.course.display_organization = "overridden_org"
         self.store.update_item(self.course, self.user.id)
@@ -632,15 +634,16 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
 
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
     def test_render_html_view_invalid_course(self):
-        test_url = get_certificate_url(
+        test_url = "/certificates/user/{user_id}/course/{course_id}".format(
             user_id=self.user.id,
-            course_id='missing/course/key'
+            course_id="missing/course/key"
         )
         response = self.client.get(test_url)
         self.assertIn('invalid', response.content)
 
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
     def test_render_html_view_invalid_user(self):
+        self._add_course_certificates(count=1, signatory_count=0)
         test_url = get_certificate_url(
             user_id=111,
             course_id=unicode(self.course.id)
