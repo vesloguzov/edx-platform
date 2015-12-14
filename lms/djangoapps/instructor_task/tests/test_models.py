@@ -6,9 +6,13 @@ from cStringIO import StringIO
 import mock
 import time
 from datetime import datetime
-from unittest import TestCase
+from django.test import TestCase
+import urllib
 
-from instructor_task.models import LocalFSReportStore, S3ReportStore
+from django.test.utils import override_settings
+from django.conf import settings
+
+from instructor_task.models import LocalFSReportStore, S3ReportStore, ProtectedFSReportStore
 from instructor_task.tests.test_base import TestReportMixin
 from opaque_keys.edx.locator import CourseLocator
 
@@ -105,3 +109,32 @@ class S3ReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, TestCase):
     def create_report_store(self):
         """ Create and return a S3ReportStore. """
         return S3ReportStore.from_config(config_name='GRADES_DOWNLOAD')
+
+
+@override_settings(
+    GRADES_DOWNLOAD={
+        'STORAGE_TYPE' : 'protectedfs',
+        'ROOT_PATH' : '/tmp/path-to-report-store/',
+        'PROTECTED_URL' : '/reports_storage/'
+        }
+)
+class ProtectedFSReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, TestCase):
+    """
+    Test the ProtectedFSReportStore
+    """
+    def create_report_store(self):
+        """ Create and return a ProtectedFSReportStore. """
+        return ProtectedFSReportStore.from_config(config_name='GRADES_DOWNLOAD')
+
+    def test_protected_url(self):
+        """
+        Test that ReportStore.protected_url_for(*args) returns internal path for nginx
+        """
+        filename = 'report'
+        report_store = self.create_report_store()
+        report_store.store(self.course_id, filename, StringIO())
+
+        self.assertEqual(
+            report_store.protected_url_for(self.course_id, filename),
+            settings.GRADES_DOWNLOAD['PROTECTED_URL'] + urllib.quote(unicode(self.course_id)) + '/' + filename
+        )

@@ -13,7 +13,7 @@ from instructor_task.models import ReportStore
 from courseware.access import has_access
 from courseware.courses import get_course_by_id
 
-from opaque_keys.edx.locations import SlashSeparatedCourseKey
+from opaque_keys.edx.keys import CourseKey
 
 
 @ensure_csrf_cookie
@@ -23,12 +23,12 @@ def serve_report(request, course_id, filename):
     Serve grade reports from local filesystem using nginx X-Accell-Redirect header.
     Imply that the view is enabled only if ReportStore is instance of LocalFSReportStore.
     """
-    course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+    course_key = CourseKey.from_string(course_id)
     course = get_course_by_id(course_key, depth=None)
     if not has_access(request.user, 'staff', course):
         return HttpResponseForbidden()
 
-    store = ReportStore.from_config()
+    store = ReportStore.from_config(config_name='GRADES_DOWNLOAD')
     store_filepath = store.path_to(course_key, filename)
 
     if not os.path.exists(store_filepath):

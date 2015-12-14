@@ -450,7 +450,7 @@ class ProtectedFSReportStore(LocalFSReportStore):
 
     def protected_url_for(self, course_id, filename):
         """Return nginx internal path to a given file for a given course."""
-        return os.path.join(self.protected_url, urllib.quote(course_id.to_deprecated_string(), safe=''), filename)
+        return os.path.join(self.protected_url, urllib.quote(unicode(course_id), safe=''), filename)
 
     def links_for(self, course_id):
         """
@@ -461,10 +461,10 @@ class ProtectedFSReportStore(LocalFSReportStore):
         course_dir = self.path_to(course_id, '')
         if not os.path.exists(course_dir):
             return []
-        return sorted(
-            [
-                (filename, reverse('serve_report', args=[course_id, filename]))
-                for filename in os.listdir(course_dir)
-            ],
-            reverse=True
-        )
+        files = [(filename, os.path.join(course_dir, filename)) for filename in os.listdir(course_dir)]
+        files.sort(key=lambda (filename, full_path): os.path.getmtime(full_path), reverse=True)
+
+        return [
+            (filename, reverse('serve_report', args=[course_id, filename]))
+            for filename, _ in files
+        ]
