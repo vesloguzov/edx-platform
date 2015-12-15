@@ -946,14 +946,14 @@ div.wrapper-comp-editor.is-inactive ~ div.launch-latex-compiler {
           @extend %t-action3;
           @extend %t-strong;
           display: inline-block;
-          width: 15%;
+          width: 25%;
           vertical-align: top;
           cursor: pointer;
         }
         .explanation {
           @extend %t-action4;
           display: inline-block;
-          width: 75%;
+          width: 65%;
           vertical-align: top;
           color: $gray;
         }
