@@ -20,6 +20,7 @@ from student.models import CourseEnrollment
 from student.views import send_enrollment_email
 
 from api.serializers import UserSerializer, UID_PATTERN, CourseSerializer, CourseEnrollmentSerializer
+from api.put_as_create import AllowPUTAsCreateMixin
 
 class ApiKeyHeaderPermission(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -38,7 +39,8 @@ class ApiKeyHeaderPermission(permissions.BasePermission):
             (api_key and request.META.get("HTTP_X_EDX_API_KEY") == api_key)
         )
 
-class UserViewSet(mixins.CreateModelMixin,
+class UserViewSet(AllowPUTAsCreateMixin,
+                  mixins.CreateModelMixin,
                   mixins.RetrieveModelMixin,
                   mixins.UpdateModelMixin,
                   # mixins.ListModelMixin,

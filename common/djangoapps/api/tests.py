@@ -235,7 +235,7 @@ class UserViewSetTest(APITest):
             response = self._request_with_auth('post', self.list_url, data)
             self.assertEqual(response.status_code, 400)
 
-    @skip('Removed from framework upstream, may be fixed with mixin')
+    # @skip('Removed from framework upstream, may be fixed with mixin')
     def test_put_create(self):
         data = {
             'uid': '123',
@@ -247,10 +247,9 @@ class UserViewSetTest(APITest):
             'birthdate': '2014-01-26',
             'city': 'Capital',
         }
-        response = self._request_with_auth('put', data=data,
-                    path=reverse('profile-detail', kwargs={'username': data['uid']}))
-        print 'URL:', reverse('profile-detail', kwargs={'username': data['uid']})
-        print "USERS:", User.objects.all()
+        response = self._request_with_auth('put', data=json.dumps(data),
+                    path=reverse('profile-detail', kwargs={'username': data['uid']}),
+                    content_type='application/json')
         self.assertEquals(response.status_code, 201)
 
         user = User.objects.get(username=data['uid'])
