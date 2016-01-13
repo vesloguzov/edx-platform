@@ -185,6 +185,11 @@ ALLOWED_HOSTS = [
     FEATURES['PREVIEW_LMS_BASE'],
 ]
 
+if ROOT_URL_PREFIX:
+    LMS_BASE += ROOT_URL_PREFIX
+    if 'PREVIEW_LMS_BASE' in FEATURES:
+        FEATURES['PREVIEW_LMS_BASE'] += ROOT_URL_PREFIX
+
 # allow for environments to specify what cookie name our login subsystem should use
 # this is to fix a bug regarding simultaneous logins between edx.org and edge.edx.org which can
 # happen with some browsers (e.g. Firefox)
@@ -265,10 +270,6 @@ USE_I18N = ENV_TOKENS.get('USE_I18N', USE_I18N)
 # Additional installed apps
 for app in ENV_TOKENS.get('ADDL_INSTALLED_APPS', []):
     INSTALLED_APPS += (app,)
-
-ENV_FEATURES = ENV_TOKENS.get('FEATURES', {})
-for feature, value in ENV_FEATURES.items():
-    FEATURES[feature] = value
 
 WIKI_ENABLED = ENV_TOKENS.get('WIKI_ENABLED', WIKI_ENABLED)
 local_loglevel = ENV_TOKENS.get('LOCAL_LOGLEVEL', 'INFO')

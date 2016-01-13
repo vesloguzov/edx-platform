@@ -239,6 +239,13 @@ if FEATURES.get('AUTH_USE_CAS'):
             CAS_ATTRIBUTE_CALLBACK['function']
         )
 
+# Get root url prefix if specified and fix LMS_BASE and PREVIEW_LMS_BASE settings accordingly
+ROOT_URL_PREFIX = ENV_TOKENS.get('LMS_ROOT_URL_PREFIX', ROOT_URL_PREFIX)
+if ROOT_URL_PREFIX:
+    LMS_BASE += ROOT_URL_PREFIX
+    if 'PREVIEW_LMS_BASE' in FEATURES:
+        FEATURES['PREVIEW_LMS_BASE'] += ROOT_URL_PREFIX
+
 
 ################ SECURE AUTH ITEMS ###############################
 # Secret things: passwords, access keys, etc.

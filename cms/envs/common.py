@@ -272,6 +272,7 @@ AUTHENTICATION_BACKENDS = (
 )
 
 LMS_BASE = None
+ROOT_URL_PREFIX = ''
 
 # These are standard regexes for pulling out info like course_ids, usage_ids, etc.
 # They are used so that URLs with deprecated-format strings still work.
