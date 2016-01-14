@@ -428,7 +428,7 @@ class ProtectedFSReportStore(LocalFSReportStore):
         self.root_path = root_path
         if not os.path.exists(root_path):
             os.makedirs(root_path)
-        self.protected_url = protected_url
+        self.protected_url = settings.ROOT_URL_PREFIX + protected_url
 
     @classmethod
     def from_config(cls, config_name):
