@@ -24,15 +24,15 @@ class UserSerializer(serializers.ModelSerializer):
     Represents username as uid (since it's a technical field),
     profile.name as name
     """
-    uid = serializers.CharField(source='username', required=True, validators=[UniqueValidator(queryset=User.objects)])
-    email = serializers.EmailField(required=False, validators=[UniqueValidator(queryset=User.objects)])
+    uid = serializers.CharField(source='username', required=True, allow_blank=False, validators=[UniqueValidator(queryset=User.objects)])
+    email = serializers.EmailField(required=False, allow_null=False, validators=[UniqueValidator(queryset=User.objects)])
 
-    name = serializers.CharField(source='profile.name', default='', max_length=255, required=False)
-    nickname = serializers.CharField(source='profile.nickname', default='', max_length=255, required=False)
-    first_name = serializers.CharField(source='profile.first_name', default='', max_length=255, required=False)
-    last_name = serializers.CharField(source='profile.last_name', default='', max_length=255, required=False)
-    birthdate = serializers.DateField(source='profile.birthdate', default=None, required=False)
-    city = serializers.CharField(source='profile.city', default='', required=False)
+    name = serializers.CharField(source='profile.name', default='', max_length=255, required=False, allow_blank=True)
+    nickname = serializers.CharField(source='profile.nickname', default='', max_length=255, required=False, allow_blank=True)
+    first_name = serializers.CharField(source='profile.first_name', default='', max_length=255, required=False, allow_blank=True)
+    last_name = serializers.CharField(source='profile.last_name', default='', max_length=255, required=False, allow_blank=True)
+    birthdate = serializers.DateField(source='profile.birthdate', default=None, required=False, allow_null=True)
+    city = serializers.CharField(source='profile.city', default='', required=False, allow_blank=True)
 
     class Meta:
         model = User

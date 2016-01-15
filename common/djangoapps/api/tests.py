@@ -261,6 +261,33 @@ class UserViewSetTest(APITest):
             else:
                 self.assertEquals(getattr(user.profile, field_name), data[field_name])
 
+    def test_put_update_optional_with_blank(self):
+        """
+        Test blank fields are updated correctly
+        """
+        data = {
+            'uid': self.user.username,
+            'email': self.user.email,
+            'nickname': '',
+            'name': '',
+            'first_name': '',
+            'last_name': '',
+            'birthdate': None,
+            'city': '',
+        }
+        response = self._request_with_auth('put', data=json.dumps(data),
+                    path=reverse('profile-detail', kwargs={'username': data['uid']}),
+                    content_type='application/json')
+        self.assertEquals(response.status_code, 200)
+
+        user = User.objects.get(username=self.user.username)
+        self.assertEqual(user.email, self.user.email)
+        self.assertEqual(user.profile.name, '')
+        self.assertEqual(user.profile.first_name, '')
+        self.assertEqual(user.profile.last_name, '')
+        self.assertEqual(user.profile.birthdate, None)
+        self.assertEqual(user.profile.city, '')
+
     def test_creation_fails_on_duplicate_email(self):
         data = {
             'uid': '123',
