@@ -4,7 +4,7 @@ import datetime
 CERT_NAME_SHORT = u"сертификат"
 CERT_NAME_LONG = u"сертификат"
 CERT_URL = 'certificates/'
-CERT_STORAGE_PATH = '/edx/var/edxapp/certificate_store/'
+CERT_STORAGE_PATH = '/edx/var/edxapp/certificates/'
 
 CAS_VERSION = '3'
 CAS_USER_CREATOR = 'external_auth.views.cas_create_user'
