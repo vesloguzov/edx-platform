@@ -403,3 +403,16 @@ class CourseModeModelTest(TestCase):
             return dict(zip(dict_keys, display_values.get('verify_none')))
         else:
             return dict(zip(dict_keys, display_values.get(dict_type)))
+
+    @ddt.data(
+        (CourseMode.AUDIT, False),
+        (CourseMode.HONOR, True),
+        (CourseMode.VERIFIED, True),
+        (CourseMode.CREDIT_MODE, True),
+        (CourseMode.PROFESSIONAL, True),
+        (CourseMode.NO_ID_PROFESSIONAL_MODE, True),
+    )
+    @ddt.unpack
+    def test_eligible_for_cert(self, mode_slug, expected_eligibility):
+        """Verify that non-audit modes are eligible for a cert."""
+        self.assertEqual(CourseMode.is_eligible_for_certificate(mode_slug), expected_eligibility)

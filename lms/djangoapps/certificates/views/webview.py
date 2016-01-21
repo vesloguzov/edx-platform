@@ -34,7 +34,9 @@ from certificates.api import (
     get_certificate_url,
     emit_certificate_event,
     has_html_certificates_enabled,
-    get_certificate_template
+    get_certificate_template,
+    get_certificate_header_context,
+    get_certificate_footer_context
 )
 from certificates.models import (
     GeneratedCertificate,
@@ -153,7 +155,7 @@ def _update_context_with_basic_info(context, course_id, platform_name, configura
 
     # Translators:  'All rights reserved' is a legal term used in copyrighting to protect published content
     reserved = _("All rights reserved")
-    context['copyright_text'] = '&copy; {year} {platform_name}. {reserved}.'.format(
+    context['copyright_text'] = u'&copy; {year} {platform_name}. {reserved}.'.format(
         year=settings.COPYRIGHT_YEAR,
         platform_name=platform_name,
         reserved=reserved
@@ -345,7 +347,7 @@ def _get_user_certificate(request, user, course_key, course, preview_mode=None):
     else:
         # certificate is being viewed by learner or public
         try:
-            user_certificate = GeneratedCertificate.objects.get(
+            user_certificate = GeneratedCertificate.eligible_certificates.get(
                 user=user,
                 course_id=course_key,
                 status=CertificateStatuses.downloadable
@@ -463,7 +465,7 @@ def render_cert_by_uuid(request, certificate_uuid):
     This public view generates an HTML representation of the specified certificate
     """
     try:
-        certificate = GeneratedCertificate.objects.get(
+        certificate = GeneratedCertificate.eligible_certificates.get(
             verify_uuid=certificate_uuid,
             status=CertificateStatuses.downloadable
         )
@@ -539,6 +541,10 @@ def render_html_view(request, user_id, course_id):
 
     # Append microsite overrides
     _update_microsite_context(context, configuration)
+
+    # Add certificate header/footer data to current context
+    context.update(get_certificate_header_context(is_secure=request.is_secure()))
+    context.update(get_certificate_footer_context())
 
     # Append/Override the existing view context values with any course-specific static values from Advanced Settings
     context.update(course.cert_html_view_overrides)
