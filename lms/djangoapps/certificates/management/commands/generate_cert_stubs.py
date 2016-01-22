@@ -21,7 +21,8 @@ from certificates.models import CertificateWhitelist
 from courseware import grades
 from django.test.client import RequestFactory
 from student.models import UserProfile, CourseEnrollment
-from verify_student.models import SoftwareSecurePhotoVerification
+from course_modes.models import CourseMode
+from lms.djangoapps.verify_student.models import SoftwareSecurePhotoVerification
 
 # JSON_KEYS
 USERNAME_KEY = 'uid'
@@ -189,14 +190,19 @@ def _generate_cert_stub_for_student_from_json(student, course, data, forced_grad
 
 def _get_certificate_mode(student, course):
     enrollment_mode, __ = CourseEnrollment.enrollment_mode_for_user(student, course.id)
-    mode_is_verified = (enrollment_mode == GeneratedCertificate.MODES.verified)
+    mode_is_verified = enrollment_mode in GeneratedCertificate.VERIFIED_CERTS_MODES
     user_is_verified = SoftwareSecurePhotoVerification.user_is_verified(student)
-    user_is_reverified = SoftwareSecurePhotoVerification.user_is_reverified_for_all(course.id, student)
     cert_mode = enrollment_mode
-    if (mode_is_verified and not (user_is_verified and user_is_reverified)):
-        return GeneratedCertificate.MODES.honor
-    else:
-        return enrollment_mode
+
+    # For credit mode generate verified certificate
+    if cert_mode == CourseMode.CREDIT_MODE:
+        cert_mode = CourseMode.VERIFIED
+
+    if mode_is_verified and not user_is_verified:
+        cert_mode = GeneratedCertificate.MODES.honor
+
+    return cert_mode
+
 
 def _can_generate_certificate_for_student(student, course):
     VALID_STATUSES = [CertificateStatuses.generating,
