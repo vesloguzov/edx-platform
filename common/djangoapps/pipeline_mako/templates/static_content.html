@@ -8,10 +8,11 @@ from microsite_configuration import microsite
 %>
 
 <%def name='url(file, raw=False)'><%
+prefix = '' if settings.ROOT_URLCONF == 'cms.urls' else settings.ROOT_URL_PREFIX
 try:
     url = staticfiles_storage.url(file)
 except:
-    url = file
+    url = prefix + file
 %>${url}${"?raw" if raw else ""}</%def>
 
 <%def name='css(group, raw=False)'>
