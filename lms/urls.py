@@ -111,6 +111,7 @@ urlpatterns = (
     url(r'^api/val/v0/', include('edxval.urls')),
 
     url(r'^api/commerce/', include('commerce.api.urls', namespace='commerce_api')),
+    url(r'^api/organizations/', include('organizations.urls', namespace='organizations')),
 )
 
 if settings.FEATURES["ENABLE_COMBINED_LOGIN_REGISTRATION"]:
