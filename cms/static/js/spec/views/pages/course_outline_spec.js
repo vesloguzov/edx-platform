@@ -503,7 +503,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 it('can be edited', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.section-header-actions .configure-button').click();
-                    $("#start_date").val("1/2/2015");
+                    $("#start_date").val("2015-1-2");
                     // Section release date can't be cleared.
                     expect($(".wrapper-modal-window .action-clear")).not.toExist();
 
@@ -696,7 +696,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 it('can be edited', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    setEditModalValues("7/9/2014", "7/10/2014", "Lab", true);
+                    setEditModalValues("2014-07-09", "2014-07-10", "Lab", true);
                     setModalTimedExaminationPreferenceValues(true, "02:30", true);
                     $(".wrapper-modal-window .action-save").click();
                     AjaxHelpers.expectJsonRequest(requests, 'POST', '/xblock/mock-subsection', {
@@ -736,8 +736,8 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
 
                     expect($(".outline-item .outline-subsection .status-grading-value")).toContainText("Lab");
                     outlinePage.$('.outline-item .outline-subsection .configure-button').click();
-                    expect($("#start_date").val()).toBe('7/9/2014');
-                    expect($("#due_date").val()).toBe('7/10/2014');
+                    expect($("#start_date").val()).toBe('2014-07-09');
+                    expect($("#due_date").val()).toBe('2014-07-10');
                     expect($("#grading_type").val()).toBe('Lab');
                     expect($("#staff_lock").is(":checked")).toBe(true);
                     expect($("#id_timed_examination").is(":checked")).toBe(true);
@@ -749,7 +749,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 it('can be edited and enable/disable proctoring fields, when time_limit checkbox value changes', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    setEditModalValues("7/9/2014", "7/10/2014", "Lab", true);
+                    setEditModalValues("2014-07-09", "2014-07-10", "Lab", true);
                     setModalTimedExaminationPreferenceValues(true, "02:30", true);
                     var target = $('#id_timed_examination');
                     target.attr("checked","checked");
@@ -767,7 +767,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 it('release date, due date, grading type, and staff lock can be cleared.', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-item .outline-subsection .configure-button').click();
-                    setEditModalValues("7/9/2014", "7/10/2014", "Lab", true);
+                    setEditModalValues("2014-07-09", "2014-07-10", "Lab", true);
                     $(".wrapper-modal-window .action-save").click();
 
                     // This is the response for the change operation.
@@ -789,8 +789,8 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     );
 
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    expect($("#start_date").val()).toBe('7/9/2014');
-                    expect($("#due_date").val()).toBe('7/10/2014');
+                    expect($("#start_date").val()).toBe('2014-07-09');
+                    expect($("#due_date").val()).toBe('2014-07-10');
                     expect($("#grading_type").val()).toBe('Lab');
                     expect($("#staff_lock").is(":checked")).toBe(true);
 
@@ -898,10 +898,10 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     expect($("#start_date").val()).toBe('');
                     expect($("#start_time").val()).toBe('');
                     DateUtils.setDate($("#start_date"), ("#start_time"), "2015-08-10T05:10:00Z");
-                    expect($("#start_date").val()).toBe('8/10/2015');
+                    expect($("#start_date").val()).toBe('2015-08-10');
                     expect($("#start_time").val()).toBe('05:10');
                     DateUtils.setDate($("#start_date"), ("#start_time"), "2014-07-09T00:00:00+00:00");
-                    expect($("#start_date").val()).toBe('7/9/2014');
+                    expect($("#start_date").val()).toBe('2014-07-09');
                     expect($("#start_time").val()).toBe('00:00');
                 });
             });

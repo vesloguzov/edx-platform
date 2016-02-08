@@ -375,13 +375,13 @@ class EditingSectionsTest(CourseOutlineTest):
         self.assertTrue(modal.has_policy())
 
         # Verify initial values
-        self.assertEqual(modal.release_date, u'1/1/1970')
+        self.assertEqual(modal.release_date, u'1970-1-1')
         self.assertEqual(modal.due_date, u'')
         self.assertEqual(modal.policy, u'Not Graded')
 
         # Set new values
-        modal.release_date = '3/12/1972'
-        modal.due_date = '7/21/2014'
+        modal.release_date = '1972-12-3'
+        modal.due_date = '2014-7-21'
         modal.policy = 'Lab'
 
         modal.save()
@@ -419,10 +419,10 @@ class EditingSectionsTest(CourseOutlineTest):
         self.assertFalse(modal.has_policy())
 
         # Verify initial value
-        self.assertEqual(modal.release_date, u'1/1/1970')
+        self.assertEqual(modal.release_date, u'1970-1-1')
 
         # Set new value
-        modal.release_date = '5/14/1969'
+        modal.release_date = '1969-5-14'
 
         modal.save()
         self.assertIn(u'Released: May 14, 1969', section.release_date)

@@ -7,7 +7,7 @@ define(["module", "jquery", "jquery.ui"], function(module, $, ui) {
         '%b': 'M', //short month name, locale-aware
         '%B': 'MM' // full month name, locale-aware
     }
-    var dateFormat = module.config().dateFormatPython;
+    var dateFormat = module.config().dateFormatPython || '%Y-%m-%d';
     for (var directive in format_translation){
         dateFormat = dateFormat.replace(directive, format_translation[directive]);
     }

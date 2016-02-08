@@ -47,6 +47,7 @@
             'jquery.timeago': 'js/vendor/jquery.timeago',
             "jquery.url": "js/vendor/url.min",
             "jquery.ui": "js/vendor/jquery-ui.min",
+            "jquery.ui.datepickerDefaults": "js/utils/jquery.ui.datepickerDefaults",
             "jquery.iframe-transport": "js/vendor/jQuery-File-Upload/js/jquery.iframe-transport",
             "jquery.fileupload": "js/vendor/jQuery-File-Upload/js/jquery.fileupload",
             "URI": "js/vendor/URI.min",
