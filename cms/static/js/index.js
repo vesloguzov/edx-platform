@@ -60,10 +60,12 @@ define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/vie
             };
 
             analytics.track('Created a Course', course_info);
+            $('.new-course-save').addClass('is-disabled').attr('aria-disabled', true);
+            $('.new-course-save').val(gettext('Creating new course…'));
             CreateCourseUtils.create(course_info, function (errorMessage) {
                 $('.create-course .wrap-error').addClass('is-shown');
                 $('#course_creation_error').html('<p>' + errorMessage + '</p>');
-                $('.new-course-save').addClass('is-disabled').attr('aria-disabled', true);
+                $('.new-course-save').val(gettext('Create'));
             });
         };
 
@@ -114,10 +116,12 @@ define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/vie
             };
 
             analytics.track('Created a Library', lib_info);
+            $('.new-library-save').addClass('is-disabled').attr('aria-disabled', true);
+            $('.new-library-save').val(gettext('Creating new library…'));
             CreateLibraryUtils.create(lib_info, function (errorMessage) {
                 $('.create-library .wrap-error').addClass('is-shown');
                 $('#library_creation_error').html('<p>' + errorMessage + '</p>');
-                $('.new-library-save').addClass('is-disabled').attr('aria-disabled', true);
+                $('.new-library-save').val(gettext('Create'));
             });
         };
 

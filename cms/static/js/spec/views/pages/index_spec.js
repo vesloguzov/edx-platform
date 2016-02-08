@@ -208,15 +208,32 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                 }
             });
 
+            it("disables course creation button during request and restores label on error", function(){
+                var requests = AjaxHelpers.requests(this);
+                var initial_label = $('.new-course-save').val();
+                $('.new-course-button').click();
+                fillInFields('', '', '', 'Demo course');
+                $('.new-course-save').click();
+                expect($('.new-course-save')).toHaveClass('is-disabled');
+                expect($('.new-course-save')).toHaveAttr('aria-disabled', 'true');
+                expect($('.new-course-save').val()).not.toEqual(initial_label);
+                AjaxHelpers.respondWithJson(requests, {
+                    ErrMsg: 'error message'
+                });
+                expect($('.new-course-save')).toHaveClass('is-disabled');
+                expect($('.new-course-save')).toHaveAttr('aria-disabled', 'true');
+                expect($('.new-course-save').val()).toEqual(initial_label);
+            });
+
             it("saves new libraries with auto key", function () {
                 var requests = AjaxHelpers.requests(this);
                 var redirectSpy = spyOn(ViewUtils, 'redirect');
                 $('.new-library-button').click();
-                fillInLibraryFields('1', '1', 'Demo library');
+                fillInLibraryFields('', '', 'Demo library');
                 $('.new-library-save').click();
                 AjaxHelpers.expectJsonRequest(requests, 'POST', '/library/', {
-                    org: '1',
-                    number: '1',
+                    org: '',
+                    number: '',
                     display_name: 'Demo library'
                 });
                 AjaxHelpers.respondWithJson(requests, {
@@ -243,5 +260,22 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                 }
             });
 
+            it("disables library creation button during request and restores label on error", function(){
+                var requests = AjaxHelpers.requests(this);
+                var initial_label = $('.new-library-save').val();
+                $('.new-library-button').click();
+                fillInLibraryFields('', '', 'Demo library');
+                $('.new-library-save').click();
+
+                expect($('.new-library-save')).toHaveClass('is-disabled');
+                expect($('.new-library-save')).toHaveAttr('aria-disabled', 'true');
+                expect($('.new-library-save').val()).not.toEqual(initial_label);
+                AjaxHelpers.respondWithError(requests, 400, {
+                    ErrMsg: 'error message'
+                });
+                expect($('.new-library-save')).toHaveClass('is-disabled');
+                expect($('.new-library-save')).toHaveAttr('aria-disabled', 'true');
+                expect($('.new-library-save').val()).toEqual(initial_label);
+            });
         });
     });
