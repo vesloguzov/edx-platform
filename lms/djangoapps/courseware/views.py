@@ -689,7 +689,7 @@ def course_info(request, course_id):
             # redirect to the dashboard page.
             if isinstance(access_response, StartDateError):
                 start_date = strftime_localized(course.start, 'SHORT_DATE')
-                params = urllib.urlencode({'notlive': start_date})
+                params = urllib.urlencode({'notlive': start_date.encode('utf-8')})
                 return redirect('{0}?{1}'.format(reverse('dashboard'), params))
             # Otherwise, give a 404 to avoid leaking info about access
             # control.
