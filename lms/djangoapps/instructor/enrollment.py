@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.core.mail import send_mail
-from django.utils.translation import override as override_language
+from django.utils.translation import override as override_language, get_language
 
 from student.models import CourseEnrollment, CourseEnrollmentAllowed
 from courseware.models import StudentModule
@@ -349,6 +349,10 @@ def send_mail_to_student(student, param_dict, language=None):
         'SITE_NAME',
         param_dict['site_name']
     )
+
+    # if language is None, explicitly replace it with current language
+    # otherwise override_language deactivates all translations
+    language = language or get_language()
 
     subject = None
     message = None

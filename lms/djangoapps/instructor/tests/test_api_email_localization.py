@@ -86,6 +86,6 @@ class TestInstructorAPIEnrollmentEmailLocalization(SharedModuleStoreTestCase):
         self.check_outbox_is_french()
 
     def test_enroll_unsubscribed_student(self):
-        # Student is unknown, so the platform language should be used
+        # Student is unknown, so the instructor language should be used
         self.update_enrollement("enroll", "newuser@hotmail.com")
-        self.check_outbox("You have been")
+        self.check_outbox(u"已被")
