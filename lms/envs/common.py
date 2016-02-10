@@ -49,7 +49,7 @@ from lms.djangoapps.lms_xblock.mixin import LmsBlockMixin
 PLATFORM_NAME = "Your Platform Name Here"
 CC_MERCHANT_NAME = PLATFORM_NAME
 # Shows up in the platform footer, eg "(c) COPYRIGHT_YEAR"
-COPYRIGHT_YEAR = "2015"
+COPYRIGHT_YEAR = "2016"
 SERVICE_VARIANT = "lms"
 
 PLATFORM_FACEBOOK_ACCOUNT = "http://www.facebook.com/YourPlatformFacebookAccount"
