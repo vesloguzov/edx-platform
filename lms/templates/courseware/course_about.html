@@ -207,6 +207,7 @@ from edxmako.shortcuts import marketing_link
         </div>
       % endif
 
+      <%doc>
       <nav aria-label="${_('Course About')}">
         <a href="#" class="active">${_("Overview")}</a>
       ##  <a href="#">${_("FAQ")}</a>
@@ -215,6 +216,7 @@ from edxmako.shortcuts import marketing_link
       ##  <a href="#">${_("Syllabus")}</a>
       ##  <a href="#">${_("Reviews")}</a>
       </nav>
+      </%doc>
 
       <div class="inner-wrapper">
         ${get_course_about_section(course, "overview")}
