@@ -101,13 +101,11 @@ import json
       </ul>
     % else:
       <section class="empty-dashboard-message">
-        <p>${_("Looks like you haven't enrolled in any courses yet.")}</p>
+        <p>${_("Looks like you haven't created any courses yet.")}</p>
 
-        % if settings.FEATURES.get('COURSES_ARE_BROWSABLE'):
-          <a href="${marketing_link('COURSES')}">
-            ${_("Find courses now!")}
-          </a>
-        %endif
+        <a href="${'//' + settings.CMS_BASE + '/home'}">
+          ${_("Create a New Course now!")}
+        </a>
       </section>
     % endif
 
