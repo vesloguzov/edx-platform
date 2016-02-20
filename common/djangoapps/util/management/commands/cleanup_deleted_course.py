@@ -8,6 +8,7 @@ from opaque_keys.edx.keys import CourseKey
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from xmodule.modulestore.django import modulestore
+from xmodule_django.models import CourseKeyField
 
 class Command(BaseCommand):
     help = '''Cleanup database after deletion of the course'''
@@ -45,20 +46,25 @@ class Command(BaseCommand):
         if course:
             raise CommandError('Trying to perform a cleanup for existing course, forbidden!')
 
-        connected_models = [m for m in models.get_models() if 'course_id' in m._meta.get_all_field_names()]
         connected_objects_count = 0
+        for course_key_field_name in ('course_id', 'course_key'):
+            connected_models = [
+                m for m in models.get_models()
+                if course_key_field_name in m._meta.get_all_field_names()
+                and isinstance(m._meta.get_field(course_key_field_name), CourseKeyField)
+            ]
 
-        for model in connected_models:
-            connected_objects = model.objects.filter(course_id=course_key)
-            _connected_objects_count = connected_objects.count()
-            if _connected_objects_count:
-                print '{}: {} objects to be deleted'.format(
-                    model._meta.verbose_name, connected_objects.count()
-                )
-                connected_objects_count += _connected_objects_count
-                if options['do_it']:
-                    connected_objects.delete()
-                    print 'DELETED'
+            for model in connected_models:
+                connected_objects = model.objects.filter(**{course_key_field_name: course_key})
+                _connected_objects_count = connected_objects.count()
+                if _connected_objects_count:
+                    print '{}: {} objects to be deleted'.format(
+                        model._meta.verbose_name, connected_objects.count()
+                    )
+                    connected_objects_count += _connected_objects_count
+                    if options['do_it']:
+                        connected_objects.delete()
+                        print 'DELETED'
         if not connected_objects_count:
             print 'No connected objects found'
         if not options['do_it']:
