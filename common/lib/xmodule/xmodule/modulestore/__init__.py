@@ -315,7 +315,8 @@ class BulkOperationsMixin(object):
         Sends out the signal that items have been published from within this course.
         """
         if self.signal_handler and bulk_ops_record.has_publish_item:
-            self.signal_handler.send("course_published", course_key=course_id)
+            # We remove the branch, because publishing always means copying from draft to published
+            self.signal_handler.send("course_published", course_key=course_id.for_branch(None))
             bulk_ops_record.has_publish_item = False
 
     def send_bulk_library_updated_signal(self, bulk_ops_record, library_id):
@@ -758,7 +759,6 @@ class ModuleStoreAssetWriteInterface(ModuleStoreAssetBase):
         pass
 
 
-# pylint: disable=abstract-method
 class ModuleStoreRead(ModuleStoreAssetBase):
     """
     An abstract interface for a database backend that stores XModuleDescriptor
@@ -906,6 +906,14 @@ class ModuleStoreRead(ModuleStoreAssetBase):
         pass
 
     @abstractmethod
+    def make_course_usage_key(self, course_key):
+        """
+        Return a valid :class:`~opaque_keys.edx.keys.UsageKey` for this modulestore
+        that matches the supplied course_key.
+        """
+        pass
+
+    @abstractmethod
     def get_courses(self, **kwargs):
         '''
         Returns a list containing the top level XModuleDescriptors of the courses
@@ -1008,7 +1016,6 @@ class ModuleStoreRead(ModuleStoreAssetBase):
         pass
 
 
-# pylint: disable=abstract-method
 class ModuleStoreWrite(ModuleStoreRead, ModuleStoreAssetWriteInterface):
     """
     An abstract interface for a database backend that stores XModuleDescriptor
@@ -1322,7 +1329,7 @@ class ModuleStoreWriteBase(ModuleStoreReadBase, ModuleStoreWrite):
         """
         if self.contentstore:
             self.contentstore._drop_database()  # pylint: disable=protected-access
-        super(ModuleStoreWriteBase, self)._drop_database()  # pylint: disable=protected-access
+        super(ModuleStoreWriteBase, self)._drop_database()
 
     def create_child(self, user_id, parent_usage_key, block_type, block_id=None, fields=None, **kwargs):
         """
@@ -1344,22 +1351,6 @@ class ModuleStoreWriteBase(ModuleStoreReadBase, ModuleStoreWrite):
         parent = self.get_item(parent_usage_key)
         parent.children.append(item.location)
         self.update_item(parent, user_id)
-
-    def _flag_publish_event(self, course_key):
-        """
-        Wrapper around calls to fire the course_published signal
-        Unless we're nested in an active bulk operation, this simply fires the signal
-        otherwise a publish will be signalled at the end of the bulk operation
-
-        Arguments:
-            course_key - course_key to which the signal applies
-        """
-        if self.signal_handler:
-            bulk_record = self._get_bulk_ops_record(course_key) if isinstance(self, BulkOperationsMixin) else None
-            if bulk_record and bulk_record.active:
-                bulk_record.has_publish_item = True
-            else:
-                self.signal_handler.send("course_published", course_key=course_key)
 
     def _flag_library_updated_event(self, library_key):
         """

@@ -4,11 +4,9 @@ Tests for celery tasks defined in tasks module
 
 from mock_django import mock_signal_receiver
 
-from ccx.tests.factories import (  # pylint: disable=import-error
-    CcxFactory,
-)
-from student.roles import CourseCcxCoachRole  # pylint: disable=import-error
-from student.tests.factories import (  # pylint: disable=import-error
+from lms.djangoapps.ccx.tests.factories import CcxFactory
+from student.roles import CourseCcxCoachRole
+from student.tests.factories import (
     AdminFactory,
 )
 from xmodule.modulestore.django import SignalHandler
@@ -21,7 +19,7 @@ from openedx.core.djangoapps.content.course_overviews.models import CourseOvervi
 
 from ccx_keys.locator import CCXLocator
 
-from ..tasks import send_ccx_course_published
+from lms.djangoapps.ccx.tasks import send_ccx_course_published
 
 
 class TestSendCCXCoursePublished(ModuleStoreTestCase):
@@ -94,17 +92,14 @@ class TestSendCCXCoursePublished(ModuleStoreTestCase):
             structure = CourseStructure.objects.get(course_id=course_key)
             self.assertEqual(structure.structure, ccx_structure)
 
-    def test_course_overview_deleted(self):
-        """Check that course overview is deleted after course published signal is sent
+    def test_course_overview_cached(self):
+        """Check that course overview is cached after course published signal is sent
         """
         course_key = CCXLocator.from_course_locator(self.course.id, self.ccx.id)
-        overview = CourseOverview(id=course_key)
-        overview.version = 1
-        overview.save()
         overview = CourseOverview.objects.filter(id=course_key)
-        self.assertEqual(len(overview), 1)
+        self.assertEqual(len(overview), 0)
         with mock_signal_receiver(SignalHandler.course_published) as receiver:
             self.call_fut(self.course.id)
             self.assertEqual(receiver.call_count, 3)
             overview = CourseOverview.objects.filter(id=course_key)
-            self.assertEqual(len(overview), 0)
+            self.assertEqual(len(overview), 1)

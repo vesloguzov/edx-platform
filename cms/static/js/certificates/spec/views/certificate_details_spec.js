@@ -174,6 +174,12 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
                 this.view.$('.action-delete .delete').click();
             });
 
+            it('should scroll to top after rendering if necessary', function () {
+                $.smoothScroll = jasmine.createSpy('jQuery.smoothScroll');
+                appendSetFixtures(this.view.render().el);
+                expect($.smoothScroll).toHaveBeenCalled();
+            });
+
         });
 
         describe('Signatory details', function(){
@@ -237,24 +243,6 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
                 expect(
                     this.view.$(SELECTORS.signatory_organization_value)
                 ).toContainText('New Signatory Test Organization');
-            });
-            it('should not allow invalid data when saving changes made during in-line signatory editing', function() {
-                this.view.$(SELECTORS.edit_signatory).click();
-
-                setValuesToInputs(this.view, {
-                    inputSignatoryName: 'New Signatory Test Name'
-                });
-
-                setValuesToInputs(this.view, {
-                    inputSignatoryTitle: 'New Signatory Test Title longer than 40 characters in length'
-                });
-
-                setValuesToInputs(this.view, {
-                    inputSignatoryOrganization: 'New Signatory Test Organization'
-                });
-
-                this.view.$(SELECTORS.signatory_panel_save).click();
-                expect(this.view.$(SELECTORS.inputSignatoryTitle).parent()).toHaveClass('error');
             });
         });
     });

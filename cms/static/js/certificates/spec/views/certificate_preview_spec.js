@@ -58,7 +58,6 @@ function(_, $, Course, CertificatePreview, TemplateHelpers, ViewHelpers, AjaxHel
         });
 
         describe('Certificate preview', function() {
-
             it('course mode event should call when user choose a new mode', function () {
                 spyOn(this.view, 'courseModeChanged');
                 this.view.delegateEvents();

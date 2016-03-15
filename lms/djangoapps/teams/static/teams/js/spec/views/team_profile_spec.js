@@ -21,7 +21,9 @@ define([
             ];
 
         beforeEach(function () {
-            setFixtures('<div id="page-prompt"></div><div class="teams-content"><div class="msg-content"><div class="copy"></div></div></div>');
+            setFixtures('<div id="page-prompt"></div>' +
+                '<div class="teams-content"><div class="msg-content"><div class="copy"></div></div></div>' +
+                '<div class="profile-view"></div>');
             DiscussionSpecHelper.setUnderscoreFixtures();
         });
 
@@ -40,6 +42,7 @@ define([
         createTeamProfileView = function(requests, options) {
             teamModel = new TeamModel(createTeamModelData(options), { parse: true });
             profileView = new TeamProfileView({
+                el: $('.profile-view'),
                 teamEvents: TeamSpecHelpers.teamEvents,
                 courseID: TeamSpecHelpers.testCourseID,
                 context: TeamSpecHelpers.testContext,
@@ -85,10 +88,9 @@ define([
                 AjaxHelpers.expectJsonRequest(requests, 'GET', '/api/team/v0/teams/test-team');
                 AjaxHelpers.respondWithJson(requests, createTeamModelData({country: 'US', language: 'en'}));
             } else {
-                var requestCount = requests.length;
                 // click on Cancel button on dialog
                 $('.prompt.warning .action-secondary').click();
-                expect(requests.length).toBe(requestCount);
+                AjaxHelpers.expectNoRequests(requests);
             }
         };
 

@@ -22,7 +22,9 @@ from xmodule.exceptions import NotFoundError
 from student.models import CourseEnrollment
 from student.roles import CourseInstructorRole, CourseStaffRole
 from student.tests.factories import UserFactory
+from course_modes.tests.factories import CourseModeFactory
 from contentstore.views.certificates import CertificateManager
+from django.test.utils import override_settings
 from contentstore.utils import get_lms_link_for_certificate_web_view
 from util.testing import EventTestMixin
 
@@ -78,7 +80,7 @@ class HelperMethods(object):
                 'title': 'Title ' + str(i),
                 'signature_image_path': '/c4x/test/CSS101/asset/Signature{}.png'.format(i),
                 'id': i
-            } for i in xrange(signatory_count)
+            } for i in xrange(0, signatory_count)
 
         ]
 
@@ -97,7 +99,7 @@ class HelperMethods(object):
                 'signatories': signatories,
                 'version': CERTIFICATE_SCHEMA_VERSION,
                 'is_active': is_active
-            } for i in xrange(count)
+            } for i in xrange(0, count)
         ]
         self.course.certificates = {'certificates': certificates}
         self.save_course()
@@ -229,7 +231,7 @@ class CertificatesListHandlerTestCase(EventTestMixin, CourseTestCase, Certificat
         self.assertEqual(response.status_code, 201)
         self.assertIn("Location", response)
         content = json.loads(response.content)
-        certificate_id = self._remove_ids(content)  # pylint: disable=unused-variable
+        certificate_id = self._remove_ids(content)
         self.assertEqual(content, expected)
         self.assert_event_emitted(
             'edx.certificate.configuration.created',
@@ -324,6 +326,19 @@ class CertificatesListHandlerTestCase(EventTestMixin, CourseTestCase, Certificat
         )
         self.assertEqual(response.status_code, 403)
         self.assertIn("error", response.content)
+
+    def test_audit_course_mode_is_skipped(self):
+        """
+        Tests audit course mode is skipped when rendering certificates page.
+        """
+        CourseModeFactory.create(course_id=self.course.id)
+        CourseModeFactory.create(course_id=self.course.id, mode_slug='verified')
+        response = self.client.get_html(
+            self._url(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'verified')
+        self.assertNotContains(response, 'audit')
 
     def test_assign_unique_identifier_to_certificates(self):
         """
@@ -444,6 +459,45 @@ class CertificatesDetailHandlerTestCase(EventTestMixin, CourseTestCase, Certific
         self.assertEqual(len(course_certificates), 2)
         self.assertEqual(course_certificates[1].get('name'), u'New test certificate')
         self.assertEqual(course_certificates[1].get('description'), 'New test description')
+
+    def test_can_edit_certificate_without_is_active(self):
+        """
+        Tests user should be able to edit certificate, if is_active attribute is not present
+        for given certificate. Old courses might not have is_active attribute in certificate data.
+        """
+        certificates = [
+            {
+                'id': 1,
+                'name': 'certificate with is_active',
+                'description': 'Description ',
+                'signatories': [],
+                'version': CERTIFICATE_SCHEMA_VERSION,
+            }
+        ]
+        self.course.certificates = {'certificates': certificates}
+        self.save_course()
+
+        expected = {
+            u'id': 1,
+            u'version': CERTIFICATE_SCHEMA_VERSION,
+            u'name': u'New test certificate',
+            u'description': u'New test description',
+            u'is_active': True,
+            u'course_title': u'Course Title Override',
+            u'signatories': []
+
+        }
+
+        response = self.client.post(
+            self._url(cid=1),
+            data=json.dumps(expected),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 201)
+        content = json.loads(response.content)
+        self.assertEqual(content, expected)
 
     def test_can_delete_certificate_with_signatories(self):
         """

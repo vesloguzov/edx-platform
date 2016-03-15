@@ -15,7 +15,6 @@ from django.utils.translation import ugettext as _
 from django_comment_common.models import assign_default_role
 from django_comment_common.utils import seed_permissions_roles
 
-from xmodule.contentstore.content import StaticContent
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
@@ -161,16 +160,6 @@ def get_lms_link_for_certificate_web_view(user_id, course_key, mode):
         course_id=unicode(course_key),
         mode=mode
     )
-
-
-def course_image_url(course):
-    """Returns the image url for the course."""
-    try:
-        loc = StaticContent.compute_location(course.location.course_key, course.course_image)
-    except InvalidKeyError:
-        return ''
-    path = StaticContent.serialize_asset_key_with_slash(loc)
-    return path
 
 
 # pylint: disable=invalid-name
@@ -338,25 +327,6 @@ def get_next_int_key(items, key_getter, start_value):
     for key in itertools.count(start_value):
         if key not in existing_keys:
             return str(key)
-
-
-def has_active_web_certificate(course):
-    """
-    Returns True if given course has active web certificate configuration.
-    If given course has no active web certificate configuration returns False.
-    Returns None If `CERTIFICATES_HTML_VIEW` is not enabled of course has not enabled
-    `cert_html_view_enabled` settings.
-    """
-    cert_config = None
-    if settings.FEATURES.get('CERTIFICATES_HTML_VIEW', False) and course.cert_html_view_enabled:
-        cert_config = False
-        certificates = getattr(course, 'certificates', {})
-        configurations = certificates.get('certificates', [])
-        for config in configurations:
-            if config.get('is_active'):
-                cert_config = True
-                break
-    return cert_config
 
 
 def get_user_partition_info(xblock, schemes=None, course=None):

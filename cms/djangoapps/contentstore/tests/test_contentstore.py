@@ -682,6 +682,16 @@ class MiscCourseTests(ContentStoreTestCase):
         for expected in expected_types:
             self.assertIn(expected, resp.content)
 
+    @ddt.data("<script>alert(1)</script>", "alert('hi')", "</script><script>alert(1)</script>")
+    def test_container_handler_xss_prevent(self, malicious_code):
+        """
+        Test that XSS attack is prevented
+        """
+        resp = self.client.get_html(get_url('container_handler', self.vert_loc) + '?action=' + malicious_code)
+        self.assertEqual(resp.status_code, 200)
+        # Test that malicious code does not appear in html
+        self.assertNotIn(malicious_code, resp.content)
+
     @patch('django.conf.settings.DEPRECATED_ADVANCED_COMPONENT_TYPES', [])
     def test_advanced_components_in_edit_unit(self):
         # This could be made better, but for now let's just assert that we see the advanced modules mentioned in the page
@@ -689,7 +699,7 @@ class MiscCourseTests(ContentStoreTestCase):
         self.check_components_on_page(
             ADVANCED_COMPONENT_TYPES,
             ['Word cloud', 'Annotation', 'Text Annotation', 'Video Annotation', 'Image Annotation',
-             'Open Response Assessment', 'Peer Grading Interface', 'split_test'],
+             'split_test'],
         )
 
     @ddt.data('/Fake/asset/displayname', '\\Fake\\asset\\displayname')
@@ -1501,7 +1511,6 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         test_get_html('export_handler')
         test_get_html('course_team_handler')
         test_get_html('course_info_handler')
-        test_get_html('checklists_handler')
         test_get_html('assets_handler')
         test_get_html('tabs_handler')
         test_get_html('settings_handler')
@@ -1685,7 +1694,6 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         self.assertEqual(course.textbooks, [])
         self.assertIn('GRADER', course.grading_policy)
         self.assertIn('GRADE_CUTOFFS', course.grading_policy)
-        self.assertGreaterEqual(len(course.checklists), 4)
 
         # by fetching
         fetched_course = self.store.get_item(course.location)
@@ -1694,8 +1702,6 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         self.assertEqual(course.start, fetched_course.start)
         self.assertEqual(fetched_course.start, fetched_item.start)
         self.assertEqual(course.textbooks, fetched_course.textbooks)
-        # is this test too strict? i.e., it requires the dicts to be ==
-        self.assertEqual(course.checklists, fetched_course.checklists)
 
     # out-of-date fallback, not relevant for new courses and new edx instances
     @expectedFailure

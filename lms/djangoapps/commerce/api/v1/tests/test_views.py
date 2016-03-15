@@ -7,15 +7,22 @@ import ddt
 from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.core.urlresolvers import reverse
+from django.test import TestCase
 from django.test.utils import override_settings
+from edx_rest_api_client import exceptions
+from flaky import flaky
+from nose.plugins.attrib import attr
 import pytz
 from rest_framework.utils.encoders import JSONEncoder
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 
+from commerce.tests import TEST_API_URL, TEST_API_SIGNING_KEY
+from commerce.tests.mocks import mock_order_endpoint
+from commerce.tests.test_views import UserMixin
 from course_modes.models import CourseMode
 from student.tests.factories import UserFactory
-from verify_student.models import VerificationDeadline
+from lms.djangoapps.verify_student.models import VerificationDeadline
 
 PASSWORD = 'test'
 JSON_CONTENT_TYPE = 'application/json'
@@ -112,8 +119,8 @@ class CourseRetrieveUpdateViewTests(CourseApiViewTestMixin, ModuleStoreTestCase)
 
     @ddt.data('post', 'put')
     def test_authorization_required(self, method):
-        """ Verify create/edit operations require appropriate permissions. """
         self.user.user_permissions.clear()
+        """ Verify create/edit operations require appropriate permissions. """
         response = getattr(self.client, method)(self.path, content_type=JSON_CONTENT_TYPE)
         self.assertEqual(response.status_code, 403)
 
@@ -148,6 +155,7 @@ class CourseRetrieveUpdateViewTests(CourseApiViewTestMixin, ModuleStoreTestCase)
 
         return response, expected
 
+    @flaky  # TODO This test will fail if one of the timestamps (in actual or expected) ends in .000
     def test_update(self):
         """ Verify the view supports updating a course. """
         # Sanity check: Ensure no verification deadline is set
@@ -277,7 +285,7 @@ class CourseRetrieveUpdateViewTests(CourseApiViewTestMixin, ModuleStoreTestCase)
 
         expected_modes = [
             CourseMode(
-                mode_slug=u'honor',
+                mode_slug=CourseMode.DEFAULT_MODE_SLUG,
                 min_price=150, currency=u'USD',
                 sku=u'ABC123'
             )
@@ -305,3 +313,38 @@ class CourseRetrieveUpdateViewTests(CourseApiViewTestMixin, ModuleStoreTestCase)
             ]
         }
         self.assertDictEqual(expected_dict, json.loads(response.content))
+
+
+@attr('shard_1')
+@override_settings(ECOMMERCE_API_URL=TEST_API_URL, ECOMMERCE_API_SIGNING_KEY=TEST_API_SIGNING_KEY)
+class OrderViewTests(UserMixin, TestCase):
+    """ Tests for the basket order view. """
+    view_name = 'commerce_api:v1:orders:detail'
+    ORDER_NUMBER = 'EDX-100001'
+    MOCK_ORDER = {'number': ORDER_NUMBER}
+    path = reverse(view_name, kwargs={'number': ORDER_NUMBER})
+
+    def setUp(self):
+        super(OrderViewTests, self).setUp()
+        self._login()
+
+    def test_order_found(self):
+        """ If the order is located, the view should pass the data from the API. """
+        with mock_order_endpoint(order_number=self.ORDER_NUMBER, response=self.MOCK_ORDER):
+            response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 200)
+        actual = json.loads(response.content)
+        self.assertEqual(actual, self.MOCK_ORDER)
+
+    def test_order_not_found(self):
+        """ If the order is not found, the view should return a 404. """
+        with mock_order_endpoint(order_number=self.ORDER_NUMBER, exception=exceptions.HttpNotFoundError):
+            response = self.client.get(self.path)
+        self.assertEqual(response.status_code, 404)
+
+    def test_login_required(self):
+        """ The view should return 403 if the user is not logged in. """
+        self.client.logout()
+        response = self.client.get(self.path)
+        self.assertEqual(response.status_code, 403)

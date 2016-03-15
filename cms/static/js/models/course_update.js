@@ -8,6 +8,5 @@ define(["backbone", "jquery", "jquery.ui", "jquery.ui.datepickerDefaults"], func
             "push_notification_selected" : false
         }
     });
-    console.log($.datepicker._defaults);
     return CourseUpdate;
 }); // end define()

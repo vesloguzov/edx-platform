@@ -5,15 +5,15 @@ import json
 import ddt
 
 from django.conf import settings
-from django.core.cache import get_cache
+from django.core.cache import caches
 from django.test.client import Client, RequestFactory
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.core.urlresolvers import reverse
 from request_cache.middleware import RequestCache
 from mock import patch, ANY, Mock
-from nose.tools import assert_true, assert_equal  # pylint: disable=no-name-in-module
-from opaque_keys.edx.locations import SlashSeparatedCourseKey
+from nose.tools import assert_true, assert_equal
+from opaque_keys.edx.keys import CourseKey
 from lms.lib.comment_client import Thread
 
 from common.test.utils import MockSignalHandlerMixin, disable_signal
@@ -24,14 +24,13 @@ from django_comment_client.tests.unicode import UnicodeTestMixin
 from django_comment_common.models import Role
 from django_comment_common.utils import seed_permissions_roles, ThreadContext
 from student.tests.factories import CourseEnrollmentFactory, UserFactory, CourseAccessRoleFactory
+from lms.djangoapps.teams.tests.factories import CourseTeamFactory, CourseTeamMembershipFactory
 from util.testing import UrlResetMixin
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import check_mongo_calls
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore import ModuleStoreEnum
-
-from teams.tests.factories import CourseTeamFactory
 
 
 log = logging.getLogger(__name__)
@@ -49,7 +48,7 @@ class MockRequestSetupMixin(object):
         mock_request.return_value = self._create_response_mock(data)
 
 
-@patch('lms.lib.comment_client.utils.requests.request')
+@patch('lms.lib.comment_client.utils.requests.request', autospec=True)
 class CreateThreadGroupIdTestCase(
         MockRequestSetupMixin,
         CohortedTestCase,
@@ -84,7 +83,7 @@ class CreateThreadGroupIdTestCase(
         self._assert_json_response_contains_group_info(response)
 
 
-@patch('lms.lib.comment_client.utils.requests.request')
+@patch('lms.lib.comment_client.utils.requests.request', autospec=True)
 @disable_signal(views, 'thread_edited')
 @disable_signal(views, 'thread_voted')
 @disable_signal(views, 'thread_deleted')
@@ -349,7 +348,7 @@ class ViewsTestCaseMixin(object):
 
 
 @ddt.ddt
-@patch('lms.lib.comment_client.utils.requests.request')
+@patch('lms.lib.comment_client.utils.requests.request', autospec=True)
 @disable_signal(views, 'thread_created')
 @disable_signal(views, 'thread_edited')
 class ViewsQueryCountTestCase(UrlResetMixin, ModuleStoreTestCase, MockRequestSetupMixin, ViewsTestCaseMixin):
@@ -361,7 +360,7 @@ class ViewsQueryCountTestCase(UrlResetMixin, ModuleStoreTestCase, MockRequestSet
     def clear_caches(self):
         """Clears caches so that query count numbers are accurate."""
         for cache in settings.CACHES:
-            get_cache(cache).clear()
+            caches[cache].clear()
         RequestCache.clear_request_cache()
 
     def count_queries(func):  # pylint: disable=no-self-argument
@@ -379,10 +378,10 @@ class ViewsQueryCountTestCase(UrlResetMixin, ModuleStoreTestCase, MockRequestSet
         return inner
 
     @ddt.data(
-        (ModuleStoreEnum.Type.mongo, 3, 4, 22),
-        (ModuleStoreEnum.Type.mongo, 20, 4, 22),
-        (ModuleStoreEnum.Type.split, 3, 13, 22),
-        (ModuleStoreEnum.Type.split, 20, 13, 22),
+        (ModuleStoreEnum.Type.mongo, 3, 4, 26),
+        (ModuleStoreEnum.Type.mongo, 20, 4, 26),
+        (ModuleStoreEnum.Type.split, 3, 13, 26),
+        (ModuleStoreEnum.Type.split, 20, 13, 26),
     )
     @ddt.unpack
     @count_queries
@@ -390,10 +389,10 @@ class ViewsQueryCountTestCase(UrlResetMixin, ModuleStoreTestCase, MockRequestSet
         self.create_thread_helper(mock_request)
 
     @ddt.data(
-        (ModuleStoreEnum.Type.mongo, 3, 3, 16),
-        (ModuleStoreEnum.Type.mongo, 20, 3, 16),
-        (ModuleStoreEnum.Type.split, 3, 10, 16),
-        (ModuleStoreEnum.Type.split, 20, 10, 16),
+        (ModuleStoreEnum.Type.mongo, 3, 3, 20),
+        (ModuleStoreEnum.Type.mongo, 20, 3, 20),
+        (ModuleStoreEnum.Type.split, 3, 10, 20),
+        (ModuleStoreEnum.Type.split, 20, 10, 20),
     )
     @ddt.unpack
     @count_queries
@@ -402,7 +401,7 @@ class ViewsQueryCountTestCase(UrlResetMixin, ModuleStoreTestCase, MockRequestSet
 
 
 @ddt.ddt
-@patch('lms.lib.comment_client.utils.requests.request')
+@patch('lms.lib.comment_client.utils.requests.request', autospec=True)
 class ViewsTestCase(
         UrlResetMixin,
         ModuleStoreTestCase,
@@ -985,7 +984,7 @@ class ViewsTestCase(
         self.assertEqual(response.status_code, 200)
 
 
-@patch("lms.lib.comment_client.utils.requests.request")
+@patch("lms.lib.comment_client.utils.requests.request", autospec=True)
 @disable_signal(views, 'comment_endorsed')
 class ViewPermissionsTestCase(UrlResetMixin, ModuleStoreTestCase, MockRequestSetupMixin):
     @patch.dict("django.conf.settings.FEATURES", {"ENABLE_DISCUSSION_SERVICE": True})
@@ -1089,7 +1088,7 @@ class CreateThreadUnicodeTestCase(ModuleStoreTestCase, UnicodeTestMixin, MockReq
         self.student = UserFactory.create()
         CourseEnrollmentFactory(user=self.student, course_id=self.course.id)
 
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def _test_unicode_data(self, text, mock_request,):
         """
         Test to make sure unicode data in a thread doesn't break it.
@@ -1119,7 +1118,7 @@ class UpdateThreadUnicodeTestCase(ModuleStoreTestCase, UnicodeTestMixin, MockReq
         CourseEnrollmentFactory(user=self.student, course_id=self.course.id)
 
     @patch('django_comment_client.utils.get_discussion_categories_ids', return_value=["test_commentable"])
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def _test_unicode_data(self, text, mock_request, mock_get_discussion_id_map):
         self._set_mock_request_data(mock_request, {
             "user_id": str(self.student.id),
@@ -1148,7 +1147,7 @@ class CreateCommentUnicodeTestCase(ModuleStoreTestCase, UnicodeTestMixin, MockRe
         self.student = UserFactory.create()
         CourseEnrollmentFactory(user=self.student, course_id=self.course.id)
 
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def _test_unicode_data(self, text, mock_request):
         commentable_id = "non_team_dummy_id"
         self._set_mock_request_data(mock_request, {
@@ -1183,7 +1182,7 @@ class UpdateCommentUnicodeTestCase(ModuleStoreTestCase, UnicodeTestMixin, MockRe
         self.student = UserFactory.create()
         CourseEnrollmentFactory(user=self.student, course_id=self.course.id)
 
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def _test_unicode_data(self, text, mock_request):
         self._set_mock_request_data(mock_request, {
             "user_id": str(self.student.id),
@@ -1212,7 +1211,7 @@ class CreateSubCommentUnicodeTestCase(ModuleStoreTestCase, UnicodeTestMixin, Moc
         self.student = UserFactory.create()
         CourseEnrollmentFactory(user=self.student, course_id=self.course.id)
 
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def _test_unicode_data(self, text, mock_request):
         """
         Create a comment with unicode in it.
@@ -1226,7 +1225,7 @@ class CreateSubCommentUnicodeTestCase(ModuleStoreTestCase, UnicodeTestMixin, Moc
         request = RequestFactory().post("dummy_url", {"body": text})
         request.user = self.student
         request.view_name = "create_sub_comment"
-        Thread.commentable_id = Mock()
+        Thread.commentable_id = "test_commentable"
         try:
             response = views.create_sub_comment(
                 request, course_id=unicode(self.course.id), comment_id="dummy_comment_id"
@@ -1240,7 +1239,7 @@ class CreateSubCommentUnicodeTestCase(ModuleStoreTestCase, UnicodeTestMixin, Moc
 
 
 @ddt.ddt
-@patch("lms.lib.comment_client.utils.requests.request")
+@patch("lms.lib.comment_client.utils.requests.request", autospec=True)
 @disable_signal(views, 'thread_voted')
 @disable_signal(views, 'thread_edited')
 @disable_signal(views, 'comment_created')
@@ -1289,6 +1288,7 @@ class TeamsPermissionsTestCase(UrlResetMixin, ModuleStoreTestCase, MockRequestSe
             topic_id='topic_id',
             discussion_topic_id=self.team_commentable_id
         )
+
         self.team.add_user(self.student_in_team)
 
         # Dummy commentable ID not linked to a team
@@ -1496,7 +1496,11 @@ class TeamsPermissionsTestCase(UrlResetMixin, ModuleStoreTestCase, MockRequestSe
             self.assertEqual(response.status_code, status_code)
 
 
+TEAM_COMMENTABLE_ID = 'test-team-discussion'
+
+
 @disable_signal(views, 'comment_created')
+@ddt.ddt
 class ForumEventTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
     """
     Forum actions are expected to launch analytics events. Test these here.
@@ -1511,7 +1515,7 @@ class ForumEventTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
         CourseAccessRoleFactory(course_id=self.course.id, user=self.student, role='Wizard')
 
     @patch('eventtracking.tracker.emit')
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def test_thread_event(self, __, mock_emit):
         request = RequestFactory().post(
             "dummy_url", {
@@ -1540,7 +1544,7 @@ class ForumEventTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
         self.assertEquals(event['anonymous_to_peers'], False)
 
     @patch('eventtracking.tracker.emit')
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def test_response_event(self, mock_request, mock_emit):
         """
         Check to make sure an event is fired when a user responds to a thread.
@@ -1566,7 +1570,7 @@ class ForumEventTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
         self.assertEqual(event['options']['followed'], True)
 
     @patch('eventtracking.tracker.emit')
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def test_comment_event(self, mock_request, mock_emit):
         """
         Ensure an event is fired when someone comments on a response.
@@ -1591,6 +1595,85 @@ class ForumEventTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
         self.assertEqual(event['user_forums_roles'], ['Student'])
         self.assertEqual(event['user_course_roles'], ['Wizard'])
         self.assertEqual(event['options']['followed'], False)
+
+    @patch('eventtracking.tracker.emit')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
+    @ddt.data((
+        'create_thread',
+        'edx.forum.thread.created', {
+            'thread_type': 'discussion',
+            'body': 'Test text',
+            'title': 'Test',
+            'auto_subscribe': True
+        },
+        {'commentable_id': TEAM_COMMENTABLE_ID}
+    ), (
+        'create_comment',
+        'edx.forum.response.created',
+        {'body': 'Test comment', 'auto_subscribe': True},
+        {'thread_id': 'test_thread_id'}
+    ), (
+        'create_sub_comment',
+        'edx.forum.comment.created',
+        {'body': 'Another comment'},
+        {'comment_id': 'dummy_comment_id'}
+    ))
+    @ddt.unpack
+    def test_team_events(self, view_name, event_name, view_data, view_kwargs, mock_request, mock_emit):
+        user = self.student
+        team = CourseTeamFactory.create(discussion_topic_id=TEAM_COMMENTABLE_ID)
+        CourseTeamMembershipFactory.create(team=team, user=user)
+
+        mock_request.return_value.status_code = 200
+        self._set_mock_request_data(mock_request, {
+            'closed': False,
+            'commentable_id': TEAM_COMMENTABLE_ID,
+            'thread_id': 'test_thread_id',
+        })
+
+        request = RequestFactory().post('dummy_url', view_data)
+        request.user = user
+        request.view_name = view_name
+
+        getattr(views, view_name)(request, course_id=unicode(self.course.id), **view_kwargs)
+
+        name, event = mock_emit.call_args[0]
+        self.assertEqual(name, event_name)
+        self.assertEqual(event['team_id'], team.team_id)
+
+    @ddt.data(
+        ('vote_for_thread', 'thread_id', 'thread'),
+        ('undo_vote_for_thread', 'thread_id', 'thread'),
+        ('vote_for_comment', 'comment_id', 'response'),
+        ('undo_vote_for_comment', 'comment_id', 'response'),
+    )
+    @ddt.unpack
+    @patch('eventtracking.tracker.emit')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
+    def test_thread_voted_event(self, view_name, obj_id_name, obj_type, mock_request, mock_emit):
+        undo = view_name.startswith('undo')
+
+        self._set_mock_request_data(mock_request, {
+            'closed': False,
+            'commentable_id': 'test_commentable_id',
+            'username': 'gumprecht',
+        })
+        request = RequestFactory().post('dummy_url', {})
+        request.user = self.student
+        request.view_name = view_name
+        view_function = getattr(views, view_name)
+        kwargs = dict(course_id=unicode(self.course.id))
+        kwargs[obj_id_name] = obj_id_name
+        if not undo:
+            kwargs.update(value='up')
+        view_function(request, **kwargs)
+
+        self.assertTrue(mock_emit.called)
+        event_name, event = mock_emit.call_args[0]
+        self.assertEqual(event_name, 'edx.forum.{}.voted'.format(obj_type))
+        self.assertEqual(event['target_username'], 'gumprecht')
+        self.assertEqual(event['undo_vote'], undo)
+        self.assertEqual(event['vote_value'], 'up')
 
 
 class UsersEndpointTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
@@ -1621,7 +1704,7 @@ class UsersEndpointTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
         request.view_name = "users"
         return views.users(request, course_id=course_id.to_deprecated_string())
 
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def test_finds_exact_match(self, mock_request):
         self.set_post_counts(mock_request)
         response = self.make_request(username="other")
@@ -1631,7 +1714,7 @@ class UsersEndpointTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
             [{"id": self.other_user.id, "username": self.other_user.username}]
         )
 
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def test_finds_no_match(self, mock_request):
         self.set_post_counts(mock_request)
         response = self.make_request(username="othor")
@@ -1650,7 +1733,7 @@ class UsersEndpointTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
         self.assertNotIn("users", content)
 
     def test_course_does_not_exist(self):
-        course_id = SlashSeparatedCourseKey.from_deprecated_string("does/not/exist")
+        course_id = CourseKey.from_string("does/not/exist")
         response = self.make_request(course_id=course_id, username="other")
 
         self.assertEqual(response.status_code, 404)
@@ -1668,7 +1751,7 @@ class UsersEndpointTestCase(ModuleStoreTestCase, MockRequestSetupMixin):
         self.assertIn("errors", content)
         self.assertNotIn("users", content)
 
-    @patch('lms.lib.comment_client.utils.requests.request')
+    @patch('lms.lib.comment_client.utils.requests.request', autospec=True)
     def test_requires_matched_user_has_forum_content(self, mock_request):
         self.set_post_counts(mock_request, 0, 0)
         response = self.make_request(username="other")

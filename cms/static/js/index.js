@@ -1,6 +1,6 @@
 define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/views/utils/create_course_utils",
-    "js/views/utils/create_library_utils", "common/js/components/utils/view_utils", "common/js/components/views/feedback_notification"],
-    function (domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibraryUtilsFactory, ViewUtils, NotificationView) {
+    "js/views/utils/create_library_utils", "common/js/components/utils/view_utils"],
+    function (domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibraryUtilsFactory, ViewUtils) {
         "use strict";
         var CreateCourseUtils = new CreateCourseUtilsFactory({
             name: '.new-course-name',
@@ -93,7 +93,7 @@ define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/vie
             $('.new-course-save').on('click', saveNewCourse);
             $cancelButton.bind('click', makeCancelHandler('course'));
             CancelOnEscape($cancelButton);
-
+            CreateCourseUtils.setupOrgAutocomplete();
             CreateCourseUtils.configureHandlers();
         };
 
@@ -145,8 +145,10 @@ define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/vie
             e.preventDefault();
             $('.courses-tab').toggleClass('active', tab === 'courses');
             $('.libraries-tab').toggleClass('active', tab === 'libraries');
+            $('.programs-tab').toggleClass('active', tab === 'programs');
+
             // Also toggle this course-related notice shown below the course tab, if it is present:
-            $('.wrapper-creationrights').toggleClass('is-hidden', tab === 'libraries');
+            $('.wrapper-creationrights').toggleClass('is-hidden', tab !== 'courses');
           };
         };
 
@@ -169,12 +171,16 @@ define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/vie
         var onReady = function () {
             $('.new-course-button').bind('click', addNewCourse);
             $('.new-library-button').bind('click', addNewLibrary);
+
             $('.dismiss-button').bind('click', ViewUtils.deleteNotificationHandler(function () {
                 ViewUtils.reload();
             }));
+
             $('.action-reload').bind('click', ViewUtils.reload);
+
             $('#course-index-tabs .courses-tab').bind('click', showTab('courses'));
             $('#course-index-tabs .libraries-tab').bind('click', showTab('libraries'));
+            $('#course-index-tabs .programs-tab').bind('click', showTab('programs'));
 
             $('.toggle-checkbox').on('click', toggleCourseVisibility).enable();
         };

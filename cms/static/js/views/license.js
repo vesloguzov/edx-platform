@@ -129,7 +129,7 @@ define(["js/views/baseview", "underscore"], function(BaseView, _) {
 		for (var i=0; i<conflicts.length; i++) {
 		    // Uncheck all conflicts
 		    licenseOptions[conflicts[i]] = false;
-		    console.log(licenseOptions);
+		    // console.log(licenseOptions);
 		}
             }
 

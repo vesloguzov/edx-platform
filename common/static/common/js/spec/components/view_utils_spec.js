@@ -17,6 +17,29 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "common
                     deferred.resolve();
                     expect(link).not.toHaveClass("is-disabled");
                 });
+
+                it("uses withDisabledElement wrapper to disable element while running a Backbone event handler", function() {
+                    var link,
+                        eventCallback,
+                        event,
+                        deferred = new $.Deferred(),
+                        promise = deferred.promise(),
+                        MockView = Backbone.View.extend({
+                            testFunction: function() {
+                                return promise;
+                            }
+                        }),
+                        testView = new MockView();
+                    setFixtures("<a href='#' id='link'>ripe apples drop about my head</a>");
+                    link = $("#link");
+                    expect(link).not.toHaveClass("is-disabled");
+                    eventCallback = ViewUtils.withDisabledElement('testFunction');
+                    event = {currentTarget: link};
+                    eventCallback.apply(testView, [event]);
+                    expect(link).toHaveClass("is-disabled");
+                    deferred.resolve();
+                    expect(link).not.toHaveClass("is-disabled");
+                });
             });
 
             describe("progress notification", function() {
@@ -45,8 +68,7 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "common
 
             describe("course/library fields validation", function() {
                 describe("without unicode support", function() {
-                    // breaks Single responsibility principle
-                    xit("validates presence of field", function() {
+                    it("validates presence of field", function() {
                         var error = ViewUtils.validateURLItemEncoding('', false);
                         expect(error).toBeTruthy();
                     });
@@ -81,7 +103,8 @@ define(["jquery", "underscore", "common/js/components/utils/view_utils", "common
                         expect(error).toBeTruthy();
                     });
 
-                    it("checks for presence of spaces", function() {
+                    // breaks Single responsibility principle
+                    xit("checks for presence of spaces", function() {
                         var error = ViewUtils.validateURLItemEncoding('My Field', true);
                         expect(error).toBeTruthy();
                     });

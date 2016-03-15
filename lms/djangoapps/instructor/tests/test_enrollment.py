@@ -15,12 +15,13 @@ from django.utils.translation import override as override_language
 from nose.plugins.attrib import attr
 from ccx_keys.locator import CCXLocator
 from student.tests.factories import UserFactory
+from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 
-from ccx.tests.factories import CcxFactory
+from lms.djangoapps.ccx.tests.factories import CcxFactory
 from student.models import CourseEnrollment, CourseEnrollmentAllowed
-from student.roles import CourseCcxCoachRole  # pylint: disable=import-error
-from student.tests.factories import (  # pylint: disable=import-error
+from student.roles import CourseCcxCoachRole
+from student.tests.factories import (
     AdminFactory
 )
 from instructor.enrollment import (

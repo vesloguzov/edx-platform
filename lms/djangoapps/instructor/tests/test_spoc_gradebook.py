@@ -9,7 +9,6 @@ from student.tests.factories import UserFactory, CourseEnrollmentFactory, AdminF
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from capa.tests.response_xml_factory import StringResponseXMLFactory
 from courseware.tests.factories import StudentModuleFactory
-from xmodule.modulestore.django import modulestore
 
 
 USER_COUNT = 11
@@ -80,7 +79,6 @@ class TestGradebook(SharedModuleStoreTestCase):
             args=(self.course.id.to_deprecated_string(),)
         ))
 
-    def test_response_code(self):
         self.assertEquals(self.response.status_code, 200)
 
 
@@ -142,7 +140,6 @@ class TestLetterCutoffPolicy(TestGradebook):
         self.assertIn("grade_D {color:DarkSlateGray;}", self.response.content)
 
     def test_assigned_grades(self):
-        print self.response.content
         # Users 9-10 have >= 90% on Homeworks [2]
         # Users 9-10 have >= 90% on the class [2]
         # One use at the top of the page [1]

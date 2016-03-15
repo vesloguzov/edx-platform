@@ -26,6 +26,11 @@ from warnings import filterwarnings, simplefilter
 
 from openedx.core.lib.tempdir import mkdtemp_clean
 
+# This patch disabes the commit_on_success decorator during tests
+# in TestCase subclasses.
+from util.testing import patch_testcase
+patch_testcase()
+
 # Silence noisy logs to make troubleshooting easier when tests fail.
 import logging
 LOG_OVERRIDES = [
@@ -62,8 +67,6 @@ FEATURES['ENABLE_INSTRUCTOR_LEGACY_DASHBOARD'] = True
 FEATURES['ENABLE_SHOPPING_CART'] = True
 
 FEATURES['ENABLE_VERIFIED_CERTIFICATES'] = True
-
-FEATURES['ENABLE_CREDIT_API'] = True
 
 # Enable this feature for course staff grade downloads, to enable acceptance tests
 FEATURES['ENABLE_S3_GRADE_DOWNLOADS'] = True
@@ -129,6 +132,8 @@ XQUEUE_WAITTIME_BETWEEN_REQUESTS = 5  # seconds
 MOCK_STAFF_GRADING = True
 MOCK_PEER_GRADING = True
 
+############################ STATIC FILES #############################
+
 # TODO (cpennington): We need to figure out how envs/test.py can inject things
 # into common.py so that we don't have to repeat this sort of thing
 STATICFILES_DIRS = [
@@ -146,7 +151,9 @@ STATICFILES_DIRS += [
 # find pipelined assets will raise a ValueError.
 # http://stackoverflow.com/questions/12816941/unit-testing-with-django-pipeline
 STATICFILES_STORAGE = 'pipeline.storage.NonPackagingPipelineStorage'
-PIPELINE_ENABLED = False
+
+# Don't use compression during tests
+PIPELINE_JS_COMPRESSOR = None
 
 update_module_store_settings(
     MODULESTORE,
@@ -176,10 +183,15 @@ CONTENTSTORE = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': TEST_ROOT / 'db' / 'edx.db'
+        'NAME': TEST_ROOT / 'db' / 'edx.db',
+        'ATOMIC_REQUESTS': True,
     },
 
 }
+
+# This hack disables migrations during tests. We want to create tables directly from the models for speed.
+# See https://groups.google.com/d/msg/django-developers/PWPj3etj3-U/kCl6pMsQYYoJ.
+MIGRATION_MODULES = {app: "app.migrations_not_used_in_tests" for app in INSTALLED_APPS}
 
 CACHES = {
     # This is the cache used for most things.
@@ -214,6 +226,14 @@ CACHES = {
     },
     'course_structure_cache': {
         'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    },
+    'block_cache': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'edx_location_block_cache',
+    },
+    'lms.course_blocks': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'edx_location_course_blocks',
     },
 }
 
@@ -253,6 +273,14 @@ AUTHENTICATION_BACKENDS = (
     'third_party_auth.lti.LTIAuthBackend',
 ) + AUTHENTICATION_BACKENDS
 
+THIRD_PARTY_AUTH_CUSTOM_AUTH_FORMS = {
+    'custom1': {
+        'secret_key': 'opensesame',
+        'url': '/misc/my-custom-registration-form',
+        'error_url': '/misc/my-custom-sso-error-page'
+    },
+}
+
 ################################## OPENID #####################################
 FEATURES['AUTH_USE_OPENID'] = True
 FEATURES['AUTH_USE_OPENID_PROVIDER'] = True
@@ -269,13 +297,14 @@ OPENID_PROVIDER_TRUSTED_ROOTS = ['*']
 
 ############################## OAUTH2 Provider ################################
 FEATURES['ENABLE_OAUTH2_PROVIDER'] = True
+# don't cache courses for testing
+OIDC_COURSE_HANDLER_CACHE_TIMEOUT = 0
 
 ########################### External REST APIs #################################
 FEATURES['ENABLE_MOBILE_REST_API'] = True
 FEATURES['ENABLE_MOBILE_SOCIAL_FACEBOOK_FEATURES'] = True
 FEATURES['ENABLE_VIDEO_ABSTRACTION_LAYER_API'] = True
 FEATURES['ENABLE_COURSE_BLOCKS_NAVIGATION_API'] = True
-FEATURES['ENABLE_RENDER_XBLOCK_API'] = True
 
 ###################### Payment ##############################3
 # Enable fake payment processing page
@@ -286,7 +315,7 @@ FEATURES['ENABLE_PAYMENT_FAKE'] = True
 # the same settings, we can generate this randomly and guarantee
 # that they are using the same secret.
 from random import choice
-from string import letters, digits, punctuation  # pylint: disable=deprecated-module
+from string import letters, digits, punctuation
 RANDOM_SHARED_SECRET = ''.join(
     choice(letters + digits + punctuation)
     for x in range(250)
@@ -314,13 +343,13 @@ CELERY_RESULT_BACKEND = 'djcelery.backends.cache:CacheBackend'
 MKTG_URL_LINK_MAP = {
     'ABOUT': 'about',
     'CONTACT': 'contact',
-    'FAQ': 'help',
+    'HELP_CENTER': 'help-center',
     'COURSES': 'courses',
     'ROOT': 'root',
     'TOS': 'tos',
     'HONOR': 'honor',
     'PRIVACY': 'privacy',
-    'JOBS': 'jobs',
+    'CAREERS': 'careers',
     'NEWS': 'news',
     'PRESS': 'press',
     'BLOG': 'blog',
@@ -330,6 +359,7 @@ MKTG_URL_LINK_MAP = {
     'WHAT_IS_VERIFIED_CERT': 'verified-certificate',
 }
 
+SUPPORT_SITE_LINK = 'https://support.example.com'
 
 ############################ STATIC FILES #############################
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
@@ -486,12 +516,6 @@ FEATURES['ENABLE_EDXNOTES'] = True
 # Enable teams feature for tests.
 FEATURES['ENABLE_TEAMS'] = True
 
-# Enable teams search for tests.
-FEATURES['ENABLE_TEAMS_SEARCH'] = True
-
-# Add milestones to Installed apps for testing
-INSTALLED_APPS += ('milestones', 'openedx.core.djangoapps.call_stack_manager')
-
 # Enable courseware search for tests
 FEATURES['ENABLE_COURSEWARE_SEARCH'] = True
 
@@ -506,7 +530,7 @@ FACEBOOK_APP_ID = "Test"
 FACEBOOK_API_VERSION = "v2.2"
 
 ######### custom courses #########
-INSTALLED_APPS += ('ccx',)
+INSTALLED_APPS += ('lms.djangoapps.ccx',)
 FEATURES['CUSTOM_COURSES_EDX'] = True
 
 # Set dummy values for profile image settings.
@@ -530,3 +554,6 @@ AUTHENTICATION_BACKENDS += ('lti_provider.users.LtiBackend',)
 
 # ORGANIZATIONS
 FEATURES['ORGANIZATIONS_APP'] = True
+
+# Financial assistance page
+FEATURES['ENABLE_FINANCIAL_ASSISTANCE_FORM'] = True

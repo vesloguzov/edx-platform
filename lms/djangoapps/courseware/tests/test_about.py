@@ -58,10 +58,12 @@ class AboutTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase, EventTrackingT
         )
 
         self.purchase_course = CourseFactory.create(org='MITx', number='buyme', display_name='Course To Buy')
-        self.course_mode = CourseMode(course_id=self.purchase_course.id,
-                                      mode_slug="honor",
-                                      mode_display_name="honor cert",
-                                      min_price=10)
+        self.course_mode = CourseMode(
+            course_id=self.purchase_course.id,
+            mode_slug=CourseMode.DEFAULT_MODE_SLUG,
+            mode_display_name=CourseMode.DEFAULT_MODE_SLUG,
+            min_price=10
+        )
         self.course_mode.save()
 
     def test_anonymous_user(self):
@@ -96,7 +98,7 @@ class AboutTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase, EventTrackingT
         url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertIn("You are registered for this course", resp.content)
+        self.assertIn("You are enrolled in this course", resp.content)
         self.assertIn("View Courseware", resp.content)
 
     @override_settings(COURSE_ABOUT_VISIBILITY_PERMISSION="see_about_page")
@@ -244,12 +246,11 @@ class AboutWithCappedEnrollmentsTestCase(LoginEnrollmentTestCase, ModuleStoreTes
 
         self.enroll(self.course, verify=True)
 
-        # create a new account since the first account is already registered for the course
+        # create a new account since the first account is already enrolled in the course
         self.email = 'foo_second@test.com'
         self.password = 'bar'
         self.username = 'test_second'
-        self.create_account(self.username,
-                            self.email, self.password)
+        self.create_account(self.username, self.email, self.password)
         self.activate_user(self.email)
         self.login(self.email, self.password)
 
@@ -307,7 +308,7 @@ class AboutWithInvitationOnly(ModuleStoreTestCase):
         url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertIn(u"Register for {}".format(self.course.id.course), resp.content.decode('utf-8'))
+        self.assertIn(u"Enroll in {}".format(self.course.id.course), resp.content.decode('utf-8'))
 
         # Check that registration button is present
         self.assertIn(REG_STR, resp.content)
@@ -330,26 +331,26 @@ class AboutTestCaseShibCourse(LoginEnrollmentTestCase, ModuleStoreTestCase):
 
     def test_logged_in_shib_course(self):
         """
-        For shib courses, logged in users will see the register button, but get rejected once they click there
+        For shib courses, logged in users will see the enroll button, but get rejected once they click there
         """
         self.setup_user()
         url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertIn("OOGIE BLOOGIE", resp.content)
-        self.assertIn(u"Register for {}".format(self.course.id.course), resp.content.decode('utf-8'))
+        self.assertIn(u"Enroll in {}".format(self.course.id.course), resp.content.decode('utf-8'))
         self.assertIn(SHIB_ERROR_STR, resp.content)
         self.assertIn(REG_STR, resp.content)
 
     def test_anonymous_user_shib_course(self):
         """
-        For shib courses, anonymous users will also see the register button
+        For shib courses, anonymous users will also see the enroll button
         """
         url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertIn("OOGIE BLOOGIE", resp.content)
-        self.assertIn(u"Register for {}".format(self.course.id.course), resp.content.decode('utf-8'))
+        self.assertIn(u"Enroll in {}".format(self.course.id.course), resp.content.decode('utf-8'))
         self.assertIn(SHIB_ERROR_STR, resp.content)
         self.assertIn(REG_STR, resp.content)
 
@@ -417,8 +418,8 @@ class AboutPurchaseCourseTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         """
         course_mode = CourseMode(
             course_id=course.id,
-            mode_slug="honor",
-            mode_display_name="honor cert",
+            mode_slug=CourseMode.DEFAULT_MODE_SLUG,
+            mode_display_name=CourseMode.DEFAULT_MODE_SLUG,
             min_price=10,
         )
         course_mode.save()
@@ -472,7 +473,7 @@ class AboutPurchaseCourseTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
 
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertIn("You are registered for this course", resp.content)
+        self.assertIn("You are enrolled in this course", resp.content)
         self.assertIn("View Courseware", resp.content)
         self.assertNotIn("Add buyme to Cart <span>($10 USD)</span>", resp.content)
 
@@ -538,7 +539,7 @@ class AboutPurchaseCourseTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         # for paywalled courses
         CourseEnrollment.enroll(self.user, course.id)
 
-        # create a new account since the first account is already registered for the course
+        # create a new account since the first account is already enrolled in the course
         email = 'foo_second@test.com'
         password = 'bar'
         username = 'test_second'

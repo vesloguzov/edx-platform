@@ -94,7 +94,6 @@ GIT_IMPORT_STATIC = True
 META_UNIVERSITIES = {}
 DATADOG = {}
 EMAIL_FILE_PATH = None
-SEGMENT_IO_LMS = False
 
 MONGODB_LOG = {}
 SESSION_INACTIVITY_TIMEOUT_IN_SECONDS = None
@@ -121,11 +120,6 @@ BROKER_HEARTBEAT_CHECKRATE = 2
 
 # Each worker should only fetch one message at a time
 CELERYD_PREFETCH_MULTIPLIER = 1
-
-# Skip djcelery migrations, since we don't use the database as the broker
-SOUTH_MIGRATION_MODULES = {
-    'djcelery': 'ignore',
-}
 
 # Rename the exchange and queues for each variant
 
@@ -179,7 +173,7 @@ ENV_TOKENS = convert_tokens(ENV_TOKENS)
 # into settings some dictionary settings
 # need to be merged from common.py
 
-ENV_FEATURES = ENV_TOKENS.get('FEATURES', ENV_TOKENS.get('MITX_FEATURES', {}))
+ENV_FEATURES = ENV_TOKENS.get('FEATURES', {})
 for feature, value in ENV_FEATURES.items():
     FEATURES[feature] = value
 
@@ -283,8 +277,6 @@ vars().update(AUTH_TOKENS)
 # Manipulate imported settings with code
 #
 
-FEATURES['SEGMENT_IO_LMS'] = SEGMENT_IO_LMS
-
 if AWS_ACCESS_KEY_ID == "":
     AWS_ACCESS_KEY_ID = None
 
@@ -306,9 +298,9 @@ GRADES_DOWNLOAD_ROUTING_KEY = HIGH_MEM_QUEUE
 
 ##### Custom Courses for EdX #####
 if FEATURES.get('CUSTOM_COURSES_EDX'):
-    INSTALLED_APPS += ('ccx',)
+    INSTALLED_APPS += ('lms.djangoapps.ccx',)
     FIELD_OVERRIDE_PROVIDERS += (
-        'ccx.overrides.CustomCoursesForEdxOverrideProvider',
+        'lms.djangoapps.ccx.overrides.CustomCoursesForEdxOverrideProvider',
     )
 
 ##### Individual Due Date Extensions #####

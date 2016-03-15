@@ -3,6 +3,7 @@
 from datetime import datetime
 from uuid import uuid4
 import pytz
+from model_utils import FieldTracker
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
@@ -26,7 +27,8 @@ from xmodule_django.models import CourseKeyField
 from util.model_utils import slugify
 from student.models import LanguageField, CourseEnrollment
 from .errors import AlreadyOnTeamInCourse, NotEnrolledInCourseForTeam, ImmutableMembershipFieldException
-from teams import TEAM_DISCUSSION_CONTEXT
+from lms.djangoapps.teams.utils import emit_team_event
+from lms.djangoapps.teams import TEAM_DISCUSSION_CONTEXT
 
 
 @receiver(thread_voted)
@@ -72,6 +74,9 @@ def handle_activity(user, post, original_author_id=None):
 class CourseTeam(models.Model):
     """This model represents team related info."""
 
+    class Meta(object):
+        app_label = "teams"
+
     team_id = models.CharField(max_length=255, unique=True)
     discussion_topic_id = models.CharField(max_length=255, unique=True)
     name = models.CharField(max_length=255, db_index=True)
@@ -87,6 +92,11 @@ class CourseTeam(models.Model):
     last_activity_at = models.DateTimeField(db_index=True)  # indexed for ordering
     users = models.ManyToManyField(User, db_index=True, related_name='teams', through='CourseTeamMembership')
     team_size = models.IntegerField(default=0, db_index=True)  # indexed for ordering
+
+    field_tracker = FieldTracker()
+
+    # Don't emit changed events when these fields change.
+    FIELD_BLACKLIST = ['last_activity_at', 'team_size']
 
     @classmethod
     def create(cls, name, course_id, description, topic_id=None, country=None, language=None):
@@ -123,6 +133,9 @@ class CourseTeam(models.Model):
 
         return course_team
 
+    def __repr__(self):
+        return "<CourseTeam team_id={0.team_id}>".format(self)
+
     def add_user(self, user):
         """Adds the given user to the CourseTeam."""
         if not CourseEnrollment.is_enrolled(user, self.course_id):
@@ -144,7 +157,7 @@ class CourseTeamMembership(models.Model):
     """This model represents the membership of a single user in a single team."""
 
     class Meta(object):
-        """Stores meta information for the model."""
+        app_label = "teams"
         unique_together = (('user', 'team'),)
 
     user = models.ForeignKey(User)
@@ -164,8 +177,17 @@ class CourseTeamMembership(models.Model):
             # to set the value. Otherwise, we're trying to overwrite
             # an immutable field.
             current_value = getattr(self, name, None)
-            if current_value is not None:
-                raise ImmutableMembershipFieldException
+            if value == current_value:
+                # This is an attempt to set an immutable value to the same value
+                # to which it's already set. Don't complain - just ignore the attempt.
+                return
+            else:
+                # This is an attempt to set an immutable value to a different value.
+                # Allow it *only* if the current value is None.
+                if current_value is not None:
+                    raise ImmutableMembershipFieldException(
+                        "Field %r shouldn't change from %r to %r" % (name, current_value, value)
+                    )
         super(CourseTeamMembership, self).__setattr__(name, value)
 
     def save(self, *args, **kwargs):
@@ -180,12 +202,12 @@ class CourseTeamMembership(models.Model):
             self.last_activity_at = datetime.utcnow().replace(tzinfo=pytz.utc)
         super(CourseTeamMembership, self).save(*args, **kwargs)
         if should_reset_team_size:
-            self.team.reset_team_size()  # pylint: disable=no-member
+            self.team.reset_team_size()
 
     def delete(self, *args, **kwargs):
         """Recompute the related team's team_size after deleting a membership"""
         super(CourseTeamMembership, self).delete(*args, **kwargs)
-        self.team.reset_team_size()  # pylint: disable=no-member
+        self.team.reset_team_size()
 
     @classmethod
     def get_memberships(cls, username=None, course_ids=None, team_id=None):
@@ -240,3 +262,6 @@ class CourseTeamMembership(models.Model):
         membership.team.last_activity_at = now
         membership.team.save()
         membership.save()
+        emit_team_event('edx.team.activity_updated', membership.team.course_id, {
+            'team_id': membership.team_id,
+        })

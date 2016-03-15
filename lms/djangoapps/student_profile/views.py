@@ -18,7 +18,7 @@ from openedx.core.djangoapps.user_api.preferences.api import get_user_preference
 from student.models import User
 from microsite_configuration import microsite
 from course_owners.views import get_accessible_owner_courses
-from courseware.courses import course_image_url
+from openedx.core.lib.courses import course_image_url
 
 
 @user_passes_test(lambda u: settings.FEATURES['ALLOW_PROFILE_ANONYMOUS_ACCESS'] or u.is_authenticated())
@@ -63,6 +63,7 @@ def learner_profile_context(request, profile_username):
         ObjectDoesNotExist: the specified profile_username does not exist.
     """
     profile_user = User.objects.get(username=profile_username)
+    logged_in_user = request.user
 
     own_profile = (request.user.username == profile_username)
 

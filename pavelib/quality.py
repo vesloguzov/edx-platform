@@ -50,8 +50,7 @@ def find_fixme(options):
         apps_list = ' '.join(top_python_dirs(system))
 
         pythonpath_prefix = (
-            "PYTHONPATH={system}:{system}/lib"
-            "common/djangoapps:common/lib".format(
+            "PYTHONPATH={system}/djangoapps:common/djangoapps:common/lib".format(
                 system=system
             )
         )
@@ -105,8 +104,7 @@ def run_pylint(options):
         apps_list = ' '.join(top_python_dirs(system))
 
         pythonpath_prefix = (
-            "PYTHONPATH={system}:{system}/djangoapps:{system}/"
-            "lib:common/djangoapps:common/lib".format(
+            "PYTHONPATH={system}/djangoapps:common/djangoapps:common/lib".format(
                 system=system
             )
         )
@@ -272,11 +270,9 @@ def run_jshint(options):
     jshint_report = jshint_report_dir / "jshint.report"
     _prepare_report_dir(jshint_report_dir)
 
-    jshint_directories = ["common/static/js", "cms/static/js", "lms/static/js"]
-
     sh(
-        "jshint {list} --config .jshintrc >> {jshint_report}".format(
-            list=(" ".join(jshint_directories)), jshint_report=jshint_report
+        "jshint . --config .jshintrc >> {jshint_report}".format(
+            jshint_report=jshint_report
         ),
         ignore_error=True
     )
@@ -444,9 +440,11 @@ def run_quality(options):
 
     pylint_files = get_violations_reports("pylint")
     pylint_reports = u' '.join(pylint_files)
+    jshint_files = get_violations_reports("jshint")
+    jshint_reports = u' '.join(jshint_files)
 
     pythonpath_prefix = (
-        "PYTHONPATH=$PYTHONPATH:lms:lms/djangoapps:lms/lib:cms:cms/djangoapps:cms/lib:"
+        "PYTHONPATH=$PYTHONPATH:lms:lms/djangoapps:cms:cms/djangoapps:"
         "common:common/djangoapps:common/lib"
     )
 
@@ -465,7 +463,7 @@ def run_quality(options):
     if not run_diff_quality(
             violations_type="jshint",
             prefix=pythonpath_prefix,
-            reports=pylint_reports,
+            reports=jshint_reports,
             percentage_string=percentage_string,
             branch_string=compare_branch_string,
             dquality_dir=dquality_dir

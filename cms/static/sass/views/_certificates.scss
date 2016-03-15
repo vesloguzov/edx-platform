@@ -1,7 +1,7 @@
 // studio - views - certificates
 // ====================
 
-// Table of Contents 
+// Table of Contents
 // * +Layout - Certificates
 // * +Main - Collection
 // * +Main - Certificate
@@ -33,22 +33,44 @@
       @extend %no-content;
     }
 
-    .wrapper-certificate {
+    .wrapper-certificates {
 
       .title {
         @extend %t-title4;
         @extend %t-strong;
-        margin-bottom: ($baseline/2);
       }
 
       .copy {
         @extend %t-copy-sub1;
       }
+
+      .instructions {
+        @extend %t-copy-sub1;
+        margin-bottom: $baseline;
+      }
+    }
+
+    .certificate-settings {
+      margin-bottom: $baseline;
+    }
+
+    .actual-course-title {
+      @extend %t-strong;
+      margin-bottom: $baseline;
     }
   }
 
   .content-supplementary {
     width: flex-grid(3, 12);
+  }
+
+  .certificate-info-section{
+      overflow: auto;
+
+    .course-title-section, .course-number-section{
+      min-width: 47%;
+      @include margin-right(2%);
+    }
   }
 }
 
@@ -196,6 +218,10 @@
 
       .wrapper-form {
         padding: $baseline ($baseline*1.5);
+
+        label {
+          @extend %t-strong;
+        }
       }
 
       .action-add-signatory {
@@ -510,7 +536,7 @@
 
 // * +Signatories -Certificate
 // ====================
-// TO-DO: refactor to use collection styling where possible. 
+// TO-DO: refactor to use collection styling where possible.
 .view-certificates .certificates {
 
   .signatory-details, .signatory-edit {
@@ -531,6 +557,10 @@
 
       .signatory-image {
         margin-top: 20px;
+      }
+
+      .signature-image {
+        max-width: 450px;
       }
     }
 
@@ -677,7 +707,7 @@
         .wrapper-signature-image {
           display: block;
           width: 375px;
-          height: 200px;
+          line-height: 200px;
           overflow: hidden;
           margin: 0 auto;
           border: 1px solid $gray-l4;
@@ -687,9 +717,9 @@
         }
 
         .signature-image {
-          display: block;
+          vertical-align: middle;
           width: 100%;
-          min-height: 100%;
+          max-height: 100%;
         }
       }
     }
