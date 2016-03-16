@@ -5,6 +5,7 @@ when you run "manage.py test".
 
 Replace this with more appropriate tests for your application.
 """
+import ddt
 import json
 import datetime
 from unittest import skipIf, skipUnless, skip
@@ -17,8 +18,10 @@ from django.core.urlresolvers import reverse
 from django.core import mail
 from django.conf import settings
 
+from xmodule.modulestore import ModuleStoreEnum
+from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.factories import CourseFactory
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from rest_framework import mixins
 
 from student.models import CourseEnrollment
@@ -180,7 +183,7 @@ class UserSerializerTest(TestCase):
 
 @skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @override_settings(EDX_API_KEY=TEST_API_KEY)
-class APITest(ModuleStoreTestCase):
+class APITest(SharedModuleStoreTestCase):
     @override_settings(EDX_API_KEY='')
     def test_empty_api_key_fail(self):
         if getattr(self, 'list_url', False):
@@ -335,20 +338,26 @@ class UserViewSetTest(APITest):
         self.assertTrue(CourseEnrollment.is_enrolled(user, course.id))
 
 
+@ddt.ddt
 class CourseViewSetTest(APITest):
-    def setUp(self):
-        super(CourseViewSetTest, self).setUp()
-        self.course = CourseFactory.create()
-        self.list_url = reverse('course-list')
-        self.detail_url = reverse('course-detail', kwargs={'course_id': self.course.id.to_deprecated_string()})
-
     def test_list(self):
-        response = self._request_with_auth('get', self.list_url)
+        course = CourseFactory.create()
+        list_url = reverse('course-list')
+        response = self._request_with_auth('get', list_url)
         self.assertEquals(response.status_code, 200)
 
-    def test_detail(self):
-        response = self._request_with_auth('get', self.detail_url)
+    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
+    def test_detail(self, modulestore_type):
+        """
+        Test course info is correctly fetched from any modulestore
+        """
+        with modulestore().default_store(modulestore_type):
+            course = CourseFactory.create()
+        detail_url = reverse('course-detail', kwargs={'course_id': course.id.to_deprecated_string()})
+
+        response = self._request_with_auth('get', detail_url)
         self.assertEquals(response.status_code, 200)
+
 
 
 class EnrollmentViewSetTest(APITest):
