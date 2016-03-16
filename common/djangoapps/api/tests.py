@@ -22,6 +22,7 @@ from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.factories import CourseFactory
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
+from opaque_keys.edx.locator import CourseLocator
 from rest_framework import mixins
 
 from student.models import CourseEnrollment
@@ -337,6 +338,11 @@ class UserViewSetTest(APITest):
         user = User.objects.get(username=data['uid'])
         self.assertTrue(CourseEnrollment.is_enrolled(user, course.id))
 
+    def test_get_nonexistent_user(self):
+        detail_url = reverse('profile-detail', kwargs={'username': 'nonexistent'})
+        response = self._request_with_auth('get', detail_url)
+        self.assertEqual(response.status_code, 404)
+
 
 @ddt.ddt
 class CourseViewSetTest(APITest):
@@ -353,13 +359,18 @@ class CourseViewSetTest(APITest):
         """
         with modulestore().default_store(modulestore_type):
             course = CourseFactory.create()
-        detail_url = reverse('course-detail', kwargs={'course_id': course.id.to_deprecated_string()})
+        detail_url = reverse('course-detail', kwargs={'course_id': unicode(course.id)})
 
         response = self._request_with_auth('get', detail_url)
         self.assertEquals(response.status_code, 200)
 
+    def test_nonexistent_course(self):
+        detail_url = reverse('course-detail', kwargs={'course_id': CourseLocator(org='no_org', course='no_course', run='1')})
+        response = self._request_with_auth('get', detail_url)
+        self.assertEquals(response.status_code, 404)
 
 
+@ddt.ddt
 class EnrollmentViewSetTest(APITest):
     def setUp(self):
         super(EnrollmentViewSetTest, self).setUp()
@@ -405,13 +416,24 @@ class EnrollmentViewSetTest(APITest):
             mail.outbox[0].body
         )
 
+    @patch.dict('django.conf.settings.FEATURES', {'SEND_ENROLLMENT_EMAIL': True})
+    @ddt.data((True, 0), (False, 1))
+    @ddt.unpack
+    def test_skip_enrollment_email(self, skip_enrollment_email, email_count):
+        url = reverse('enrollment-enroll', kwargs={'user_username': self.user.username,
+                                                   'course_id': self.course_other.id})
+        response = self._request_with_auth('post', url,
+            data=json.dumps({'skip_enrollment_email': skip_enrollment_email}),
+            content_type='application/json'
+        )
+        self.assertEquals(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), email_count)
+
     def test_enroll_error_if_enrolled(self):
         url = reverse('enrollment-enroll', kwargs={'user_username': self.user.username,
                                                    'course_id': self.course_enrolled.id})
         response = self._request_with_auth('post', url)
         self.assertEquals(response.status_code, 400)
-
-    # TODO: test enrollment to courses with different modes
 
     def test_unenroll(self):
         url = reverse('enrollment-unenroll', kwargs={'user_username': self.user.username,
@@ -457,3 +479,21 @@ class EnrollmentViewSetTest(APITest):
                                                    'course_id': course_enrollment_closed.id})
         response = self._request_with_auth('post', url)
         self.assertEquals(response.status_code, 400)
+
+    @ddt.data('enrollment-enroll', 'enrollment-unenroll')
+    def test_nonexistent_user(self, view_name):
+        url = reverse(view_name, kwargs={
+            'user_username': 'nonexistent_user',
+            'course_id': self.course_enrolled.id
+        })
+        response = self._request_with_auth('post', url)
+        self.assertEquals(response.status_code, 404)
+
+    @ddt.data('enrollment-enroll', 'enrollment-unenroll')
+    def test_nonexistent_course(self, view_name):
+        url = reverse(view_name, kwargs={
+            'user_username': self.user.username,
+            'course_id': CourseLocator(org='no_org', course='no_course', run='1')
+        })
+        response = self._request_with_auth('post', url)
+        self.assertEquals(response.status_code, 404)
