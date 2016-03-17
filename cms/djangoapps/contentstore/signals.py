@@ -10,7 +10,7 @@ from contentstore.courseware_index import CoursewareSearchIndexer, LibrarySearch
 from contentstore.proctoring import register_special_exams
 from openedx.core.djangoapps.credit.signals import on_course_publish
 
-import course_owners.models
+from openedx.core.djangoapps import course_owners
 
 
 @receiver(SignalHandler.course_published)

@@ -15,7 +15,7 @@ from xmodule.modulestore.tests.factories import CourseFactory
 from util.testing import UrlResetMixin
 from student.tests.factories import UserFactory
 from student.roles import CourseStaffRole
-from course_owners.models import CourseOwnership
+from openedx.core.djangoapps.course_owners.models import CourseOwnership
 from openedx.core.djangoapps.user_api.preferences.api import set_user_preference
 from openedx.core.djangoapps.user_api.accounts import ACCOUNT_VISIBILITY_PREF_KEY, PRIVATE_VISIBILITY
 
@@ -127,7 +127,10 @@ class LearnerProfileViewTest(UrlResetMixin, TestCase):
             self.assertIn(attribute, response.content)
 
 
-@override_settings(COURSE_CATALOG_VISIBILITY_PERMISSION='see_in_catalog', COURSE_LISTINGS={})
+@override_settings(
+    COURSE_CATALOG_VISIBILITY_PERMISSION='see_in_catalog',
+    COURSE_LISTINGS={}
+)
 class CourseOwnerProfileViewTest(ModuleStoreTestCase):
     """Tests for profile view of users authoring any courses"""
 
@@ -139,12 +142,13 @@ class CourseOwnerProfileViewTest(ModuleStoreTestCase):
         self.user = UserFactory.create(username=self.USERNAME, password=self.PASSWORD)
         self.client.login(username=self.USERNAME, password=self.PASSWORD)
 
-        self.course = CourseFactory.create(user_id=self.user.id)
+        self.course = CourseFactory.create(user_id=self.user.id, emit_signals=True)
         CourseOwnership.objects.create(course_id=self.course.id, user=self.user)
 
         self.hidden_course = CourseFactory.create(
             user_id=self.user.id,
-            metadata={'catalog_visibility': 'about'}
+            metadata={'catalog_visibility': 'about'},
+            emit_signals=True
         )
         # suppose ordinary case when owner is a staff member of a course team
         CourseStaffRole(self.hidden_course.id).add_users(self.user)

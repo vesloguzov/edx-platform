@@ -807,7 +807,7 @@ INSTALLED_APPS = (
     'openedx.core.djangoapps.credit',
 
     # Storing information about users creating courses
-    'course_owners',
+    'openedx.core.djangoapps.course_owners',
 
     'xblock_django',
 

@@ -14,7 +14,7 @@ from xmodule.modulestore.tests.factories import CourseFactory
 
 from student.tests.factories import UserFactory
 
-from course_owners.models import CourseOwnership
+from openedx.core.djangoapps.course_owners.models import CourseOwnership
 
 
 @unittest.skipUnless(settings.ROOT_URLCONF == 'cms.urls', 'Test only valid in cms')

@@ -379,6 +379,9 @@ FEATURES = {
     # Teams feature
     'ENABLE_TEAMS': True,
 
+    # Learner profile access for anonymous user
+    'ALLOW_PROFILE_ANONYMOUS_ACCESS': False,
+
     # Show video bumper in LMS
     'ENABLE_VIDEO_BUMPER': False,
 
@@ -1935,7 +1938,7 @@ INSTALLED_APPS = (
     'openedx.core.djangoapps.credit',
 
     # Storing information about users creating courses
-    'course_owners',
+    'openedx.core.djangoapps.course_owners',
 
     # Course teams
     'lms.djangoapps.teams',

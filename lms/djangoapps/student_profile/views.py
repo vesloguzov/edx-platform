@@ -15,10 +15,9 @@ from openedx.core.djangoapps.user_api.accounts.serializers import PROFILE_IMAGE_
 from openedx.core.djangoapps.user_api.errors import UserNotFound, UserNotAuthorized
 from openedx.core.djangoapps.user_api.accounts import ACCOUNT_VISIBILITY_PREF_KEY, ALL_USERS_VISIBILITY
 from openedx.core.djangoapps.user_api.preferences.api import get_user_preferences
+from openedx.core.djangoapps.course_owners.views import get_accessible_owner_courses
 from student.models import User
 from microsite_configuration import microsite
-from course_owners.views import get_accessible_owner_courses
-from openedx.core.lib.courses import course_image_url
 
 
 @user_passes_test(lambda u: settings.FEATURES['ALLOW_PROFILE_ANONYMOUS_ACCESS'] or u.is_authenticated())
@@ -117,6 +116,6 @@ def _get_owned_courses(request, owner, preferences):
         'number': course.display_number_with_default,
         'org': course.display_org_with_default,
         'start_datetime_text': course.start_datetime_text(),
-        'course_image': course_image_url(course),
+        'course_image': course.course_image_url,
         'about_url': reverse('about_course', args=[course.id.to_deprecated_string()])
     } for course in courses]
