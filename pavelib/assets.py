@@ -24,6 +24,7 @@ SASS_DIRS = [
     path("lms/static/sass"),
     path("lms/static/themed_sass"),
     path("cms/static/sass"),
+    path("cms/static/themed_sass"),
     path("common/static/sass"),
     path("lms/static/certificates/sass"),
 ]

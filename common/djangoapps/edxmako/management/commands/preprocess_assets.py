@@ -47,7 +47,7 @@ class Command(BaseCommand):
                 studio_theme_name if use_custom_studio_theme else None
             )
 
-    def process_one_file(self, source_file, dest_dir, theme_name):
+    def process_one_file(self, source_file, dest_dir, theme_name, studio_theme_name):
         """Pre-process a .scss file to replace our markers with real code."""
         with open(source_file) as fsource:
             original_content = content = fsource.read()
