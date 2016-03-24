@@ -63,6 +63,17 @@ class ShortcutsTests(UrlResetMixin, TestCase):
                 '//' + other_service_base + '/about'
             )
 
+    @override_settings(
+        ENABLE_MKTG_SITE=False, MKTG_URL_LINK_MAP={'ABOUT': 'login'},
+        SERVICE_VARIANT_FOR_MKTG_LINKS=settings.ROOT_URLCONF[:3],
+        SERVICE_VARIANT='some_test_service_variant')
+    def test_test_service_variant_for_marketing_links(self):
+        """
+        Test that marketing links are correctly empty for test service variant (e.g. bokchoy)
+        """
+        self.assertEquals(marketing_link('ROOT'), '#')
+        self.assertEquals(marketing_link('ABOUT'), '#')
+
     @override_settings(MKTG_URLS={'ROOT': 'dummy-root', 'ABOUT': '/about-us'})
     @override_settings(MKTG_URL_LINK_MAP={'ABOUT': 'login'})
     @override_settings(SERVICE_VARIANT_FOR_MKTG_LINKS=settings.ROOT_URLCONF[:3])

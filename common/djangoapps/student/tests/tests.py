@@ -900,13 +900,14 @@ class AnonymousLookupTable(ModuleStoreTestCase):
 
 
 @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+@override_settings(COURSE_LISTINGS={})
 class IndexViewTest(ModuleStoreTestCase):
     """
     Tests for index view course listing
     """
     def setUp(self):
         super(IndexViewTest, self).setUp()
-        self.course = CourseFactory.create()
+        self.course = CourseFactory.create(emit_signals=True)
         self.client = Client()
         cache.clear()
 
@@ -924,7 +925,8 @@ class IndexViewTest(ModuleStoreTestCase):
             org='testx',
             number='index_page_course',
             run='test',
-            display_name='index page course'
+            display_name='index page course',
+            emit_signals=True
         )
 
         response = self.client.get(reverse('root'))

@@ -108,7 +108,7 @@ def enable_studio_theme():
     theme_root = settings.ENV_ROOT / "themes" / settings.STUDIO_THEME_NAME
 
     # Include the theme's templates in the template search paths
-    settings.TEMPLATE_DIRS.insert(0, theme_root / 'templates')
+    settings.DEFAULT_TEMPLATE_ENGINE['DIRS'].insert(0, theme_root / 'templates')
     edxmako.paths.add_lookup('main', theme_root / 'templates', prepend=True)
 
     # Namespace the theme's static files to 'themes/<theme_name>' to

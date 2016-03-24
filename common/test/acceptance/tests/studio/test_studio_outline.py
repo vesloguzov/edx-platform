@@ -378,14 +378,15 @@ class EditingSectionsTest(CourseOutlineTest):
         self.assertTrue(modal.has_policy())
 
         # Verify initial values
-        self.assertEqual(modal.release_date, u'1970-1-1')
+        self.assertEqual(modal.release_date, u'1970-01-01')
         self.assertEqual(modal.release_time, u'00:00')
         self.assertEqual(modal.due_date, u'')
         self.assertEqual(modal.due_time, u'')
         self.assertEqual(modal.policy, u'Not Graded')
 
         # Set new values
-        modal.release_date = '1972-12-3'
+        modal.release_date = '1972-03-12'
+        # modal.release_date = '1972-12-03'
         modal.release_time = '04:01'
         modal.due_date = '2014-7-21'
         modal.due_time = '23:39'
@@ -428,10 +429,10 @@ class EditingSectionsTest(CourseOutlineTest):
         self.assertFalse(modal.has_policy())
 
         # Verify initial value
-        self.assertEqual(modal.release_date, u'1970-1-1')
+        self.assertEqual(modal.release_date, u'1970-01-01')
 
         # Set new value
-        modal.release_date = '1969-5-14'
+        modal.release_date = '1969-05-14'
 
         modal.save()
         self.assertIn(u'Released: May 14, 1969', section.release_date)
@@ -475,7 +476,7 @@ class EditingSectionsTest(CourseOutlineTest):
             When I open the settings modal for the subsection
             And I pressed save
             And I open the settings modal for the section
-            And I change the release date to 07/20/1969
+            And I change the release date to 1969-07-20
             And I press save
             Then the subsection and the section have the release date 07/20/1969
         """
@@ -485,7 +486,7 @@ class EditingSectionsTest(CourseOutlineTest):
         modal.save()
 
         modal = self.course_outline_page.section_at(0).edit()
-        modal.release_date = '7/20/1969'
+        modal.release_date = '1969-07-20'
         modal.save()
 
         release_text = 'Released: Jul 20, 1969'

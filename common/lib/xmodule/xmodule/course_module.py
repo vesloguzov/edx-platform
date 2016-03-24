@@ -472,8 +472,8 @@ class CourseFields(object):
             "You can also set the course image on the Settings & Details page."
         ),
         scope=Scope.settings,
-        # Ensure that courses imported from XML keep their image
-        default="images_course_image.jpg"
+        # Empty default value enabling default image in LMS
+        default=""
     )
     issue_badges = Boolean(
         display_name=_("Issue Open Badges"),

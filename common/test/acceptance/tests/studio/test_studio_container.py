@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Acceptance tests for Studio related to the container page.
 The container page is used both for displaying units, and
@@ -1122,17 +1123,30 @@ class ProblemCategoryTabsTest(ContainerBase):
         self.go_to_unit_page()
         page = ContainerPage(self.browser, None)
 
+        # expected_components = [
+        #     "Blank Common Problem",
+        #     "Checkboxes",
+        #     "Dropdown",
+        #     "Multiple Choice",
+        #     "Numerical Input",
+        #     "Text Input",
+        #     "Checkboxes with Hints and Feedback",
+        #     "Dropdown with Hints and Feedback",
+        #     "Multiple Choice with Hints and Feedback",
+        #     "Numerical Input with Hints and Feedback",
+        #     "Text Input with Hints and Feedback",
+        # ]
         expected_components = [
-            "Blank Common Problem",
-            "Checkboxes",
-            "Dropdown",
-            "Multiple Choice",
-            "Numerical Input",
-            "Text Input",
-            "Checkboxes with Hints and Feedback",
-            "Dropdown with Hints and Feedback",
-            "Multiple Choice with Hints and Feedback",
-            "Numerical Input with Hints and Feedback",
-            "Text Input with Hints and Feedback",
+            u"Выбор варианта",
+            u"Выпадающий список",
+            u"Пустая задача",
+            u"Текстовый ввод",
+            u"Флажки",
+            u"Числовой ввод",
+            u"Выбор варианта с подсказками",
+            u"Выпадающий список с подсказками",
+            u"Текстовый ввод с подсказками",
+            u"Флажки с подсказками",
+            u"Числовой ввод с подсказками",
         ]
         self.assertEqual(page.get_category_tab_components('problem', 1), expected_components)

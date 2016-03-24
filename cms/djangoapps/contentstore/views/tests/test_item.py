@@ -1355,11 +1355,11 @@ class TestComponentTemplates(CourseTestCase):
         template_dict = next((template for template in self.templates if template.get('type') == template_type), None)
         return template_dict.get('templates') if template_dict else None
 
-    def get_template(self, templates, display_name):
+    def get_template(self, templates, boilerplate_name):
         """
         Returns the template which has the specified display name.
         """
-        return next((template for template in templates if template.get('display_name') == display_name), None)
+        return next((template for template in templates if template.get('boilerplate_name') == boilerplate_name), None)
 
     def test_basic_components(self):
         """
@@ -1408,10 +1408,11 @@ class TestComponentTemplates(CourseTestCase):
         Test the handling of advanced problem templates.
         """
         problem_templates = self.get_templates_of_type('problem')
-        circuit_template = self.get_template(problem_templates, u'Circuit Schematic Builder')
+        circuit_template = self.get_template(problem_templates, 'circuitschematic.yaml')
         self.assertIsNotNone(circuit_template)
         self.assertEqual(circuit_template.get('category'), 'problem')
-        self.assertEqual(circuit_template.get('boilerplate_name'), 'circuitschematic.yaml')
+        # TODO: enable check when proper translation of templates would be enabled
+        # self.assertEqual(circuit_template.get('display_name'), u'Circuit Schematic Builder')
 
     @patch('django.conf.settings.DEPRECATED_ADVANCED_COMPONENT_TYPES', ["poll", "survey"])
     def test_deprecated_no_advance_component_button(self):

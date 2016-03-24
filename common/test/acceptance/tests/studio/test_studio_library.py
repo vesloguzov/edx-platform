@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Acceptance tests for Content Libraries in Studio
 """
@@ -101,7 +102,8 @@ class LibraryEditPageTest(StudioLibraryTest):
         """
         self.assertEqual(len(self.lib_page.xblocks), 0)
         # Create a new problem block:
-        add_component(self.lib_page, "problem", "Multiple Choice")
+        # add_component(self.lib_page, "problem", "Multiple Choice")
+        add_component(self.lib_page, "problem", u"Выбор варианта")
         self.assertEqual(len(self.lib_page.xblocks), 1)
         problem_block = self.lib_page.xblocks[0]
         # Edit it:
@@ -143,9 +145,11 @@ class LibraryEditPageTest(StudioLibraryTest):
         """
         self.assertEqual(len(self.lib_page.xblocks), 0)
         for _ in range(10):
-            add_component(self.lib_page, "problem", "Multiple Choice")
+            # add_component(self.lib_page, "problem", "Multiple Choice")
+            add_component(self.lib_page, "problem", u"Выбор варианта")
         self.assertEqual(len(self.lib_page.xblocks), 10)
-        add_component(self.lib_page, "problem", "Multiple Choice")
+        # add_component(self.lib_page, "problem", "Multiple Choice")
+        add_component(self.lib_page, "problem", u"Выбор варианта")
         self.assertEqual(len(self.lib_page.xblocks), 1)
         self.lib_page.click_delete_button(self.lib_page.xblocks[0].locator)
         self.assertEqual(len(self.lib_page.xblocks), 10)
@@ -161,7 +165,8 @@ class LibraryEditPageTest(StudioLibraryTest):
         """
         self.assertEqual(len(self.lib_page.xblocks), 0)
         self.assertTrue(self.lib_page.nav_disabled(position))
-        add_component(self.lib_page, "problem", "Multiple Choice")
+        # add_component(self.lib_page, "problem", "Multiple Choice")
+        add_component(self.lib_page, "problem", u"Выбор варианта")
         self.assertTrue(self.lib_page.nav_disabled(position))
 
     def test_delete_deletes_only_desired_block(self):
@@ -175,15 +180,17 @@ class LibraryEditPageTest(StudioLibraryTest):
         And Blank Common Problem XBlock is deleted
         """
         self.assertEqual(len(self.lib_page.xblocks), 0)
-        add_component(self.lib_page, "problem", "Blank Common Problem")
-        add_component(self.lib_page, "problem", "Checkboxes")
+        # add_component(self.lib_page, "problem", "Blank Common Problem")
+        add_component(self.lib_page, "problem", u"Пустая задача")
+        # add_component(self.lib_page, "problem", "Checkboxes")
+        add_component(self.lib_page, "problem", u"Флажки")
         self.assertEqual(len(self.lib_page.xblocks), 2)
-        self.assertIn("Blank Common Problem", self.lib_page.xblocks[0].name)
-        self.assertIn("Checkboxes", self.lib_page.xblocks[1].name)
+        self.assertIn(u"Пустая задача", self.lib_page.xblocks[0].name)
+        self.assertIn(u"Флажки", self.lib_page.xblocks[1].name)
         self.lib_page.click_delete_button(self.lib_page.xblocks[0].locator)
         self.assertEqual(len(self.lib_page.xblocks), 1)
         problem_block = self.lib_page.xblocks[0]
-        self.assertIn("Checkboxes", problem_block.name)
+        self.assertIn(u"Флажки", problem_block.name)
 
 
 @attr('shard_2')
@@ -316,10 +323,12 @@ class LibraryNavigationTest(StudioLibraryTest):
         self.assertEqual(len(self.lib_page.xblocks), 10)
         self.assertEqual(self.lib_page.get_page_number(), '1')
         self.assertEqual(self.lib_page.xblocks[0].name, '1')
-        add_component(self.lib_page, "problem", "Multiple Choice")
+        # add_component(self.lib_page, "problem", "Multiple Choice")
+        add_component(self.lib_page, "problem", u"Выбор варианта")
         self.assertEqual(len(self.lib_page.xblocks), 1)
         self.assertEqual(self.lib_page.get_page_number(), '5')
-        self.assertEqual(self.lib_page.xblocks[0].name, "Multiple Choice")
+        # self.assertEqual(self.lib_page.xblocks[0].name, "Multiple choice")
+        self.assertEqual(self.lib_page.xblocks[0].name, u"Выбор варианта")
         self.lib_page.click_delete_button(self.lib_page.xblocks[0].locator)
         self.assertEqual(len(self.lib_page.xblocks), 10)
         self.assertEqual(self.lib_page.get_page_number(), '4')
@@ -427,20 +436,24 @@ class LibraryNavigationTest(StudioLibraryTest):
         self.assertTrue(self.lib_page.are_previews_showing())
         self.lib_page.toggle_previews()
         self.assertFalse(self.lib_page.are_previews_showing())
-        add_component(self.lib_page, "problem", "Checkboxes")
+        # add_component(self.lib_page, "problem", "Checkboxes")
+        add_component(self.lib_page, "problem", u"Флажки")
         self.assertEqual(self.lib_page.get_page_number(), '5')
         first_added = self.lib_page.xblocks[0]
-        self.assertIn("Checkboxes", first_added.name)
+        # self.assertIn("Checkboxes", first_added.name)
+        self.assertIn(u"Флажки", first_added.name)
         self.assertFalse(self.lib_page.xblocks[0].is_placeholder())
         self.lib_page.visit()
         self.lib_page.wait_until_ready()
         self.lib_page.go_to_page(5)
         self.assertTrue(self.lib_page.xblocks[0].is_placeholder())
-        add_component(self.lib_page, "problem", "Multiple Choice")
+        # add_component(self.lib_page, "problem", "Multiple Choice")
+        add_component(self.lib_page, "problem", u"Выбор варианта")
         # DOM has detatched the element since last assignment
         first_added = self.lib_page.xblocks[0]
         second_added = self.lib_page.xblocks[1]
-        self.assertIn("Multiple Choice", second_added.name)
+        # self.assertIn("Multiple Choice", second_added.name)
+        self.assertIn(u"Выбор варианта", second_added.name)
         self.assertFalse(second_added.is_placeholder())
         self.assertTrue(first_added.is_placeholder())
 
