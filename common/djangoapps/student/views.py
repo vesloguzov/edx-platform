@@ -604,7 +604,6 @@ def dashboard(request):
         and modulestore().get_modulestore_type(enrollment.course_id) != ModuleStoreEnum.Type.xml
         and modulestore().get_course(enrollment.course_id).course_edit_method == 'Studio'
     )
-    print 'STUDIO_LINKS:', show_studio_links_for
 
     # Get any programs associated with courses being displayed.
     # This is passed along in the template context to allow rendering of
