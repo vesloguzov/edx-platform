@@ -216,6 +216,9 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = ()
 CORS_ORIGIN_ALLOW_ALL = True
 
+######################## Eduardo-specific features ##################
+FEATURES['ALLOW_PROFILE_ANONYMOUS_ACCESS'] = True
+
 
 #####################################################################
 # See if the developer has any local overrides.
