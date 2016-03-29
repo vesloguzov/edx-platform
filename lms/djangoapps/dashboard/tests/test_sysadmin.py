@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Provide tests for sysadmin dashboard feature in sysadmin.py
 """
@@ -391,6 +392,22 @@ class TestSysadmin(SysadminBaseTestCase):
         self.assertIn(','.join('"' + c + '"' for c in columns),
                       response.content)
 
+        self._rm_edx4edx()
+
+    @override_settings(LANGUAGE_CODE='ru')
+    def test_staff_unicode_csv(self):
+        """Make sure unicode is handled correctly"""
+        self._setstaff_login()
+        self._add_edx4edx()
+
+        def_ms = modulestore()
+        course = def_ms.get_course(SlashSeparatedCourseKey('MITx', 'edx4edx', 'edx4edx'))
+        CourseStaffRole(course.id).add_users(self.user)
+
+        response = self.client.post(reverse('sysadmin_staffing'),
+                                    {'action': 'get_staff_csv', })
+        self.assertEqual(200, response.status_code)
+        self.assertIn(u'роль'.encode('utf-8'), response.content)
         self._rm_edx4edx()
 
     def test_enrollment_page(self):
