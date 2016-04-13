@@ -907,7 +907,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
                 u"required": True,
                 u"label": u"Public username",
                 u"placeholder": u"JaneDoe",
-                u"instructions": u"The name that will identify you in your courses - <strong>(cannot be changed later)</strong>",  # pylint: disable=line-too-long
+                u"instructions": u"Use only latin characters, numbers, underscores (_), and hyphens (-), no spaces allowed. This name will identify you in your courses - <strong>(cannot be changed later)</strong>",  # pylint: disable=line-too-long
                 u"restrictions": {
                     "min_length": USERNAME_MIN_LENGTH,
                     "max_length": USERNAME_MAX_LENGTH
@@ -995,7 +995,7 @@ class RegistrationViewTest(ThirdPartyAuthTestMixin, ApiTestCase):
                     u"required": True,
                     u"label": u"Public username",
                     u"placeholder": u"JaneDoe",
-                    u"instructions": u"The name that will identify you in your courses - <strong>(cannot be changed later)</strong>",  # pylint: disable=line-too-long
+                    u"instructions": u"Use only latin characters, numbers, underscores (_), and hyphens (-), no spaces allowed. This name will identify you in your courses - <strong>(cannot be changed later)</strong>",  # pylint: disable=line-too-long
                     u"restrictions": {
                         "min_length": USERNAME_MIN_LENGTH,
                         "max_length": USERNAME_MAX_LENGTH

@@ -392,8 +392,8 @@ class RegistrationView(APIView):
         username_instructions = _(
             # Translators: These instructions appear on the registration form, immediately
             # below a field meant to hold the user's public username.
-            u"The name that will identify you in your courses - "
-            u"{bold_start}(cannot be changed later){bold_end}"
+            u"Use only latin characters, numbers, underscores (_), and hyphens (-), no spaces allowed. "
+            u"This name will identify you in your courses - {bold_start}(cannot be changed later){bold_end}"
         ).format(bold_start=u'<strong>', bold_end=u'</strong>')
 
         # Translators: This example username is used as a placeholder in
