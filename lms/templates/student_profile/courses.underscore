@@ -1,11 +1,22 @@
 <section class="courses">
-  <h2><%- interpolate(gettext("%s's MOOCs"), [username]) %></h2>
+  <h2>
+    <%- interpolate(
+              gettext("%s's MOOCs"),
+              [username]
+    ) %>
+  </h2>
   <p>
     <%- gettext("Browse free online courses in a variety of subjects.") %>
     <% if (paid_courses_available) { %>
-    <%- interpolate(gettext("%s's courses found below can be audited free or students can choose to receive a verified certificate for a small fee."), [username]) %>
+    <%- interpolate(
+      gettext("%s's courses found below can be audited free or students can choose to receive a verified certificate for a small fee."),
+      [username]
+    ) %>
     <% } else { %>
-    <%- interpolate(gettext("%s's courses found below can be audited free."), [username]) %>
+    <%- interpolate(
+      gettext("%s's courses found below can be audited free."),r
+      [username]
+    ) %>
     <% } %>
     <%- gettext("Select a course to learn more.") %>
   </p>

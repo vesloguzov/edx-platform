@@ -25,8 +25,10 @@
             <button class="toggle-collapse ccx-button-link" aria-expanded="false">
               <i class="fa fa-caret-right"></i>
               <span class="sr">
-                <%- interpolate(gettext('toggle chapter %(displayName)s'),
-                  {displayName: chapter.display_name}, true) %>
+                <%- interpolate(
+                  gettext('toggle chapter %(displayName)s'),
+                  {displayName: chapter.display_name}, true
+                ) %>
               </span>
             </button>
             <span class="sr">
