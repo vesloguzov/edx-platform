@@ -323,9 +323,9 @@ def css_has_text(css_selector, text, index=0, strip=False):
     # If we're expecting a non-empty string, give the page
     # a chance to fill in text fields.
     if text:
-        wait_for(lambda _: css_text(css_selector, index=index))
+        wait_for(lambda _: css_html(css_selector, index=index))
 
-    actual_text = css_text(css_selector, index=index)
+    actual_text = css_html(css_selector, index=index)
 
     if strip:
         actual_text = actual_text.strip()
