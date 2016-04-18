@@ -31,6 +31,9 @@ def run():
     if settings.FEATURES.get('ENABLE_THIRD_PARTY_AUTH', False):
         enable_third_party_auth()
 
+    if settings.FEATURES.get('USE_CUSTOM_THEME', False):
+        enable_stanford_theme_translations()
+
     django.setup()
 
     autostartup()
@@ -111,6 +114,11 @@ def enable_stanford_theme():
     settings.STATICFILES_DIRS.append(
         (u'themes/{}'.format(settings.THEME_NAME), theme_root / 'static')
     )
+
+
+def enable_stanford_theme_translations():
+    # Calculate the location of the theme's files
+    theme_root = settings.ENV_ROOT / "themes" / settings.THEME_NAME
 
     # Include theme locale path for django translations lookup
     settings.LOCALE_PATHS = (theme_root / 'conf/locale',) + settings.LOCALE_PATHS

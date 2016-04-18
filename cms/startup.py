@@ -23,9 +23,11 @@ def run():
     """
     third_party_auth.patch()
 
+    if settings.FEATURES.get('USE_CUSTOM_STUDIO_THEME', False):
+        enable_stanford_theme_translations()
+
     django.setup()
 
-    # enable themes before autostartup since runnit it activates translations
     if settings.FEATURES.get('USE_CUSTOM_THEME', False):
         enable_lms_theme()
 
@@ -118,6 +120,11 @@ def enable_studio_theme():
     )
     # allow static files overrides
     settings.STATICFILES_DIRS.insert(0, theme_root / 'static-overrides')
+
+
+def enable_stanford_theme_translations():
+    # Calculate the location of the theme's files
+    theme_root = settings.ENV_ROOT / "themes" / settings.STUDIO_THEME_NAME
 
     # Include theme locale path for django translations lookup
     settings.LOCALE_PATHS = (theme_root / 'conf/locale',) + settings.LOCALE_PATHS
