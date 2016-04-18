@@ -1061,6 +1061,10 @@ def send_enrollment_email(user, course, use_https_for_links=True):
     Construct the email and then send it.
     """
     site_name = microsite.get_value('SITE_NAME', settings.SITE_NAME)
+    mktg_site_name = microsite.get_value(
+        'MKTG_SITE_NAME',
+        microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+    )
     course_url = u'{protocol}://{site}{path}'.format(
         protocol='https' if use_https_for_links else 'http',
         site=site_name,
@@ -1080,6 +1084,7 @@ def send_enrollment_email(user, course, use_https_for_links=True):
         'course_url': course_url,
         'course_about_url': course_about_url,
         'site_name': site_name,
+        'mktg_site_name': mktg_site_name,
     }
 
     subject = render_to_string('emails/enroll_email_subject.txt', context)

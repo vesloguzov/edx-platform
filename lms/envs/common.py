@@ -2075,6 +2075,8 @@ MKTG_URL_LINK_MAP = {
     # Verified Certificates
     'WHAT_IS_VERIFIED_CERT': 'verified-certificate',
 }
+# site name used in emails
+MKTG_SITE_NAME = SITE_NAME
 
 ############################# SOCIAL MEDIA SHARING #############################
 # Social Media Sharing on Student Dashboard

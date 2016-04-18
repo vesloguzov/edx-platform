@@ -1649,6 +1649,10 @@ def generate_registration_codes(request, course_id):
         registration_codes.append(generated_registration_code)
 
     site_name = microsite.get_value('SITE_NAME', 'localhost')
+    mktg_site_name = microsite.get_value(
+        'MKTG_SITE_NAME',
+        microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+    )
     quantity = course_code_number
     discount = (float(quantity * course_price) - float(sale_price))
     course_url = u'{base_url}{course_about}'.format(
@@ -1670,6 +1674,7 @@ def generate_registration_codes(request, course_id):
     context = {
         'invoice': sale_invoice,
         'site_name': site_name,
+        'mktg_site_name': mktg_site_name,
         'course': course,
         'course_price': course_price,
         'sub_total': course_price * quantity,

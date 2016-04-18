@@ -6,7 +6,7 @@ ${_("You have been removed as a beta tester for {course_name} at {site_name} by 
 	"member of the course staff. The course will remain on your dashboard, but "
 	"you will no longer be part of the beta testing group.").format(
 		course_name=course.display_name_with_default,
-		site_name=site_name
+		site_name=mktg_site_name
 	)}
 
 ${_("Your other courses have not been affected.")}
@@ -14,5 +14,5 @@ ${_("Your other courses have not been affected.")}
 ----
 ${_("This email was automatically sent from {site_name} to "
 	"{email_address}").format(
-		site_name=site_name, email_address=email_address
+		site_name=mktg_site_name, email_address=email_address
 	)}
