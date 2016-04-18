@@ -159,14 +159,15 @@ class ResetPasswordTests(EventTestMixin, TestCase):
 
     @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', "Test only valid in LMS")
     @patch('django.core.mail.send_mail')
-    @ddt.data(('Crazy Awesome Site', 'Crazy Awesome Site'), (None, 'edX'))
+    @ddt.data(('Crazy Awesome Site', 'Crazy Awesome Site', 'crazy.awesome.com'), (None, 'edX', 'edx.org'))
     @ddt.unpack
-    def test_reset_password_email_domain(self, domain_override, platform_name, send_email):
+    def test_reset_password_email_domain(self, domain_override, platform_name, mktg_site_name, send_email):
         """
         Tests that the right url domain and platform name is included in
         the reset password email
         """
-        with patch("django.conf.settings.PLATFORM_NAME", platform_name):
+        with patch("django.conf.settings.PLATFORM_NAME", platform_name), \
+                patch("django.conf.settings.MKTG_SITE_NAME", mktg_site_name):
             req = self.request_factory.post(
                 '/password_reset/', {'email': self.user.email}
             )
@@ -175,13 +176,11 @@ class ResetPasswordTests(EventTestMixin, TestCase):
             password_reset(req)
             _, msg, _, _ = send_email.call_args[0]
 
-            reset_msg = "you requested a password reset for your user account at {}"
-            if domain_override:
-                reset_msg = reset_msg.format(domain_override)
-            else:
-                reset_msg = reset_msg.format(settings.SITE_NAME)
-
+            reset_msg = "you requested a password reset for your user account at {}".format(mktg_site_name)
             self.assertIn(reset_msg, msg)
+
+            password_reset_url_fragment = '://{}/'.format(domain_override or settings.SITE_NAME)
+            self.assertIn(password_reset_url_fragment, msg)
 
             sign_off = "The {} Team".format(platform_name)
             self.assertIn(sign_off, msg)

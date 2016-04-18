@@ -37,6 +37,6 @@ ${_("Payment Instructions")}
 
 ${payment_instructions}
 
-${_("If we do not receive payment, the learner enrollments that use these codes will be canceled and learners will not be able to access course materials. All purchases are final. For more information, see the {site_name} cancellation policy.").format(site_name=site_name)}
+${_("If we do not receive payment, the learner enrollments that use these codes will be canceled and learners will not be able to access course materials. All purchases are final. For more information, see the {site_name} cancellation policy.").format(site_name=mktg_site_name)}
 
 ${_("For payment questions, contact {contact_email}").format(contact_email=contact_email)}

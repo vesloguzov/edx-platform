@@ -1997,6 +1997,8 @@ MKTG_URL_LINK_MAP = {
     'WHAT_IS_VERIFIED_CERT': 'verified-certificate',
 }
 SERVICE_VARIANT_FOR_MKTG_LINKS = 'lms'
+# site name used in emails
+MKTG_SITE_NAME = SITE_NAME
 
 SUPPORT_SITE_LINK = ''
 

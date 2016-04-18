@@ -35,7 +35,7 @@ ${_("The {platform_name} Team").format(platform_name=settings.PLATFORM_NAME)}
 ${_("This email was automatically sent by {site_name} because someone "
       "attempted to create an {platform_name} account using this email address."
     ).format(
-      site_name=settings.SITE_NAME,
+      site_name=settings.MKTG_SITE_NAME,
       platform_name=settings.PLATFORM_NAME
     )}
 

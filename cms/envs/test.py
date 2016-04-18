@@ -30,6 +30,7 @@ from lms.envs.test import (
     WIKI_ENABLED,
     PLATFORM_NAME,
     SITE_NAME,
+    MKTG_SITE_NAME,
     DEFAULT_FILE_STORAGE,
     MEDIA_ROOT,
     MEDIA_URL,
