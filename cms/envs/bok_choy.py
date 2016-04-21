@@ -114,7 +114,7 @@ FEATURES['ENABLE_COURSEWARE_INDEX'] = True
 FEATURES['ENABLE_LIBRARY_INDEX'] = True
 
 # Disable organizations app for eduardo since it clashes with autogeneration of course/library keys
-FEATURES['ORGANIZATIONS_APP'] = True
+FEATURES['ORGANIZATIONS_APP'] = False
 
 SEARCH_ENGINE = "search.tests.mock_search_engine.MockSearchEngine"
 # Path at which to store the mock index

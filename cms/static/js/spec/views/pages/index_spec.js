@@ -181,6 +181,8 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                 var requests = AjaxHelpers.requests(this);
                 var redirectSpy = spyOn(ViewUtils, 'redirect');
                 $('.new-course-button').click()
+                AjaxHelpers.expectJsonRequest(requests, 'GET', '/organizations');
+                AjaxHelpers.respondWithJson(requests, []);
                 fillInFields('', '', '', 'Demo course');
                 $('.new-course-save').click();
                 AjaxHelpers.expectJsonRequest(requests, 'POST', '/course/', {
@@ -217,6 +219,8 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                 var requests = AjaxHelpers.requests(this);
                 var initial_label = $('.new-course-save').val();
                 $('.new-course-button').click();
+                AjaxHelpers.expectJsonRequest(requests, 'GET', '/organizations');
+                AjaxHelpers.respondWithJson(requests, []);
                 fillInFields('', '', '', 'Demo course');
                 $('.new-course-save').click();
                 expect($('.new-course-save')).toHaveClass('is-disabled');

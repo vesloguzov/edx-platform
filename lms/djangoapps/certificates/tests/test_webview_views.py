@@ -8,6 +8,7 @@ from uuid import uuid4
 from nose.plugins.attrib import attr
 from mock import patch
 
+from django.utils import html
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.test.client import Client
@@ -277,7 +278,7 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         )
         # Test an item from user info
         self.assertIn(
-            "{fullname}, you've earned a certificate!".format(fullname=self.user.profile.name),
+            html.escape("{fullname}, you've earned a certificate!".format(fullname=self.user.profile.name)),
             response.content
         )
         # Test an item from social info
