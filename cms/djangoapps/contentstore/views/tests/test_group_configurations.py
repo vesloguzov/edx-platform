@@ -87,7 +87,7 @@ class HelperMethods(object):
         self.save_course()
         return (vertical, split_test)
 
-    def _create_problem_with_content_group(self, cid, group_id, name_suffix='', special_characters=''):
+    def _create_problem_with_content_group(self, cid, group_id, name_suffix='', special_characters='', orphan=False):
         """
         Create a problem
         Assign content group to the problem.
@@ -111,6 +111,8 @@ class HelperMethods(object):
             data={'metadata': group_access_content}
         )
 
+        if not orphan:
+            self.course.children.append(vertical.location)
         self.save_course()
 
         return vertical, problem
