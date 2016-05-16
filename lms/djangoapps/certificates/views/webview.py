@@ -306,7 +306,7 @@ def render_html_view(request, user_id, course_id):
 
     # Translators:  'All rights reserved' is a legal term used in copyrighting to protect published content
     reserved = _("All rights reserved")
-    context['copyright_text'] = '&copy; {year} {platform_name}. {reserved}.'.format(
+    context['copyright_text'] = u'&copy; {year} {platform_name}. {reserved}.'.format(
         year=settings.COPYRIGHT_YEAR,
         platform_name=context.get('platform_name'),
         reserved=reserved
