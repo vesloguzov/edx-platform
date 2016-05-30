@@ -149,6 +149,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                 expect($courses_tab).toHaveClass('active');
                 expect($libraraies_tab).not.toHaveClass('active');
             });
+
         });
         describe("Course listing page with auto key generator", function () {
             var mockIndexPageHTML = readFixtures('mock/mock-index-page-auto-key.underscore');
@@ -285,6 +286,33 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/spec_helpers
                 expect($('.new-library-save')).toHaveClass('is-disabled');
                 expect($('.new-library-save')).toHaveAttr('aria-disabled', 'true');
                 expect($('.new-library-save').val()).toEqual(initial_label);
+            });
+        });
+        describe("Course listing page visibility control", function(){
+            var mockVisibilityControl = readFixtures('mock/mock-course-action-visible.underscore');
+
+            beforeEach(function () {
+                appendSetFixtures(mockVisibilityControl);
+                IndexUtils.onReady();
+            });
+
+            it("saves visibility:visible setting", function(){
+                var requests = AjaxHelpers.requests(this);
+                $('.toggle-checkbox').click()
+                AjaxHelpers.expectJsonRequest(requests, 'POST', '/visibility_setting_url/', {
+                    value: 'both',
+                });
+            });
+
+            it("saves visibility:hidden setting", function(){
+                // change checkbox state without firing "click" event
+                $('.toggle-checkbox').prop('checked', true)
+
+                var requests = AjaxHelpers.requests(this);
+                $('.toggle-checkbox').click()
+                AjaxHelpers.expectJsonRequest(requests, 'POST', '/visibility_setting_url/', {
+                    value: 'about',
+                });
             });
         });
     });

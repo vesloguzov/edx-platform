@@ -1,6 +1,7 @@
 define(["domReady", "jquery", "underscore", "js/utils/cancel_on_escape", "js/views/utils/create_course_utils",
-    "js/views/utils/create_library_utils", "common/js/components/utils/view_utils"],
-    function (domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibraryUtilsFactory, ViewUtils) {
+    "js/views/utils/create_library_utils", "common/js/components/utils/view_utils",
+    "common/js/components/views/feedback_notification"],
+    function (domReady, $, _, CancelOnEscape, CreateCourseUtilsFactory, CreateLibraryUtilsFactory, ViewUtils, NotificationView) {
         "use strict";
         var CreateCourseUtils = new CreateCourseUtilsFactory({
             name: '.new-course-name',
