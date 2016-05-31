@@ -14,7 +14,7 @@
     ) %>
     <% } else { %>
     <%- interpolate(
-      gettext("%s's courses found below can be audited free."),r
+      gettext("%s's courses found below can be audited free."),
       [username]
     ) %>
     <% } %>
