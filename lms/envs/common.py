@@ -1009,10 +1009,18 @@ WIKI_LINK_DEFAULT_LEVEL = 2
 ##### Feedback submission mechanism #####
 FEEDBACK_SUBMISSION_EMAIL = None
 
+##### Feedback service #####
+FEEDBACK_BACKEND = 'Zendesk'
+
 ##### Zendesk #####
 ZENDESK_URL = None
 ZENDESK_USER = None
 ZENDESK_API_KEY = None
+
+##### HelpDeskEddy #####
+HELPDESKEDDY_URL = None
+HELPDESKEDDY_API_KEY = None
+HELPDESKEDDY_DEPART = 1
 
 ##### EMBARGO #####
 EMBARGO_SITE_REDIRECT_URL = None

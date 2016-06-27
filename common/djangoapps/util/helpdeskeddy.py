@@ -1,9 +1,17 @@
 """
-API for creation of users and tickets in HelpDeskEddy service
+Feedback backend and API for creation of users and tickets in HelpDeskEddy service
 """
 import json
+import logging
 import requests
 import urlparse
+
+from django.conf import settings
+
+from microsite_configuration import microsite
+
+
+log = logging.getLogger(__name__)
 
 
 HELPDESK_ENDPOINTS = {
@@ -27,16 +35,65 @@ HELPDESK_ENDPOINTS = {
 
 class HelpDeskEddyError(Exception):
     """Error indicating some unexpected HelpDeskEddy online API error"""
-    pass
+    def __init__(self, msg, error_code=None):
+        self.msg = msg
+        self.error_code = error_code
+
+
+class HelpDeskEddyMixin(object):
+    @staticmethod
+    def record_feedback(realname, email, subject, details, tags, additional_info):
+        """
+        Create a new user-requested HelpDeskEddy ticket.
+
+        Missing realname resolves to user nickname or username since HelpDeskEddy requires name for user creation.
+        Tags are added to details.
+        Additional information is skipped since Help does not provide endpoints
+        for private comments.
+        """
+        helpdeskeddy_api = HelpDeskEddyAPI(
+            settings.HELPDESKEDDY_URL,
+            settings.HELPDESKEDDY_API_KEY,
+            settings.HELPDESKEDDY_DEPART
+        )
+        # Get creator id for ticket
+        name = (realname
+                or additional_info.get('nickname')
+                or additional_info.get('username')
+                or _('Anonymous')
+        )
+        try:
+            creator_id = helpdeskeddy_api.get_or_create_user(email, name)
+        except helpdeskeddy.HelpDeskEddyError as e:
+            log.exception("Error creating HelpDeskEddy user: %s", e.msg)
+            return False
+
+        # Tag all issues with LMS to distinguish channel in Zendesk; requested by student support team
+        helpdeskeddy_tags = list(tags.values()) + ["LMS"]
+
+        # via tagging
+        white_label_org = microsite.get_value('course_org_filter')
+        if white_label_org:
+            helpdeskeddy_tags = helpdeskeddy_tags + ["whitelabel_{org}".format(org=white_label_org)]
+
+        full_ticket_description = u'{}\n\n#{}'.format(details, u' #'.join(helpdeskeddy_tags))
+        try:
+            ticket_id = helpdeskeddy_api.create_ticket(creator_id, subject, full_ticket_description)
+        except HelpDeskEddyError as e:
+            log.exception("Error creating HelpDeskEddy ticket: %s", e.msg)
+            return False
+
+        return True
 
 
 class HelpDeskEddyAPI(object):
     optional_user_fields = ('lastname', 'password', 'phone', 'website', 'skype')
 
-    def __init__(self, url, api_key, depart_id=1):
+    def __init__(self, url, api_key, depart_id=None):
+        assert url and api_key
         self.base_url = url
         self.api_key = api_key
-        self.depart_id = depart_id
+        self.depart_id = depart_id or 1
         self.request_headers = {
             "Content-Type": "application/json",
             "Accept": "application/json"

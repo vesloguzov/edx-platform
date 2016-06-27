@@ -9,6 +9,8 @@ from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import server_error
 from django.http import (Http404, HttpResponse, HttpResponseNotAllowed,
                          HttpResponseServerError)
+from django.utils.translation import ugettext_lazy as _
+
 import dogstats_wrapper as dog_stats_api
 from edxmako.shortcuts import render_to_response
 import zendesk
@@ -16,6 +18,7 @@ from microsite_configuration import microsite
 
 import calc
 import track.views
+import helpdeskeddy
 
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
@@ -101,6 +104,38 @@ def calculate(request):
         track.views.server_track(request, 'error:calc', event, page='calc')
         return HttpResponse(json.dumps({'result': 'Invalid syntax'}))
     return HttpResponse(json.dumps({'result': str(result)}))
+
+
+def _get_feedback_backend():
+    if settings.FEEDBACK_BACKEND.lower() == 'zendesk':
+        return ZendeskFeedbackBackend()
+    elif settings.FEEDBACK_BACKEND.lower() == 'helpdeskeddy':
+        return HelpDeskEddyFeedbackBackend()
+    else:
+        raise Exception('Feedback backend not configured')
+
+class FeedbackBackend(object):
+    required_settings = ()
+    def __init__(self):
+        if not any(getattr(settings, name) for name in self.required_settings):
+            raise Exception('%s enabled but not configured.' % self.name)
+
+    @staticmethod
+    def record_feedback(realname, email, subject, details, tags, additional_info):
+        raise NotImplementedError
+
+
+class ZendeskFeedbackBackend(FeedbackBackend):
+    name = 'Zendesk'
+    required_settings = ('ZENDESK_URL', 'ZENDESK_USER', 'ZENDESK_API_KEY')
+
+    @staticmethod
+    def record_feedback(*args, **kwargs):
+        return _record_feedback_in_zendesk(*args, **kwargs)
+
+class HelpDeskEddyFeedbackBackend(helpdeskeddy.HelpDeskEddyMixin, FeedbackBackend):
+    name = 'HelpDeskEddy'
+    required_settings = ('HELPDESKEDDY_URL', 'HELPDESKEDDY_API_KEY')
 
 
 class _ZendeskApi(object):
@@ -220,15 +255,10 @@ def submit_feedback(request):
         raise Http404()
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
-    if (
-        not settings.ZENDESK_URL or
-        not settings.ZENDESK_USER or
-        not settings.ZENDESK_API_KEY
-    ):
-        raise Exception("Zendesk enabled but not configured")
+    feedback_backend = _get_feedback_backend()
 
     def build_error_response(status_code, field, err_msg):
-        return HttpResponse(json.dumps({"field": field, "error": err_msg}), status=status_code)
+        return HttpResponse(json.dumps({"field": field, "error": unicode(err_msg)}), status=status_code)
 
     additional_info = {}
 
@@ -236,10 +266,10 @@ def submit_feedback(request):
     if not request.user.is_authenticated():
         required_fields += ["name", "email"]
     required_field_errs = {
-        "subject": "Please provide a subject.",
-        "details": "Please provide details.",
-        "name": "Please provide your name.",
-        "email": "Please provide a valid e-mail.",
+        "subject": _("Please provide a subject."),
+        "details": _("Please provide details."),
+        "name": _("Please provide your name."),
+        "email": _("Please provide a valid e-mail."),
     }
 
     for field in required_fields:
@@ -256,6 +286,7 @@ def submit_feedback(request):
         realname = request.user.profile.name
         email = request.user.email
         additional_info["username"] = request.user.username
+        additional_info["nickname"] = request.user.profile.nickname
     else:
         realname = request.POST["name"]
         email = request.POST["email"]
@@ -272,7 +303,7 @@ def submit_feedback(request):
     ]:
         additional_info[pretty] = request.META.get(header)
 
-    success = _record_feedback_in_zendesk(realname, email, subject, details, tags, additional_info)
+    success = feedback_backend.record_feedback(realname, email, subject, details, tags, additional_info)
     _record_feedback_in_datadog(tags)
 
     return HttpResponse(status=(200 if success else 500))
