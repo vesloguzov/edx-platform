@@ -372,7 +372,7 @@ def ZendeskSubmitFeedbackTest(SubmitFeedbackTest, TestCase):
 
 
 @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": True})
-@override_settings(FEEDBACK_BACKEND='helpdeskeddy', HELPDESKEDDY_URL="http://dummy", HELPDESKEDDY_API_KEY="dummy")
+@override_settings(FEEDBACK_BACKEND='helpdeskeddy', HELPDESKEDDY_URL="http://dummy", HELPDESKEDDY_API_KEY="dummy", HELPDESKEDDY_DEPART=1)
 @mock.patch("util.views.dog_stats_api")
 @mock.patch("util.helpdeskeddy.HelpDeskEddyAPI", autospec=True)
 class HelpDeskEddySubmitFeedbackTest(SubmitFeedbackTest, TestCase):

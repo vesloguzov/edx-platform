@@ -52,6 +52,19 @@ class HelpDeskEddyAPITest(TestCase):
                 MockResponse(200, USER_CREATED_RESPONSE),
             ]
             user_id = self.api.get_or_create_user(name='John', lastname='Doe', email='johndoe@example.com')
+            self.assertEqual(
+                mock_request.mock_calls, [
+                mock.call.request(
+                    'GET', 'http://dummy_url/api/v1/users/',
+                    headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                    data='{"filter": {"email": ["johndoe@example.com"]}, "apiKey": "dummy_api_key"}'
+                ),
+                mock.call.request(
+                    'POST', 'http://dummy_url/api/v1/users/',
+                    headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                    data='{"apiKey": "dummy_api_key", "user": {"lastname": "Doe", "name": "John", "email": "johndoe@example.com"}}',
+                )]
+            )
         self.assertEqual(user_id, '321')
 
     def test_get_or_create_user_empty_email(self):
@@ -75,6 +88,14 @@ class HelpDeskEddyAPITest(TestCase):
         with mock.patch.object(requests, 'request') as mock_request:
             mock_request.return_value = MockResponse(200, TICKET_CREATED_RESPONSE)
             ticket_id = self.api.create_ticket('1', u'test subject', u'test content')
+            self.assertEqual(
+                mock_request.mock_calls, [
+                mock.call.request(
+                    'POST', 'http://dummy_url/api/v1/tickets/',
+                    headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                    data='{"ticket": {"content": "test content", "creator_id": "1", "depart_id": 1, "subject": "test subject"}, "apiKey": "dummy_api_key", "notify": 1}',
+                )]
+            )
         self.assertEqual(ticket_id, '123')
 
     def test_create_ticket_unicode(self):

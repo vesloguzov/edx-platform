@@ -64,12 +64,12 @@ class HelpDeskEddyMixin(object):
         )
         try:
             creator_id = helpdeskeddy_api.get_or_create_user(email, name)
-        except helpdeskeddy.HelpDeskEddyError as e:
+        except HelpDeskEddyError as e:
             log.exception("Error creating HelpDeskEddy user: %s", e.msg)
             return False
 
         # Tag all issues with LMS to distinguish channel in Zendesk; requested by student support team
-        helpdeskeddy_tags = list(tags.values()) + ["LMS"]
+        helpdeskeddy_tags = [v for v in tags.values() if v] + ["LMS"]
 
         # via tagging
         white_label_org = microsite.get_value('course_org_filter')
@@ -166,8 +166,8 @@ class HelpDeskEddyAPI(object):
 
     def _create_user(self, email, name, **kwargs):
         user_create_url = urlparse.urljoin(self.base_url, HELPDESK_ENDPOINTS['create_user']['path'])
-        user_data = {'name': name, 'email': email}
-        user_data.update({k: w for k,w in kwargs.items() if k in self.optional_user_fields})
+        user_data = {'user': {'name': name, 'email': email}}
+        user_data['user'].update({k: w for k,w in kwargs.items() if k in self.optional_user_fields})
 
         user_create_response = requests.request(
             HELPDESK_ENDPOINTS['create_user']['method'],
