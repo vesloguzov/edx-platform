@@ -65,14 +65,12 @@ class SubmitFeedbackTest(object):
         Assert that the given `response` contains correct failure data.
 
         It should have a 400 status code, and its content should be a JSON
-        object containing the specified `field` and an `error`.
+        object containing list of items with `field` and an `error`.
         """
         self.assertEqual(response.status_code, 400)
         resp_json = json.loads(response.content)
-        self.assertTrue("field" in resp_json)
-        self.assertEqual(resp_json["field"], field)
-        self.assertTrue("error" in resp_json)
-        # There should be absolutely no interaction with Zendesk
+        self.assertIn(field, resp_json)
+        # There should be absolutely no interaction with feedback backend
         self.assertFalse(feedback_backend_mock_class.return_value.mock_calls)
         self.assertFalse(datadog_mock.mock_calls)
 
@@ -90,6 +88,15 @@ class SubmitFeedbackTest(object):
         resp = self._build_and_run_request(user, filtered_fields)
         self._assert_bad_request(resp, omit_field, feedback_backend_mock_class, datadog_mock)
 
+    def _test_bad_request_omit_multiple_fields(self, user, fields, omit_fields, feedback_backend_mock_class, datadog_mock):
+        """
+        Just like _test_bad_request_omit_field, but omitting multiple fields.
+        """
+        filtered_fields = {k: v for (k, v) in fields.items() if k not in omit_fields}
+        resp = self._build_and_run_request(user, filtered_fields)
+        for field in omit_fields:
+            self._assert_bad_request(resp, field, feedback_backend_mock_class, datadog_mock)
+
     def _test_bad_request_empty_field(self, user, fields, empty_field, feedback_backend_mock_class, datadog_mock):
         """
         Invoke the view with an empty field and assert correctness.
@@ -104,6 +111,17 @@ class SubmitFeedbackTest(object):
         altered_fields[empty_field] = ""
         resp = self._build_and_run_request(user, altered_fields)
         self._assert_bad_request(resp, empty_field, feedback_backend_mock_class, datadog_mock)
+
+    def _test_bad_request_empty_fields(self, user, fields, empty_fields, feedback_backend_mock_class, datadog_mock):
+        """
+        Just like _test_bad_request_empty_field, but sending multiple empty fields.
+        """
+        altered_fields = fields.copy()
+        for field in empty_fields:
+            altered_fields[field] = ""
+        resp = self._build_and_run_request(user, altered_fields)
+        for field in empty_fields:
+            self._assert_bad_request(resp, field, feedback_backend_mock_class, datadog_mock)
 
     def _test_success(self, user, fields):
         """
@@ -161,6 +179,16 @@ class SubmitFeedbackTest(object):
         """Test a request from an authenticated user not specifying `details`."""
         self._test_bad_request_omit_field(self._auth_user, self._auth_fields, "details", feedback_backend_mock_class, datadog_mock)
         self._test_bad_request_empty_field(self._auth_user, self._auth_fields, "details", feedback_backend_mock_class, datadog_mock)
+
+    def test_bad_request_anon_user_multiple_fields_missed(self, feedback_backend_mock_class, datadog_mock):
+        """Test a request from an anonymous user not specifying multiple fields."""
+        self._test_bad_request_omit_multiple_fields(self._anon_user, self._anon_fields, ['name', 'subject'], feedback_backend_mock_class, datadog_mock)
+        self._test_bad_request_empty_fields(self._anon_user, self._anon_fields, ['email', 'details'], feedback_backend_mock_class, datadog_mock)
+
+    def test_bad_request_auth_user_multiple_fields_missed(self, feedback_backend_mock_class, datadog_mock):
+        """Test a request from an anonymous user not specifying multiple fields."""
+        self._test_bad_request_omit_multiple_fields(self._auth_user, self._auth_fields, ['subject', 'details'], feedback_backend_mock_class, datadog_mock)
+        self._test_bad_request_empty_fields(self._auth_user, self._auth_fields, ['subject', 'details'], feedback_backend_mock_class, datadog_mock)
 
     def test_get_request(self, feedback_backend_mock_class, datadog_mock):
         """Test that a GET results in a 405 even with all required fields"""

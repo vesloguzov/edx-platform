@@ -106,6 +106,37 @@ def calculate(request):
     return HttpResponse(json.dumps({'result': str(result)}))
 
 
+def _get_feedback_form_errors(request):
+    """
+    Check all feedback form fields are filled and email is correct.
+
+    Return list of items {'field': field_name, 'error': error_label}.
+    """
+    errors = {}
+
+    required_fields = ["subject", "details"]
+    if not request.user.is_authenticated():
+        required_fields += ["name", "email"]
+    required_field_errs = {
+        "subject": _("Please provide a subject."),
+        "details": _("Please provide details."),
+        "name": _("Please provide your name."),
+        "email": _("Please provide a valid e-mail."),
+    }
+
+    for field in required_fields:
+        if not request.POST.get(field):
+            errors[field] = unicode(required_field_errs[field])
+
+    if "email" in request.POST:
+        try:
+            validate_email(request.POST["email"])
+        except ValidationError:
+            errors["email"] = unicode(required_field_errs["email"])
+
+    return errors
+
+
 def _get_feedback_backend():
     if settings.FEEDBACK_BACKEND.lower() == 'zendesk':
         return ZendeskFeedbackBackend()
@@ -257,24 +288,11 @@ def submit_feedback(request):
         return HttpResponseNotAllowed(["POST"])
     feedback_backend = _get_feedback_backend()
 
-    def build_error_response(status_code, field, err_msg):
-        return HttpResponse(json.dumps({"field": field, "error": unicode(err_msg)}), status=status_code)
-
     additional_info = {}
 
-    required_fields = ["subject", "details"]
-    if not request.user.is_authenticated():
-        required_fields += ["name", "email"]
-    required_field_errs = {
-        "subject": _("Please provide a subject."),
-        "details": _("Please provide details."),
-        "name": _("Please provide your name."),
-        "email": _("Please provide a valid e-mail."),
-    }
-
-    for field in required_fields:
-        if field not in request.POST or not request.POST[field]:
-            return build_error_response(400, field, required_field_errs[field])
+    errors = _get_feedback_form_errors(request)
+    if errors:
+        return HttpResponse(json.dumps(errors), status=400)
 
     subject = request.POST["subject"]
     details = request.POST["details"]
@@ -290,10 +308,6 @@ def submit_feedback(request):
     else:
         realname = request.POST["name"]
         email = request.POST["email"]
-        try:
-            validate_email(email)
-        except ValidationError:
-            return build_error_response(400, "email", required_field_errs["email"])
 
     for header, pretty in [
         ("HTTP_REFERER", "Page"),
