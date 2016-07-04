@@ -691,12 +691,12 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase, HelperMethods):
 
         expected = self._get_expected_content_group(usage_for_group=[
             {
-                'url': '/container/{}'.format(vertical.location),
-                'label': 'Test Unit 0 / Test Problem 0'
-            },
-            {
                 'url': '/container/{}'.format(vertical1.location),
                 'label': 'Test Unit 1 / Test Problem 1'
+            },
+            {
+                'url': '/container/{}'.format(vertical.location),
+                'label': 'Test Unit 0 / Test Problem 0'
             }
         ])
 
