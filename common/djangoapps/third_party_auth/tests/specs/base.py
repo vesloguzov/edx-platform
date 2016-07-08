@@ -27,6 +27,7 @@ from third_party_auth import settings as auth_settings
 from third_party_auth.tests import testutil
 
 
+@unittest.skipUnless(django_settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 class IntegrationTestMixin(object):
     """
     Mixin base class for third_party_auth integration tests.
@@ -197,6 +198,7 @@ class IntegrationTestMixin(object):
         return reverse('social:complete', kwargs={'backend': self.PROVIDER_BACKEND})
 
 
+@unittest.skipUnless(django_settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @unittest.skipUnless(
     testutil.AUTH_FEATURES_KEY in django_settings.FEATURES, testutil.AUTH_FEATURES_KEY + ' not in settings.FEATURES')
 @django_utils.override_settings()  # For settings reversion on a method-by-method basis.

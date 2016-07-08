@@ -23,6 +23,10 @@ def run():
     """
     third_party_auth.patch()
 
+    # To override the settings before executing the autostartup() for python-social-auth
+    if settings.FEATURES.get('ENABLE_THIRD_PARTY_AUTH', False):
+        enable_third_party_auth()
+
     if settings.FEATURES.get('USE_CUSTOM_STUDIO_THEME', False):
         enable_stanford_theme_translations()
 
@@ -128,3 +132,14 @@ def enable_stanford_theme_translations():
 
     # Include theme locale path for django translations lookup
     settings.LOCALE_PATHS = (theme_root / 'conf/locale',) + settings.LOCALE_PATHS
+
+
+def enable_third_party_auth():
+    """
+    Enable the use of third_party_auth, which allows users to sign in to edX
+    using other identity providers. For configuration details, see
+    common/djangoapps/third_party_auth/settings.py.
+    """
+
+    from third_party_auth import settings as auth_settings
+    auth_settings.apply_settings(settings)

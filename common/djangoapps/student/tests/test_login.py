@@ -479,6 +479,8 @@ class ExternalAuthShibTest(ModuleStoreTestCase):
         self.assertEqual(shib_response.status_code, 200)
 
 
+# This is necessary because cms does not implement third party login
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @httpretty.activate
 class LoginOAuthTokenMixin(ThirdPartyOAuthTestMixin):
     """

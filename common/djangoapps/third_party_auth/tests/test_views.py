@@ -6,6 +6,7 @@ import ddt
 from lxml import etree
 from onelogin.saml2.errors import OneLogin_Saml2_Error
 import unittest
+from django.conf import settings
 from .testutil import AUTH_FEATURE_ENABLED, SAMLTestCase
 
 # Define some XML namespaces:
@@ -13,6 +14,7 @@ from third_party_auth.tasks import SAML_XML_NS
 XMLDSIG_XML_NS = 'http://www.w3.org/2000/09/xmldsig#'
 
 
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @unittest.skipUnless(AUTH_FEATURE_ENABLED, 'third_party_auth not enabled')
 @ddt.ddt
 class SAMLMetadataTest(SAMLTestCase):

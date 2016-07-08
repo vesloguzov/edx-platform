@@ -20,6 +20,7 @@ from student.tests.factories import UserFactory
 from third_party_auth.tests.utils import ThirdPartyOAuthTestMixinFacebook, ThirdPartyOAuthTestMixinGoogle
 
 
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 class AccessTokenExchangeViewTest(AccessTokenExchangeTestMixin):
     """
     Mixin that defines test cases for AccessTokenExchangeView

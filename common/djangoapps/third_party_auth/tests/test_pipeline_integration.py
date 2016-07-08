@@ -143,6 +143,7 @@ class GetProviderUserStatesTestCase(testutil.TestCase, test.TestCase):
         self.assertEqual(self.user, linkedin_state.user)
 
 
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @unittest.skipUnless(
     testutil.AUTH_FEATURES_KEY in settings.FEATURES, testutil.AUTH_FEATURES_KEY + ' not in settings.FEATURES')
 class UrlFormationTestCase(TestCase):

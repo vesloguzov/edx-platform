@@ -825,6 +825,10 @@ INSTALLED_APPS = (
     'provider.oauth2',
     'oauth2_provider',
 
+    # Allow social auth when session cookie domain coincides with LMS's
+    'social.apps.django_app.default',
+    'third_party_auth',
+
     # These are apps that aren't strictly needed by Studio, but are imported by
     # other apps that are.  Django 1.8 wants to have imported models supported
     # by installed apps.

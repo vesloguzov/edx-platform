@@ -277,3 +277,23 @@ FEATURES['ENABLE_TEAMS'] = True
 
 # Dummy secret key for dev/test
 SECRET_KEY = '85920908f28904ed733fe576320db18cabd7b6cd'
+
+######### Third-party auth ##########
+FEATURES['ENABLE_THIRD_PARTY_AUTH'] = True
+
+AUTHENTICATION_BACKENDS = (
+    'social.backends.google.GoogleOAuth2',
+    'social.backends.linkedin.LinkedinOAuth2',
+    'social.backends.facebook.FacebookOAuth2',
+    'social.backends.twitter.TwitterOAuth',
+    'third_party_auth.dummy.DummyBackend',
+    'third_party_auth.saml.SAMLAuthBackend',
+) + AUTHENTICATION_BACKENDS
+
+THIRD_PARTY_AUTH_CUSTOM_AUTH_FORMS = {
+    'custom1': {
+        'secret_key': 'opensesame',
+        'url': '/misc/my-custom-registration-form',
+        'error_url': '/misc/my-custom-sso-error-page'
+    },
+}
