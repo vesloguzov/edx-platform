@@ -8,6 +8,7 @@ import unittest
 from django.core.cache import cache
 from django.core.urlresolvers import reverse
 from django.conf import settings
+from django.test import TestCase
 from django.test.client import RequestFactory
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import UNUSABLE_PASSWORD_PREFIX
