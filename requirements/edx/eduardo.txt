@@ -1,0 +1,2 @@
+# Eduardo-specific requirements
+-e git+https://github.com/lektorium-llc/eduardo-service-plans.git@0.1.0#egg=eduardo-service-plans

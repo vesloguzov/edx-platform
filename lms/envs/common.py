@@ -1952,6 +1952,9 @@ INSTALLED_APPS = (
     'openedx.core.djangoapps.self_paced',
 
     'sorl.thumbnail',
+
+    # Eduardo service plans
+    'service_plans',
 )
 
 # Migrations which are not in the standard module "migrations"
