@@ -695,6 +695,7 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
         distinct_username = pipeline.get(request)['kwargs']['username']
         self.assertNotEqual(original_username, distinct_username)
 
+    @unittest.skip('The test checks username existence, not email existence.')
     def test_new_account_registration_fails_if_email_exists(self):
         request, strategy = self.get_request_and_strategy(
             auth_entry=pipeline.AUTH_ENTRY_REGISTER, redirect_uri='social:complete')

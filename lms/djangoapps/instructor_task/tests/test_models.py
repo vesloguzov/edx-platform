@@ -15,6 +15,7 @@ from django.conf import settings
 from instructor_task.models import LocalFSReportStore, S3ReportStore, ProtectedFSReportStore
 from instructor_task.tests.test_base import TestReportMixin
 from opaque_keys.edx.locator import CourseLocator
+from util.testing import UrlResetMixin
 
 
 class MockKey(object):
@@ -118,7 +119,7 @@ class S3ReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, TestCase):
         'PROTECTED_URL' : '/reports_storage/'
         }
 )
-class ProtectedFSReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, TestCase):
+class ProtectedFSReportStoreTestCase(UrlResetMixin, ReportStoreTestMixin, TestReportMixin, TestCase):
     """
     Test the ProtectedFSReportStore
     """

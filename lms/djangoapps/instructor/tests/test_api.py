@@ -2144,11 +2144,11 @@ class TestInstructorAPILevelsDataDump(SharedModuleStoreTestCase, LoginEnrollment
 
         self.students = [UserFactory() for _ in xrange(6)]
         for student in self.students:
-            UserProfile.objects.filter(user=student).update(nickname='nick_'+student.username)
             CourseEnrollment.enroll(student, self.course.id)
 
         self.students_who_may_enroll = self.students + [UserFactory() for _ in range(5)]
         for student in self.students_who_may_enroll:
+            UserProfile.objects.filter(user=student).update(nickname='nick_'+student.username)
             CourseEnrollmentAllowed.objects.create(
                 email=student.email, course_id=self.course.id
             )
