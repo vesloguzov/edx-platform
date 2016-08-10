@@ -26,6 +26,7 @@ from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, SharedMo
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from opaque_keys.edx.keys import CourseKey
 
+from util.testing import UrlResetMixin
 from courseware.models import StudentModule
 from student.tests.factories import UserFactory, UserProfileFactory
 from instructor_task.models import ReportStore
@@ -405,7 +406,7 @@ class TestDataDumps(ModuleStoreTestCase):
         'PROTECTED_URL' : '/reports_storage/'
         }
 )
-class TestServeProtectedReport(SharedModuleStoreTestCase):
+class TestServeProtectedReport(UrlResetMixin, SharedModuleStoreTestCase):
     @classmethod
     def setUpClass(cls):
         super(TestServeProtectedReport, cls).setUpClass()
@@ -415,6 +416,7 @@ class TestServeProtectedReport(SharedModuleStoreTestCase):
         report_store.store(cls.course.id, 'report', StringIO())
 
     def setUp(self):
+        super(TestServeProtectedReport, self).setUp()
         self.user = GlobalStaffFactory.create(password='password')
         self.client.login(username=self.user.username, password='password')
 

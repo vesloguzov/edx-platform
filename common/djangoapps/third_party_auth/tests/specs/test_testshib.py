@@ -98,7 +98,7 @@ class TestShibIntegrationTest(testutil.SAMLTestCase):
             {
                 'email': 'myself@testshib.org',
                 'name': 'Myself',
-                'username': 'myself',
+                'nickname': 'myself',
                 'honor_code': True,
             }
         )

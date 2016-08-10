@@ -925,7 +925,7 @@ class MatlabInput(CodeInput):
             'queue_len': str(self.queue_len),
             'queue_msg': queue_msg,
             'button_enabled': self.button_enabled(),
-            'matlab_editor_js': u'{static_url}js/vendor/CodeMirror/octave.js'.format(
+            'matlab_editor_js': '{static_url}js/vendor/CodeMirror/octave.js'.format(
                 static_url=self.capa_system.STATIC_URL),
             'msg': sanitize_html(self.msg)  # sanitize msg before rendering into template
         }

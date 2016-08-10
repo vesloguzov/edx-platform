@@ -75,6 +75,7 @@ class RequiredStudentDataTest(ModuleStoreTestCase):
     def test_updated_fields(self):
         '''Test form fields are saved correctly'''
         profile = self.user.profile
+        self.client.post(self.update_url, self.DATA)
         self.user.profile.refresh_from_db()
         self.assertEqual(profile.first_name, self.DATA['first_name'])
         self.assertEqual(profile.last_name, self.DATA['last_name'])

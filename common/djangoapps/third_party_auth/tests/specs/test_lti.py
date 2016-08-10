@@ -78,7 +78,7 @@ class IntegrationTestLTI(testutil.TestCase):
             {
                 'email': EMAIL,
                 'name': 'Myself',
-                'username': EDX_USER_ID,
+                'nickname': EDX_USER_ID,
                 'honor_code': True,
             }
         )
@@ -110,7 +110,7 @@ class IntegrationTestLTI(testutil.TestCase):
 
         # Check that the user was created correctly
         user = User.objects.get(email=EMAIL)
-        self.assertEqual(user.username, EDX_USER_ID)
+        self.assertEqual(user.profile.nickname, EDX_USER_ID)
 
     def test_reject_initiating_login(self):
         response = self.client.get(LTI_TPA_LOGIN_URL)
