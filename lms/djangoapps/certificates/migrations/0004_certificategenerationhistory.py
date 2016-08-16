@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('instructor_task', '0001_initial'),
-        ('certificates', '0003_data__default_modes'),
+        ('certificates', '0003_verbose_names'),
     ]
 
     operations = [
