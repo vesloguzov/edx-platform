@@ -6,7 +6,13 @@
     </span>
   </div>
   <% } %>
-  <div class="signatory-panel-header">Signatory <%= signatory_number %>&nbsp;</div>
+  <div class="signatory-panel-header">
+      <%= interpolate(
+          gettext('Signatory %(number)s'),
+          {number: signatory_number},
+          true
+      ) %>
+  </div>
   <div class="signatory-panel-body">
     <div>
         <div>
