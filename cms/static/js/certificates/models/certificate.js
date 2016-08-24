@@ -20,6 +20,9 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
         defaults: {
             // Metadata fields currently displayed in web forms
             course_title: '',
+            course_description: '',
+            show_grade: false,
+            honor_code_disclaimer: '', // TODO: fix with default
 
             // Metadata fields not currently displayed in web forms
             name: 'Name of the certificate',

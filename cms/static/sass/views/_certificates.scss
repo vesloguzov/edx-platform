@@ -290,6 +290,12 @@
             width: 25%;
           }
 
+          &.input-checkbox {
+            width: auto;
+            height: auto;
+            display: inline;
+          }
+
           ::-webkit-input-placeholder {
              color: $gray-l4;
           }

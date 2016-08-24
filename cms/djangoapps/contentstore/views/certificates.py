@@ -143,7 +143,7 @@ class CertificateManager(object):
             certificate["organizations"] = []
         # create a default for 'show_grade' field
         if certificate.get("show_grade") is None:
-            certificate["show_grade"] = True
+            certificate["show_grade"] = False
         certificate["editing"] = False
         return certificate
 

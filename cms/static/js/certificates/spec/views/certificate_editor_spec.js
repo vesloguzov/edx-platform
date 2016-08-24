@@ -28,6 +28,9 @@ function(_, Course, CertificateModel, SignatoryModel, CertificatesCollection, Ce
         errorMessage: '.certificate-edit-error',
         inputCertificateName: '.collection-name-input',
         inputCertificateDescription: '.certificate-description-input',
+        inputCourseDescription: '.certificate-course-description-input',
+        inputShowGrade: '.certificate-show-grade-input',
+        inputHonorCodeDisclaimer: '.certificate-honor-code-disclaimer-input',
         inputSignatoryName: '.signatory-name-input',
         inputSignatoryTitle: '.signatory-title-input',
         inputSignatoryOrganization: '.signatory-organization-input',
@@ -113,7 +116,8 @@ function(_, Course, CertificateModel, SignatoryModel, CertificatesCollection, Ce
             this.model = new CertificateModel({
                 name: 'Test Name',
                 description: 'Test Description',
-                is_active: true
+                is_active: true,
+                show_grade: false
 
             }, this.newModelOptions);
 
@@ -171,6 +175,25 @@ function(_, Course, CertificateModel, SignatoryModel, CertificatesCollection, Ce
                 expect(this.model).toBeCorrectValuesInModel({
                     name: 'New Test Name',
                     description: 'New Test Description'
+                });
+            });
+
+            it('should save additional information', function() {
+                var requests = AjaxHelpers.requests(this),
+                    notificationSpy = ViewHelpers.createNotificationSpy();
+                this.view.$('.action-add').click();
+
+                setValuesToInputs(this.view, {
+                    inputCourseDescription: 'New Test Course Description',
+                    inputHonorCodeDisclaimer: 'New Test Honor Code Disclaimer'
+                });
+                this.view.$(SELECTORS['inputShowGrade']).prop('checked', true).trigger('change');
+
+                ViewHelpers.submitAndVerifyFormSuccess(this.view, requests, notificationSpy);
+                expect(this.model).toBeCorrectValuesInModel({
+                    course_description: 'New Test Course Description',
+                    show_grade: true,
+                    honor_code_disclaimer: 'New Test Honor Code Disclaimer'
                 });
             });
 

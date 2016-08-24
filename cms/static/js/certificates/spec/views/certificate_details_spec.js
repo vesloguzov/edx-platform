@@ -25,6 +25,9 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
         name: '.certificate-name',
         description: '.certificate-description',
         course_title: '.course-title-override .certificate-value',
+        course_description: '.course-description .certificate-value',
+        show_grade: '.show-grade .certificate-value',
+        honor_code_disclaimer: '.honor-code-disclaimer .certificate-value',
         errorMessage: '.certificate-edit-error',
         inputName: '.collection-name-input',
         inputDescription: '.certificate-description-input',
@@ -86,6 +89,7 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
                 name: 'Test Name',
                 description: 'Test Description',
                 course_title: 'Test Course Title Override',
+                show_grade: false,
                 is_active: true
             }, this.newModelOptions);
 
@@ -132,6 +136,11 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
             it('should display the certificate course title override', function () {
                 expect(this.view.$(SELECTORS.course_title)).toExist();
                 expect(this.view.$(SELECTORS.course_title)).toContainText('Test Course Title Override');
+            });
+
+            it('should display verbose show_grade setting for certificate', function() {
+                expect(this.view.$(SELECTORS.show_grade)).toExist();
+                expect(this.view.$(SELECTORS.show_grade)).toContainText('No');
             });
 
             it('should present an Edit action', function () {
