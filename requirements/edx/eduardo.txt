@@ -1,2 +1,12 @@
 # Eduardo-specific requirements
 -e git+https://github.com/lektorium-llc/eduardo-service-plans.git@0.1.0#egg=eduardo-service-plans
+
+##### Advanced block types #####
+# advanced block types from edx-private requirements
+-e git+https://github.com/pmitros/AudioXBlock.git@1e2fa66f9d611e98edaaa45ca2d3c305c6571db8#egg=audio-xblock
+-e git+https://github.com/open-craft/xblock-activetable.git@1786a2c8fc06ca3ecfac1972464048982bd486ff#egg=xblock-activetable
+
+# eduardo-specific advanced block types
+-e git+https://github.com/polimediaupv/pdfXBlock.git@e2493fc84db6b412c6c41b3c844c8be5f256e59f#egg=pdf-xblock
+-e git+https://github.com/ExtensionEngine/xblock_charting.git@1ab1057ff57c6f16b977f94b617197277a207cbe#egg=piechart-xblock&subdirectory=piechart
+-e git+https://github.com/MarCnu/flashXBlock.git@1cb9d00c215dcd98bb5bfc967817534a6f7697c8#egg=flash-xblock
