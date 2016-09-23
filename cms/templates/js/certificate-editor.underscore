@@ -52,9 +52,15 @@
                 <span id="certificate-honor-code-disclaimer-<%= uniqueId %>-tip" class="tip tip-stacked"><%= gettext("Specify an informational message about missing verification. This message is displayed only on Honor Code certificates. Leave blank to show no Honor Code disclaimer.") %></span>
             </div>
         </fieldset>
-         <header>
-            <span class="title"><%= gettext("Certificate Signatories") %></legend>
-         </header>
+
+        <header>
+          <span class="title"><%= gettext("Certificate Organizations") %></legend>
+        </header>
+        <div class="organizations-wrapper"></div>
+
+        <header>
+          <span class="title"><%= gettext("Certificate Signatories") %></legend>
+        </header>
         <div class="signatory-edit-list"> </div>
         <span>
            <button class="action action-add-signatory" type="button"><%= gettext("Add Additional Signatory") %></button>

@@ -70,6 +70,11 @@
         </div>
 
          <header style='margin-top: 30px;'>
+           <span class="title"><%= gettext("Certificate Organizations") %></span>
+         </header>
+         <div class="organization-details-list"></div>
+
+         <header style='margin-top: 30px;'>
            <span class="title"><%= gettext("Certificate Signatories") %></span>
          </header>
          <div class="signatory-details-list"></div>

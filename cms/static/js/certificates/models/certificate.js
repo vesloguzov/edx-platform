@@ -9,10 +9,12 @@ define([ // jshint ignore:line
     'gettext',
     'coffee/src/main',
     'js/certificates/models/signatory',
-    'js/certificates/collections/signatories'
+    'js/certificates/collections/signatories',
+    'js/certificates/models/organization',
+    'js/certificates/collections/organizations'
 ],
 function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, CoffeeSrcMain,
-          SignatoryModel, SignatoryCollection) {
+          SignatoryModel, SignatoryCollection, OrganizationModel, OrganizationCollection) {
     'use strict';
     _.str = str;
     var Certificate = Backbone.RelationalModel.extend({
@@ -43,6 +45,19 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
                 key: 'certificate',
                 includeInJSON: "id"
             }
+        }, {
+            type: Backbone.HasMany,
+            key: 'organizations',
+            relatedModel: OrganizationModel,
+            collectionType: OrganizationCollection,
+            /*collectionOptions: function(instance) {
+                return {}
+            },*/
+            includeInJSON: ['short_name'],
+            reverseRelation: {
+                key: 'certificate',
+                includeInJSON: false
+            }
         }],
 
         initialize: function(attributes, options) {
@@ -52,6 +67,7 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
                 // Ensure at least one child Signatory model is defined for any new Certificate model
                 attributes.signatories = new SignatoryModel({certificate: this});
             }
+            // TODO: add default organizations?
             this.setOriginalAttributes();
             return this;
         },
@@ -92,6 +108,7 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
                     attributes: {signatories: attrs.signatories.models}
                 };
             }
+            // TODO: validate organizations
         },
 
         reset: function() {

@@ -82,7 +82,7 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
         };
 
         beforeEach(function() {
-            TemplateHelpers.installTemplates(['certificate-details', 'signatory-details', 'signatory-editor', 'signatory-actions'], true);
+            TemplateHelpers.installTemplates(['certificate-details', 'signatory-details', 'signatory-editor', 'signatory-actions', 'organization-details'], true);
 
             this.newModelOptions = {add: true};
             this.model = new CertificateModel({
@@ -100,6 +100,7 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
             this.view = new CertificateDetailsView({
                 model: this.model
             });
+
             appendSetFixtures(this.view.render().el);
             CustomMatchers(this); // jshint ignore:line
         });
@@ -204,11 +205,11 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
                 expect(this.view.$(SELECTORS.signatory_organization_value)).toContainText('');
             });
 
-            it('should present Edit action on signaotry', function () {
+            it('should present Edit action on signatory', function () {
                 expect(this.view.$(SELECTORS.edit_signatory)).toExist();
             });
 
-            it('should not present Edit action on signaotry if user is not global staff and certificate is active', function () {
+            it('should not present Edit action on signatory if user is not global staff and certificate is active', function () {
                 window.CMS.User = {isGlobalStaff: false};
                 this.view.render();
                 expect(this.view.$(SELECTORS.edit_signatory)).not.toExist();

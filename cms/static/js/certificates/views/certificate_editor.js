@@ -7,10 +7,11 @@ define([ // jshint ignore:line
     'gettext',
     'js/views/list_item_editor',
     'js/certificates/models/signatory',
-    'js/certificates/views/signatory_editor'
+    'js/certificates/views/signatory_editor',
+    'js/certificates/views/organizations_editor'
 ],
 function($, _, Backbone, gettext,
-         ListItemEditorView, SignatoryModel, SignatoryEditorView) {
+         ListItemEditorView, SignatoryModel, SignatoryEditorView, OrganizationsEditorView) {
     'use strict';
 
     // If signatories limit is required to specific value then we can change it.
@@ -79,6 +80,11 @@ function($, _, Backbone, gettext,
                 self.$('div.signatory-edit-list').append($(signatory_view.render()));
             });
             this.disableAddSignatoryButton();
+
+            var organizations_editor = new OrganizationsEditorView({
+                collection: this.model.get("organizations")
+            });
+            this.$('div.organizations-wrapper').append(organizations_editor.render().$el);
             return this;
         },
 

@@ -5,6 +5,7 @@ define([ // jshint ignore:line
     'js/models/course',
     'js/certificates/models/certificate',
     'js/certificates/models/signatory',
+    'js/certificates/models/organization',
     'js/certificates/collections/certificates',
     'js/certificates/views/certificate_editor',
     'common/js/components/views/feedback_notification',
@@ -12,9 +13,10 @@ define([ // jshint ignore:line
     'common/js/spec_helpers/template_helpers',
     'common/js/spec_helpers/view_helpers',
     'js/spec_helpers/validation_helpers',
-    'js/certificates/spec/custom_matchers'
+    'js/certificates/spec/custom_matchers',
+    'jquery.simulate'
 ],
-function(_, Course, CertificateModel, SignatoryModel, CertificatesCollection, CertificateEditorView,
+function(_, Course, CertificateModel, SignatoryModel, OrganizationModel, CertificatesCollection, CertificateEditorView,
          Notification, AjaxHelpers, TemplateHelpers, ViewHelpers, ValidationHelpers, CustomMatchers) {
     'use strict';
 
@@ -35,6 +37,11 @@ function(_, Course, CertificateModel, SignatoryModel, CertificatesCollection, Ce
         inputSignatoryTitle: '.signatory-title-input',
         inputSignatoryOrganization: '.signatory-organization-input',
         inputSignatorySignature: '.signatory-signature-input',
+        inputOrganizationShortName: '.organization-short_name-input',
+        addOrganizationButton: '.action-add-organization',
+        organization_name_value: '.organization-name-value',
+        organization_logo_image: '.organization-logo-image',
+        organizationDeleteButton: '.action-delete-organization',
         warningMessage: '.certificate-validation-text',
         warningIcon: '.wrapper-certificate-validation > i',
         note: '.wrapper-delete-button',
@@ -110,15 +117,15 @@ function(_, Course, CertificateModel, SignatoryModel, CertificatesCollection, Ce
         uploadDialogTpl = readFixtures('upload-dialog.underscore');
 
         beforeEach(function() {
-            TemplateHelpers.installTemplates(['certificate-editor', 'signatory-editor'], true);
+            TemplateHelpers.installTemplates(['certificate-editor', 'signatory-editor', 'organization-details', 'organizations-editor'], true);
 
             this.newModelOptions = {add: true};
             this.model = new CertificateModel({
                 name: 'Test Name',
                 description: 'Test Description',
                 is_active: true,
-                show_grade: false
-
+                show_grade: false,
+                organizations: []
             }, this.newModelOptions);
 
             this.collection = new CertificatesCollection([ this.model ], {
@@ -360,6 +367,88 @@ function(_, Course, CertificateModel, SignatoryModel, CertificatesCollection, Ce
                 expect(signatory.get('organization')).toEqual('New Signatory Organization');
                 expect(signatory.get('signature_image_path')).toEqual(sinature_image_path);
             });
+        });
+
+        describe('Organizations', function() {
+            it('should add organization with valid short name and display its details', function() {
+                setValuesToInputs(this.view, {inputOrganizationShortName: 'TEST'});
+
+                expect(this.view.$(SELECTORS.addOrganizationButton)).not.toHaveClass('disableClick');
+                this.view.$(SELECTORS.addOrganizationButton).click();
+
+                var organization = this.model.get('organizations').at(0);
+                expect(organization.get('short_name')).toEqual('TEST');
+
+                expect(this.view.$(SELECTORS.organization_name_value)).toContainText('Test Organization');
+                expect(this.view.$(SELECTORS.organization_logo_image).attr('src')).toContain('test_logo');
+                expect(this.view.$(SELECTORS.organizationDeleteButton)).toExist();
+
+            });
+
+            it('should add organization on hitting return', function() {
+                setValuesToInputs(this.view, {
+                    inputOrganizationShortName: 'TEST'
+                });
+                this.view.$(SELECTORS.inputOrganizationShortName).simulate("keyup", {keyCode: $.simulate.keyCode.ENTER});
+
+                var organization = this.model.get('organizations').at(0);
+                expect(organization.get('short_name')).toEqual('TEST');
+            });
+
+            it('user can delete organizations', function() {
+                var requests = AjaxHelpers.requests(this),
+                    notificationSpy = ViewHelpers.createNotificationSpy();
+
+                setValuesToInputs(this.view, {inputOrganizationShortName: 'TEST'});
+                this.view.$(SELECTORS.addOrganizationButton).click();
+
+                var total_organizations = this.model.get('organizations').length;
+                var organization = this.model.get('organizations').at(0);
+                // Simply delete organization without prompting: it's easily reverted
+                this.view.$(SELECTORS.organizationDeleteButton).click();
+                ViewHelpers.submitAndVerifyFormSuccess(this.view, requests, notificationSpy);
+
+                expect(this.model.get('organizations').length).toEqual(total_organizations - 1);
+            });
+
+            it('can cancel deletion of organizations', function() {
+                var requests = AjaxHelpers.requests(this),
+                    notificationSpy = ViewHelpers.createNotificationSpy();
+                var total_organizations = this.model.get('organizations').length;
+
+                setValuesToInputs(this.view, {inputOrganizationShortName: 'TEST-1'});
+                this.view.$(SELECTORS.addOrganizationButton).click();
+                ViewHelpers.submitAndVerifyFormSuccess(this.view, requests, notificationSpy);
+                expect(this.model.get('organizations').length, total_organizations + 1);
+
+                this.view.render();
+                this.view.$(SELECTORS.organizationDeleteButton).filter(':first').click();
+                expect(this.model.get('organizations').length, total_organizations);
+
+                this.view.$('.action-cancel').click();
+                expect(this.model.get('organizations').length, total_organizations + 1);
+            });
+
+            it('organizations should save properly', function() {
+                var requests = AjaxHelpers.requests(this),
+                    notificationSpy = ViewHelpers.createNotificationSpy();
+
+                setValuesToInputs(this.view, {inputOrganizationShortName: 'TEST'});
+                this.view.$('.action-add-organization').click();
+                ViewHelpers.submitAndVerifyFormSuccess(this.view, requests, notificationSpy);
+
+                // get the first organization from the organizations collection.
+                var organization = this.model.get('organizations').at(0);
+                expect(organization).toBeInstanceOf(OrganizationModel);
+                expect(organization.get('short_name')).toEqual('TEST');
+            });
+
+            // TODO: sorting
+            // add only unique orgs
+            // it('should reject organization with invalid short name and display error message', function() {
+            // it('should search for organization by long name', function() {
+            // ??? it('user can only add signatories up to max 100', function() {
+            // it('should show disabled add button till valid organization entered', function() {
         });
     });
 });

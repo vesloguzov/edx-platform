@@ -35,6 +35,11 @@ function(CertificateModel, CertificateCollection) {
                 var relation = this.model.getRelations()[0];
                 expect(relation.key).toEqual('signatories');
             });
+
+            it('certificate should have organizations in its relations', function() {
+                var relation = this.model.getRelations()[1];
+                expect(relation.key).toEqual('organizations');
+            });
         });
 
         describe('Validation', function() {
