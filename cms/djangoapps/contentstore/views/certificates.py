@@ -57,8 +57,6 @@ from contentstore.utils import get_lms_link_for_certificate_web_view
 CERTIFICATE_SCHEMA_VERSION = 'lek-1'
 CERTIFICATE_MINIMUM_ID = 100
 
-DEFAULT_HONOR_CODE_DISCLAIMER = ugettext_noop('Honor Code Disclaimer')
-
 def _get_course_and_check_access(course_key, user, depth=0):
     """
     Internal method used to calculate and return the locator and
@@ -99,9 +97,9 @@ def get_default_certificate_organizations(course_key):
         settings.CERTIFICATE_DEFAULT_ORGANIZATION
     )
     organizations = [org['short_name'] for org in course_organizations]
-    if platform_organization:
+    if platform_organization and platform_organization not in organizations:
         organizations.insert(0, platform_organization['short_name'])
-    return organizations
+    return [{'short_name': org} for org in organizations]
 
 
 # Certificates Exceptions
@@ -396,8 +394,6 @@ def certificates_list_handler(request, course_key_string):
                 course_key=course_key,
                 mode=course_modes[0]  # CourseMode.modes_for_course returns default mode 'honor' if doesn't find anyone.
             )
-            honor_code_disclaimer = _(DEFAULT_HONOR_CODE_DISCLAIMER)
-            organizations = get_default_certificate_organizations(course_key)
             certificates = None
             is_active = False
             if settings.FEATURES.get('CERTIFICATES_HTML_VIEW', False):
@@ -406,6 +402,8 @@ def certificates_list_handler(request, course_key_string):
                 for certificate in certificates:
                     is_active = certificate.get('is_active', False)
                     break
+
+            default_organizations = get_default_certificate_organizations(course_key)
 
             return render_to_response('certificates.html', {
                 'context_course': course,
@@ -417,7 +415,8 @@ def certificates_list_handler(request, course_key_string):
                 'certificate_web_view_url': certificate_web_view_url,
                 'is_active': is_active,
                 'is_global_staff': GlobalStaff().has_user(request.user),
-                'certificate_activation_handler_url': activation_handler_url
+                'certificate_activation_handler_url': activation_handler_url,
+                'default_organizations': default_organizations
             })
         elif "application/json" in request.META.get('HTTP_ACCEPT'):
             # Retrieve the list of certificates for the specified course

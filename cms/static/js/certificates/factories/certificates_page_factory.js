@@ -21,12 +21,13 @@ define([ // jshint ignore:line
 function($, CertificatesCollection, Certificate, CertificatesPage, CertificatePreview) {
     'use strict';
     return function (certificatesJson, certificateUrl, courseOutlineUrl, course_modes, certificate_web_view_url,
-                     is_active, certificate_activation_handler_url) {
+                     is_active, certificate_activation_handler_url, default_organizations) {
         // Initialize the model collection, passing any necessary options to the constructor
         var certificatesCollection = new CertificatesCollection(certificatesJson, {
             parse: true,
             canBeEmpty: true,
-            certificateUrl: certificateUrl
+            certificateUrl: certificateUrl,
+            newCertificateAttributes: {'organizations': default_organizations}
         });
 
         // associating the certificate_preview globally.
