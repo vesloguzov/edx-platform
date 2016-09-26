@@ -523,6 +523,90 @@
   }
 }
 
+// * +Organizations - Certificate
+// ====================
+.view-certificates .certificates {
+    .organization-details {
+        display: table;
+        width: 100%;
+        box-sizing: border-box;
+
+      .organization-details {
+        display: table-row;
+      }
+    }
+
+    .organization-logo,
+    .organization-name,
+    .organization-actions-wrapper {
+        display: table-cell;
+        vertical-align: middle;
+        height: 100%;
+    }
+
+    .organization-logo,
+    .organization-logo-image {
+        width: ($baseline*4);
+    }
+
+    .organization-logo-image {
+        display: block;
+    }
+
+    .organization-name {
+        padding-left: ($baseline/2);
+    }
+
+    .organization-long-name-value {
+      display: block;
+      font-weight: 600;
+    }
+
+    .organization-details.editable {
+      padding: ($baseline/4);
+      margin-bottom: ($baseline/4);
+      border: 1px solid $gray-l4;
+      border-radius: 2px;
+      background-color: $gray-l5;
+
+      .organization-name {
+        width: 100%; // hack to make it stretch as much as possible
+        font-size: 1.4rem;
+      }
+
+      .action-delete-organization {
+        float: right;
+        padding: ($baseline/4);
+      }
+
+    }
+
+    .organization-add-wrapper {
+      @include clearfix();
+      width: flex-grid(12,12);
+      margin-top: ($baseline/4);
+
+      .organization-add-input-wrapper {
+        float: left;
+        width: flex-grid(9,12);
+        margin-right: flex-gutter();
+        margin-top: 2px;
+      }
+
+      .organization-short_name-input {
+          font-size: 1.6rem;
+          width: 100%;
+      }
+
+      .action-add-organization {
+        @extend %ui-btn-flat-outline;
+        float: right;
+        width: flex-grid(3,12);
+        padding: ($baseline/2) $baseline;
+      }
+    }
+}
+
 // * +Signatories -Certificate
 // ====================
 // TO-DO: refactor to use collection styling where possible.

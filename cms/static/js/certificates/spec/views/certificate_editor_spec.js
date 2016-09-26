@@ -39,7 +39,7 @@ function(_, Course, CertificateModel, SignatoryModel, OrganizationModel, Certifi
         inputSignatorySignature: '.signatory-signature-input',
         inputOrganizationShortName: '.organization-short_name-input',
         addOrganizationButton: '.action-add-organization',
-        organization_name_value: '.organization-name-value',
+        organization_name: '.organization-name',
         organization_logo_image: '.organization-logo-image',
         organizationDeleteButton: '.action-delete-organization',
         warningMessage: '.certificate-validation-text',
@@ -379,7 +379,7 @@ function(_, Course, CertificateModel, SignatoryModel, OrganizationModel, Certifi
                 var organization = this.model.get('organizations').at(0);
                 expect(organization.get('short_name')).toEqual('TEST');
 
-                expect(this.view.$(SELECTORS.organization_name_value)).toContainText('Test Organization');
+                expect(this.view.$(SELECTORS.organization_name)).toContainText('Test Organization');
                 expect(this.view.$(SELECTORS.organization_logo_image).attr('src')).toContain('test_logo');
                 expect(this.view.$(SELECTORS.organizationDeleteButton)).toExist();
 

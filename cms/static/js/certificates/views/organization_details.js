@@ -21,10 +21,14 @@ function ($, _, str, Backbone, gettext, TemplateUtils, ViewUtils, BaseView) {
         className: function () {
             // Determine the CSS class names for this model instance
             var index = this.model.collection.indexOf(this.model);
-            return [
+            var classes = [
                 'organization-details',
                 'organization-details-view-' + index
-            ].join(' ');
+            ]
+            if (this.options.editable) {
+                classes.push('editable');
+            }
+            return classes.join(' ');
         },
 
         initialize: function(options) {

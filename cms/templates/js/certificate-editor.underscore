@@ -54,9 +54,12 @@
         </fieldset>
 
         <header>
-          <span class="title"><%= gettext("Certificate Organizations") %></legend>
+          <span class="title"><%= gettext("Certificate Organizations") %></span>
         </header>
-        <div class="organizations-wrapper"></div>
+        <fieldset class="collection-fields certificate-fields">
+          <legend class="sr"><%= gettext("Certificate Organizations Information") %></legend>
+            <div class="organizations-wrapper"></div>
+        </fieldset>
 
         <header>
           <span class="title"><%= gettext("Certificate Signatories") %></legend>

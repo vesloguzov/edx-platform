@@ -1,5 +1,5 @@
         <div class="organizations-edit-list"> </div>
-        <span>
+        <span class="organization-add-wrapper">
           <div class="organization-add-input-wrapper">
             <input id="organization-short_name" class="input-text organization-short_name-input" name="organization-short_name" type="text" placeholder="<%= gettext("Organization slug or full name") %>" value=""  aria-describedby="organization-add-tip" />
             <span id="organization-add-tip" class="tip tip-stacked"><%= gettext("Search for organization by its slug or full name, only existing organizations allowed.") %></span>
