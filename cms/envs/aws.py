@@ -101,6 +101,9 @@ if STATIC_URL_BASE:
         STATIC_URL += "/"
 STATIC_URL += EDX_PLATFORM_REVISION + "/"
 
+# User-uploaded content, served by lms server
+LMS_MEDIA_URL = ENV_TOKENS.get('MEDIA_URL')
+
 # GITHUB_REPO_ROOT is the base directory
 # for course data
 GITHUB_REPO_ROOT = ENV_TOKENS.get('GITHUB_REPO_ROOT', GITHUB_REPO_ROOT)

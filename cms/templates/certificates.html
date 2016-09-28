@@ -38,7 +38,8 @@ CMS.User.isGlobalStaff = '${is_global_staff}'=='True' ? true : false;
           ${escape_json_dumps(certificate_web_view_url) | n},
           ${escape_json_dumps(is_active) | n},
           ${escape_json_dumps(certificate_activation_handler_url) | n},
-          ${escape_json_dumps(default_organizations) | n}
+          ${escape_json_dumps(default_organizations) | n},
+          ${escape_json_dumps(organizations_list) | n}
       );
   });
 </%block>

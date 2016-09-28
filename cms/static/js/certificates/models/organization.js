@@ -15,6 +15,8 @@ function(_, str, Backbone, BackboneRelational, gettext) {
         defaults: {
             short_name: ''
         },
+        NOT_FOUND_MESSAGE: gettext("No organization found. Please contact your manager to add the organization to the system."),
+        DUPLICATE_MESSAGE: gettext("Organization already added."),
 
         initialize: function() {
             // Set the unique id for Backbone Relational
@@ -27,12 +29,17 @@ function(_, str, Backbone, BackboneRelational, gettext) {
             return response
         },
 
-        getOrganizationDetails: function(){
-            return {
-                // TODO: implement
-                long_name: 'Test Organization',
-                logo: '//test_logo'
+        getOrganizationDetails: function() {
+            for (var i=0; i < window.organizationsList.length; i++) {
+                var organization = window.organizationsList[i];
+                if (organization.short_name == this.get('short_name')) {
+                    return {
+                        long_name: organization.long_name,
+                        logo: organization.logo || ''
+                    }
+                }
             }
+            throw new Error(this.NOT_FOUND_MESSAGE);
         }
     });
     return Organization;

@@ -5,6 +5,7 @@ define([ // jshint ignore:line
     'js/models/course',
     'js/certificates/collections/certificates',
     'js/certificates/models/certificate',
+    'js/certificates/models/organization',
     'js/certificates/views/certificate_details',
     'js/certificates/views/certificate_preview',
     'common/js/components/views/feedback_notification',
@@ -14,7 +15,7 @@ define([ // jshint ignore:line
     'js/spec_helpers/validation_helpers',
     'js/certificates/spec/custom_matchers'
 ],
-function(_, Course, CertificatesCollection, CertificateModel, CertificateDetailsView, CertificatePreview,
+function(_, Course, CertificatesCollection, CertificateModel, OrganizationModel, CertificateDetailsView, CertificatePreview,
          Notification, AjaxHelpers, TemplateHelpers, ViewHelpers, ValidationHelpers, CustomMatchers) {
     'use strict';
 
@@ -63,6 +64,7 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
             course_modes: ['honor', 'test'],
             certificate_web_view_url: '/users/1/courses/orgX/009/2016'
         });
+        window.organizationsList = [];
         window.CMS.User = {isGlobalStaff: true};
     });
 
@@ -188,6 +190,15 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
                 $.smoothScroll = jasmine.createSpy('jQuery.smoothScroll');
                 appendSetFixtures(this.view.render().el);
                 expect($.smoothScroll).toHaveBeenCalled();
+            });
+
+            it('should display error message if organization is not found', function() {
+                new OrganizationModel({
+                    certificate: this.model,
+                    short_name: 'INVALID'
+                });
+                this.view.render();
+                expect(this.view.$('.organization-details .error')).toExist();
             });
 
         });

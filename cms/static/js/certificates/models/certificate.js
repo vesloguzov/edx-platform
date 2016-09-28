@@ -50,9 +50,6 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
             key: 'organizations',
             relatedModel: OrganizationModel,
             collectionType: OrganizationCollection,
-            /*collectionOptions: function(instance) {
-                return {}
-            },*/
             includeInJSON: ['short_name'],
             reverseRelation: {
                 key: 'certificate',
@@ -108,7 +105,6 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
                     attributes: {signatories: attrs.signatories.models}
                 };
             }
-            // TODO: validate organizations
         },
 
         reset: function() {

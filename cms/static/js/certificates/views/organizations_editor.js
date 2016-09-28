@@ -7,7 +7,8 @@ define([ // jshint ignore:line
     'gettext',
     'js/utils/templates',
     'js/certificates/models/organization',
-    'js/certificates/views/organization_details'
+    'js/certificates/views/organization_details',
+    'jquery.ui'
 ],
 function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, OrganizationDetailsView) {
     'use strict';
@@ -16,10 +17,9 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
         className: 'organizations-editor',
         events: {
             'change .organization-short_name-input': 'updateAddButtonState',
-            'click .action-add-organization': 'addOrganization',
+            'click .action-add-organization': 'onAddOrganization',
             'keyup .organization-short_name-input': 'shortNameKeyUp',
             'keypress .organization-short_name-input': 'preventFormSubmission'
-            // TODO: sorting
         },
         initialize: function(options) {
             this.eventAgg = _.extend({}, Backbone.Events);
@@ -40,6 +40,7 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
                 });
                 self.$('div.organizations-edit-list').append($(organization_detail_view.render().$el));
             });
+            this._setupAutocomplete();
             return this;
         },
 
@@ -48,12 +49,24 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
             return TemplateUtils.loadTemplate(name);
         },
 
+        onAddOrganization: function(event) {
+            if (event && event.preventDefault) { event.preventDefault(); }
+            var short_name = this.$('.organization-short_name-input').val().trim();
+
+            if (! this._organizationExists(short_name)) {
+                this.$('.organization-add-error').text(OrganizationModel.prototype.NOT_FOUND_MESSAGE).show();
+            } else if (this._organizationUsed(short_name)) {
+                this.$('.organization-add-error').text(OrganizationModel.prototype.DUPLICATE_MESSAGE).show();
+            } else {
+                this.addOrganization();
+            }
+        },
+
         addOrganization: function(event) {
             // Appends organization to certificate models organizations collection (still requires persistence on server)
-            if (event && event.preventDefault) { event.preventDefault(); }
-            var organizations = new OrganizationModel({
+            new OrganizationModel({
                 certificate: this.collection.certificate,
-                short_name: this.$('.organization-short_name-input').val()
+                short_name: this.$('.organization-short_name-input').val().trim()
             });
             this.render();
             this.$('.organization-short_name-input').focus();
@@ -67,26 +80,58 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
         },
 
         shortNameKeyUp: function(event) {
-            this.$('.organization-short_name-input').trigger('change');
+            this.$('.organization-add-error').hide();
             if (event.which == $.ui.keyCode.ENTER) {
-                // TODO: implement search
-                var organization_found = true;
-                if (organization_found) {
-                    this.addOrganization();
-                }
+                this.onAddOrganization();
             }
-        },
-
-        updateAddButtonState: function() {
-            // Searches for organization in organizations list
-            // and enables/disables add organizaton button
-            // TODO: implement search
-            var organization_found = true;
-            this.$(".action-add-organization").toggleClass("disableClick", !organization_found);
         },
 
         preventFormSubmission: function(event) {
             if (event.which == $.ui.keyCode.ENTER) { event.preventDefault(); }
+        },
+
+        _setupAutocomplete: function() {
+            var self = this;
+            this.$('.organization-short_name-input').autocomplete({
+                source: function(request, response) {
+                    var matcher = new RegExp( $.ui.autocomplete.escapeRegex( request.term ), "i" );
+                    response(
+                        $.grep(window.organizationsList, function(item) {
+                            return (
+                                matcher.test(item.short_name) || matcher.test(item.long_name)
+                            ) && !self._organizationUsed(item.short_name);
+                        })
+                    );
+                },
+                focus: function(event, ui) {
+                    $(this).val(ui.item.short_name).change();
+                    return false;
+                },
+                select: function(event, ui) {
+                    $(this).val(ui.item.short_name).change();
+                    return false;
+                }
+            }).data('ui-autocomplete')._renderItem = function(ul, item) {
+                // show short and long organization names
+                return $('<li>').append(
+                    $('<a>').append(
+                        $('<strong>').text(item.short_name + ': '),
+                        document.createTextNode(item.long_name)
+                    )
+                ).appendTo(ul);
+
+            };
+        },
+        _organizationExists: function(short_name) {
+            return $.grep(window.organizationsList, function(item){
+                return item.short_name == short_name;
+            }).length > 0;
+        },
+        _organizationUsed: function(short_name) {
+            var used = this.collection.certificate.get('organizations').map(function(organization){
+                return organization.get('short_name');
+            });
+            return $.inArray(short_name, used) != -1;
         }
     });
     return OrganizationsEditorView;

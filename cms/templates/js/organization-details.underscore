@@ -2,6 +2,11 @@
   <span class="organization-logo">
     <% if (logo != "") { %>
       <img class="organization-logo-image" src="<%= logo %>" alt="Organization Logo">
+    <% }  else { %>
+      <div class="no-image">
+          <i class="icon fa fa-exclamation-circle"></i>
+          <%= gettext("No logo") %>
+      </div>
     <% } %>
   </span>
   <span class="organization-name">

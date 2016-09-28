@@ -46,8 +46,12 @@ function ($, _, str, Backbone, gettext, TemplateUtils, ViewUtils, BaseView) {
 
         render: function() {
             // Assemble the detail view for this model
-            var context = this.getTemplateContext();
-            $(this.el).html(this.template(context));
+            try {
+                var context = this.getTemplateContext();
+                $(this.el).html(this.template(context));
+            } catch (e) {
+                $(this.el).html($('<span>').text(e.message).addClass('error'));
+            }
             return this;
         },
 

@@ -40,6 +40,7 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
             course_modes: ['honor', 'test'],
             certificate_web_view_url: '/users/1/courses/orgX/009/2016'
         });
+        window.organizationsList = [];
     });
 
     afterEach(function() {
@@ -51,7 +52,7 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
 
         beforeEach(function() {
             TemplateHelpers.installTemplates(
-                ['certificate-editor', 'certificate-edit', 'list']
+                ['certificate-editor', 'certificate-edit', 'list', 'organization-details', 'organizations-editor']
             );
 
             this.model = new CertificateModel({

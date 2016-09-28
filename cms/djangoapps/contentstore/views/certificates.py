@@ -102,6 +102,28 @@ def get_default_certificate_organizations(course_key):
     return [{'short_name': org} for org in organizations]
 
 
+def get_serializable_organizations_list():
+    """
+    Get list of all organization prepared for usage by certificate editor.
+    Each organization item includes short name, long name and logo path.
+    """
+    def _get_logo_url(logo):
+        if logo:
+            return u"//{base}{media_url}{url}".format(
+                base = settings.LMS_BASE,
+                media_url = settings.LMS_MEDIA_URL,
+                url = logo.url
+            )
+        return ''
+
+    organizations = organizations_helpers.get_organizations()
+    return [{
+        'short_name': org['short_name'],
+        'long_name': org['name'],
+        'logo': _get_logo_url(org['logo'])
+    } for org in organizations]
+
+
 # Certificates Exceptions
 class CertificateException(Exception):
     """
@@ -403,6 +425,7 @@ def certificates_list_handler(request, course_key_string):
                     is_active = certificate.get('is_active', False)
                     break
 
+            organizations_list = get_serializable_organizations_list()
             default_organizations = get_default_certificate_organizations(course_key)
 
             return render_to_response('certificates.html', {
@@ -416,6 +439,7 @@ def certificates_list_handler(request, course_key_string):
                 'is_active': is_active,
                 'is_global_staff': GlobalStaff().has_user(request.user),
                 'certificate_activation_handler_url': activation_handler_url,
+                'organizations_list': organizations_list,
                 'default_organizations': default_organizations
             })
         elif "application/json" in request.META.get('HTTP_ACCEPT'):

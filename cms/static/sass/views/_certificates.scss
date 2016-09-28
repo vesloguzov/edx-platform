@@ -545,12 +545,26 @@
     }
 
     .organization-logo,
-    .organization-logo-image {
+    .organization-logo-image,
+    .no-image {
         width: ($baseline*4);
+        min-width: ($baseline*4);
     }
 
     .organization-logo-image {
         display: block;
+    }
+
+    .no-image {
+        padding: $baseline ($baseline/7);
+        box-sizing: border-box;
+        text-align: center;
+        font-size: 75%;
+        line-height: $body-line-height;
+        color: $black-t2;
+        background-color: $red-l5;
+        border: solid 1px $black-t0;
+        border-radius: 2px;
     }
 
     .organization-name {
