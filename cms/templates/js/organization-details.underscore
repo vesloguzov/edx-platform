@@ -1,4 +1,11 @@
 <div class="organization-panel-default">
+  <% if (error) { %>
+  <span class="error organization-details-error">
+    <i class="icon fa fa-warning"></i>
+    <span class="organization-short-name-value"><%= short_name %>:</span>
+    <%= error %>
+  </span>
+  <% } else { %>
   <span class="organization-logo">
     <% if (logo != "") { %>
       <img class="organization-logo-image" src="<%= logo %>" alt="Organization Logo">
@@ -14,6 +21,7 @@
     <span class="organization-long-name-value"><%= long_name %></span>
     <span class="sr"><%= gettext('Organization name') %></span>
   </span>
+  <% } %>
   <% if (editable) { %>
   <span class="organization-actions-wrapper">
      <a class="action action-delete-organization" href="#" data-tooltip="Delete">

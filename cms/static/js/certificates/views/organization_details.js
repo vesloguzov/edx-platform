@@ -46,22 +46,19 @@ function ($, _, str, Backbone, gettext, TemplateUtils, ViewUtils, BaseView) {
 
         render: function() {
             // Assemble the detail view for this model
-            try {
-                var context = this.getTemplateContext();
-                $(this.el).html(this.template(context));
-            } catch (e) {
-                $(this.el).html($('<span>').text(e.message).addClass('error'));
-            }
+            var context = this.getTemplateContext();
+            $(this.el).html(this.template(context));
             return this;
         },
 
         getTemplateContext: function() {
-            var details = this.model.getOrganizationDetails();
-            return $.extend(
-                {editable: this.editable},
-                this.model.attributes,
-                details
-            );
+            var context = $.extend({editable: this.editable}, this.model.attributes);
+            try {
+                var details = this.model.getOrganizationDetails();
+                return $.extend(context, details, {'error': null});
+            } catch (e) {
+                return $.extend(context, {'error': e.message});
+            };
         },
         triggerDeleteOrganization: function(event) {
             this.eventAgg.trigger("onClickDeleteOrganization", event, this.model);

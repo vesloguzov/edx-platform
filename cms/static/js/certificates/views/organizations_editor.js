@@ -54,9 +54,9 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
             var short_name = this.$('.organization-short_name-input').val().trim();
 
             if (! this._organizationExists(short_name)) {
-                this.$('.organization-add-error').text(OrganizationModel.prototype.NOT_FOUND_MESSAGE).show();
+                this._toggleOrganizationError(OrganizationModel.prototype.NOT_FOUND_MESSAGE);
             } else if (this._organizationUsed(short_name)) {
-                this.$('.organization-add-error').text(OrganizationModel.prototype.DUPLICATE_MESSAGE).show();
+                this._toggleOrganizationError(OrganizationModel.prototype.DUPLICATE_MESSAGE);
             } else {
                 this.addOrganization();
             }
@@ -80,7 +80,7 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
         },
 
         shortNameKeyUp: function(event) {
-            this.$('.organization-add-error').hide();
+            this._toggleOrganizationError(false);
             if (event.which == $.ui.keyCode.ENTER) {
                 this.onAddOrganization();
             }
@@ -132,6 +132,11 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
                 return organization.get('short_name');
             });
             return $.inArray(short_name, used) != -1;
+        },
+
+        _toggleOrganizationError: function(message) {
+            this.$('.organization-add-input-wrapper').toggleClass('error', message);
+            this.$('.organization-add-error').text(message);
         }
     });
     return OrganizationsEditorView;

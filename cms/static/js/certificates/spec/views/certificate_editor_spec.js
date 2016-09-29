@@ -462,7 +462,7 @@ function(_, Course, CertificateModel, SignatoryModel, OrganizationModel, Certifi
                 this.view.$(SELECTORS.inputOrganizationShortName).simulate("keyup", {keyCode: $.simulate.keyCode.ENTER});
                 expect(this.model.get('organizations').length).toEqual(total_organizations);
 
-                expect(this.view.$('.error')).toBeVisible();
+                expect(this.view.$('.message-error:visible')).toContainText('No organization found');
             });
 
             it('should reject duplicate organization and display error message', function() {
@@ -480,7 +480,7 @@ function(_, Course, CertificateModel, SignatoryModel, OrganizationModel, Certifi
 
                 this.view.$(SELECTORS.inputOrganizationShortName).simulate("keyup", {keyCode: $.simulate.keyCode.ENTER});
                 expect(this.model.get('organizations').length).toEqual(total_organizations);
-                expect(this.view.$('.error')).toBeVisible();
+                expect(this.view.$('.message-error:visible')).toContainText('Organization already added');
             });
         });
     });
