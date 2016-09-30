@@ -58,7 +58,7 @@ CERTIFICATE_JSON_WITH_SIGNATORIES = {
             "signature_image_path": "/c4x/test/CSS101/asset/Signature.png"
         }
     ],
-    u'organizations': ['org1', 'org2'],
+    u'organizations': [{'short_name': 'org1'}, {'short_name': 'org2'}],
     u'honor_code_disclaimer': 'Honor Code Disclaimer'
 }
 
@@ -78,21 +78,22 @@ class CertificateOrganizationsTestCase(TestCase):
         self._create_course_organization()
 
         orgs = get_default_certificate_organizations(self.course_key)
-        self.assertIn(self.organization_short_name, orgs)
-        self.assertIn(settings.CERTIFICATE_DEFAULT_ORGANIZATION, orgs)
+        self.assertIn({'short_name': self.organization_short_name}, orgs)
+        self.assertIn({'short_name': settings.CERTIFICATE_DEFAULT_ORGANIZATION}, orgs)
 
     def test_missing_platform_organization(self):
         self._create_course_organization()
 
         orgs = get_default_certificate_organizations(self.course_key)
-        self.assertIn(self.organization_short_name, orgs)
+        self.assertEqual(1, len(orgs))
+        self.assertIn({'short_name': self.organization_short_name}, orgs)
 
     def test_missing_course_organization(self):
         OrganizationFactory.create(short_name=settings.CERTIFICATE_DEFAULT_ORGANIZATION)
 
         orgs = get_default_certificate_organizations(self.course_key)
-        self.assertNotIn(self.organization_short_name, orgs)
-        self.assertIn(settings.CERTIFICATE_DEFAULT_ORGANIZATION, orgs)
+        self.assertNotIn({'short_name': self.organization_short_name}, orgs)
+        self.assertIn({'short_name': settings.CERTIFICATE_DEFAULT_ORGANIZATION}, orgs)
 
     def _create_course_organization(self):
         OrganizationFactory.create(short_name=self.organization_short_name)
@@ -228,9 +229,9 @@ class CertificatesBaseTestCase(object):
         }
 
         with self.assertRaises(Exception) as context:
-            CertificateManager.validate(json_data_1)
+            CertificateManager.deserialize_certificate(None, json.dumps(json_data_1))
 
-        self.assertTrue("Unsupported certificate schema version: 100.  Expected version: lek-1." in context.exception)
+        self.assertIn("version: Unsupported certificate schema version: 100.  Expected version: lek-1.", context.exception)
 
         #Test certificate name is missing
         json_data_2 = {
@@ -239,9 +240,9 @@ class CertificatesBaseTestCase(object):
         }
 
         with self.assertRaises(Exception) as context:
-            CertificateManager.validate(json_data_2)
+            CertificateManager.deserialize_certificate(None, json.dumps(json_data_2))
 
-        self.assertTrue('must have name of the certificate' in context.exception)
+        self.assertIn('name: This field is required.', context.exception)
 
 
 @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
@@ -347,7 +348,7 @@ class CertificatesListHandlerTestCase(EventTestMixin, CourseTestCase, Certificat
         self.assertEqual(data[0]['name'], 'Test certificate')
         self.assertEqual(data[0]['description'], 'Test description')
         self.assertEqual(data[0]['version'], CERTIFICATE_SCHEMA_VERSION)
-        self.assertEqual(data[0]['organizations'], ['org1', 'org2'])
+        self.assertEqual(data[0]['organizations'], [{'short_name': 'org1'}, {'short_name': 'org2'}])
 
     def test_unsupported_http_accept_header(self):
         """

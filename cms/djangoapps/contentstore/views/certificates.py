@@ -11,8 +11,8 @@ course.certificates: {
             'course_title': 'course title',
             'course_description': 'course_description', //short course description, not required
             'organizations': [
-                'ORG1_SHORT_NAME',
-                'ORG2_SHORT_NAME',
+                {'short_name': 'ORG1_SHORT_NAME'},
+                {'short_name': 'ORG2_SHORT_NAME'},
             ],
             'signatories': [
                 {
@@ -28,7 +28,9 @@ course.certificates: {
     ]
 }
 """
+import re
 import json
+import urllib
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -36,6 +38,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import HttpResponse
 from django.utils.translation import ugettext_noop, ugettext as _
 from django.views.decorators.http import require_http_methods
+
+from rest_framework import serializers, renderers
 
 from contentstore.utils import reverse_course_url
 from edxmako.shortcuts import render_to_response
@@ -54,8 +58,10 @@ from django.core.exceptions import PermissionDenied
 from course_modes.models import CourseMode
 from contentstore.utils import get_lms_link_for_certificate_web_view
 
+
 CERTIFICATE_SCHEMA_VERSION = 'lek-1'
 CERTIFICATE_MINIMUM_ID = 100
+
 
 def _get_course_and_check_access(course_key, user, depth=0):
     """
@@ -139,107 +145,94 @@ class CertificateValidationError(CertificateException):
     pass
 
 
+class SignatorySerializer(serializers.Serializer):
+    """
+    Serializer for serialization and validation of Signatory objects
+    """
+    id = serializers.IntegerField(required=False)
+    name = serializers.CharField(required=False, allow_blank=True)
+    title = serializers.CharField(required=False, allow_blank=True)
+    organization = serializers.CharField(required=False, allow_blank=True)
+    signature_image_path = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class OrganizationSerializer(serializers.Serializer):
+    """
+    Serializer for serialization and validation of certificate organizations
+
+    Currently only short name is stored in certificate to map it to existing
+    Organization model.
+    Existence is not validated to allow editing of imported courses with
+    not-yet-created organizations linked to certificates.
+    """
+    short_name = serializers.CharField(required=True, allow_blank=False)
+
+    def validate_short_name(self, value):
+        """
+        Validates organization short_name, similar to course creation validators
+        """
+        if settings.FEATURES.get('ALLOW_UNICODE_COURSE_ID'):
+            if value != re.sub(r'\s+', '', value, flags=re.UNICODE):
+                raise serializers.ValidationError(_('This field should not contain any spaces.'))
+        else:
+            if value != urllib.quote(value) or any(symbol in value for symbol in "!'()*"):
+                raise serializers.ValidationError(_('This field should not contain any non-latin letters, special characters or spaces.'))
+        return value
+
+
+class CertificateSerializer(serializers.Serializer):
+    """
+    Serializer for serialization and validation of Certificate objects
+
+    Replacement for most parts of CertificateManager's parse and validate methods.
+    Skips field 'editing' as unused, delegates id assigning to Certificate class.
+    """
+    version = serializers.CharField(required=True, allow_blank=False)
+    id = serializers.IntegerField(required=False)
+    name = serializers.CharField(required=True, allow_blank=False)
+    description = serializers.CharField(required=True, allow_blank=True)
+    is_active = serializers.BooleanField(required=False, default=False)
+
+    course_title = serializers.CharField(required=False, allow_blank=True)
+    course_description = serializers.CharField(required=False, allow_blank=True)
+
+    show_grade = serializers.BooleanField(required=False, default=False)
+    honor_code_disclaimer = serializers.CharField(required=False, allow_blank=True)
+
+    organizations = OrganizationSerializer(required=False, many=True, default=list)
+    signatories = SignatorySerializer(required=False, many=True, default=list)
+
+    def validate_version(self, value):
+        """
+        Ensure the schema version meets our expectations
+        """
+        if value != CERTIFICATE_SCHEMA_VERSION:
+            raise serializers.ValidationError(
+                "Unsupported certificate schema version: {0}.  Expected version: {1}.".format(
+                    value, CERTIFICATE_SCHEMA_VERSION
+                )
+            )
+        return value
+
+
 class CertificateManager(object):
     """
     The CertificateManager is responsible for storage, retrieval, and manipulation of Certificates
     Certificates are not stored in the Django ORM, they are a field/setting on the course descriptor
     """
-    @staticmethod
-    def parse(json_string):
-        """
-        Deserialize the provided JSON data into a standard Python object
-        """
-        try:
-            certificate = json.loads(json_string)
-        except ValueError:
-            raise CertificateValidationError(_("invalid JSON"))
-        # Include the data contract version
-        certificate["version"] = CERTIFICATE_SCHEMA_VERSION
-        # Ensure a signatories list is always returned
-        if certificate.get("signatories") is None:
-            certificate["signatories"] = []
-        # Ensure an organizations list is always returned
-        if certificate.get("organizations") is None:
-            certificate["organizations"] = []
-        # create a default for 'show_grade' field
-        if certificate.get("show_grade") is None:
-            certificate["show_grade"] = False
-        certificate["editing"] = False
-        return certificate
-
-    @staticmethod
-    def validate(certificate_data):
-        """
-        Ensure the certificate data contains all of the necessary fields and the values match our rules
-        """
-        # Ensure the schema version meets our expectations
-        if certificate_data.get("version") != CERTIFICATE_SCHEMA_VERSION:
-            raise TypeError(
-                "Unsupported certificate schema version: {0}.  Expected version: {1}.".format(
-                    certificate_data.get("version"),
-                    CERTIFICATE_SCHEMA_VERSION
-                )
-            )
-        if not certificate_data.get("name"):
-            raise CertificateValidationError(_("must have name of the certificate"))
-
-    @staticmethod
-    def get_used_ids(course):
-        """
-        Return a list of certificate identifiers that are already in use for this course
-        """
-        if not course.certificates or not course.certificates.get('certificates'):
-            return []
-        return [cert['id'] for cert in course.certificates['certificates']]
-
-    @staticmethod
-    def assign_id(course, certificate_data, certificate_id=None):
-        """
-        Assign an identifier to the provided certificate data.
-        If the caller did not provide an identifier, we autogenerate a unique one for them
-        In addition, we check the certificate's signatories and ensure they also have unique ids
-        """
-        used_ids = CertificateManager.get_used_ids(course)
-        if certificate_id:
-            certificate_data['id'] = int(certificate_id)
-        else:
-            certificate_data['id'] = generate_int_id(
-                CERTIFICATE_MINIMUM_ID,
-                MYSQL_MAX_INT,
-                used_ids
-            )
-
-        for index, signatory in enumerate(certificate_data['signatories']):  # pylint: disable=unused-variable
-            if signatory and not signatory.get('id', False):
-                signatory['id'] = generate_int_id(used_ids=used_ids)
-            used_ids.append(signatory['id'])
-
-        return certificate_data
 
     @staticmethod
     def serialize_certificate(certificate):
         """
         Serialize the Certificate object's locally-stored certificate data to a JSON representation
-        We use direct access here for specific keys in order to enforce their presence
         """
         certificate_data = certificate.certificate_data
-        certificate_response = {
-            "id": certificate_data['id'],
-            "name": certificate_data['name'],
-            "description": certificate_data['description'],
-            "is_active": certificate_data['is_active'],
-            "show_grade": certificate_data['show_grade'],
-            "version": CERTIFICATE_SCHEMA_VERSION,
-            "organizations": certificate_data['organizations'],
-            "signatories": certificate_data['signatories'],
-        }
-
-        # Some keys are not required, such as the title override...
-        for optional_field in ('course_title', 'course_description', 'honor_code_disclaimer'):
-            if certificate_data.get(optional_field):
-                certificate_response[optional_field] = certificate_data[optional_field]
-
-        return certificate_response
+        certificate_data["version"] = CERTIFICATE_SCHEMA_VERSION
+        assert all(
+            field in certificate_data
+            for field in ('id', 'name', 'description', 'is_active', 'show_grade', 'version')
+        )
+        return certificate_data
 
     @staticmethod
     def deserialize_certificate(course, value):
@@ -247,20 +240,19 @@ class CertificateManager(object):
         Deserialize from a JSON representation into a Certificate object.
         'value' should be either a Certificate instance, or a valid JSON string
         """
+        try:
+            raw_data = json.loads(value)
+        except ValueError:
+            raise CertificateValidationError(_("invalid JSON"))
 
-        # Ensure the schema fieldset meets our expectations
-        for key in ("name", "description", "version"):
-            if key not in value:
-                raise CertificateValidationError(_("Certificate dict {0} missing value key '{1}'").format(value, key))
-
-        # Load up the Certificate data
-        certificate_data = CertificateManager.parse(value)
-        CertificateManager.validate(certificate_data)
-        certificate_data = CertificateManager.assign_id(course, certificate_data, certificate_data.get('id', None))
-        certificate = Certificate(course, certificate_data)
-
-        # Return a new Certificate object instance
-        return certificate
+        serializer = CertificateSerializer(data=raw_data)
+        if serializer.is_valid():
+            certificate_data = serializer.data
+            certificate = Certificate(course, certificate_data)
+            return certificate
+        else:
+            error_str = ' '.join(u'{}: {}'.format(key, val[0]) for key, val in serializer.errors.items())
+            raise CertificateValidationError(error_str)
 
     @staticmethod
     def get_certificates(course, only_active=False):
@@ -331,7 +323,39 @@ class Certificate(object):
         """
         self.course = course
         self._certificate_data = certificate_data
+        self.assign_missing_ids()
         self.id = certificate_data['id']  # pylint: disable=invalid-name
+
+    def assign_missing_ids(self):
+        """
+        Assign an identifier to the certificate data if required.
+        If identifier is not provided, we autogenerate a unique one for them
+        In addition, we check the certificate's signatories and ensure they also have unique ids
+        """
+        used_ids = Certificate.get_used_ids(self.course)
+        certificate_id = self._certificate_data.get('id')
+        if certificate_id:
+            self._certificate_data['id'] = int(certificate_id)
+        else:
+            self._certificate_data['id'] = generate_int_id(
+                CERTIFICATE_MINIMUM_ID,
+                MYSQL_MAX_INT,
+                used_ids
+            )
+
+        for signatory in self._certificate_data['signatories']:  # pylint: disable=unused-variable
+            if signatory and not signatory.get('id', False):
+                signatory['id'] = generate_int_id(used_ids=used_ids)
+            used_ids.append(signatory['id'])
+
+    @staticmethod
+    def get_used_ids(course):
+        """
+        Return a list of certificate identifiers that are already in use for this course
+        """
+        if not course.certificates or not course.certificates.get('certificates'):
+            return []
+        return [cert['id'] for cert in course.certificates['certificates']]
 
     @property
     def certificate_data(self):

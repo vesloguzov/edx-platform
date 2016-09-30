@@ -31,7 +31,7 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
             description: 'Description of the certificate',
 
             // Internal-use only, not displayed in web forms
-            version: 1,
+            version: 'lek-1',
             is_active: false
         },
 
