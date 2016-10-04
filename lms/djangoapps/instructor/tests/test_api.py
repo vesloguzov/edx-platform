@@ -2148,7 +2148,7 @@ class TestInstructorAPILevelsDataDump(SharedModuleStoreTestCase, LoginEnrollment
 
         self.students_who_may_enroll = self.students + [UserFactory() for _ in range(5)]
         for student in self.students_who_may_enroll:
-            UserProfile.objects.filter(user=student).update(nickname='nick_'+student.username)
+            UserProfile.objects.filter(user=student).update(nickname='nick_' + student.username)
             CourseEnrollmentAllowed.objects.create(
                 email=student.email, course_id=self.course.id
             )
@@ -2935,7 +2935,7 @@ class TestInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginEnrollmentTes
         self.client.login(username=self.instructor.username, password='test')
 
         self.student = UserFactory()
-        UserProfile.objects.filter(user=self.student).update(nickname='nick_'+self.student.username)
+        UserProfile.objects.filter(user=self.student).update(nickname='nick_' + self.student.username)
         CourseEnrollment.enroll(self.student, self.course.id)
 
         self.module_to_reset = StudentModule.objects.create(

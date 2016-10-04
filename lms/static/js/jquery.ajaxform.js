@@ -32,6 +32,8 @@ $.fn.extend({
  */
 
     ajaxForm: function(opts){
+        "use strict";
+
         var defaults = {
             action: null,
             method: 'post',
@@ -39,7 +41,7 @@ $.fn.extend({
             onError: null,
             onCancel: null,
             errorClass: 'error'
-        }
+        };
         var options = $.extend(defaults, opts);
 
         return this.each(function(){
@@ -54,8 +56,9 @@ $.fn.extend({
                 })
                 .done(function(response){
                     if (response.success){
-                        if (options.onSuccess)
+                        if (options.onSuccess) {
                             options.onSuccess(form);
+                        }
                     } else {
                         var errors = response.errors;
                         var error_fields = [];
@@ -63,23 +66,25 @@ $.fn.extend({
                             var error_div = $('<div></div>')
                             .addClass(options.errorClass)
                             .text(error.errors).show();
-                            if (error.field  == '')
+                            if (error.field  == '') {
                               form.find('.non_field_errors').html(error_div);
-                            else{
+                            } else {
                               $('#' + error.field + '_error').html(error_div);
                               error_fields.push($('#' + error.field));
                             }
                         });
-                        if (error_fields.length)
+                        if (error_fields.length) {
                             error_fields[0].focus();
-                        if (options.onError)
+                        }
+                        if (options.onError) {
                             options.onError(form);
+                        }
                     }
                 })
-                .fail(function(jXHR, textStatus, errorThrown){
+                .fail(function(jXHR){
                     if (jXHR.status == 400) {
                     try {
-                        response = $.parseJSON(jXHR.responseText);
+                        var response = $.parseJSON(jXHR.responseText);
                         if (response.error) {
                             var error_div = $('<div></div>')
                              .addClass(options.errorClass)
@@ -91,8 +96,9 @@ $.fn.extend({
                 });
             return false;
             });
-            if (options.onCancel)
-                form.find('.cancel').click(options.onCancel)
+            if (options.onCancel) {
+                form.find('.cancel').click(options.onCancel);
+            }
         });
     }
 });

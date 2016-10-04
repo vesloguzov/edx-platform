@@ -36,10 +36,10 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import HttpResponse
-from django.utils.translation import ugettext_noop, ugettext as _
+from django.utils.translation import ugettext as _
 from django.views.decorators.http import require_http_methods
 
-from rest_framework import serializers, renderers
+from rest_framework import serializers
 
 from contentstore.utils import reverse_course_url
 from edxmako.shortcuts import render_to_response
@@ -116,9 +116,9 @@ def get_serializable_organizations_list():
     def _get_logo_url(logo):
         if logo:
             return u"//{base}{media_url}{url}".format(
-                base = settings.LMS_BASE,
-                media_url = settings.LMS_MEDIA_URL,
-                url = logo.url
+                base=settings.LMS_BASE,
+                media_url=settings.LMS_MEDIA_URL,
+                url=logo.url
             )
         return ''
 
@@ -176,7 +176,9 @@ class OrganizationSerializer(serializers.Serializer):
                 raise serializers.ValidationError(_('This field should not contain any spaces.'))
         else:
             if value != urllib.quote(value) or any(symbol in value for symbol in "!'()*"):
-                raise serializers.ValidationError(_('This field should not contain any non-latin letters, special characters or spaces.'))
+                raise serializers.ValidationError(
+                    _('This field should not contain any non-latin letters, special characters or spaces.')
+                )
         return value
 
 

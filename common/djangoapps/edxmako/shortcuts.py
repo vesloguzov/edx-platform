@@ -98,6 +98,7 @@ def microsite_footer_context_processor(request):
         ]
     )
 
+
 def theme_context_processor(request):
     """
     """
@@ -132,7 +133,6 @@ def theme_context_processor(request):
                 'FOOTER_FILE': microsite.get_template_path('footer-edx-v3.html')
             })
     return context
-
 
 
 def render_to_string(template_name, dictionary, context=None, namespace='main'):

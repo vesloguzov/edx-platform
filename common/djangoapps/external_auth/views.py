@@ -114,7 +114,7 @@ def openid_login_complete(request,
         url = getattr(settings, 'OPENID_SSO_SERVER_URL', None)
         external_domain = u"{0}{1}".format(OPENID_DOMAIN_PREFIX, url)
         fullname = u'%s %s' % (details.get('first_name', ''),
-                              details.get('last_name', ''))
+                               details.get('last_name', ''))
 
         return _external_login_or_signup(
             request,
@@ -500,7 +500,6 @@ def _create_profile_from_attributes(user, attributes):
         if value:
             setattr(profile, field, value)
 
-
     day_of_birth = attributes.get(keys['day_of_birth'])
     if day_of_birth:
         try:
@@ -527,6 +526,7 @@ def _get_date_from_string(datestring):
             return datetime.datetime.strptime(datestring, _format).date()
         except ValueError:
             pass
+
 
 # -----------------------------------------------------------------------------
 # Shibboleth (Stanford and others.  Uses *Apache* environment variables)

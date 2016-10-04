@@ -1895,8 +1895,8 @@ class CertificateItem(OrderItem):
         # send billing an email so they can handle refunding
         subject = _("[Refund] User-Requested Refund")
         message = u"User {user} ({user_email}) has requested a refund on Order #{order_number}.".format(user=course_enrollment.user,
-                                                                                                       user_email=course_enrollment.user.email,
-                                                                                                       order_number=order_number)
+                                                                                                        user_email=course_enrollment.user.email,
+                                                                                                        order_number=order_number)
         to_email = [settings.PAYMENT_SUPPORT_EMAIL]
         from_email = microsite.get_value('payment_support_email', settings.PAYMENT_SUPPORT_EMAIL)
         try:

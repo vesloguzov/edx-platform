@@ -21,7 +21,7 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
             'keyup .organization-short_name-input': 'shortNameKeyUp',
             'keypress .organization-short_name-input': 'preventFormSubmission'
         },
-        initialize: function(options) {
+        initialize: function() {
             this.eventAgg = _.extend({}, Backbone.Events);
             this.eventAgg.bind("onClickDeleteOrganization", this.deleteOrganization, this);
 
@@ -29,7 +29,7 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
             this.organization_template = this.loadTemplate('organization-details');
         },
 
-        render: function(options) {
+        render: function() {
             var self = this;
             $(this.el).html(this.template());
             this.collection.each(function(modelOrganization) {
@@ -62,8 +62,9 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
             }
         },
 
-        addOrganization: function(event) {
-            // Appends organization to certificate models organizations collection (still requires persistence on server)
+        addOrganization: function() {
+            // Appends organization to certificate models organizations collection
+            // (still requires persistence on server)
             new OrganizationModel({
                 certificate: this.collection.certificate,
                 short_name: this.$('.organization-short_name-input').val().trim()
@@ -81,13 +82,13 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
 
         shortNameKeyUp: function(event) {
             this._toggleOrganizationError(false);
-            if (event.which == $.ui.keyCode.ENTER) {
+            if (event.which === $.ui.keyCode.ENTER) {
                 this.onAddOrganization();
             }
         },
 
         preventFormSubmission: function(event) {
-            if (event.which == $.ui.keyCode.ENTER) { event.preventDefault(); }
+            if (event.which === $.ui.keyCode.ENTER) { event.preventDefault(); }
         },
 
         _setupAutocomplete: function() {
@@ -124,7 +125,7 @@ function ($, _, Backbone, gettext, TemplateUtils, OrganizationModel, Organizatio
         },
         _organizationExists: function(short_name) {
             return $.grep(window.organizationsList, function(item){
-                return item.short_name == short_name;
+                return item.short_name === short_name;
             }).length > 0;
         },
         _organizationUsed: function(short_name) {

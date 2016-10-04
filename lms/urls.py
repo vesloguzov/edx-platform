@@ -21,6 +21,7 @@ if settings.DEBUG or settings.FEATURES.get('ENABLE_DJANGO_ADMIN_SITE'):
 
 if settings.ROOT_URL_PREFIX:
     url_django = url
+
     def url(regex, *args, **kwargs):
         """
         Built-in url override to insert common url prefix
@@ -551,13 +552,12 @@ if settings.COURSEWARE_ENABLED:
             url(r'^courses/{}/submission_history/(?P<location>.*?)$'.format(settings.COURSE_ID_PATTERN),
                 'courseware.views.submission_history',
                 name='submission_history'),
-    )
+        )
     if settings.GRADES_DOWNLOAD['STORAGE_TYPE'] == 'protectedfs':
         urlpatterns += (
             url(r'^courses/{}/download_report/(?P<filename>[^/]*)/$'.format(settings.COURSE_ID_PATTERN),
                 'instructor.views.storage.serve_report', name='serve_report'),
         )
-
 
 
 if settings.COURSEWARE_ENABLED and settings.FEATURES.get('ENABLE_INSTRUCTOR_LEGACY_DASHBOARD'):

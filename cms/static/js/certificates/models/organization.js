@@ -26,17 +26,17 @@ function(_, str, Backbone, BackboneRelational, gettext) {
 
         parse: function(response) {
             // Parse must be defined for the model, but does not need to do anything special right now
-            return response
+            return response;
         },
 
         getOrganizationDetails: function() {
             for (var i=0; i < window.organizationsList.length; i++) {
                 var organization = window.organizationsList[i];
-                if (organization.short_name == this.get('short_name')) {
+                if (organization.short_name === this.get('short_name')) {
                     return {
                         long_name: organization.long_name,
                         logo: organization.logo || ''
-                    }
+                    };
                 }
             }
             throw new Error(this.NOT_FOUND_MESSAGE);

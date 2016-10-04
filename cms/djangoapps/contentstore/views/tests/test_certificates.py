@@ -27,7 +27,6 @@ from student.models import CourseEnrollment
 from student.roles import CourseInstructorRole, CourseStaffRole
 from student.tests.factories import UserFactory
 from contentstore.views.certificates import CertificateManager
-from django.test.utils import override_settings
 from contentstore.utils import get_lms_link_for_certificate_web_view
 from util.testing import EventTestMixin
 
@@ -70,6 +69,7 @@ class CertificateOrganizationsTestCase(TestCase):
     Tests for course organizations data, especially default organizations list
     """
     def setUp(self):
+        super(CertificateOrganizationsTestCase, self).setUp()
         self.organization_short_name = 'UniversityX'
         self.course_key = CourseLocator(self.organization_short_name, 'course', 'run')
 
@@ -96,6 +96,9 @@ class CertificateOrganizationsTestCase(TestCase):
         self.assertIn({'short_name': settings.CERTIFICATE_DEFAULT_ORGANIZATION}, orgs)
 
     def _create_course_organization(self):
+        """
+        Create organization and link it to existing self.course_key
+        """
         OrganizationFactory.create(short_name=self.organization_short_name)
         org = organizations_helpers.get_organization_by_short_name(self.organization_short_name)
         organizations_helpers.add_organization_course(org, self.course_key)
@@ -231,7 +234,10 @@ class CertificatesBaseTestCase(object):
         with self.assertRaises(Exception) as context:
             CertificateManager.deserialize_certificate(None, json.dumps(json_data_1))
 
-        self.assertIn("version: Unsupported certificate schema version: 100.  Expected version: lek-1.", context.exception)
+        self.assertIn(
+            "version: Unsupported certificate schema version: 100.  Expected version: lek-1.",
+            context.exception
+        )
 
         #Test certificate name is missing
         json_data_2 = {

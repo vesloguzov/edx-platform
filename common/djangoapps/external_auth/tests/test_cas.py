@@ -15,10 +15,11 @@ from student.models import UserProfile, CourseEnrollment
 from external_auth.views import cas_create_user
 from instructor.enrollment import enroll_email
 
+
 class CASUserCreatorTest(ModuleStoreTestCase):
     def setUp(self):
         super(CASUserCreatorTest, self).setUp()
-        self.username =  'test'
+        self.username = 'test'
         self.attrs = {'mail': 'test@example.com'}
 
     def test_create_simple(self):
@@ -34,7 +35,6 @@ class CASUserCreatorTest(ModuleStoreTestCase):
         # TODO: fix when handling this IntegrityError or special exception in cas
         with self.assertRaises(IntegrityError):
             cas_create_user(self.username, self.attrs)
-
 
     def test_profile_creation(self):
         attrs = {

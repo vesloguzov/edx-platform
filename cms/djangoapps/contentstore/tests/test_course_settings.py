@@ -1075,18 +1075,18 @@ class CourseMetadataEditingTest(CourseTestCase):
         test_model = CourseMetadata.update_from_json(
             self.course,
             {
-               "discussion_link": {"value": "other_discussion_link"}
+                "discussion_link": {"value": "other_discussion_link"}
             },
             user=self.user
         )
         # fetch course from database to ensure tabs are generated/fetched correctly for the next request
         fresh = modulestore().get_course(self.course.id)
         self.assertNotEqual(self._get_discussion_tab(fresh).type, 'discussion',
-            'Discussion link not updated')
+                            'Discussion link not updated')
         self.assertIsNotNone(self._get_discussion_tab(fresh),
-            'Discussion link not generated')
+                             'Discussion link not generated')
         self.assertEqual(self._get_discussion_tab(fresh).type, 'external_discussion',
-            'Changing of discussion links not followed by tabs updating')
+                         'Changing of discussion links not followed by tabs updating')
 
     def test_restore_builtin_discussion_link(self):
         """
@@ -1094,30 +1094,30 @@ class CourseMetadataEditingTest(CourseTestCase):
         results in restoring of builtin discussion tab.
         """
         self.assertEqual(self._get_discussion_tab(self.course).type, 'discussion',
-            'Initial discussion tab is not internal Discussion Tab')
+                         'Initial discussion tab is not internal Discussion Tab')
         test_model = CourseMetadata.update_from_json(
             self.course,
             {
-               "discussion_link": {"value": "other_discussion_link"}
+                "discussion_link": {"value": "other_discussion_link"}
             },
             user=self.user
         )
         # fetch course from database to ensure tabs are generated/fetched correctly for the next request
         fresh = modulestore().get_course(self.course.id)
         self.assertEqual(self._get_discussion_tab(fresh).type, 'external_discussion',
-            'Changing of discussion links not followed by tabs updating')
+                         'Changing of discussion links not followed by tabs updating')
         # remove discussion link value
         test_model = CourseMetadata.update_from_json(
             fresh,
             {
-               "discussion_link": {"value": None}
+                "discussion_link": {"value": None}
             },
             user=self.user
         )
         # fetch course from database to ensure tabs are generated/fetched correctly for the next request
         fresh = modulestore().get_course(self.course.id)
         self.assertEqual(self._get_discussion_tab(fresh).type, 'discussion',
-            'Changing of discussion links to null not followed by tabs updating: %s' % self._get_discussion_tab(fresh))
+                         'Changing of discussion links to null not followed by tabs updating: %s' % self._get_discussion_tab(fresh))
 
     def _get_discussion_tab(self, course):
         for tab in course.tabs:

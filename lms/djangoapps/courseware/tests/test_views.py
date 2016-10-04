@@ -414,7 +414,7 @@ class ViewsTestCase(ModuleStoreTestCase):
         url = reverse('submission_history', kwargs={
             'course_id': self.course_key.to_deprecated_string(),
             'location': 'dummy'
-            }) + urlencode({'student_identifier': '<script>alert("hello");</script>'})
+        }) + urlencode({'student_identifier': '<script>alert("hello");</script>'})
         response = self.client.get(url)
         self.assertFalse('<script>' in response.content)
 
@@ -864,8 +864,9 @@ class ProgressPageTests(ModuleStoreTestCase):
         CertificateGenerationConfiguration(enabled=True).save()
         certs_api.set_cert_generation_enabled(self.course.id, True)
         CourseEnrollment.enroll(self.user, self.course.id, mode=course_mode)
-        with patch('lms.djangoapps.verify_student.models.SoftwareSecurePhotoVerification.user_is_verified'
-                ) as user_verify:
+        with patch(
+            'lms.djangoapps.verify_student.models.SoftwareSecurePhotoVerification.user_is_verified'
+        ) as user_verify:
             user_verify.return_value = user_verified
             resp = views.progress(self.request, course_id=unicode(self.course.id))
 

@@ -24,7 +24,7 @@ function ($, _, str, Backbone, gettext, TemplateUtils, ViewUtils, BaseView) {
             var classes = [
                 'organization-details',
                 'organization-details-view-' + index
-            ]
+            ];
             if (this.options.editable) {
                 classes.push('editable');
             }
@@ -58,7 +58,7 @@ function ($, _, str, Backbone, gettext, TemplateUtils, ViewUtils, BaseView) {
                 return $.extend(context, details, {'error': null});
             } catch (e) {
                 return $.extend(context, {'error': e.message});
-            };
+            }
         },
         triggerDeleteOrganization: function(event) {
             this.eventAgg.trigger("onClickDeleteOrganization", event, this.model);

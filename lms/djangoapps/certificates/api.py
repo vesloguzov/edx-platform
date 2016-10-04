@@ -465,6 +465,7 @@ def emit_certificate_event(event_name, user, course_id, course=None, event_data=
     with tracker.get_tracker().context(event_name, context):
         tracker.emit(event_name, event_data)
 
+
 def get_asset_url_by_slug(asset_slug):
     """
     Returns certificate template asset url for given asset_slug.

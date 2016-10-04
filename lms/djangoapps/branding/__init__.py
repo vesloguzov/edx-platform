@@ -90,6 +90,7 @@ from edxmako.shortcuts import marketing_link
 
 EMPTY_URL = '#'
 
+
 def _get_url(name):
     return marketing_link(name) or EMPTY_URL
 

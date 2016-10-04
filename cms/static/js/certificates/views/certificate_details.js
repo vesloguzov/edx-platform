@@ -13,7 +13,8 @@ define([ // jshint ignore:line
     'common/js/components/utils/view_utils',
     'jquery.smoothScroll'
 ],
-function($, _, str, gettext, BaseView, SignatoryModel, SignatoryDetailsView, OrganizationModel, OrganizationDetailsView, ViewUtils) {
+function($, _, str, gettext, BaseView, SignatoryModel, SignatoryDetailsView,
+         OrganizationModel, OrganizationDetailsView, ViewUtils) {
     'use strict';
     var CertificateDetailsView = BaseView.extend({
         tagName: 'div',

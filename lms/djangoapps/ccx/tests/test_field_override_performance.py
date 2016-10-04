@@ -173,7 +173,7 @@ class FieldOverridePerformanceTestCase(ProceduralCourseTestMixin,
             # can actually take affect.
             OverrideFieldData.provider_classes = None
 
-            with self.assertNumQueries(queries+1): # fix for profile.nickname
+            with self.assertNumQueries(queries + 1):  # fix for profile.nickname
                 with self.assertMongoCallCount(reads):
                     with self.assertXBlockInstantiations(xblocks):
                         self.grade_course(self.course, view_as_ccx)

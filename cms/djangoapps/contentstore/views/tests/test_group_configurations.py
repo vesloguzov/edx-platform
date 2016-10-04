@@ -935,8 +935,7 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase, HelperMethods):
                 {'id': 2, 'name': u'Group C ηοη-αςκιι', 'version': 1},
             ],
             'usage': [{
-                'url': #'/container/{}'.format(vertical.location),
-                reverse_usage_url('container_handler', vertical.location),
+                'url': reverse_usage_url('container_handler', vertical.location),
                 'label': u'Test Unit ηοη-αςκιι / Test Content Experiment ηοη-αςκιιηοη-αςκιι',
                 'validation': None,
             }],

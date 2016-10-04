@@ -44,6 +44,7 @@ API_PROFILE_FIELDS = (
     'city',
 )
 
+
 class UserSerializerTest(TestCase):
     profile_fields = API_PROFILE_FIELDS
 
@@ -80,8 +81,7 @@ class UserSerializerTest(TestCase):
             'city': 'Test city'
         }
         serializer = UserSerializer(data=data)
-        self.assertTrue(serializer.is_valid(),
-            'Validation on creaion failed: %s' % serializer.errors)
+        self.assertTrue(serializer.is_valid(), 'Validation on creaion failed: %s' % serializer.errors)
 
         new_user = serializer.save()
         self.assertEquals(new_user.username, serializer.data['uid'])
@@ -99,8 +99,7 @@ class UserSerializerTest(TestCase):
             'last_name': 'Test surname',
         }
         serializer = UserSerializer(self.user, data=data)
-        self.assertTrue(serializer.is_valid(),
-            'Validation on update failed: %s' % serializer.errors)
+        self.assertTrue(serializer.is_valid(), 'Validation on update failed: %s' % serializer.errors)
 
         serializer.save()
         updated_user = User.objects.get(id=self.user.id)
@@ -114,8 +113,7 @@ class UserSerializerTest(TestCase):
     def test_optional_fields(self):
         data = {'uid': 'test2', 'email': 'test2@example.com'}
         serializer = UserSerializer(data=data)
-        self.assertTrue(serializer.is_valid(),
-            'Validation on update failed: %s' % serializer.errors)
+        self.assertTrue(serializer.is_valid(), 'Validation on update failed: %s' % serializer.errors)
 
     def test_required_fields(self):
         data = {}
@@ -142,8 +140,7 @@ class UserSerializerTest(TestCase):
         profile.save()
 
         serializer = UserSerializer(self.user, data=data, partial=True)
-        self.assertTrue(serializer.is_valid(),
-            'Validation on update failed: %s' % serializer.errors)
+        self.assertTrue(serializer.is_valid(), 'Validation on update failed: %s' % serializer.errors)
         updated_user = serializer.save()
         self.assertEqual(updated_user.profile.nickname, data['nickname'])
         self.assertEqual(updated_user.profile.name, 'not-to-be-changed')
@@ -158,8 +155,7 @@ class UserSerializerTest(TestCase):
         profile.save()
 
         serializer = UserSerializer(self.user, data=data)
-        self.assertTrue(serializer.is_valid(),
-            'Validation on update failed: %s' % serializer.errors)
+        self.assertTrue(serializer.is_valid(), 'Validation on update failed: %s' % serializer.errors)
         updated_user = serializer.save()
         self.assertEqual(updated_user.profile.name, '')
 
@@ -179,7 +175,6 @@ class UserSerializerTest(TestCase):
         serializer = UserSerializer(data=data)
         self.assertFalse(serializer.is_valid(), 'Validation unexpectedly succeded')
         self.assertIn('uid', serializer.errors)
-
 
 
 @skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
@@ -251,9 +246,11 @@ class UserViewSetTest(APITest):
             'birthdate': '2014-01-26',
             'city': 'Capital',
         }
-        response = self._request_with_auth('put', data=json.dumps(data),
-                    path=reverse('profile-detail', kwargs={'username': data['uid']}),
-                    content_type='application/json')
+        response = self._request_with_auth(
+            'put', data=json.dumps(data),
+            path=reverse('profile-detail', kwargs={'username': data['uid']}),
+            content_type='application/json'
+        )
         self.assertEquals(response.status_code, 201)
 
         user = User.objects.get(username=data['uid'])
@@ -279,9 +276,11 @@ class UserViewSetTest(APITest):
             'birthdate': None,
             'city': '',
         }
-        response = self._request_with_auth('put', data=json.dumps(data),
-                    path=reverse('profile-detail', kwargs={'username': data['uid']}),
-                    content_type='application/json')
+        response = self._request_with_auth(
+            'put', data=json.dumps(data),
+            path=reverse('profile-detail', kwargs={'username': data['uid']}),
+            content_type='application/json'
+        )
         self.assertEquals(response.status_code, 200)
 
         user = User.objects.get(username=self.user.username)
@@ -310,9 +309,11 @@ class UserViewSetTest(APITest):
             'name': 'New Name',
             'first_name': 'NewFirstName',
         }
-        response = self._request_with_auth('post', data=data,
-                    path=reverse('profile-detail', kwargs={'username': data['uid']}),
-                    HTTP_X_HTTP_METHOD_OVERRIDE='PATCH')
+        response = self._request_with_auth(
+            'post', data=data,
+            path=reverse('profile-detail', kwargs={'username': data['uid']}),
+            HTTP_X_HTTP_METHOD_OVERRIDE='PATCH'
+        )
         self.assertEquals(response.status_code, 200)
 
         user = User.objects.get(username=self.user.username)
@@ -422,7 +423,8 @@ class EnrollmentViewSetTest(APITest):
     def test_skip_enrollment_email(self, skip_enrollment_email, email_count):
         url = reverse('enrollment-enroll', kwargs={'user_username': self.user.username,
                                                    'course_id': self.course_other.id})
-        response = self._request_with_auth('post', url,
+        response = self._request_with_auth(
+            'post', url,
             data=json.dumps({'skip_enrollment_email': skip_enrollment_email}),
             content_type='application/json'
         )
@@ -437,7 +439,7 @@ class EnrollmentViewSetTest(APITest):
 
     def test_unenroll(self):
         url = reverse('enrollment-unenroll', kwargs={'user_username': self.user.username,
-                                                   'course_id': self.course_enrolled.id})
+                                                     'course_id': self.course_enrolled.id})
         response = self._request_with_auth('post', url)
 
         self.assertEquals(response.status_code, 204)
@@ -445,7 +447,7 @@ class EnrollmentViewSetTest(APITest):
 
     def test_unenroll_error_if_not_enrolled(self):
         url = reverse('enrollment-unenroll', kwargs={'user_username': self.user.username,
-                                                   'course_id': self.course_other.id})
+                                                     'course_id': self.course_other.id})
         response = self._request_with_auth('post', url)
         self.assertEquals(response.status_code, 400)
 
@@ -455,10 +457,10 @@ class EnrollmentViewSetTest(APITest):
         CourseEnrollmentFactory.create(course_id=course_with_certificate.id, user=self.user)
 
         certificate = GeneratedCertificate.objects.create(
-                       course_id=course_with_certificate.id,
-                       user=self.user,
-                       status = CertificateStatuses.downloadable,
-                       download_url = 'http://example.com/test'
+            course_id=course_with_certificate.id,
+            user=self.user,
+            status=CertificateStatuses.downloadable,
+            download_url='http://example.com/test'
         )
 
         url = reverse('enrollment-list', kwargs={'user_username': self.user.username})

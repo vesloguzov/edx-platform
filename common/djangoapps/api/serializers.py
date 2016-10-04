@@ -17,6 +17,7 @@ from certificates.models import GeneratedCertificate
 UID_PATTERN = r'[\w.-]+'
 UID_REGEX = re.compile('^%s$' % UID_PATTERN)
 
+
 class UserSerializer(serializers.ModelSerializer):
     """
     Serializes user and corresponding profile to unite object
@@ -114,12 +115,12 @@ class CourseSerializer(serializers.Serializer):
 
     def get_about_url(self, course):
         url = reverse('about_course',
-                kwargs={'course_id': course.id.to_deprecated_string()})
+                      kwargs={'course_id': course.id.to_deprecated_string()})
         return self._get_absolute_url(url)
 
     def get_root_url(self, course):
         url = reverse('course_root',
-                kwargs={'course_id': course.id.to_deprecated_string()})
+                      kwargs={'course_id': course.id.to_deprecated_string()})
         return self._get_absolute_url(url)
 
     def _get_absolute_url(self, url):
@@ -145,5 +146,5 @@ class CourseEnrollmentSerializer(serializers.ModelSerializer):
     def _get_certificate(self, enrollment):
         if not hasattr(enrollment, '_certificate'):
             enrollment._certificate = GeneratedCertificate.certificate_for_student(
-                                 enrollment.user, enrollment.course_id)
+                enrollment.user, enrollment.course_id)
         return enrollment._certificate

@@ -213,7 +213,6 @@ class EnrollmentTest(UrlResetMixin, ModuleStoreTestCase):
         resp = self._change_enrollment('unenroll', course_id="edx/")
         self.assertEqual(resp.status_code, 400)
 
-
     def _change_enrollment(self, action, course_id=None, email_opt_in=None):
         """
         Change the student's enrollment status in a course.

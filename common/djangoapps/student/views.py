@@ -1534,6 +1534,7 @@ def _do_create_account(form):
 
     return (user, profile, registration)
 
+
 def save_user_with_auto_username(user):
     user.username = 'new_user_%s' % uuid.uuid4().hex[:20]
     user.save()

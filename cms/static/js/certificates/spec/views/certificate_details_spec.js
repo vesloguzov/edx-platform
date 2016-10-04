@@ -84,7 +84,11 @@ function(_, Course, CertificatesCollection, CertificateModel, OrganizationModel,
         };
 
         beforeEach(function() {
-            TemplateHelpers.installTemplates(['certificate-details', 'signatory-details', 'signatory-editor', 'signatory-actions', 'organization-details'], true);
+            TemplateHelpers.installTemplates([
+                'certificate-details',
+                'signatory-details', 'signatory-editor', 'signatory-actions',
+                'organization-details'
+            ], true);
 
             this.newModelOptions = {add: true};
             this.model = new CertificateModel({
@@ -193,7 +197,7 @@ function(_, Course, CertificatesCollection, CertificateModel, OrganizationModel,
             });
 
             it('should display error message if organization is not found', function() {
-                new OrganizationModel({
+                var invalid_organization = new OrganizationModel({
                     certificate: this.model,
                     short_name: 'INVALID'
                 });

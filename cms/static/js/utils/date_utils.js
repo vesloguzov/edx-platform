@@ -1,4 +1,5 @@
 define(["jquery", "date", "jquery.ui", "jquery.timepicker"], function($, date) {
+    'use strict';
     var getDate = function (datepickerInput, timepickerInput) {
         // given a pair of inputs (datepicker and timepicker), return a JS Date
         // object that corresponds to the datetime.js that they represent. Assume

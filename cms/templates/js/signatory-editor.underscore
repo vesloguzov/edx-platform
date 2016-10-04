@@ -5,7 +5,13 @@
           <span class="sr action-button-text"><%= gettext("Delete") %></span>
        </a>
        <% } %>
-       <div class="signatory-panel-header">Signatory <%= signatory_number %></div>
+       <div class="signatory-panel-header">
+           <%= interpolate(
+               gettext('Signatory %(number)s'),
+               {number: signatory_number},
+               true
+           ) %>
+       </div>
        <div class="signatory-panel-body">
          <fieldset class="collection-fields signatory-fields">
             <legend class="sr"><%= gettext("Certificate Signatory Configuration") %></legend>

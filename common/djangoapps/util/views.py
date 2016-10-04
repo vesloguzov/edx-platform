@@ -156,8 +156,10 @@ def _get_feedback_backend():
     else:
         raise Exception('Feedback backend not configured')
 
+
 class FeedbackBackend(object):
     required_settings = ()
+
     def __init__(self):
         if not any(getattr(settings, name) for name in self.required_settings):
             raise Exception('%s enabled but not configured.' % self.name)
@@ -174,6 +176,7 @@ class ZendeskFeedbackBackend(FeedbackBackend):
     @staticmethod
     def record_feedback(*args, **kwargs):
         return _record_feedback_in_zendesk(*args, **kwargs)
+
 
 class HelpDeskEddyFeedbackBackend(helpdeskeddy.HelpDeskEddyMixin, FeedbackBackend):
     name = 'HelpDeskEddy'

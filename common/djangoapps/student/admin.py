@@ -123,10 +123,6 @@ class CourseAccessRoleAdmin(admin.ModelAdmin):
         super(CourseAccessRoleAdmin, self).save_model(request, obj, form, change)
 
 
-
-
-
-
 class LinkedInAddToProfileConfigurationAdmin(admin.ModelAdmin):
     """Admin interface for the LinkedIn Add to Profile configuration. """
 
@@ -178,7 +174,6 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     class Meta(object):
         model = UserProfile
-
 
 
 admin.site.register(UserTestGroup)

@@ -2610,6 +2610,7 @@ def _split_input_list(str_list):
 
     return new_list
 
+
 def _split_input_list_with_nicknames(str_list):
     """
     Same as _split_input_list, but splits only on line breaks and commas

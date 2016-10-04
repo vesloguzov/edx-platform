@@ -92,7 +92,7 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
     def test_create_staff_user(self):
 
         # Create a staff user
-        email='test@example.com'
+        email = 'test@example.com'
         self._auto_auth({'email': email, 'staff': 'true'})
         user = User.objects.get(email=email)
         self.assertTrue(user.is_staff)

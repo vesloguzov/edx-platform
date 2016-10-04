@@ -30,6 +30,7 @@ GRADE_KEY = 'grade'
 DISTINCTION_KEY = 'distinction'
 NAME_KEY = 'name'
 
+
 class Command(BaseCommand):
     help = """Create stub certificates (with 'generating' status) for the course"""
 
@@ -88,6 +89,7 @@ class Command(BaseCommand):
             print status.upper()
             for cert in certs:
                 print cert.user.username, cert.grade
+
 
 def _generate_cert_stubs(course, forced_grade=None, create_uuids=False):
     enrolled_students = User.objects.filter(

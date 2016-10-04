@@ -31,7 +31,7 @@ function (gettext, ListView, CertificateItemView) {
             this.collection.add(
                 $.extend({editing: true}, this.collection.newCertificateAttributes),
                 this.newModelOptions
-            )
+            );
         }
 
     });

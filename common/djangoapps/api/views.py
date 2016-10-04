@@ -147,7 +147,7 @@ class EnrollmentViewSet(ServerAPIViewSet):
                 raise NotFound(detail=_("No course '{}' found").format(course_id))
             else:
                 return Response({'detail': _("User is not enrolled in this course")},
-                            status=status.HTTP_400_BAD_REQUEST)
+                                status=status.HTTP_400_BAD_REQUEST)
 
         CourseEnrollment.unenroll(user, course_key)
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -117,7 +117,11 @@ function(_, Course, CertificateModel, SignatoryModel, OrganizationModel, Certifi
         uploadDialogTpl = readFixtures('upload-dialog.underscore');
 
         beforeEach(function() {
-            TemplateHelpers.installTemplates(['certificate-editor', 'signatory-editor', 'organization-details', 'organizations-editor'], true);
+            TemplateHelpers.installTemplates([
+                'certificate-editor',
+                'signatory-editor',
+                'organization-details', 'organizations-editor'
+            ], true);
 
             window.organizationsList = [
                 {
@@ -125,7 +129,7 @@ function(_, Course, CertificateModel, SignatoryModel, OrganizationModel, Certifi
                     long_name: 'Test Organization',
                     logo: '//logo'
                 }
-            ]
+            ];
             this.newModelOptions = {add: true};
             this.model = new CertificateModel({
                 name: 'Test Name',
@@ -410,7 +414,6 @@ function(_, Course, CertificateModel, SignatoryModel, OrganizationModel, Certifi
                 this.view.$(SELECTORS.addOrganizationButton).click();
 
                 var total_organizations = this.model.get('organizations').length;
-                var organization = this.model.get('organizations').at(0);
                 // Simply delete organization without prompting: it's easily reverted
                 this.view.$(SELECTORS.organizationDeleteButton).click();
                 ViewHelpers.submitAndVerifyFormSuccess(this.view, requests, notificationSpy);

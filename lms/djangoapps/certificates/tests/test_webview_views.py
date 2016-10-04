@@ -325,8 +325,8 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         # TODO (lektorium): uncomment when updated
         # Test item from microsite info
         # self.assertIn(
-            # "http://www.testmicrosite.org/about-us",
-            # response.content
+        #     "http://www.testmicrosite.org/about-us",
+        #     response.content
         # )
         # Test course overrides
         self.assertIn(
