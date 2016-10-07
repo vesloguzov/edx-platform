@@ -225,7 +225,7 @@ class CertificatesTest(StudioCourseTest):
             [
                 {
                     'name': 'Signatory Name',
-                    'title': 'Signatory title with new line character \n',
+                    'title': 'Signatory title with new line character \n not in the end',
                     'organization': 'Signatory Organization',
                 }
             ]

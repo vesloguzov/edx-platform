@@ -26,6 +26,7 @@ from django.core import mail
 from django.core.urlresolvers import reverse
 from django.core.validators import validate_email, ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.http import (HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
                          HttpResponseServerError, Http404)
 from django.shortcuts import redirect
@@ -1905,10 +1906,18 @@ def auto_auth(request):
                 _("An account with the Email '{email}' already exists.").format(email=email),
                 field="email"
             )
+        if username and len(User.objects.filter(username=username)) > 0:
+            raise AccountValidationError(
+                _("An account with the username '{username}' already exists.").format(username=username),
+                field="email"
+            )
         user, profile, reg = _do_create_account(form)
     except AccountValidationError:
         # Attempt to retrieve the existing user.
-        user = User.objects.get(email=email)
+        if username:
+            user = User.objects.get(Q(username=username) | Q(email=email))
+        else:
+            user = User.objects.get(email=email)
         user.email = email
         user.set_password(password)
         user.save()
