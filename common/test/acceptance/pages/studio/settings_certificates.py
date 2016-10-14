@@ -282,6 +282,14 @@ class Certificate(object):
         css = self.selector + ' .signatory-' + self.mode
         return [Signatory(self, self.selector, self.mode, index) for index in xrange(len(self.page.q(css=css)))]
 
+    @property
+    def organizations(self):
+        """
+        Return list of organizations for the certificate.
+        """
+        css = self.selector + ' .organization-details'
+        return [Organization(self, self.selector, index) for index in xrange(len(self.page.q(css=css)))]
+
     ################
     # Wait Actions
     ################
@@ -302,6 +310,24 @@ class Certificate(object):
         EmptyPromise(
             lambda: self.find_css('a.detail-toggle.hide-details').present,
             'Certificate details are expanded'
+        ).fulfill()
+
+    def wait_for_organization_added(self, organization_short_name):
+        """
+        Returns whether the organization is added to the end of certificate organizations.
+        """
+        EmptyPromise(
+            lambda: self.organizations and self.organizations[-1].short_name == organization_short_name,
+            'Organization added'
+        ).fulfill()
+
+    def wait_for_organization_deletion(self, organization_short_name):
+        """
+        Returns whether or not the delete icon is present.
+        """
+        EmptyPromise(
+            lambda: organization_short_name not in self.organizations,
+            'Organization deleted'
         ).fulfill()
 
     ################
@@ -353,6 +379,18 @@ class Certificate(object):
         """
         self.wait_for_certificate_delete_button()
         self.find_css('.actions .delete.action-icon').first.click()
+
+    ################
+    # Workflows
+    ################
+
+    def add_organization(self, value):
+        """
+        Add organization by its short name
+        """
+        self.find_css('.organization-short_name-input').first.fill(value)
+        self.find_css('.action-add-organization').first.click()
+        self.wait_for_organization_added(value)
 
 
 class Signatory(object):
@@ -586,3 +624,68 @@ class Signatory(object):
         Clicks the signatory deletion icon/action
         """
         self.find_css('.signatory-panel-delete').first.click()
+
+
+class Organization(object):
+    """
+    Organization page object wrapper
+    """
+    def __init__(self, certificate, prefix, index):
+        self.certificate = certificate
+        self.prefix = prefix
+        self.index = index
+
+    def __eq__(self, value):
+        """
+        Overriden method for simplified membership test
+        """
+        return self.short_name == value
+
+    ################
+    # Helpers
+    ################
+
+    def get_selector(self, css=''):
+        """
+        Return selector fo signatory container
+        """
+        selector = self.prefix + ' .organization-details-view-{}'.format(self.index)
+        return ' '.join([selector, css])
+
+    def find_css(self, css_selector):
+        """
+        Find elements as defined by css locator.
+        """
+        return self.certificate.page.q(css=self.get_selector(css=css_selector))
+
+    ################
+    # Properties
+    ################
+
+    @property
+    def short_name(self):
+        """
+        Return organization short name
+        """
+        return self.find_css('.organization-panel-default .organization-short-name-value').first.text[0]
+
+    ################
+    # Click Actions
+    ################
+
+    def click_organization_delete_icon(self):
+        """
+        Clicks the organization deletion icon/action
+        """
+        print 'SHORT_NAME', self.short_name
+        assert self.find_css('.action-delete-organization').present
+        self.find_css('.action-delete-organization').first.click()
+
+    #################
+    # Workflows
+    #################
+
+    def delete(self):
+        short_name = self.short_name
+        self.click_organization_delete_icon()
+        self.certificate.wait_for_organization_deletion(short_name)

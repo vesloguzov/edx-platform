@@ -1,5 +1,16 @@
 [
   {
+    "pk": 98,
+    "model": "organizations.organization",
+    "fields": {
+      "name": "Platform organization",
+      "short_name": "PlatformX",
+      "description": "Description of platform organization",
+      "logo": "platform_logo.png",
+      "active": 1
+    }
+  },
+  {
     "pk": 99,
     "model": "organizations.organization",
     "fields": {

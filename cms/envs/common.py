@@ -1130,4 +1130,7 @@ PROCTORING_BACKEND_PROVIDER = {
 }
 PROCTORING_SETTINGS = {}
 
+#### Certificates ##############################################################
+CERTIFICATE_DEFAULT_ORGANIZATION = None
+
 from lektorium import *
