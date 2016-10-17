@@ -26,6 +26,8 @@ from courseware.courses import course_image_url
 from student.models import LinkedInAddToProfileConfiguration
 from util import organizations_helpers as organization_api
 from util.views import handle_500
+from course_modes.models import CourseMode
+
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
 
@@ -126,9 +128,23 @@ def _update_certificate_context(context, user_certificate, platform_name):
         platform_name=platform_name,
         certificate_type=context.get("certificate_type"))
 
+    context['distinction'] = user_certificate.distinction
+    if context['certificate_data'].get('show_grade', False) and user_certificate.grade:
+        grade = _get_grade_display(user_certificate.grade)
+        context['grade'] = grade
+        context['accomplishment_copy_description_full'] = _("successfully completed, received final grade {grade}, "
+                                                            "and was awarded a {platform_name} {certificate_type} "
+                                                            "Certificate of Completion in ").format(
+            grade=grade,
+            platform_name=platform_name,
+            certificate_type=context.get("certificate_type"))
+
     certificate_type_description = get_certificate_description(user_certificate.mode, certificate_type, platform_name)
     if certificate_type_description:
         context['certificate_type_description'] = certificate_type_description
+
+    context['show_honor_code_disclaimer'] = (not CourseMode.is_verified_slug(user_certificate.mode)
+                                             and context['certificate_data'].get('honor_code_disclaimer', False))
 
     # Translators: This text describes the purpose (and therefore, value) of a course certificate
     # 'verifying your identity' refers to the process for establishing the authenticity of the student
@@ -140,6 +156,18 @@ def _update_certificate_context(context, user_certificate, platform_name):
         platform_name=platform_name,
         tos_url=context.get('company_tos_url'),
         verified_cert_url=context.get('company_verified_certificate_url'))
+
+
+def _get_grade_display(grade_str):
+    """
+    Convert grade string stored in certificate to percentage value if possible
+    """
+    try:
+        numerical_grade = float(grade_str)
+    except ValueError:
+        return grade_str
+    else:
+        return u'{:.0%}'.format(numerical_grade)
 
 
 def _update_context_with_basic_info(context, course_id, platform_name, configuration):
@@ -233,8 +261,12 @@ def _update_course_context(request, context, course, platform_name):
     course_title_from_cert = context['certificate_data'].get('course_title', '')
     accomplishment_copy_course_name = course_title_from_cert if course_title_from_cert else course.display_name
     context['accomplishment_copy_course_name'] = accomplishment_copy_course_name
+
     course_number = course.display_coursenumber if course.display_coursenumber else course.number
     context['course_number'] = course_number
+
+    context['additional_course_description'] = context['certificate_data'].get('course_description', '')
+
     if context['organization_long_name']:
         # Translators:  This text represents the description of course
         context['accomplishment_copy_course_description'] = _('a course of study offered by {partner_short_name}, '
@@ -444,6 +476,21 @@ def _update_organization_context(context, course):
     """
     Updates context with organization related info.
     """
+    def _get_organizations_with_logos(organizations):
+        """
+        Collect information only about organizations having logos
+        """
+        organizations_with_logos = []
+        for org_dict in organizations:
+            organization = organization_api.get_organization_by_short_name(org_dict.get('short_name', ''))
+            if organization and organization.get('logo', False):
+                organization_data = {
+                    'name': organization.get('name', organization.get('short_name', '')),
+                    'logo_url': u'{media_url}{url}'.format(media_url=settings.MEDIA_URL, url=organization['logo'])
+                }
+                organizations_with_logos.append(organization_data)
+        return organizations_with_logos
+
     partner_long_name, organization_logo = None, None
     partner_short_name = course.display_organization if course.display_organization else course.org
     organizations = organization_api.get_course_organizations(course_id=course.id)
@@ -452,12 +499,14 @@ def _update_organization_context(context, course):
         organization = organizations[0]
         partner_long_name = organization.get('name', partner_long_name)
         partner_short_name = organization.get('short_name', partner_short_name)
-        organization_logo = organization.get('logo', None)
 
     context['organization_long_name'] = partner_long_name
     context['organization_short_name'] = partner_short_name
     context['accomplishment_copy_course_org'] = partner_short_name
-    context['organization_logo'] = organization_logo
+
+    context['organizations_with_logos'] = _get_organizations_with_logos(
+        context['certificate_data'].get('organizations', ())
+    )
 
 
 def render_cert_by_uuid(request, certificate_uuid):

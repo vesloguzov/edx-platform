@@ -103,7 +103,8 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         CertificateHtmlViewConfigurationFactory.create()
         LinkedInAddToProfileConfigurationFactory.create()
 
-    def _add_course_certificates(self, count=1, signatory_count=0, is_active=True):
+    def _add_course_certificates(self, count=1, signatory_count=0, is_active=True,
+                                 organizations=None, additional_information=None):
         """
         Create certificate for the course.
         """
@@ -118,6 +119,10 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
 
         ]
 
+        certificate_organizations = []
+        if organizations:
+            certificate_organizations = [{'short_name': org} for org in organizations]
+
         certificates = [
             {
                 'id': i,
@@ -126,10 +131,14 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
                 'course_title': 'course_title_' + str(i),
                 'org_logo_path': '/t4x/orgX/testX/asset/org-logo-{}.png'.format(i),
                 'signatories': signatories,
-                'version': 1,
-                'is_active': is_active
+                'version': 'lek-1',
+                'is_active': is_active,
+                'organizations': certificate_organizations
             } for i in xrange(count)
         ]
+        if additional_information:
+            for certificate_data in certificates:
+                certificate_data.update(additional_information)
 
         self.course.certificates = {'certificates': certificates}
         self.course.cert_html_view_enabled = True
@@ -200,7 +209,8 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         }
         test_org = organizations_api.add_organization(organization_data=test_organization_data)
         organizations_api.add_organization_course(organization_data=test_org, course_id=unicode(self.course.id))
-        self._add_course_certificates(count=1, signatory_count=1, is_active=True)
+        self._add_course_certificates(count=1, signatory_count=1, is_active=True,
+                                      organizations=[test_organization_data['short_name']])
         test_url = get_certificate_url(
             user_id=self.user.id,
             course_id=unicode(self.course.id)
@@ -219,6 +229,33 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
             response.content
         )
         self.assertIn('logo_test1.png', response.content)
+
+    @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
+    def test_rendering_certificate_organizations_data(self):
+        """
+        Test: organization logos should render on certificate web view if organizations are added to certificate
+        """
+        organizations_data = [{
+            'name': 'Test Organization {}'.format(i),
+            'short_name': 'test_organization_{}'.format(i),
+            'description': 'Test Description',
+            'active': True,
+            'logo': '/test_logo_{}.png'.format(i)
+        } for i in range(3)]
+
+        for item in organizations_data:
+            organizations_api.add_organization(organization_data=item)
+
+        certificate_organizations = [item['short_name'] for item in organizations_data]
+        self._add_course_certificates(count=1, signatory_count=2, organizations=certificate_organizations)
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+
+        response = self.client.get(test_url)
+        for item in organizations_data:
+            self.assertIn(item['logo'], response.content)
 
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
     @patch.dict("django.conf.settings.SOCIAL_SHARING_SETTINGS", {
@@ -496,6 +533,30 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         response = self.client.get(test_url)
         self.assertIn('overridden_number', response.content)
         self.assertIn('overridden_org', response.content)
+
+    @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
+    def test_additional_course_information(self):
+        """
+        Test if additional course information is specified in studio:
+            * course_description
+            * honor_code_disclaimer
+            * show_grade
+        """
+        additional_information = {
+            'course_description': 'Course details',
+            'honor_code_disclaimer': 'Custom Honor Code Disclaimer',
+            'show_grade': True
+        }
+        self._add_course_certificates(count=1, signatory_count=2, additional_information=additional_information)
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+
+        response = self.client.get(test_url)
+        self.assertIn(additional_information['course_description'], response.content)
+        self.assertIn(additional_information['honor_code_disclaimer'], response.content)
+        self.assertIn('95%', response.content)
 
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
     def test_certificate_view_without_org_logo(self):
