@@ -5,16 +5,16 @@ from django.http import Http404
 from django.test import TestCase
 from django.test.client import RequestFactory
 
-from mock import patch, MagicMock
 from nose.plugins.attrib import attr
+from mock import patch, MagicMock, PropertyMock
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from opaque_keys.edx.locator import CourseLocator, BlockUsageLocator
 
 from courseware.grades import field_data_cache_for_grading, grade, iterate_grades_for, MaxScoresCache, ProgressSummary
-from student.tests.factories import UserFactory
+from student.tests.factories import UserFactory, CourseEnrollmentFactory
 from student.models import CourseEnrollment
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, SharedModuleStoreTestCase
 
 
 def _grade_with_errors(student, request, course, keep_raw_scores=False):
@@ -318,3 +318,56 @@ class TestProgressSummary(TestCase):
         earned, possible = self.progress_summary.score_for_module(self.loc_m)
         self.assertEqual(earned, 0)
         self.assertEqual(possible, 0)
+
+
+@attr('shard_1')
+class FinalGradeTest(SharedModuleStoreTestCase):
+    """
+    Test computing of final course grade
+    """
+    GRADING_POLICY = {
+        "GRADER": [{
+            'type': 'Exam',
+            'min_count': 1,
+            'drop_count': 0,
+            'short_label': 'Exam',
+            'weight': 1
+        }],
+        "GRADE_CUTOFFS": {'A': 0.9, 'B': 0.6}
+    }
+
+    def setUp(self):
+        """
+        Create a course and a user to assign grades
+        """
+        super(FinalGradeTest, self).setUp()
+
+        self.course = CourseFactory.create(
+            grading_policy = self.GRADING_POLICY
+        )
+        self.student = UserFactory.create()
+        CourseEnrollmentFactory.create(user=self.student, course_id=self.course.id)
+
+    def test_grade_with_distinction(self):
+        """
+        Test the result of grading includes "distinction" item set to True
+        if student gets grade over largest grade cutoff
+        """
+        with patch('xmodule.course_module.CourseDescriptor.grader', PropertyMock) as mock_grader:
+            mock_grader.grade = MagicMock(return_value={'percent': 0.95})
+
+            result = grade(self.student, RequestFactory(), self.course)
+            self.assertIn('distinction', result)
+            self.assertTrue(result['distinction'], 'The distinction is not calculated correctly')
+
+    def test_grade_no_distinction(self):
+        """
+        Test the result of grading includes "distinction" item set to False
+        if student gets grade under largest grade cutoff
+        """
+        with patch('xmodule.course_module.CourseDescriptor.grader', PropertyMock) as mock_grader:
+            mock_grader.grade = MagicMock(return_value={'percent': 0.75})
+
+            result = grade(self.student, RequestFactory(), self.course)
+            self.assertIn('distinction', result)
+            self.assertFalse(result['distinction'], 'The distinction is not calculated correctly')
