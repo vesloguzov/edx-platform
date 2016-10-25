@@ -287,6 +287,7 @@ class XQueueCertInterface(object):
         cert.mode = cert_mode
         cert.user = student
         cert.grade = grade['percent']
+        cert.distinction = grade.get('distinction', False)
         cert.course_id = course_id
         cert.name = profile_name
         cert.download_url = ''

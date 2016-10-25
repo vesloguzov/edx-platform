@@ -104,6 +104,21 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         mock_send = self.add_cert_to_queue(mode)
         self.assert_certificate_generated(mock_send, 'verified', template_name)
 
+
+    @ddt.data(True, False)
+    def test_add_cert_distinction(self, distinction):
+        """
+        Test distinction certificate flag
+        """
+        template_name = 'certificate-template-{id.org}-{id.course}.pdf'.format(
+            id=self.course.id
+        )
+        mock_send = self.add_cert_to_queue('honor', distinction)
+
+        self.assert_certificate_generated(mock_send, 'honor', template_name)
+        certificate = GeneratedCertificate.eligible_certificates.get(user=self.user_2, course_id=self.course.id)
+        self.assertEqual(certificate.distinction, distinction)
+
     def test_ineligible_cert_whitelisted(self):
         """Test that audit mode students can receive a certificate if they are whitelisted."""
         # Enroll as audit
@@ -128,7 +143,7 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         self.assertIsNotNone(certificate)
         self.assertEqual(certificate.mode, 'audit')
 
-    def add_cert_to_queue(self, mode):
+    def add_cert_to_queue(self, mode, distinction=False):
         """
         Dry method for course enrollment and adding request to
         queue. Returns a mock object containing information about the
@@ -141,7 +156,8 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
             is_active=True,
             mode=mode,
         )
-        with patch('courseware.grades.grade', Mock(return_value={'grade': 'Pass', 'percent': 0.75})):
+        with patch('courseware.grades.grade',
+                   Mock(return_value={'grade': 'Pass', 'percent': 0.75, 'distinction': distinction})):
             with patch.object(XQueueInterface, 'send_to_queue') as mock_send:
                 mock_send.return_value = (0, None)
                 self.xqueue.add_cert(self.user_2, self.course.id)
