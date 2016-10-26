@@ -156,7 +156,7 @@ class SignatorySerializer(serializers.Serializer):
     signature_image_path = serializers.CharField(required=False, allow_blank=True, default='')
 
     # required for per-signatory updates, null is allowed for new signatories only
-    certificate = serializers.IntegerField(required=True, allow_null=True)
+    certificate = serializers.IntegerField(required=False, allow_null=True)
 
 
 class OrganizationSerializer(serializers.Serializer):
