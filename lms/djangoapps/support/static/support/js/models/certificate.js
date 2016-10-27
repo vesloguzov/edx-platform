@@ -10,7 +10,8 @@
                 download_url: null,
                 grade: null,
                 created: null,
-                modified: null
+                modified: null,
+                regeneratable: false
             }
         });
     });

@@ -369,6 +369,9 @@ FEATURES = {
     # Certificates Web/HTML Views
     'CERTIFICATES_HTML_VIEW': False,
 
+    # Use external service to generate certificates
+    'CERTIFICATES_USE_CERTS_SERVICE': True,
+
     # Batch-Generated Certificates from Instructor Dashboard
     'CERTIFICATES_INSTRUCTOR_GENERATION': False,
 

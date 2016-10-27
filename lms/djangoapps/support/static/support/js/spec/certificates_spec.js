@@ -18,7 +18,8 @@ define([
                 'type': 'honor',
                 'course_key': 'course-v1:edX+DemoX+Demo_Course',
                 'download_url': null,
-                'modified': '2015-08-06T19:47:07+00:00'
+                'modified': '2015-08-06T19:47:07+00:00',
+                'regeneratable': true
             },
             {
                 'username': 'student',
@@ -28,7 +29,8 @@ define([
                 'type': 'verified',
                 'course_key': 'edx/test/2015',
                 'download_url': 'http://www.example.com/certificate.pdf',
-                'modified': '2015-08-06T19:47:05+00:00'
+                'modified': '2015-08-06T19:47:05+00:00',
+                'regeneratable': false
             },
         ],
 
@@ -158,6 +160,16 @@ define([
 
             // Respond with success
             AjaxHelpers.respondWithJson(requests, '');
+        });
+
+        it('hides regenerate button if certificate could not be regenerated', function() {
+            var requests = AjaxHelpers.requests(this);
+
+            // Trigger a search
+            searchFor('student@example.com', requests, SEARCH_RESULTS);
+
+            // Expect regenerate button is not showed if certificate is not regeneratable
+            expect($('.btn-cert-regenerate[data-course-key="edx/test/2015"]')).not.toExist();
         });
     });
 });

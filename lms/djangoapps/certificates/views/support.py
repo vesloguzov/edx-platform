@@ -13,6 +13,7 @@ from django.http import (
     HttpResponseForbidden,
     HttpResponseServerError
 )
+from django.conf import settings
 from django.views.decorators.http import require_GET, require_POST
 from django.db import transaction
 from django.db.models import Q
@@ -72,7 +73,8 @@ def search_by_user(request):
                 "download_url": "http://www.example.com/cert.pdf",
                 "grade": "0.98",
                 "created": 2015-07-31T00:00:00Z,
-                "modified": 2015-07-31T00:00:00Z
+                "modified": 2015-07-31T00:00:00Z,
+                "regeneratable": true
             }
         ]
 
@@ -91,6 +93,10 @@ def search_by_user(request):
         cert["course_key"] = unicode(cert["course_key"])
         cert["created"] = cert["created"].isoformat()
         cert["modified"] = cert["modified"].isoformat()
+        cert["regeneratable"] = (
+            api.has_html_certificates_enabled(cert["course_key"])
+            or settings.FEATURES["CERTIFICATES_USE_CERTS_SERVICE"]
+        )
 
     return JsonResponse(certificates)
 

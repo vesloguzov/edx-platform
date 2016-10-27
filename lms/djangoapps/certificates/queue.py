@@ -50,6 +50,14 @@ class XQueueAddToQueueError(Exception):
         )
 
 
+class CertsServiceNotConfiguredError(Exception):
+    """
+    An error occured when calling external certificates service is not possible
+    """
+    message = 'External certificates service is not configured'
+
+
+
 class XQueueCertInterface(object):
     """
     XQueueCertificateInterface provides an
@@ -405,7 +413,7 @@ class XQueueCertInterface(object):
         if generate_pdf:
             try:
                 self._send_to_xqueue(contents, key)
-            except XQueueAddToQueueError as exc:
+            except (XQueueAddToQueueError, CertsServiceNotConfiguredError) as exc:
                 cert.status = ExampleCertificate.STATUS_ERROR
                 cert.error_reason = unicode(exc)
                 cert.save()
@@ -478,7 +486,7 @@ class XQueueCertInterface(object):
                 callback_url_path=callback_url_path
             )
             LOGGER.info(u"Started generating example certificates for course '%s'.", example_cert.course_key)
-        except XQueueAddToQueueError as exc:
+        except (XQueueAddToQueueError, CertsServiceNotConfiguredError) as exc:
             example_cert.update_status(
                 ExampleCertificate.STATUS_ERROR,
                 error_reason=unicode(exc)
@@ -507,6 +515,9 @@ class XQueueCertInterface(object):
                 certificates.
 
         """
+        if not settings.FEATURES.get('CERTIFICATES_USE_CERTS_SERVICE', False):
+            raise CertsServiceNotConfiguredError
+
         callback_url = u'{protocol}://{base_url}{path}'.format(
             protocol=("https" if self.use_https else "http"),
             base_url=settings.SITE_NAME,

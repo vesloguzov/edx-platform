@@ -143,6 +143,19 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         self.assertIsNotNone(certificate)
         self.assertEqual(certificate.mode, 'audit')
 
+    @patch.dict(
+        'django.conf.settings.FEATURES',
+        {'CERTIFICATES_HTML_VIEW': True, 'CERTIFICATES_USE_CERTS_SERVICE': False}
+    )
+    def test_external_service_not_configured(self):
+        """
+        Test if external certificate service is not configured then trying
+        to add certificate to xqueue results in error
+        """
+        self.add_cert_to_queue('honor')
+        certificate = GeneratedCertificate.eligible_certificates.get(user=self.user_2, course_id=self.course.id)
+        self.assertEqual(certificate.status, CertificateStatuses.error)
+
     def add_cert_to_queue(self, mode, distinction=False):
         """
         Dry method for course enrollment and adding request to
