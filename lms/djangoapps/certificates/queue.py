@@ -381,6 +381,26 @@ class XQueueCertInterface(object):
             )
             return cert
 
+        # If the name of the student is not filled in userprofile,
+        # return a certificate with error status.
+        if not profile_name.strip():
+            cert.status = status.error
+            cert.error_reason = u'The name of the learner is not filled'
+            cert.save()
+
+            LOGGER.info(
+                (
+                    u"Student %s has not filled the name field in userprofile, "
+                    u"so their certificate status has been set to '%s' "
+                    u"for the course '%s'. "
+                    u"No certificate generation task was sent to the XQueue."
+                ),
+                student.id,
+                cert.status,
+                unicode(course_id)
+            )
+            return cert
+
         # Finally, generate the certificate and send it off.
         return self._generate_cert(cert, course, student, grade_contents, template_pdf, generate_pdf)
 

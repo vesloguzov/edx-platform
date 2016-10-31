@@ -104,7 +104,6 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         mock_send = self.add_cert_to_queue(mode)
         self.assert_certificate_generated(mock_send, 'verified', template_name)
 
-
     @ddt.data(True, False)
     def test_add_cert_distinction(self, distinction):
         """
@@ -264,6 +263,21 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
             GeneratedCertificate.objects.get(user=self.user_2, course_id=self.course.id).status,  # pylint: disable=no-member
             CertificateStatuses.generating
         )
+
+    def test_error_on_empty_name(self):
+        """
+        Test that generating certificate for student with empty profile name
+        returns certificate with status 'error'.
+        """
+        profile = self.user_2.profile
+        profile.name = ''
+        profile.save()
+        self.add_cert_to_queue('honor')
+
+        certificate = GeneratedCertificate.eligible_certificates.get(user=self.user_2, course_id=self.course.id)
+        self.assertEqual(certificate.status, CertificateStatuses.error)
+        self.assertIn('name', certificate.error_reason)
+
 
 
 @attr('shard_1')
