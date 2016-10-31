@@ -13,6 +13,7 @@ from django.http import HttpResponse, Http404
 from django.template import RequestContext
 from django.utils.translation import ugettext as _
 from django.utils.encoding import smart_str
+from django.utils import dateformat, formats
 from django.core.urlresolvers import reverse
 
 from courseware.access import has_access
@@ -97,11 +98,9 @@ def _update_certificate_context(context, user_certificate, platform_name):
         suffix=context.get('certificate_verify_url_suffix')
     )
 
-    # Translators:  The format of the date includes the full name of the month
-    context['certificate_date_issued'] = _('{month} {day}, {year}').format(
-        month=user_certificate.modified_date.strftime("%B"),
-        day=user_certificate.modified_date.day,
-        year=user_certificate.modified_date.year
+    context['certificate_date_issued'] = dateformat.format(
+        user_certificate.modified_date,
+        formats.get_format('CERTIFICATE_DATE_FORMAT')
     )
 
     # Translators:  This text represents the verification of the certificate
