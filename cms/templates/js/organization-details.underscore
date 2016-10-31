@@ -8,7 +8,7 @@
   <% } else { %>
   <span class="organization-logo">
     <% if (logo != "") { %>
-      <img class="organization-logo-image" src="<%= logo %>" alt="Organization Logo">
+      <img class="organization-logo-image" src="<%= logo %>" alt="<%= gettext('Organization Logo') %>">
     <% }  else { %>
       <div class="no-image">
           <i class="icon fa fa-exclamation-circle"></i>
