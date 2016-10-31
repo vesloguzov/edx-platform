@@ -372,6 +372,35 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         )
 
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
+    def test_rendering_saved_fullname_after_removal(self):
+        """
+        Tests learner name rendered on certificate if it was cleaned by user later.
+        """
+        test_organization_data = {
+            'name': 'Long org name',
+            'short_name': 'short_org_name',
+            'description': 'Test Organization Description',
+            'active': True,
+            'logo': '/logo_test1.png'
+        }
+        test_org = organizations_api.add_organization(organization_data=test_organization_data)
+        organizations_api.add_organization_course(organization_data=test_org, course_id=unicode(self.course.id))
+        self._add_course_certificates(count=1, signatory_count=1, is_active=True)
+
+        self.course.save()
+        self.store.update_item(self.course, self.user.id)
+
+        profile = self.user.profile
+        prev_fullname = profile.name
+        profile.name = ''
+        profile.save()
+
+        test_url = get_certificate_url(user_id=self.user.id, course_id=unicode(self.course.id))
+        response = self.client.get(test_url, HTTP_HOST=settings.MICROSITE_TEST_HOSTNAME)
+
+        self.assertIn(prev_fullname, response.content)
+
+    @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
     def test_render_html_view_valid_certificate(self):
         self._add_course_certificates(count=1, signatory_count=2)
         test_url = get_certificate_url(
