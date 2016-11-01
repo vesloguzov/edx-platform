@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ Tests for analytics.csvs """
 
 from django.test import TestCase
@@ -35,6 +36,14 @@ class TestAnalyticsCSVS(TestCase):
         self.assertEqual(res['Content-Type'], 'text/csv')
         self.assertEqual(res['Content-Disposition'], 'attachment; filename={0}'.format('robot.csv'))
         self.assertEqual(res.content.strip(), '')
+
+    def test_create_unicode_csv_response(self):
+        header = ['Name', u'Correo electrónico']
+        datarows = [['Jim', 'jim@edy.org'], [u'Úrsula', 'ursula@edy.org']]
+
+        res = create_csv_response('robot.csv', header, datarows)
+        self.assertEqual(res['Content-Type'], 'text/csv')
+        self.assertIn(u'Úrsula', res.content.decode('utf-8'))
 
 
 class TestAnalyticsFormatDictlist(TestCase):
