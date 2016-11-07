@@ -47,7 +47,7 @@ class CourseMode(models.Model):
     min_price = models.IntegerField(default=0, verbose_name=_("Price"))
 
     # the currency these prices are in, using lower case ISO currency codes
-    currency = models.CharField(default="usd", max_length=8)
+    currency = models.CharField(default="usd", max_length=8, verbose_name=_("Currency"))
 
     # The datetime at which the course mode will expire.
     # This is used to implement "upgrade" deadlines.
@@ -73,7 +73,7 @@ class CourseMode(models.Model):
 
     # optional description override
     # WARNING: will not be localized
-    description = models.TextField(null=True, blank=True)
+    description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
 
     # Optional SKU for integration with the ecommerce service
     sku = models.CharField(
@@ -111,6 +111,8 @@ class CourseMode(models.Model):
 
     class Meta(object):
         unique_together = ('course_id', 'mode_slug', 'currency')
+        verbose_name = _('course mode')
+        verbose_name_plural = _('course modes')
 
     def clean(self):
         """
@@ -611,25 +613,25 @@ class CourseModesArchive(models.Model):
     such as course price changes
     """
     # the course that this mode is attached to
-    course_id = CourseKeyField(max_length=255, db_index=True)
+    course_id = CourseKeyField(max_length=255, verbose_name=_('Course'), db_index=True)
 
     # the reference to this mode that can be used by Enrollments to generate
     # similar behavior for the same slug across courses
-    mode_slug = models.CharField(max_length=100)
+    mode_slug = models.CharField(max_length=100, verbose_name=_('Mode'))
 
     # The 'pretty' name that can be translated and displayed
-    mode_display_name = models.CharField(max_length=255)
+    mode_display_name = models.CharField(max_length=255, verbose_name=_('Display name'))
 
     # minimum price in USD that we would like to charge for this mode of the course
-    min_price = models.IntegerField(default=0)
+    min_price = models.IntegerField(default=0, verbose_name=_('Price'))
 
     # the suggested prices for this mode
     suggested_prices = models.CommaSeparatedIntegerField(max_length=255, blank=True, default='')
 
     # the currency these prices are in, using lower case ISO currency codes
-    currency = models.CharField(default="usd", max_length=8)
+    currency = models.CharField(default="usd", max_length=8, verbose_name=_('Currency'))
 
     # turn this mode off after the given expiration date
     expiration_date = models.DateField(default=None, null=True, blank=True)
 
-    expiration_datetime = models.DateTimeField(default=None, null=True, blank=True)
+    expiration_datetime = models.DateTimeField(default=None, null=True, blank=True, verbose_name=_(u"Upgrade Deadline"))
