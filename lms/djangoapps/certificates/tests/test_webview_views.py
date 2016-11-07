@@ -726,6 +726,23 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
         self.assertIn('Signatory_Title 0', response.content)
 
     @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
+    def test_render_html_view_with_preview_mode_with_show_grade(self):
+        """
+        test certificate web view should render properly in
+        preview mode with example final grade
+        """
+        self._add_course_certificates(count=1, signatory_count=2,
+                                      additional_information={'show_grade': True})
+        CourseStaffRole(self.course.id).add_users(self.user)
+
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+        response = self.client.get(test_url + '?preview=honor')
+        self.assertIn('final grade 50%', response.content)
+
+    @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
     def test_render_html_view_invalid_certificate_configuration(self):
         self.course.cert_html_view_enabled = True
         self.course.save()

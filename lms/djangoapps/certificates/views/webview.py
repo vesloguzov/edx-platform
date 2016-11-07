@@ -373,7 +373,8 @@ def _get_user_certificate(request, user, course_key, course, preview_mode=None):
             user_certificate = GeneratedCertificate(
                 mode=preview_mode,
                 verify_uuid=unicode(uuid4().hex),
-                modified_date=datetime.now().date()
+                modified_date=datetime.now().date(),
+                grade=0.5
             )
     else:
         # certificate is being viewed by learner or public
