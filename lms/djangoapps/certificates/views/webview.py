@@ -486,7 +486,7 @@ def _update_organization_context(context, course):
             if organization and organization.get('logo', False):
                 organization_data = {
                     'name': organization.get('name', organization.get('short_name', '')),
-                    'logo_url': u'{media_url}{url}'.format(media_url=settings.MEDIA_URL, url=organization['logo'])
+                    'logo_url': organization['logo'].url
                 }
                 organizations_with_logos.append(organization_data)
         return organizations_with_logos

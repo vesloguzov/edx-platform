@@ -31,6 +31,7 @@ course.certificates: {
 import re
 import json
 import urllib
+import urlparse
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -115,11 +116,15 @@ def get_serializable_organizations_list():
     """
     def _get_logo_url(logo):
         if logo:
-            return u"//{base}{media_url}{url}".format(
-                base=settings.LMS_BASE,
-                media_url=settings.LMS_MEDIA_URL,
-                url=logo.url
-            )
+            if not urlparse.urlparse(logo.url).netloc:
+                # complete logo url with LMS media url if logo url is not absolute
+                return u"//{base}{media_url}{url}".format(
+                    base=settings.LMS_BASE,
+                    media_url=settings.LMS_MEDIA_URL,
+                    url=logo.url
+                )
+            else:
+                return logo.url
         return ''
 
     organizations = organizations_helpers.get_organizations()
