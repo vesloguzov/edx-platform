@@ -103,7 +103,7 @@ def get_default_certificate_organizations(course_key):
         settings.CERTIFICATE_DEFAULT_ORGANIZATION
     )
     organizations = [org['short_name'] for org in course_organizations]
-    if platform_organization and platform_organization not in organizations:
+    if platform_organization and platform_organization['short_name'] not in organizations:
         organizations.insert(0, platform_organization['short_name'])
     return [{'short_name': org} for org in organizations]
 

@@ -95,6 +95,20 @@ class CertificateOrganizationsTestCase(TestCase):
         self.assertNotIn({'short_name': self.organization_short_name}, orgs)
         self.assertIn({'short_name': settings.CERTIFICATE_DEFAULT_ORGANIZATION}, orgs)
 
+    def test_platform_own_course(self):
+        """
+        Test only one organization is picked if course organization is equal
+        to platform organization
+        """
+        course_key = CourseLocator(settings.CERTIFICATE_DEFAULT_ORGANIZATION, 'course', 'run')
+
+        OrganizationFactory.create(short_name=settings.CERTIFICATE_DEFAULT_ORGANIZATION)
+        org = organizations_helpers.get_organization_by_short_name(settings.CERTIFICATE_DEFAULT_ORGANIZATION)
+        organizations_helpers.add_organization_course(org, course_key)
+
+        orgs = get_default_certificate_organizations(course_key)
+        self.assertEqual(len(orgs), 1, "Default organization picked twice")
+
     def _create_course_organization(self):
         """
         Create organization and link it to existing self.course_key
