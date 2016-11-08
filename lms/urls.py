@@ -80,7 +80,8 @@ urlpatterns = (
     # Note: these are older versions of the User API that will eventually be
     # subsumed by api/user listed below.
     url(r'^user_api/', include('openedx.core.djangoapps.user_api.legacy_urls')),
-    url(r'^api/', include('api.urls')),
+
+    url(r'^lek_api/', include('lek_api.urls')),
 
     url(r'^notifier_api/', include('notifier_api.urls')),
 

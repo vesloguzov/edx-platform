@@ -18,8 +18,8 @@ from course_modes.models import CourseMode
 from student.models import CourseEnrollment
 from student.views import send_enrollment_email
 
-from api.serializers import UserSerializer, UID_PATTERN, CourseSerializer, CourseEnrollmentSerializer
-from api.put_as_create import AllowPUTAsCreateMixin
+from lek_api.serializers import UserSerializer, UID_PATTERN, CourseSerializer, CourseEnrollmentSerializer
+from lek_api.put_as_create import AllowPUTAsCreateMixin
 
 
 class ApiKeyHeaderPermission(permissions.BasePermission):

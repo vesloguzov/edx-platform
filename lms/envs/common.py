@@ -2758,7 +2758,7 @@ PROCTORING_SETTINGS = {}
 
 
 INSTALLED_APPS += (
-    'api',
+    'lek_api',
     'required_student_data',
     'sync',
 )

@@ -18,7 +18,7 @@ CAS_ATTRIBUTE_KEYS = {
     # 'level_of_education',
 }
 CAS_INSTANT_LOGIN_EXEMPT = (
-    'api.',
+    'lek_api.',
 )
 
 USER_DATA_REQUEST_TIMEOUT = datetime.timedelta(hours=24)
