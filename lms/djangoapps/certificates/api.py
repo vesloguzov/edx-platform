@@ -398,7 +398,7 @@ def get_certificate_url(user_id=None, course_id=None, uuid=None):
         except GeneratedCertificate.DoesNotExist:
             log.critical(
                 'Unable to lookup certificate\n'
-                'user id: %d\n'
+                'user id: %s\n'
                 'course: %s', user_id, unicode(course_id)
             )
 

@@ -1,5 +1,6 @@
 import re
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 from django.core.urlresolvers import reverse
@@ -12,6 +13,7 @@ from rest_framework.validators import UniqueValidator
 from student.models import UserProfile, CourseEnrollment
 from courseware.courses import course_image_url
 from certificates.models import GeneratedCertificate
+from certificates.api import get_certificate_url
 
 
 UID_PATTERN = r'[\w.-]+'
@@ -141,7 +143,14 @@ class CourseEnrollmentSerializer(serializers.ModelSerializer):
 
     def get_certificate_url(self, enrollment):
         certificate = self._get_certificate(enrollment)
-        return certificate.download_url if certificate else None
+        if not certificate:
+            return None
+        if certificate.download_url:
+            return certificate.download_url
+        else:
+            url = get_certificate_url(course_id=enrollment.course_id, uuid=certificate.verify_uuid)
+            scheme = 'https' if settings.HTTPS == 'on' else 'http'
+            return u'{}://{}{}'.format(scheme, settings.LMS_BASE, url)
 
     def _get_certificate(self, enrollment):
         if not hasattr(enrollment, '_certificate'):

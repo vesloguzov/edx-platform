@@ -10,6 +10,8 @@ import json
 import datetime
 from unittest import skipIf, skipUnless, skip
 from mock import patch
+from uuid import uuid4
+import urlparse
 
 from django.test import TestCase
 from django.contrib.auth.models import User
@@ -473,6 +475,39 @@ class EnrollmentViewSetTest(APITest):
                 self.assertIsNone(item['certificate_url'])
             elif item['course_id'] == course_with_certificate.id.to_deprecated_string():
                 self.assertEquals(item['certificate_url'], certificate.download_url)
+
+    @patch.dict(settings.FEATURES, {'CERTIFICATES_HTML_VIEW': True})
+    def test_html_certificate_url(self):
+        """
+        Test HTML certificate url is showed correctly
+        """
+        course = CourseFactory.create(number='with_html_certificate')
+        course.cert_html_view_enabled = True
+        course.save()
+        self.store.update_item(course, self.user.id)
+
+        CourseEnrollmentFactory.create(course_id=course.id, user=self.user)
+        certificate = GeneratedCertificate.objects.create(
+            course_id=course.id,
+            user=self.user,
+            status=CertificateStatuses.downloadable,
+            verify_uuid=uuid4().hex
+        )
+        expected_certificate_url = reverse(
+            'certificates:render_cert_by_uuid',
+            kwargs=dict(certificate_uuid=certificate.verify_uuid)
+        )
+
+        url = reverse('enrollment-list', kwargs={'user_username': self.user.username})
+        response = self._request_with_auth('get', url)
+        self.assertEquals(response.status_code, 200)
+        data = json.loads(response.content)
+
+        enrollment = filter(lambda item: item['course_id'] == unicode(course.id), data)[0]
+        certificate_url = enrollment['certificate_url']
+        self.assertNotEqual(urlparse.urlparse(certificate_url).scheme, '')  # check for absolute url
+        self.assertTrue(certificate_url.endswith(expected_certificate_url),
+                        "Unexpected certificate URL: %s" % enrollment['certificate_url'])
 
     def test_enroll_error_on_closed_enrollment(self):
         course_enrollment_closed = CourseFactory.create(number='closed_enrollment',
