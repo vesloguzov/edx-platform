@@ -15,7 +15,7 @@ from xmodule.modulestore.django import modulestore
 
 from courseware.courses import get_course, get_courses
 from course_modes.models import CourseMode
-from student.models import CourseEnrollment
+from student.models import CourseEnrollment, CourseEnrollmentException, AlreadyEnrolledError, NonExistentCourseError
 from student.views import send_enrollment_email
 
 from lek_api.serializers import UserSerializer, UID_PATTERN, CourseSerializer, CourseEnrollmentSerializer
@@ -106,6 +106,15 @@ class EnrollmentViewSet(ServerAPIViewSet):
     lookup_field = 'course_id'
     lookup_regex = settings.COURSE_ID_PATTERN
 
+    ALLOWED_COURSE_MODES = (
+        CourseMode.AUDIT,
+        CourseMode.HONOR,
+        CourseMode.VERIFIED,
+        CourseMode.PROFESSIONAL,
+        CourseMode.NO_ID_PROFESSIONAL_MODE,
+        CourseMode.CREDIT_MODE,
+    )
+
     def list(self, request, *args, **kwargs):
         enrollments = self._get_enrollments(*args, **kwargs)
         serializer = CourseEnrollmentSerializer(enrollments, many=True)
@@ -113,23 +122,38 @@ class EnrollmentViewSet(ServerAPIViewSet):
 
     @detail_route(methods=['post'])
     def enroll(self, request, *args, **kwargs):
-        user = self._get_user(*args, **kwargs)
-        course = self._get_course(*args, **kwargs)
-        skip_enrollment_email = request.data.get('skip_enrollment_email', False)
+        """
+        Enroll student with forced mode
 
-        if not CourseMode.can_auto_enroll(course.id):
-            return Response({'detail': _("Could not auto enroll")},
+        Overrides enrollment mode for already enrolled student
+        """
+        user = self._get_user(*args, **kwargs)
+        course_id = self._get_course_id(*args, **kwargs)
+        skip_enrollment_email = request.data.get('skip_enrollment_email', False)
+        mode = request.data.get('mode', CourseMode.DEFAULT_MODE_SLUG)
+
+        if mode not in self.ALLOWED_COURSE_MODES:
+            return Response({'detail': u'Invalid course mode: {}'.format(mode)},
                             status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            enrollment = CourseEnrollment.enroll(user, course.id, check_access=True)
-        except Exception as e:
-            return Response({'detail': e.message or _("Enrollment failed")},
+            # create new enrollment
+            enrollment = CourseEnrollment.enroll(user, course_id, mode, check_access=True)
+        except AlreadyEnrolledError:
+            # update existing enrollment with current mode
+            enrollment = CourseEnrollment.objects.get(user=user, course_id=course_id)
+            enrollment.update_enrollment(is_active=True, mode=mode)
+        except NonExistentCourseError:
+            raise NotFound(detail=u"No course '{}' found".format(course_id))
+        except CourseEnrollmentException as e:
+            return Response({'detail': e.message or u"Enrollment failed ({})".format(e.__class__.__name__)},
                             status=status.HTTP_400_BAD_REQUEST)
         else:
             if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL') and not skip_enrollment_email:
+                course = get_course(course_id)
                 send_enrollment_email(user, course, use_https_for_links=request.is_secure())
-            serializer = CourseEnrollmentSerializer(enrollment)
-            return Response(serializer.data)
+        serializer = CourseEnrollmentSerializer(enrollment)
+        return Response(serializer.data)
 
     @detail_route(methods=['post'])
     def unenroll(self, request, *args, **kwargs):
@@ -144,9 +168,9 @@ class EnrollmentViewSet(ServerAPIViewSet):
             try:
                 get_course(course_key)
             except ValueError:
-                raise NotFound(detail=_("No course '{}' found").format(course_id))
+                raise NotFound(detail=u"No course '{}' found".format(course_id))
             else:
-                return Response({'detail': _("User is not enrolled in this course")},
+                return Response({'detail': u"User is not enrolled in this course"},
                                 status=status.HTTP_400_BAD_REQUEST)
 
         CourseEnrollment.unenroll(user, course_key)
@@ -162,8 +186,17 @@ class EnrollmentViewSet(ServerAPIViewSet):
         try:
             return User.objects.get(username=username)
         except User.DoesNotExist:
-            raise NotFound(detail=_("No user with uid '{}' found").format(username))
+            raise NotFound(detail=u"No user with uid '{}' found".format(username))
 
     def _get_course(self, *args, **kwargs):
         course_id = self.kwargs.get(self.lookup_field, None)
         return self._get_course_from_key_string(course_id)
+
+    def _get_course_id(self, *args, **kwargs):
+        course_id = self.kwargs.get(self.lookup_field, None)
+        try:
+            course_key = CourseKey.from_string(course_id)
+        except InvalidKeyError:
+            raise NotFound(detail=u"Invalid course id '{}'".format(course_id))
+        else:
+            return course_key
