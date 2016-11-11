@@ -375,6 +375,9 @@ FEATURES = {
     # Batch-Generated Certificates from Instructor Dashboard
     'CERTIFICATES_INSTRUCTOR_GENERATION': False,
 
+    # Use custom certificate templates stored in database
+    'CUSTOM_CERTIFICATE_TEMPLATES_ENABLED': False,
+
     # Course discovery feature
     'ENABLE_COURSE_DISCOVERY': False,
 
