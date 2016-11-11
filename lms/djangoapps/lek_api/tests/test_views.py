@@ -7,11 +7,12 @@ Replace this with more appropriate tests for your application.
 """
 import ddt
 import json
+import pytz
+import urlparse
 import datetime
 from unittest import skipIf
 from mock import patch
 from uuid import uuid4
-import urlparse
 
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
@@ -261,6 +262,25 @@ class CourseViewSetTest(APITest):
         detail_url = reverse('course-detail', kwargs={'course_id': CourseLocator(org='no_org', course='no_course', run='1')})
         response = self._request_with_auth('get', detail_url)
         self.assertEqual(response.status_code, 404)
+
+    def test_enrollments(self):
+        course = CourseFactory.create()
+        users = [UserFactory.create() for _ in xrange(3)]
+        enrollments = [CourseEnrollmentFactory.create(course_id=course.id, user=u) for u in users]
+
+        url = reverse('course-enrollments', kwargs={'course_id': unicode(course.id)})
+        response = self._request_with_auth('get', url)
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertEqual(len(data), 3)
+
+        item = data[0]
+        self.assertIn('mode', item)
+        self.assertEqual(item['is_active'], True)
+        self.assertEqual(item['uid'], users[0].username)
+        created = enrollments[0].created.astimezone(pytz.timezone('UTC')).isoformat()[:-6] + 'Z'
+        self.assertEqual(item['created'], created)
 
 
 @ddt.ddt

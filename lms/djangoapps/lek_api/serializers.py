@@ -133,6 +133,20 @@ class CourseSerializer(serializers.Serializer):
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
+    """
+    Serializes enrollment information for course summary
+    """
+    uid = serializers.CharField(source='username', required=True, allow_blank=False, validators=[UniqueValidator(queryset=User.objects)])
+
+    class Meta:
+        model = CourseEnrollment
+        fields = ('uid', 'mode', 'is_active', 'created')
+
+
+class UserEnrollmentSerializer(serializers.ModelSerializer):
+    """
+    Serializes enrollment information for user dashboard
+    """
     grade = serializers.SerializerMethodField()
     certificate_url = serializers.SerializerMethodField()
 
