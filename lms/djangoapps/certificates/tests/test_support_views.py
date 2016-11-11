@@ -81,7 +81,7 @@ class CertificateSupportTestCase(ModuleStoreTestCase):
 
 
 @ddt.ddt
-class CertificateSearchTests(ModuleStoreTestCase, CertificateSupportTestCase):
+class CertificateSearchTests(CertificateSupportTestCase):
     """
     Tests for the certificate search end-point used by the support team.
     """
