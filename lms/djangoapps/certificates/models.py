@@ -227,6 +227,13 @@ class GeneratedCertificate(models.Model):
     modified_date = models.DateTimeField(auto_now=True, verbose_name=_('modified'))
     error_reason = models.CharField(max_length=512, verbose_name=_('error reason'), blank=True, default='')
 
+    # store template version certificate would be rendered with
+    template_version = models.SlugField(
+        verbose_name=_('template version'),
+        help_text=_('Version of HTML certificate template used to render certificate. Should contain only latin letters, numbers, underscores or hyphens.'),
+        default='', blank=True
+    )
+
     class Meta(object):
         unique_together = (('user', 'course_id'),)
         app_label = "certificates"
@@ -824,6 +831,18 @@ class CertificateHtmlViewConfiguration(ConfigurationModel):
         instance = cls.current()
         json_data = json.loads(instance.configuration) if instance.enabled else {}
         return json_data
+
+    @classmethod
+    def get_template_version(cls, mode_slug):
+        """
+        Retrieves configured template version for specified mode.
+
+        Intended to be used on certificate creation only.
+        """
+        data = cls.get_config()
+        mode_config = data.get('default', {})
+        mode_config.update(data.get(mode_slug, {}))
+        return mode_config.get('template_version', '')
 
 
 class BadgeAssertion(models.Model):

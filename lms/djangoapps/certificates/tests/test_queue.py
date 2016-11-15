@@ -279,7 +279,6 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         self.assertIn('name', certificate.error_reason)
 
 
-
 @attr('shard_1')
 @override_settings(CERT_QUEUE='certificates')
 class XQueueCertInterfaceExampleCertificateTest(TestCase):

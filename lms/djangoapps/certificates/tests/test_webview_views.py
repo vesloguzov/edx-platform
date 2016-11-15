@@ -14,6 +14,7 @@ from django.core.urlresolvers import reverse
 from django.test.client import Client
 from django.test.utils import override_settings
 
+from edxmako.template import Template
 from course_modes.models import CourseMode
 from openedx.core.lib.tests.assertions.events import assert_event_matches
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
@@ -47,10 +48,8 @@ FEATURES_WITH_CERTS_ENABLED['CERTIFICATES_HTML_VIEW'] = True
 FEATURES_WITH_CERTS_DISABLED = settings.FEATURES.copy()
 FEATURES_WITH_CERTS_DISABLED['CERTIFICATES_HTML_VIEW'] = False
 
-FEATURES_WITH_CUSTOM_CERTS_ENABLED = {
-    "CUSTOM_CERTIFICATE_TEMPLATES_ENABLED": True
-}
-FEATURES_WITH_CUSTOM_CERTS_ENABLED.update(FEATURES_WITH_CERTS_ENABLED)
+FEATURES_WITH_CUSTOM_CERTS_ENABLED = FEATURES_WITH_CERTS_ENABLED.copy()
+FEATURES_WITH_CUSTOM_CERTS_ENABLED["CUSTOM_CERTIFICATE_TEMPLATES_ENABLED"] = True
 
 
 def _fake_is_request_in_microsite():
@@ -985,3 +984,64 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
                         else:
                             self.assertContains(response, "Tweet this Accomplishment")
                         self.assertContains(response, 'https://twitter.com/intent/tweet')
+
+    @override_settings(FEATURES=FEATURES_WITH_CUSTOM_CERTS_ENABLED)
+    def test_template_version(self):
+        """
+        Test choosing of template with version specified in certificate
+        """
+        self._add_course_certificates(count=1, signatory_count=2)
+        self.cert.template_version = 'v1'
+        self.cert.save()
+
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+
+        with patch('edxmako.shortcuts.lookup_template') as mock_loader:
+            mock_loader.return_value = Template('Test template')
+
+            response = self.client.get(test_url)
+            self.assertEqual(response.status_code, 200)
+            mock_loader.assert_called_with('main', 'certificates/v1/valid.html')
+            self.assertIn('Test template', response.content)
+
+    @override_settings(FEATURES=FEATURES_WITH_CUSTOM_CERTS_ENABLED)
+    def test_missing_template_version(self):
+        """
+        Test rendering of default template if template with specified version
+        does not exist
+        """
+        self._add_course_certificates(count=1, signatory_count=2)
+        self.cert.template_version = 'missing_version'
+        self.cert.save()
+
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+
+        response = self.client.get(test_url)
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(FEATURES=FEATURES_WITH_CUSTOM_CERTS_ENABLED)
+    def test_template_version_in_preview_mode(self):
+        """
+        Test preview is rendered with template version specified in active configuration
+        Current configuration has version "v0" by default and "v1" for honor certificates
+        """
+        assert CertificateHtmlViewConfiguration.get_template_version('honor') == 'v1'
+
+        self._add_course_certificates(count=1, signatory_count=2)
+        CourseStaffRole(self.course.id).add_users(self.user)
+
+        test_url = get_certificate_url(user_id=self.user.id, course_id=unicode(self.course.id))
+
+        with patch('edxmako.shortcuts.lookup_template') as mock_loader:
+            mock_loader.return_value = Template('Test template')
+
+            response = self.client.get(test_url + "?preview=honor")
+            self.assertEqual(response.status_code, 200)
+            mock_loader.assert_called_with('main', 'certificates/v1/valid.html')
+            self.assertIn('Test template', response.content)

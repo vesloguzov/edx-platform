@@ -6,6 +6,7 @@ from datetime import datetime
 from uuid import uuid4
 import logging
 import urllib
+from mako.exceptions import TemplateLookupException
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -374,7 +375,8 @@ def _get_user_certificate(request, user, course_key, course, preview_mode=None):
                 mode=preview_mode,
                 verify_uuid=unicode(uuid4().hex),
                 modified_date=datetime.now().date(),
-                grade=0.5
+                grade=0.5,
+                template_version=CertificateHtmlViewConfiguration.get_template_version(preview_mode)
             )
     else:
         # certificate is being viewed by learner or public
@@ -435,6 +437,18 @@ def _render_certificate_template(request, context, course, user_certificate):
             )
             context = RequestContext(request, context)
             return HttpResponse(template.render(context))
+
+    if user_certificate.template_version:
+        template_name = 'certificates/{}/valid.html'.format(user_certificate.template_version)
+        try:
+            response = render_to_response(template_name, context)
+        except TemplateLookupException as e:
+            log.warning(
+                u'Could not render template with version "{}" for user_id "{}" and course_id "{}" ({}).'.format(
+                    user_certificate.template_version, user_certificate.user_id, course.id, e.message)
+            )
+        else:
+            return response
 
     return render_to_response("certificates/valid.html", context)
 

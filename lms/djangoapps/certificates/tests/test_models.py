@@ -110,10 +110,12 @@ class CertificateHtmlViewConfigurationTest(TestCase):
         self.configuration_string = """{
             "default": {
                 "url": "http://www.edx.org",
-                "logo_src": "http://www.edx.org/static/images/logo.png"
+                "logo_src": "http://www.edx.org/static/images/logo.png",
+                "template_version": "v0"
             },
             "honor": {
-                "logo_src": "http://www.edx.org/static/images/honor-logo.png"
+                "logo_src": "http://www.edx.org/static/images/honor-logo.png",
+                "template_version": "v1"
             }
         }"""
         self.config = CertificateHtmlViewConfiguration(configuration=self.configuration_string)
@@ -141,10 +143,12 @@ class CertificateHtmlViewConfigurationTest(TestCase):
         expected_config = {
             "default": {
                 "url": "http://www.edx.org",
-                "logo_src": "http://www.edx.org/static/images/logo.png"
+                "logo_src": "http://www.edx.org/static/images/logo.png",
+                "template_version": "v0"
             },
             "honor": {
-                "logo_src": "http://www.edx.org/static/images/honor-logo.png"
+                "logo_src": "http://www.edx.org/static/images/honor-logo.png",
+                "template_version": "v1"
             }
         }
         self.assertEquals(self.config.get_config(), expected_config)
@@ -165,6 +169,33 @@ class CertificateHtmlViewConfigurationTest(TestCase):
         self.config.configuration = ''
         self.config.save()
         self.assertEquals(self.config.get_config(), {})
+
+    def test_template_version_by_mode(self):
+        """
+        Test template version depends on mode
+        """
+        self.config.enabled = True
+        self.config.save()
+
+        # check explicitly configured version
+        template_version = self.config.get_template_version('honor')
+        self.assertEqual(template_version, 'v1')
+
+        # check default version
+        for mode in ('verified', 'professional', 'no-id-professional', 'credit'):
+            template_version = self.config.get_template_version(mode)
+            self.assertEqual(template_version, 'v0')
+
+    def test_template_version_with_no_active_configuration(self):
+        """
+        Test default template version when no configuration is enabled
+        """
+        self.config.enabled = False
+        self.config.save()
+
+        for mode in ('honor', 'verified'):
+            template_version = self.config.get_template_version(mode)
+            self.assertEqual(template_version, '')
 
 
 @attr('shard_1')

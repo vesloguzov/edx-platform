@@ -1,6 +1,7 @@
 """Tests for the certificates Python API. """
 from contextlib import contextmanager
 import ddt
+import json
 
 from django.test import TestCase, RequestFactory
 from django.test.utils import override_settings
@@ -27,7 +28,7 @@ from certificates.models import (
     certificate_status_for_student,
 )
 from certificates.queue import XQueueCertInterface, XQueueAddToQueueError
-from certificates.tests.factories import GeneratedCertificateFactory
+from certificates.tests.factories import GeneratedCertificateFactory, CertificateHtmlViewConfigurationFactory
 
 FEATURES_WITH_CERTS_ENABLED = settings.FEATURES.copy()
 FEATURES_WITH_CERTS_ENABLED['CERTIFICATES_HTML_VIEW'] = True
@@ -270,6 +271,24 @@ class GenerateUserCertificatesTest(EventTestMixin, WebCertificateTestMixin, Modu
         """
         url = certs_api.get_certificate_url(self.student.id, self.course.id)
         self.assertEqual(url, "")
+
+    @patch.dict(settings.FEATURES, {'CERTIFICATES_HTML_VIEW': True})
+    def test_saving_template_version(self):
+        """
+        Test certificate certificate version is stored in generated certificate
+        """
+        configuration = json.loads(CertificateHtmlViewConfigurationFactory.configuration)
+        configuration['honor']['template_version'] = 'mock_version'
+        CertificateHtmlViewConfigurationFactory.create(configuration=json.dumps(configuration))
+
+        self._setup_course_certificate()
+        with self._mock_passing_grade():
+            certs_api.generate_user_certificates(self.student, self.course.id)
+
+        # Verify that the certificate is downloadable and has configured template version
+        cert = GeneratedCertificate.eligible_certificates.get(user=self.student, course_id=self.course.id)
+        self.assertEqual(cert.status, CertificateStatuses.downloadable)
+        self.assertEqual(cert.template_version, 'mock_version')
 
 
 @attr('shard_1')

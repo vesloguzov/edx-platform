@@ -311,7 +311,6 @@ class CertificatesInstructorApiTest(SharedModuleStoreTestCase):
         self.assertIsNotNone(res_json['task_id'])
 
 
-
 @attr('shard_1')
 @override_settings(CERT_QUEUE='certificates')
 @ddt.ddt

@@ -25,7 +25,8 @@ from certificates.models import (
     certificate_status_for_student,
     CertificateStatuses as status,
     CertificateWhitelist,
-    ExampleCertificate
+    ExampleCertificate,
+    CertificateHtmlViewConfiguration
 )
 
 
@@ -55,7 +56,6 @@ class CertsServiceNotConfiguredError(Exception):
     An error occured when calling external certificates service is not possible
     """
     message = 'External certificates service is not configured'
-
 
 
 class XQueueCertInterface(object):
@@ -291,6 +291,10 @@ class XQueueCertInterface(object):
             grade['grade'] = forced_grade
 
         cert, created = GeneratedCertificate.objects.get_or_create(user=student, course_id=course_id)  # pylint: disable=no-member
+
+        if created or cert_mode != cert.mode:
+            # set/update template version only if it was not stored earlier for current mode
+            cert.template_version = CertificateHtmlViewConfiguration.get_template_version(cert_mode)
 
         cert.mode = cert_mode
         cert.user = student
