@@ -965,6 +965,10 @@ def _progress(request, course_key, student_id):
         and certs_api.cert_generation_enabled(course_key)
     )
 
+    # if student hasn't filled his name in profile, disable generate cert button
+    # and show message asking for name
+    require_learner_name = show_generate_cert_btn and not student.profile.name.strip()
+
     context = {
         'course': course,
         'courseware_summary': courseware_summary,
@@ -975,7 +979,8 @@ def _progress(request, course_key, student_id):
         'passed': is_course_passed(course, grade_summary),
         'show_generate_cert_btn': show_generate_cert_btn,
         'credit_course_requirements': _credit_course_requirements(course_key, student),
-        'missing_required_verification': missing_required_verification
+        'missing_required_verification': missing_required_verification,
+        'require_learner_name': require_learner_name
     }
 
     if show_generate_cert_btn:

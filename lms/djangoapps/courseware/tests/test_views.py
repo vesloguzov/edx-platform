@@ -876,6 +876,30 @@ class ProgressPageTests(ModuleStoreTestCase):
 
             self.assertEqual(cert_button_hidden, 'Request Certificate' not in resp.content)
 
+    @patch('courseware.grades.grade', Mock(return_value={
+        'grade': 'Pass', 'percent': 0.75, 'section_breakdown': [], 'grade_breakdown': []
+    }))
+    @ddt.data(True, False)
+    def test_certificate_request_button_and_profile_name(self, name_filled):
+        profile = self.user.profile
+        profile.name = 'Jay Doe' if name_filled else ''
+        profile.save()
+
+        CertificateGenerationConfiguration(enabled=True).save()
+        certs_api.set_cert_generation_enabled(self.course.id, True)
+        CourseEnrollment.enroll(self.user, self.course.id, mode='honor')
+
+        resp = views.progress(self.request, course_id=unicode(self.course.id))
+
+        if name_filled:
+            # assert button exists and enabled
+            self.assertIn('Request Certificate', resp.content)
+            self.assertNotRegexpMatches(resp.content, '<button [^>]* disabled[^>]*>[^<]*Request Certificate')
+        else:
+            # assert button disabled
+            self.assertRegexpMatches(resp.content, '<button [^>]* disabled[^>]*>[^<]*Request Certificate')
+            self.assertIn('as soon as you fill your full name', resp.content)
+
 
 @attr('shard_1')
 class VerifyCourseKeyDecoratorTests(TestCase):

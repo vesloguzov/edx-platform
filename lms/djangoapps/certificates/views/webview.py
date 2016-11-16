@@ -376,7 +376,8 @@ def _get_user_certificate(request, user, course_key, course, preview_mode=None):
                 verify_uuid=unicode(uuid4().hex),
                 modified_date=datetime.now().date(),
                 grade=0.5,
-                template_version=CertificateHtmlViewConfiguration.get_template_version(preview_mode)
+                template_version=CertificateHtmlViewConfiguration.get_template_version(preview_mode),
+                name=_('Jane Doe')
             )
     else:
         # certificate is being viewed by learner or public
