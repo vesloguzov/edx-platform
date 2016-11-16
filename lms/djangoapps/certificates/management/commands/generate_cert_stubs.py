@@ -186,6 +186,7 @@ def _generate_cert_stub_for_student_from_json(student, course, data, forced_grad
         'name': data[NAME_KEY],
         'status': CertificateStatuses.generating,
         'download_uuid': data['download_uuid'],
+        'verify_uuid': data['number']
     }
     return _update_or_create_certificate_stub(student, course, cert_data)
 
@@ -224,5 +225,6 @@ def _update_or_create_certificate_stub(student, course, data):
     cert.status = data['status']
     if 'download_uuid' in data:
         cert.download_uuid = data['download_uuid']
+    cert.verify_uuid = data['verify_uuid']
     cert.save()
     return cert
