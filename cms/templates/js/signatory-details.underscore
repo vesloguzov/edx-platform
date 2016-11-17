@@ -20,7 +20,7 @@
           <span class="signatory-name-value"><%= name %></span>
         </div>
         <div>
-          <span class="signatory-title-label"><b><%= gettext("Title") %>:</b>&nbsp;</span>
+          <span class="signatory-title-label"><b><%= pgettext("person's title", "Title") %>:</b>&nbsp;</span>
           <span class="signatory-title-value"><%= title.replace(new RegExp('\r?\n','g'), '<br />') %></span>
         </div>
         <div>

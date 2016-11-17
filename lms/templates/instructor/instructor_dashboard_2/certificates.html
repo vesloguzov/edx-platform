@@ -1,6 +1,6 @@
 <%namespace name='static' file='../../static_content.html'/>
 
-<%! from django.utils.translation import ugettext as _
+<%! from django.utils.translation import pgettext, ugettext as _
 import json
 %>
 
@@ -11,6 +11,7 @@ import json
 <%page args="section_data"/>
 <div class="certificates-wrapper">
 
+    % if not section_data['html_cert_enabled'] or section_data['example_certificate_status'] is not None:
     <div class="example-certificates">
         % if not section_data['html_cert_enabled']:
         <h2>${_('Example Certificates')}</h2>
@@ -46,6 +47,7 @@ import json
     </div>
 
     <hr />
+    % endif
 
     <div class="enable-certificates">
         <h2>${_("Student-Generated Certificates")}</h2>
@@ -71,7 +73,7 @@ import json
         <hr />
 
         <div class="start-certificate-generation">
-            <h2>${_("Generate Certificates")}</h2>
+            <h2>${pgettext("instructor dashboard title", "Generate Certificates")}</h2>
             <form id="certificates-generating-form" method="post" action="${section_data['urls']['start_certificate_generation']}">
                 % if section_data['html_cert_enabled'] and section_data['active_certificate'] is None:
                     <p>${_("Course certificate generation requires an activated web certificate configuration.")}</p>
