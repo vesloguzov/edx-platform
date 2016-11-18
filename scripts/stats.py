@@ -21,6 +21,7 @@ def main(dirname):
         c for c in modulestore().get_courses()
         if not c.has_ended()
         and c.enrollment_start and c.enrollment_start < datetime.datetime.now(UTC())
+        and not is_utility_course(c)
     ]
     courses = sorted(courses, key=lambda c: c.display_name)
 
@@ -35,6 +36,11 @@ def main(dirname):
 
     with open(os.path.join(dirname, 'full-enrollment-summary.xml.xls'), 'w') as full_summary:
         write_report(full_summary, all_enrollments, courses)
+
+
+def is_utility_course(course):
+    run = course.id.run.lower()
+    return 'demo' in run or 'preview' in run
 
 
 def write_summary(f, all_enrollments, courses):
