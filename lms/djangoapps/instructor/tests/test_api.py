@@ -3431,9 +3431,11 @@ class TestInstructorAPITaskLists(SharedModuleStoreTestCase, LoginEnrollmentTestC
             'duration_sec'
         ]
 
-        def __init__(self, completion):
+        def __init__(self, requester, completion):
             for feature in self.FEATURES:
                 setattr(self, feature, 'expected')
+            # requester needs to be a user with profile
+            self.requester = requester
             # created needs to be a datetime
             self.created = datetime.datetime(2013, 10, 25, 11, 42, 35)
             # set 'status' and 'task_message' attrs
@@ -3458,6 +3460,9 @@ class TestInstructorAPITaskLists(SharedModuleStoreTestCase, LoginEnrollmentTestC
             """ Convert fake task to dictionary representation. """
             attr_dict = {key: getattr(self, key) for key in self.FEATURES}
             attr_dict['created'] = attr_dict['created'].isoformat()
+            attr_dict['requester'] = u'{} ({})'.format(
+                self.requester.profile.nickname_or_default, self.requester.email
+            )
             return attr_dict
 
     @classmethod
@@ -3487,7 +3492,7 @@ class TestInstructorAPITaskLists(SharedModuleStoreTestCase, LoginEnrollmentTestC
             state=json.dumps({'attempts': 10}),
         )
         mock_factory = MockCompletionInfo()
-        self.tasks = [self.FakeTask(mock_factory.mock_get_task_completion_info) for _ in xrange(7)]
+        self.tasks = [self.FakeTask(self.instructor, mock_factory.mock_get_task_completion_info) for _ in xrange(7)]
         self.tasks[-1].make_invalid_output()
 
     @patch.object(instructor_task.api, 'get_running_instructor_tasks')

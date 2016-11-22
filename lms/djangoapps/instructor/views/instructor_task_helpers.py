@@ -110,6 +110,11 @@ def extract_task_features(task):
     # Pull out information from the task
     features = ['task_type', 'task_input', 'task_id', 'requester', 'task_state']
     task_feature_dict = {feature: str(getattr(task, feature)) for feature in features}
+    # Get user-readable requester information
+    if task.requester:
+        task_feature_dict['requester'] = u'{} ({})'.format(
+            task.requester.profile.nickname_or_default, task.requester.email
+        )
     # Some information (created, duration, status, task message) require additional formatting
     task_feature_dict['created'] = task.created.isoformat()
 
