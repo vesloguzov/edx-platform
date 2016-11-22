@@ -27,6 +27,7 @@ def selected(is_selected):
 show_preview_menu = not disable_preview_menu and staff_access and active_page in ["courseware", "info"]
 cohorted_user_partition = get_cohorted_user_partition(course)
 masquerade_user_name = masquerade.user_name if masquerade else None
+masquerade_user_info = masquerade.user_info if masquerade else None
 masquerade_group_id = masquerade.group_id if masquerade else None
 staff_selected = selected(not masquerade or masquerade.role != "student")
 specific_student_selected = selected(not staff_selected and masquerade.user_name)
@@ -73,7 +74,7 @@ include_special_exams = settings.FEATURES.get('ENABLE_SPECIAL_EXAMS', False) and
             % if specific_student_selected:
             <div class="preview-specific-student-notice">
                 <p>
-                    ${_("You are now viewing the course as <i>{user_name}</i>.").format(user_name=masquerade_user_name)}
+                    ${_("You are now viewing the course as <i>{user_info}</i>.").format(user_info=masquerade_user_info)}
                 </p>
             </div>
             % endif
