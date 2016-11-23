@@ -636,7 +636,7 @@ class TestProblemGradeReport(TestReportMixin, InstructorTaskModuleTestCase):
                 u'Student ID': unicode(student.id),
                 u'Email': student.email,
                 u'Username': student.username,
-                u'error_msg': error_message if error_message else "Unknown error"
+                u'Error Message': error_message if error_message else "Unknown error"
             }
         ])
 

@@ -514,7 +514,7 @@ class TestGradeReportConditionalContent(TestReportMixin, TestConditionalContent,
         self.verify_rows_in_csv(
             [
                 merge_dicts(
-                    {'id': str(student.id), 'nickname': student.profile.nickname_or_default, 'email': student.email},
+                    {'ID': str(student.id), 'Nickname': student.profile.nickname_or_default, 'Email': student.email},
                     grades,
                     user_partition_group(student)
                 )
@@ -544,8 +544,8 @@ class TestGradeReportConditionalContent(TestReportMixin, TestConditionalContent,
             self.verify_csv_task_success(result)
             self.verify_grades_in_csv(
                 [
-                    {self.student_a: {'grade': '1.0', 'HW': '1.0'}},
-                    {self.student_b: {'grade': '0.5', 'HW': '0.5'}}
+                    {self.student_a: {'Grade': '1.0', 'HW': '1.0'}},
+                    {self.student_b: {'Grade': '0.5', 'HW': '0.5'}}
                 ],
                 ignore_other_columns=True
             )
@@ -567,8 +567,8 @@ class TestGradeReportConditionalContent(TestReportMixin, TestConditionalContent,
             self.verify_csv_task_success(result)
             self.verify_grades_in_csv(
                 [
-                    {self.student_a: {'grade': '1.0', 'HW': '1.0'}},
-                    {self.student_b: {'grade': '0.0', 'HW': '0.0'}}
+                    {self.student_a: {'Grade': '1.0', 'HW': '1.0'}},
+                    {self.student_b: {'Grade': '0.0', 'HW': '0.0'}}
                 ],
                 ignore_other_columns=True
             )
