@@ -1,5 +1,5 @@
-define(["js/views/validation", "underscore", "jquery", "jquery.ui", "js/views/settings/grader"],
-    function(ValidatingView, _, $, ui, GraderView) {
+define(["js/views/validation", "underscore", "jquery", "jquery.ui", "js/views/settings/grader", "gettext"],
+    function(ValidatingView, _, $, ui, GraderView, gettext) {
 
 var GradingView = ValidatingView.extend({
     // Model class is CMS.Models.Settings.CourseGradingPolicy
@@ -25,7 +25,7 @@ var GradingView = ValidatingView.extend({
         this.gradeCutoffTemplate = _.template('<li class="grade-specific-bar" style="width:<%= width %>%"><span class="letter-grade" contenteditable="true">' +
                 '<%= descriptor %>' +
                 '</span><span class="range"></span>' +
-                '<% if (removable) {%><a href="#" class="remove-button">remove</a><% ;} %>' +
+                '<% if (removable) {%><a href="#" class="remove-button"><%= gettext("remove") %></a><% ;} %>' +
         '</li>');
 
         this.setupCutoffs();
@@ -142,7 +142,10 @@ var GradingView = ValidatingView.extend({
 
     // A does not have a drag bar (cannot change its upper limit)
     // Need to insert new bars in right place.
-    GRADES : ['A', 'B', 'C', 'D'],	// defaults for new grade designators
+    // Translators: defaults for new grade designators separated by comma, should have 5 items
+    GRADES: gettext('A,B,C,D,F').split(','),  // defaults for new grade designators
+    PASSING_LABEL: gettext('Pass'),
+    FAIL_LABEL: gettext('Fail'),
     descendingCutoffs : [],  // array of { designation : , cutoff : }
     gradeBarWidth : null, // cache of value since it won't change (more certain)
 
@@ -255,7 +258,7 @@ var GradingView = ValidatingView.extend({
         // When a grade is removed, keep the remaining grades consistent.
         var _this = this;
         if (_this.descendingCutoffs.length === 1 && _this.descendingCutoffs[0]['designation'] === _this.GRADES[0]) {
-            _this.descendingCutoffs[0]['designation'] = 'Pass';
+            _this.descendingCutoffs[0]['designation'] = this.PASSING_LABEL;
             _this.setTopGradeLabel();
         } else {
             _.each(_this.descendingCutoffs, function(cutoff, index) {
@@ -313,7 +316,7 @@ var GradingView = ValidatingView.extend({
 
         // Munge existing grade labels?
         // If going from Pass/Fail to 3 levels, change to Pass to A
-        if (gradeLength === 1 && this.descendingCutoffs[0]['designation'] === 'Pass') {
+        if (gradeLength === 1 && this.descendingCutoffs[0]['designation'] === this.PASSING_LABEL) {
             this.descendingCutoffs[0]['designation'] = this.GRADES[0];
             this.setTopGradeLabel();
         }
@@ -345,8 +348,10 @@ var GradingView = ValidatingView.extend({
     },
 
     failLabel: function() {
-        if (this.descendingCutoffs.length === 1) return 'Fail';
-        else return 'F';
+        if (this.descendingCutoffs.length === 1)
+            return this.FAIL_LABEL;
+        else
+            return this.GRADES[this.GRADES.length - 1]
     },
     setFailLabel: function() {
         this.$el.find('.grades .letter-grade').last().html(this.failLabel());

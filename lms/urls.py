@@ -21,6 +21,7 @@ if settings.DEBUG or settings.FEATURES.get('ENABLE_DJANGO_ADMIN_SITE'):
 
 if settings.ROOT_URL_PREFIX:
     url_django = url
+
     def url(regex, *args, **kwargs):
         """
         Built-in url override to insert common url prefix
@@ -79,7 +80,8 @@ urlpatterns = (
     # Note: these are older versions of the User API that will eventually be
     # subsumed by api/user listed below.
     url(r'^user_api/', include('openedx.core.djangoapps.user_api.legacy_urls')),
-    url(r'^api/', include('api.urls')),
+
+    url(r'^lek_api/', include('lek_api.urls')),
 
     url(r'^notifier_api/', include('notifier_api.urls')),
 
@@ -111,6 +113,7 @@ urlpatterns = (
     url(r'^api/val/v0/', include('edxval.urls')),
 
     url(r'^api/commerce/', include('commerce.api.urls', namespace='commerce_api')),
+    url(r'^api/organizations/', include('organizations.urls', namespace='organizations')),
 )
 
 if settings.FEATURES["ENABLE_COMBINED_LOGIN_REGISTRATION"]:
@@ -550,13 +553,12 @@ if settings.COURSEWARE_ENABLED:
             url(r'^courses/{}/submission_history/(?P<location>.*?)$'.format(settings.COURSE_ID_PATTERN),
                 'courseware.views.submission_history',
                 name='submission_history'),
-    )
+        )
     if settings.GRADES_DOWNLOAD['STORAGE_TYPE'] == 'protectedfs':
         urlpatterns += (
             url(r'^courses/{}/download_report/(?P<filename>[^/]*)/$'.format(settings.COURSE_ID_PATTERN),
                 'instructor.views.storage.serve_report', name='serve_report'),
         )
-
 
 
 if settings.COURSEWARE_ENABLED and settings.FEATURES.get('ENABLE_INSTRUCTOR_LEGACY_DASHBOARD'):
@@ -770,6 +772,8 @@ if settings.DEBUG:
         settings.PROFILE_IMAGE_BACKEND['options']['base_url'],
         document_root=settings.PROFILE_IMAGE_BACKEND['options']['location']
     )
+    # serve user uploads in debug mode
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
     # in debug mode, allow any template to be rendered (most useful for UX reference templates)
     urlpatterns += url(r'^template/(?P<template>.+)$', 'debug.views.show_reference_template'),

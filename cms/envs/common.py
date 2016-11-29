@@ -184,6 +184,8 @@ FEATURES = {
 
     # Special Exams, aka Timed and Proctored Exams
     'ENABLE_SPECIAL_EXAMS': False,
+
+    'ORGANIZATIONS_APP': False,
 }
 
 ENABLE_JASMINE = False
@@ -448,6 +450,9 @@ STATICFILES_DIRS = [
     # This is how you would use the textbook images locally
     # ("book", ENV_ROOT / "book_images"),
 ]
+
+# User-uploaded content
+LMS_MEDIA_URL = '/media/'
 
 # Locale/Internationalization
 TIME_ZONE = 'America/New_York'  # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -829,6 +834,7 @@ MKTG_URLS = {}
 MKTG_URL_LINK_MAP = {
 
 }
+MKTG_SITE_NAME = SITE_NAME
 
 COURSES_WITH_UNSAFE_CODE = []
 
@@ -924,6 +930,9 @@ OPTIONAL_APPS = (
 
     # milestones
     'milestones',
+
+    # Organizations App (http://github.com/edx/edx-organizations)
+    'organizations',
 )
 
 
@@ -1121,5 +1130,8 @@ PROCTORING_BACKEND_PROVIDER = {
     'options': {},
 }
 PROCTORING_SETTINGS = {}
+
+#### Certificates ##############################################################
+CERTIFICATE_DEFAULT_ORGANIZATION = None
 
 from lektorium import *

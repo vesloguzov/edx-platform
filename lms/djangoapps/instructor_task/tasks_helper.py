@@ -37,7 +37,7 @@ from util.file import course_filename_prefix_generator, UniversalNewlineIterator
 from xblock.runtime import KvsFieldData
 from xmodule.modulestore.django import modulestore
 from xmodule.split_test_module import get_split_user_partitions
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext as _, pgettext
 from certificates.models import (
     CertificateWhitelist,
     certificate_info_for_user,
@@ -686,20 +686,23 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
     course = get_course_by_id(course_id)
     course_is_cohorted = is_course_cohorted(course.id)
     teams_enabled = course.teams_enabled
-    cohorts_header = ['Cohort Name'] if course_is_cohorted else []
-    teams_header = ['Team Name'] if teams_enabled else []
+    cohorts_header = [_('Cohort Name')] if course_is_cohorted else []
+    teams_header = [_('Team Name')] if teams_enabled else []
 
     experiment_partitions = get_split_user_partitions(course.user_partitions)
     group_configs_header = [u'Experiment Group ({})'.format(partition.name) for partition in experiment_partitions]
 
-    certificate_info_header = ['Certificate Eligible', 'Certificate Delivered', 'Certificate Type']
+    certificate_info_header = [_('Certificate Eligible'), _('Certificate Delivered'), _('Certificate Type')]
     certificate_whitelist = CertificateWhitelist.objects.filter(course_id=course_id, whitelist=True)
     whitelisted_user_ids = [entry.user_id for entry in certificate_whitelist]
 
     # Loop over all our students and build our CSV lists in memory
     header = None
     rows = []
-    err_rows = [["id", "username", "nickname", "error_msg"]]
+    err_rows = [[_("ID"),
+                 pgettext("report header", "Username"),
+                 pgettext("report header", "nickname"),
+                 _("Error Message")]]
     current_step = {'step': 'Calculating Grades'}
 
     total_enrolled_students = enrolled_students.count()
@@ -736,9 +739,9 @@ def upload_grades_csv(_xmodule_instance_args, _entry_id, course_id, _task_input,
             if not header:
                 header = [section['label'] for section in gradeset[u'section_breakdown']]
                 rows.append(
-                    ["id", "email", "username", "nickname", "grade"] + header + cohorts_header +
+                    [_("ID"), _("Email"), pgettext("report header", "Username"), pgettext("report header", "Nickname"), _("Grade")] + header + cohorts_header +
                     group_configs_header + teams_header +
-                    ['Enrollment Track', 'Verification Status'] + certificate_info_header
+                    [_('Enrollment Track'), _('Verification Status')] + certificate_info_header
                 )
 
             percents = {
@@ -866,7 +869,7 @@ def _order_problems(blocks):
                     assignment_index=assignment_index,
                     assignment_name=blocks[assignment]['display_name']
                 )
-                problems[problem] = [header_name + " (Earned)", header_name + " (Possible)"]
+                problems[problem] = [header_name + _(" (Earned)"), header_name + _(" (Possible)")]
 
     return problems
 
@@ -919,7 +922,11 @@ def upload_problem_grade_report(_xmodule_instance_args, _entry_id, course_id, _t
     # This struct encapsulates both the display names of each static item in the
     # header row as values as well as the django User field names of those items
     # as the keys.  It is structured in this way to keep the values related.
-    header_row = OrderedDict([('id', 'Student ID'), ('email', 'Email'), ('username', 'Username')])
+    header_row = OrderedDict([
+        ('id', _('Student ID')),
+        ('email', _('Email')),
+        ('username', pgettext('report header', 'Username'))
+    ])
 
     try:
         course_structure = CourseStructure.objects.get(course_id=course_id)
@@ -931,8 +938,8 @@ def upload_problem_grade_report(_xmodule_instance_args, _entry_id, course_id, _t
         )
 
     # Just generate the static fields for now.
-    rows = [list(header_row.values()) + ['Final Grade'] + list(chain.from_iterable(problems.values()))]
-    error_rows = [list(header_row.values()) + ['error_msg']]
+    rows = [list(header_row.values()) + [_('Final Grade')] + list(chain.from_iterable(problems.values()))]
+    error_rows = [list(header_row.values()) + [_('Error Message')]]
     current_step = {'step': 'Calculating Grades'}
 
     for student, gradeset, err_msg in iterate_grades_for(course_id, enrolled_students, keep_raw_scores=True):
@@ -1341,7 +1348,7 @@ def upload_course_survey_report(_xmodule_instance_args, _entry_id, course_id, _t
 
         user_survey_answers[user_id][survey_field_record.field_name] = survey_field_record.field_value
 
-    header = ["User ID", "User Name", "Email"]
+    header = [_("User ID"), _("User Name"), _("Email")]
     header.extend(survey_fields)
     csv_rows = []
 

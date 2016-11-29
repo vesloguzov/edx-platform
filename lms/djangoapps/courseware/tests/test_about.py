@@ -358,7 +358,6 @@ class AboutWithInvitationOnly(ModuleStoreTestCase):
         self.course = self.update_course(self.course, self.user.id)
 
 
-
 @attr('shard_1')
 @patch.dict(settings.FEATURES, {'RESTRICT_ENROLL_BY_REG_METHOD': True})
 class AboutTestCaseShibCourse(LoginEnrollmentTestCase, ModuleStoreTestCase):

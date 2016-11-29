@@ -3,6 +3,8 @@ django admin pages for certificates models
 """
 from django.contrib import admin
 from django import forms
+from django.utils.translation import ugettext_lazy as _
+
 from config_models.admin import ConfigurationModelAdmin
 from util.organizations_helpers import get_organizations
 from certificates.models import (
@@ -23,9 +25,11 @@ class CertificateTemplateForm(forms.ModelForm):
         super(CertificateTemplateForm, self).__init__(*args, **kwargs)
         organizations = get_organizations()
         org_choices = [(org["id"], org["name"]) for org in organizations]
-        org_choices.insert(0, ('', 'None'))
+        org_choices.insert(0, ('', _('None')))
         self.fields['organization_id'] = forms.TypedChoiceField(
-            choices=org_choices, required=False, coerce=int, empty_value=None
+            choices=org_choices, required=False, coerce=int, empty_value=None,
+            label=CertificateTemplate._meta.get_field('organization_id').verbose_name.capitalize(),
+            help_text=CertificateTemplate._meta.get_field('organization_id').help_text
         )
 
     class Meta(object):
@@ -37,8 +41,16 @@ class CertificateTemplateAdmin(admin.ModelAdmin):
     """
     Django admin customizations for CertificateTemplate model
     """
-    list_display = ('name', 'description', 'organization_id', 'course_key', 'mode', 'is_active')
+    list_display = ('name', 'description', 'organization', 'course_key', 'mode', 'is_active')
     form = CertificateTemplateForm
+
+    def __init__(self, *args, **kwargs):
+        super(CertificateTemplateAdmin, self).__init__(*args, **kwargs)
+        self.organizations_dict = {org['id']: org['name'] for org in get_organizations()}
+
+    def organization(self, obj):
+        return self.organizations_dict.get(obj.organization_id) or obj.organization_id
+    organization.short_description = _('Organization')
 
 
 class CertificateTemplateAssetAdmin(admin.ModelAdmin):
@@ -51,13 +63,16 @@ class CertificateTemplateAssetAdmin(admin.ModelAdmin):
 class GeneratedCertificateAdmin(admin.ModelAdmin):
     list_select_related = ('user',)
     list_display = ('id', 'username', 'email', 'course_id', 'mode', 'download_url',)
+    raw_id_fields = ('user',)
     search_fields = ('user__username', 'user__email', 'course_id',)
 
     def username(self, obj):
         return obj.user.username
+    username.short_description = _('Username')
 
     def email(self, obj):
         return obj.user.email
+    email.short_description = _('Email')
 
 admin.site.register(CertificateGenerationConfiguration)
 admin.site.register(CertificateHtmlViewConfiguration, ConfigurationModelAdmin)

@@ -77,6 +77,7 @@ from microsite_configuration import microsite
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from opaque_keys.edx.keys import CourseKey, UsageKey
 from instructor.enrollment import uses_shib
+from lms.djangoapps.verify_student.models import SoftwareSecurePhotoVerification
 from instructor.views.tools import get_student_from_email_or_nickname
 from required_student_data.decorators import require_student_data
 
@@ -952,7 +953,21 @@ def _progress(request, course_key, student_id):
         raise Http404
 
     # checking certificate generation configuration
-    show_generate_cert_btn = certs_api.cert_generation_enabled(course_key)
+    enrollment_mode, is_active = CourseEnrollment.enrollment_mode_for_user(student, course_key)
+
+    # If the learner is in verified modes and the student did not have
+    # their ID verified, we need to show message to ask learner to verify their ID first
+    missing_required_verification = enrollment_mode in CourseMode.VERIFIED_MODES and \
+        not SoftwareSecurePhotoVerification.user_is_verified(student)
+
+    show_generate_cert_btn = (
+        is_active and CourseMode.is_eligible_for_certificate(enrollment_mode)
+        and certs_api.cert_generation_enabled(course_key)
+    )
+
+    # if student hasn't filled his name in profile, disable generate cert button
+    # and show message asking for name
+    require_learner_name = show_generate_cert_btn and not student.profile.name.strip()
 
     context = {
         'course': course,
@@ -964,21 +979,19 @@ def _progress(request, course_key, student_id):
         'passed': is_course_passed(course, grade_summary),
         'show_generate_cert_btn': show_generate_cert_btn,
         'credit_course_requirements': _credit_course_requirements(course_key, student),
+        'missing_required_verification': missing_required_verification,
+        'require_learner_name': require_learner_name
     }
 
     if show_generate_cert_btn:
-        context.update(certs_api.certificate_downloadable_status(student, course_key))
+        cert_status = certs_api.certificate_downloadable_status(student, course_key)
+        context.update(cert_status)
         # showing the certificate web view button if feature flags are enabled.
         if certs_api.has_html_certificates_enabled(course_key, course):
             if certs_api.get_active_web_certificate(course) is not None:
                 context.update({
                     'show_cert_web_view': True,
-                    'cert_web_view_url': u'{url}'.format(
-                        url=certs_api.get_certificate_url(
-                            user_id=student.id,
-                            course_id=unicode(course.id)
-                        )
-                    )
+                    'cert_web_view_url': certs_api.get_certificate_url(course_id=course_key, uuid=cert_status['uuid']),
                 })
             else:
                 context.update({

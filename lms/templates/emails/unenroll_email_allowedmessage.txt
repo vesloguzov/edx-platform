@@ -9,5 +9,5 @@ ${_("You have been un-enrolled from course {course_name} by a member "
 ----
 ${_("This email was automatically sent from {site_name} "
 	"to {email_address}").format(
-		site_name=site_name, email_address=email_address
+		site_name=mktg_site_name, email_address=email_address
 	)}

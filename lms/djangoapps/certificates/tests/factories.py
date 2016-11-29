@@ -1,6 +1,7 @@
 # Factories are self documenting
 # pylint: disable=missing-docstring
 import factory
+from uuid import uuid4
 from django.core.files.base import ContentFile
 from factory.django import DjangoModelFactory, ImageField
 
@@ -21,6 +22,7 @@ class GeneratedCertificateFactory(DjangoModelFactory):
     status = CertificateStatuses.unavailable
     mode = GeneratedCertificate.MODES.honor
     name = ''
+    verify_uuid = uuid4().hex
 
 
 class CertificateWhitelistFactory(DjangoModelFactory):
@@ -30,7 +32,7 @@ class CertificateWhitelistFactory(DjangoModelFactory):
 
     course_id = None
     whitelist = True
-    notes = None
+    notes = 'Test Notes'
 
 
 class BadgeAssertionFactory(DjangoModelFactory):
@@ -38,6 +40,11 @@ class BadgeAssertionFactory(DjangoModelFactory):
         model = BadgeAssertion
 
     mode = 'honor'
+    data = {
+        'image': 'http://www.example.com/image.png',
+        'json': {'id': 'http://www.example.com/assertion.json'},
+        'issuer': 'http://www.example.com/issuer.json',
+    }
 
 
 class BadgeImageConfigurationFactory(DjangoModelFactory):
@@ -71,11 +78,14 @@ class CertificateHtmlViewConfigurationFactory(DjangoModelFactory):
                 "company_verified_certificate_url": "http://www.edx.org/verified-certificate",
                 "document_stylesheet_url_application": "/static/certificates/sass/main-ltr.css",
                 "logo_src": "/static/certificates/images/logo-edx.png",
-                "logo_url": "http://www.edx.org"
+                "logo_url": "http://www.edx.org",
+                "template_version": "v0"
             },
             "honor": {
                 "certificate_type": "Honor Code",
-                "certificate_title": "Certificate of Achievement"
+                "certificate_title": "Certificate of Achievement",
+                "logo_url": "http://www.edx.org/honor_logo.png",
+                "template_version": "v1"
             },
             "verified": {
                 "certificate_type": "Verified",

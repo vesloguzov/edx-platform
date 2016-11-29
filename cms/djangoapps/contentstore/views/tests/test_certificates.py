@@ -8,13 +8,17 @@ import mock
 import ddt
 
 from django.conf import settings
+from django.test import TestCase
 from django.test.utils import override_settings
 
 from opaque_keys.edx.keys import AssetKey
-from opaque_keys.edx.locations import AssetLocation
+from opaque_keys.edx.locations import AssetLocation, CourseLocator
+
+from organizations.tests.factories import OrganizationFactory
+from util import organizations_helpers
 
 from contentstore.utils import reverse_course_url
-from contentstore.views.certificates import CERTIFICATE_SCHEMA_VERSION
+from contentstore.views.certificates import CERTIFICATE_SCHEMA_VERSION, get_default_certificate_organizations
 from contentstore.tests.utils import CourseTestCase
 from xmodule.contentstore.django import contentstore
 from xmodule.contentstore.content import StaticContent
@@ -23,7 +27,6 @@ from student.models import CourseEnrollment
 from student.roles import CourseInstructorRole, CourseStaffRole
 from student.tests.factories import UserFactory
 from contentstore.views.certificates import CertificateManager
-from django.test.utils import override_settings
 from contentstore.utils import get_lms_link_for_certificate_web_view
 from util.testing import EventTestMixin
 
@@ -34,7 +37,9 @@ CERTIFICATE_JSON = {
     u'name': u'Test certificate',
     u'description': u'Test description',
     u'is_active': True,
+    u'show_grade': False,
     u'version': CERTIFICATE_SCHEMA_VERSION,
+    u'organizations': []
 }
 
 CERTIFICATE_JSON_WITH_SIGNATORIES = {
@@ -42,15 +47,75 @@ CERTIFICATE_JSON_WITH_SIGNATORIES = {
     u'description': u'Test description',
     u'version': CERTIFICATE_SCHEMA_VERSION,
     u'course_title': 'Course Title Override',
+    u'course_description': 'Short Course Description',
     u'is_active': True,
+    u'show_grade': False,
     u'signatories': [
         {
             "name": "Bob Smith",
             "title": "The DEAN.",
             "signature_image_path": "/c4x/test/CSS101/asset/Signature.png"
         }
-    ]
+    ],
+    u'organizations': [{'short_name': 'org1'}, {'short_name': 'org2'}],
+    u'honor_code_disclaimer': 'Honor Code Disclaimer'
 }
+
+
+@mock.patch.dict('django.conf.settings.FEATURES', {'ORGANIZATIONS_APP': True})
+@override_settings(CERTIFICATE_DEFAULT_ORGANIZATION='PlatformX')
+class CertificateOrganizationsTestCase(TestCase):
+    """
+    Tests for course organizations data, especially default organizations list
+    """
+    def setUp(self):
+        super(CertificateOrganizationsTestCase, self).setUp()
+        self.organization_short_name = 'UniversityX'
+        self.course_key = CourseLocator(self.organization_short_name, 'course', 'run')
+
+    def test_organizations(self):
+        OrganizationFactory.create(short_name=settings.CERTIFICATE_DEFAULT_ORGANIZATION)
+        self._create_course_organization()
+
+        orgs = get_default_certificate_organizations(self.course_key)
+        self.assertIn({'short_name': self.organization_short_name}, orgs)
+        self.assertIn({'short_name': settings.CERTIFICATE_DEFAULT_ORGANIZATION}, orgs)
+
+    def test_missing_platform_organization(self):
+        self._create_course_organization()
+
+        orgs = get_default_certificate_organizations(self.course_key)
+        self.assertEqual(1, len(orgs))
+        self.assertIn({'short_name': self.organization_short_name}, orgs)
+
+    def test_missing_course_organization(self):
+        OrganizationFactory.create(short_name=settings.CERTIFICATE_DEFAULT_ORGANIZATION)
+
+        orgs = get_default_certificate_organizations(self.course_key)
+        self.assertNotIn({'short_name': self.organization_short_name}, orgs)
+        self.assertIn({'short_name': settings.CERTIFICATE_DEFAULT_ORGANIZATION}, orgs)
+
+    def test_platform_own_course(self):
+        """
+        Test only one organization is picked if course organization is equal
+        to platform organization
+        """
+        course_key = CourseLocator(settings.CERTIFICATE_DEFAULT_ORGANIZATION, 'course', 'run')
+
+        OrganizationFactory.create(short_name=settings.CERTIFICATE_DEFAULT_ORGANIZATION)
+        org = organizations_helpers.get_organization_by_short_name(settings.CERTIFICATE_DEFAULT_ORGANIZATION)
+        organizations_helpers.add_organization_course(org, course_key)
+
+        orgs = get_default_certificate_organizations(course_key)
+        self.assertEqual(len(orgs), 1, "Default organization picked twice")
+
+    def _create_course_organization(self):
+        """
+        Create organization and link it to existing self.course_key
+        """
+        OrganizationFactory.create(short_name=self.organization_short_name)
+        org = organizations_helpers.get_organization_by_short_name(self.organization_short_name)
+        organizations_helpers.add_organization_course(org, self.course_key)
 
 
 # pylint: disable=no-member
@@ -80,8 +145,8 @@ class HelperMethods(object):
                 'signature_image_path': '/c4x/test/CSS101/asset/Signature{}.png'.format(i),
                 'id': i
             } for i in xrange(0, signatory_count)
-
         ]
+        organizations = ['org1', 'org2']
 
         # create images for signatory signatures except the last signatory
         for idx, signatory in enumerate(signatories):
@@ -96,6 +161,8 @@ class HelperMethods(object):
                 'name': 'Name ' + str(i),
                 'description': 'Description ' + str(i),
                 'signatories': signatories,
+                'organizations': organizations,
+                'show_grade': False,
                 'version': CERTIFICATE_SCHEMA_VERSION,
                 'is_active': is_active
             } for i in xrange(0, count)
@@ -105,6 +172,7 @@ class HelperMethods(object):
 
 
 # pylint: disable=no-member
+@ddt.ddt
 class CertificatesBaseTestCase(object):
     """
     Mixin with base test cases for the certificates.
@@ -178,9 +246,12 @@ class CertificatesBaseTestCase(object):
         }
 
         with self.assertRaises(Exception) as context:
-            CertificateManager.validate(json_data_1)
+            CertificateManager.deserialize_certificate(None, json.dumps(json_data_1))
 
-        self.assertTrue("Unsupported certificate schema version: 100.  Expected version: 1." in context.exception)
+        self.assertIn(
+            "version: Unsupported certificate schema version: 100.  Expected version: lek-1.",
+            context.exception
+        )
 
         #Test certificate name is missing
         json_data_2 = {
@@ -189,9 +260,9 @@ class CertificatesBaseTestCase(object):
         }
 
         with self.assertRaises(Exception) as context:
-            CertificateManager.validate(json_data_2)
+            CertificateManager.deserialize_certificate(None, json.dumps(json_data_2))
 
-        self.assertTrue('must have name of the certificate' in context.exception)
+        self.assertIn('name: This field is required.', context.exception)
 
 
 @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
@@ -216,11 +287,13 @@ class CertificatesListHandlerTestCase(EventTestMixin, CourseTestCase, Certificat
         Test that you can create a certificate.
         """
         expected = {
-            u'version': CERTIFICATE_SCHEMA_VERSION,
+            u'version': unicode(CERTIFICATE_SCHEMA_VERSION),
             u'name': u'Test certificate',
             u'description': u'Test description',
             u'is_active': True,
-            u'signatories': []
+            u'signatories': [],
+            u'organizations': [],
+            u'show_grade': False
         }
         response = self.client.ajax_post(
             self._url(),
@@ -295,6 +368,7 @@ class CertificatesListHandlerTestCase(EventTestMixin, CourseTestCase, Certificat
         self.assertEqual(data[0]['name'], 'Test certificate')
         self.assertEqual(data[0]['description'], 'Test description')
         self.assertEqual(data[0]['version'], CERTIFICATE_SCHEMA_VERSION)
+        self.assertEqual(data[0]['organizations'], [{'short_name': 'org1'}, {'short_name': 'org2'}])
 
     def test_unsupported_http_accept_header(self):
         """
@@ -336,7 +410,9 @@ class CertificatesListHandlerTestCase(EventTestMixin, CourseTestCase, Certificat
             u'name': u'New test certificate',
             u'description': u'New test description',
             u'is_active': True,
-            u'signatories': []
+            u'show_grade': True,
+            u'signatories': [],
+            u'organizations': []
         }
 
         response = self.client.post(
@@ -384,12 +460,15 @@ class CertificatesDetailHandlerTestCase(EventTestMixin, CourseTestCase, Certific
         """
         expected = {
             u'id': 666,
-            u'version': CERTIFICATE_SCHEMA_VERSION,
+            u'version': unicode(CERTIFICATE_SCHEMA_VERSION),
             u'name': u'Test certificate',
             u'description': u'Test description',
             u'is_active': True,
+            u'show_grade': False,
             u'course_title': u'Course Title Override',
-            u'signatories': []
+            u'course_description': u'Short Course Description',
+            u'signatories': [],
+            u'organizations': []
         }
 
         response = self.client.put(
@@ -419,9 +498,11 @@ class CertificatesDetailHandlerTestCase(EventTestMixin, CourseTestCase, Certific
             u'name': u'New test certificate',
             u'description': u'New test description',
             u'is_active': True,
+            u'show_grade': False,
             u'course_title': u'Course Title Override',
-            u'signatories': []
-
+            u'course_description': u'Short Course Description',
+            u'signatories': [],
+            u'organizations': []
         }
 
         response = self.client.put(
@@ -457,6 +538,50 @@ class CertificatesDetailHandlerTestCase(EventTestMixin, CourseTestCase, Certific
                 'name': 'certificate with is_active',
                 'description': 'Description ',
                 'signatories': [],
+                'organizations': [],
+                'version': CERTIFICATE_SCHEMA_VERSION,
+                'show_grade': False,
+            }
+        ]
+        self.course.certificates = {'certificates': certificates}
+        self.save_course()
+
+        expected = {
+            u'id': 1,
+            u'version': unicode(CERTIFICATE_SCHEMA_VERSION),
+            u'name': u'New test certificate',
+            u'description': u'New test description',
+            u'is_active': True,
+            u'show_grade': False,
+            u'course_title': u'Course Title Override',
+            u'course_description': u'Short Course Description',
+            u'signatories': [],
+            u'organizations': [],
+        }
+
+        response = self.client.post(
+            self._url(cid=1),
+            data=json.dumps(expected),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 201)
+        content = json.loads(response.content)
+        self.assertEqual(content, expected)
+
+    def test_can_edit_certificate_without_lektorium_fields(self):
+        """
+        Tests user should be able to edit certificate, if is_active attribute is not present
+        for given certificate. Old courses might not have is_active attribute in certificate data.
+        """
+        certificates = [
+            {
+                'id': 1,
+                'name': 'certificate with is_active',
+                'description': 'Description ',
+                'is_active': True,
+                'signatories': [],
                 'version': CERTIFICATE_SCHEMA_VERSION,
             }
         ]
@@ -465,13 +590,15 @@ class CertificatesDetailHandlerTestCase(EventTestMixin, CourseTestCase, Certific
 
         expected = {
             u'id': 1,
-            u'version': CERTIFICATE_SCHEMA_VERSION,
+            u'version': unicode(CERTIFICATE_SCHEMA_VERSION),
             u'name': u'New test certificate',
             u'description': u'New test description',
             u'is_active': True,
+            u'show_grade': False,
             u'course_title': u'Course Title Override',
-            u'signatories': []
-
+            u'course_description': u'Short Course Description',
+            u'signatories': [],
+            u'organizations': [],
         }
 
         response = self.client.post(

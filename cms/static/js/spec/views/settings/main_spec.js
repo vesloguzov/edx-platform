@@ -72,7 +72,8 @@ define([
             );
         });
 
-        it('Changing course start date without active certificate configuration should result in error', function () {
+        // Disable validation rule: not suitable for Lektorium
+        xit('Changing course start date without active certificate configuration should result in error', function () {
             this.view.$el.find('#course-start-date')
                 .val('10/06/2014')
                 .trigger('change');

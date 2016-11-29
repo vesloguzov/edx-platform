@@ -18,8 +18,14 @@ CAS_ATTRIBUTE_KEYS = {
     # 'level_of_education',
 }
 CAS_INSTANT_LOGIN_EXEMPT = (
-    'api.',
+    'lek_api.',
 )
 
 USER_DATA_REQUEST_TIMEOUT = datetime.timedelta(hours=24)
 SYNC_USER_URL = 'https://www.lektorium.tv/uidname/node/25618?api-key={}'
+
+# Custom formats used on platform and default values for them
+FORMAT_MODULE_PATH = [
+    'conf.locale',
+]
+CERTIFICATE_DATE_FORMAT = 'F j, Y'

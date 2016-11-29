@@ -909,25 +909,28 @@ def add_container_page_publishing_info(xblock, xblock_info):  # pylint: disable=
     Adds information about the xblock's publish state to the supplied
     xblock_info for the container page.
     """
-    def safe_get_username(user_id):
+    def safe_get_user_info(user_id):
         """
         Guard against bad user_ids, like the infamous "**replace_user**".
         Note that this will ignore our special known IDs (ModuleStoreEnum.UserID).
         We should consider adding special handling for those values.
 
         :param user_id: the user id to get the username of
-        :return: username, or None if the user does not exist or user_id is None
+        :return: string containing nickname and email, or None if the user does
+        not exist or user_id is None
         """
         if user_id:
             try:
-                return User.objects.get(id=user_id).username
+                user = User.objects.get(id=user_id)
             except:  # pylint: disable=bare-except
                 pass
+            else:
+                return u'{} ({})'.format(user.profile.nickname_or_default, user.email)
 
         return None
 
-    xblock_info["edited_by"] = safe_get_username(xblock.subtree_edited_by)
-    xblock_info["published_by"] = safe_get_username(xblock.published_by)
+    xblock_info["edited_by"] = safe_get_user_info(xblock.subtree_edited_by)
+    xblock_info["published_by"] = safe_get_user_info(xblock.published_by)
     xblock_info["currently_visible_to_students"] = is_currently_visible_to_students(xblock)
     xblock_info["has_content_group_components"] = has_children_visible_to_specific_content_groups(xblock)
     if xblock_info["release_date"]:

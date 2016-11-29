@@ -1,7 +1,8 @@
 # coding=utf-8
 from dj_lms import *
 
-import os, sys
+import os
+import sys
 import datetime
 
 from django.utils.timezone import UTC
@@ -11,13 +12,16 @@ from xmodule.modulestore.django import modulestore
 
 from student.models import CourseEnrollment
 
+
 OVERALL_SUMMARY_DAY_LIMIT = 10
+
 
 def main(dirname):
     courses = [
         c for c in modulestore().get_courses()
         if not c.has_ended()
         and c.enrollment_start and c.enrollment_start < datetime.datetime.now(UTC())
+        and not is_utility_course(c)
     ]
     courses = sorted(courses, key=lambda c: c.display_name)
 
@@ -32,6 +36,11 @@ def main(dirname):
 
     with open(os.path.join(dirname, 'full-enrollment-summary.xml.xls'), 'w') as full_summary:
         write_report(full_summary, all_enrollments, courses)
+
+
+def is_utility_course(course):
+    run = course.id.run.lower()
+    return 'demo' in run or 'preview' in run
 
 
 def write_summary(f, all_enrollments, courses):
@@ -58,8 +67,9 @@ def write_report(f, all_enrollments, courses):
         aggregated_enrollements = stats_per_day(enrollments)
         per_day_items = []
         prev_count = 0
+
         for date, count in aggregated_enrollements:
-            diff = count-prev_count
+            diff = count - prev_count
             item = XML_XLS_ROW.format(
                 date=date.strftime('%d-%m-%y'),
                 count=count,
@@ -67,10 +77,11 @@ def write_report(f, all_enrollments, courses):
             )
             prev_count = count
             per_day_items.append(item)
+
         per_day_items.append(XML_XLS_ROW.format(
-                    date=u'ВСЕГО',
-                    count=len(enrollments),
-                    diff=''
+            date=u'ВСЕГО',
+            count=len(enrollments),
+            diff=''
         ))
         items.append(XML_XLS_SHEET.format(
             sheet_name=course.id.to_deprecated_string().replace('/', '-').replace(':', '-'),
@@ -81,14 +92,16 @@ def write_report(f, all_enrollments, courses):
     result = XML_XLS.format(courses_length=len(courses), sheets=u''.join(items))
     f.write(result.encode('utf-8'))
 
+
 def stats_per_day(enrollment_datetimes, start=None):
     start = start or enrollment_datetimes[0].date()
     days_count = (datetime.date.today() - start).days
-    dates = [start + datetime.timedelta(days=i) for i in range(days_count+1)]
+    dates = [start + datetime.timedelta(days=i) for i in range(days_count + 1)]
     result = []
     for date in dates:
         result.append((date, sum(1 for dt in enrollment_datetimes if dt.date() == date)))
     return result
+
 
 def overall_summary(all_enrollments):
     start = datetime.date.today() - datetime.timedelta(days=OVERALL_SUMMARY_DAY_LIMIT)
@@ -98,9 +111,6 @@ def overall_summary(all_enrollments):
     ))
     enrollments = [d for d in enrollments if d.date() >= start]
     return reversed(stats_per_day(enrollments, start))
-
-
-
 
 
 HTML = u'<!DOCTYPE html><html><head><title>Enrollment statistics</title><meta charset="UTF-8"></head><body><table><tr><th>Дата</th><th>Количество<br>записавшихся</th></tr><tr>{}</tr></table>{}<p><a href="full-enrollment-summary.xml.xls">Full summary</a></p></body></html>'

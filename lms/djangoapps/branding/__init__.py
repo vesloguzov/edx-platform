@@ -82,3 +82,37 @@ def get_logo_url():
         return staticfiles_storage.url('images/{uni}-on-edx-logo.png'.format(uni=university))
     else:
         return staticfiles_storage.url('images/default-theme/logo.png')
+
+
+# TODO (lektorium): remove when api extracted from branding app
+import urlparse
+from edxmako.shortcuts import marketing_link
+
+EMPTY_URL = '#'
+
+
+def _get_url(name):
+    return marketing_link(name) or EMPTY_URL
+
+
+def get_tos_and_honor_code_url():
+    return _get_url('TOS_AND_HONOR')
+
+
+def get_privacy_url():
+    return _get_url('PRIVACY')
+
+
+def get_about_url():
+    return _get_url('ABOUT')
+
+
+def get_base_url(is_secure):
+    """
+    Return Base URL or site.
+    Arguments:
+        is_secure (bool): If true, use HTTPS as the protocol.
+    """
+    site_name = microsite.get_value('SITE_NAME', settings.SITE_NAME)
+    parts = ('https' if is_secure else 'http', site_name, '', '', '', '')
+    return urlparse.urlunparse(parts)

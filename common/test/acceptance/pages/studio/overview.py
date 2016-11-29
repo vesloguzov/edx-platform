@@ -776,7 +776,7 @@ class CourseOutlineModal(object):
         year, month, day = map(int, date.split('-'))
         self.click(input_selector)
         if getattr(self, property_name):
-            current_month, current_year = map(int, getattr(self, property_name).split('-')[1:])
+            current_year, current_month = map(int, getattr(self, property_name).split('-')[:2])
         else:  # Use default timepicker values, which are current month and year.
             current_month, current_year = datetime.datetime.today().month, datetime.datetime.today().year
         date_diff = 12 * (year - current_year) + month - current_month
@@ -786,7 +786,7 @@ class CourseOutlineModal(object):
         self.page.q(css="a.ui-state-default").nth(day - 1).click()  # set day
         self.page.wait_for_element_invisibility("#ui-datepicker-div", "datepicker should be closed")
         EmptyPromise(
-            lambda: getattr(self, property_name) == u'{y}-{m}-{d}'.format(m=month, d=day, y=year),
+            lambda: getattr(self, property_name) == datetime.date(year, month, day).isoformat(),
             "{} is updated in modal.".format(property_name)
         ).fulfill()
 

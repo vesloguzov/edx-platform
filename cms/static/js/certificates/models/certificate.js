@@ -9,10 +9,12 @@ define([ // jshint ignore:line
     'gettext',
     'coffee/src/main',
     'js/certificates/models/signatory',
-    'js/certificates/collections/signatories'
+    'js/certificates/collections/signatories',
+    'js/certificates/models/organization',
+    'js/certificates/collections/organizations'
 ],
 function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, CoffeeSrcMain,
-          SignatoryModel, SignatoryCollection) {
+          SignatoryModel, SignatoryCollection, OrganizationModel, OrganizationCollection) {
     'use strict';
     _.str = str;
     var Certificate = Backbone.RelationalModel.extend({
@@ -20,13 +22,16 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
         defaults: {
             // Metadata fields currently displayed in web forms
             course_title: '',
+            course_description: '',
+            show_grade: false,
+            honor_code_disclaimer: gettext('Honor Code Disclaimer'),
 
             // Metadata fields not currently displayed in web forms
             name: 'Name of the certificate',
             description: 'Description of the certificate',
 
             // Internal-use only, not displayed in web forms
-            version: 1,
+            version: 'lek-1',
             is_active: false
         },
 
@@ -40,6 +45,16 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
                 key: 'certificate',
                 includeInJSON: "id"
             }
+        }, {
+            type: Backbone.HasMany,
+            key: 'organizations',
+            relatedModel: OrganizationModel,
+            collectionType: OrganizationCollection,
+            includeInJSON: ['short_name'],
+            reverseRelation: {
+                key: 'certificate',
+                includeInJSON: false
+            }
         }],
 
         initialize: function(attributes, options) {
@@ -49,6 +64,7 @@ function (_, str, Backbone, BackboneRelational, BackboneAssociations, gettext, C
                 // Ensure at least one child Signatory model is defined for any new Certificate model
                 attributes.signatories = new SignatoryModel({certificate: this});
             }
+            // TODO: add default organizations?
             this.setOriginalAttributes();
             return this;
         },

@@ -26,6 +26,7 @@ from django.core import mail
 from django.core.urlresolvers import reverse
 from django.core.validators import validate_email, ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.http import (HttpResponse, HttpResponseBadRequest, HttpResponseForbidden,
                          HttpResponseServerError, Http404)
 from django.shortcuts import redirect
@@ -298,6 +299,9 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
         CertificateStatuses.downloadable: 'ready',
         CertificateStatuses.notpassing: 'notpassing',
         CertificateStatuses.restricted: 'restricted',
+        CertificateStatuses.auditing: 'auditing',
+        CertificateStatuses.audit_passing: 'auditing',
+        CertificateStatuses.audit_notpassing: 'auditing',
     }
 
     default_status = 'processing'
@@ -312,7 +316,7 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
     if cert_status is None:
         return default_info
 
-    is_hidden_status = cert_status['status'] in ('unavailable', 'processing', 'generating', 'notpassing')
+    is_hidden_status = cert_status['status'] in ('unavailable', 'processing', 'generating', 'notpassing', 'auditing')
 
     if course_overview.certificates_display_behavior == 'early_no_info' and is_hidden_status:
         return {}
@@ -328,7 +332,7 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
         'can_unenroll': status not in DISABLE_UNENROLL_CERT_STATES,
     }
 
-    if (status in ('generating', 'ready', 'notpassing', 'restricted') and
+    if (status in ('generating', 'ready', 'notpassing', 'restricted', 'auditing') and
             course_overview.end_of_course_survey_url is not None):
         status_dict.update({
             'show_survey_button': True,
@@ -340,13 +344,9 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
         # showing the certificate web view button if certificate is ready state and feature flags are enabled.
         if has_html_certificates_enabled(course_overview.id, course_overview):
             if course_overview.has_any_active_web_certificate:
-                certificate_url = get_certificate_url(
-                    user_id=user.id,
-                    course_id=unicode(course_overview.id),
-                )
                 status_dict.update({
                     'show_cert_web_view': True,
-                    'cert_web_view_url': u'{url}'.format(url=certificate_url)
+                    'cert_web_view_url': get_certificate_url(course_id=course_overview.id, uuid=cert_status['uuid'])
                 })
             else:
                 # don't show download certificate button if we don't have an active certificate for course
@@ -376,7 +376,7 @@ def _cert_info(user, course_overview, cert_status, course_mode):  # pylint: disa
                     cert_status['download_url']
                 )
 
-    if status in ('generating', 'ready', 'notpassing', 'restricted'):
+    if status in ('generating', 'ready', 'notpassing', 'restricted', 'auditing'):
         if 'grade' not in cert_status:
             # Note: as of 11/20/2012, we know there are students in this state-- cs169.1x,
             # who need to be regraded (we weren't tracking 'notpassing' at first).
@@ -1018,9 +1018,11 @@ def change_enrollment(request, check_access=True):
             # will NOT try to look up the course enrollment model
             # by its slug.  If they do, it's possible (based on the state of the database)
             # for no such model to exist, even though we've set the enrollment type
-            # to "honor".
+            # to "audit".
             try:
-                CourseEnrollment.enroll(user, course_id, check_access=check_access)
+                enroll_mode = CourseMode.auto_enroll_mode(course_id, available_modes)
+                if enroll_mode:
+                    CourseEnrollment.enroll(user, course_id, check_access=check_access, mode=enroll_mode)
             except Exception:
                 return HttpResponseBadRequest(_("Could not enroll"))
             else:
@@ -1059,6 +1061,10 @@ def send_enrollment_email(user, course, use_https_for_links=True):
     Construct the email and then send it.
     """
     site_name = microsite.get_value('SITE_NAME', settings.SITE_NAME)
+    mktg_site_name = microsite.get_value(
+        'MKTG_SITE_NAME',
+        microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+    )
     course_url = u'{protocol}://{site}{path}'.format(
         protocol='https' if use_https_for_links else 'http',
         site=site_name,
@@ -1078,6 +1084,7 @@ def send_enrollment_email(user, course, use_https_for_links=True):
         'course_url': course_url,
         'course_about_url': course_about_url,
         'site_name': site_name,
+        'mktg_site_name': mktg_site_name,
     }
 
     subject = render_to_string('emails/enroll_email_subject.txt', context)
@@ -1533,6 +1540,7 @@ def _do_create_account(form):
 
     return (user, profile, registration)
 
+
 def save_user_with_auto_username(user):
     user.username = 'new_user_%s' % uuid.uuid4().hex[:20]
     user.save()
@@ -1903,10 +1911,18 @@ def auto_auth(request):
                 _("An account with the Email '{email}' already exists.").format(email=email),
                 field="email"
             )
+        if username and len(User.objects.filter(username=username)) > 0:
+            raise AccountValidationError(
+                _("An account with the username '{username}' already exists.").format(username=username),
+                field="email"
+            )
         user, profile, reg = _do_create_account(form)
     except AccountValidationError:
         # Attempt to retrieve the existing user.
-        user = User.objects.get(email=email)
+        if username:
+            user = User.objects.get(Q(username=username) | Q(email=email))
+        else:
+            user = User.objects.get(email=email)
         user.email = email
         user.set_password(password)
         user.save()

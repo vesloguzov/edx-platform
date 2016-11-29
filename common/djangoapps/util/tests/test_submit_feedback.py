@@ -14,6 +14,7 @@ import mock
 
 from student.tests.test_microsite import fake_microsite_get_value
 
+
 class SubmitFeedbackTest(object):
     """
     Base class for feedback submission backends
@@ -396,7 +397,6 @@ def ZendeskSubmitFeedbackTest(SubmitFeedbackTest, TestCase):
         test_case("django.conf.settings.ZENDESK_URL")
         test_case("django.conf.settings.ZENDESK_USER")
         test_case("django.conf.settings.ZENDESK_API_KEY")
-
 
 
 @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": True})

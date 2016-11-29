@@ -30,6 +30,7 @@ GRADE_KEY = 'grade'
 DISTINCTION_KEY = 'distinction'
 NAME_KEY = 'name'
 
+
 class Command(BaseCommand):
     help = """Create stub certificates (with 'generating' status) for the course"""
 
@@ -88,6 +89,7 @@ class Command(BaseCommand):
             print status.upper()
             for cert in certs:
                 print cert.user.username, cert.grade
+
 
 def _generate_cert_stubs(course, forced_grade=None, create_uuids=False):
     enrolled_students = User.objects.filter(
@@ -184,6 +186,7 @@ def _generate_cert_stub_for_student_from_json(student, course, data, forced_grad
         'name': data[NAME_KEY],
         'status': CertificateStatuses.generating,
         'download_uuid': data['download_uuid'],
+        'verify_uuid': data['number']
     }
     return _update_or_create_certificate_stub(student, course, cert_data)
 
@@ -222,5 +225,6 @@ def _update_or_create_certificate_stub(student, course, data):
     cert.status = data['status']
     if 'download_uuid' in data:
         cert.download_uuid = data['download_uuid']
+    cert.verify_uuid = data['verify_uuid']
     cert.save()
     return cert

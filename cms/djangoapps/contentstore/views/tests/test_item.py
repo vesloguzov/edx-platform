@@ -1672,7 +1672,9 @@ class TestXBlockInfo(ItemTest):
         self.assertEqual(xblock_info['id'], unicode(self.vertical.location))
         self.assertEqual(xblock_info['display_name'], 'Unit 1')
         self.assertTrue(xblock_info['published'])
-        self.assertEqual(xblock_info['edited_by'], 'testuser')
+
+        # lektorium fix: show human-readable user information
+        self.assertEqual(xblock_info['edited_by'], 'anonymous ({})'.format(self.user.email))
 
         # Validate that the correct ancestor info has been included
         ancestor_info = xblock_info.get('ancestor_info', None)

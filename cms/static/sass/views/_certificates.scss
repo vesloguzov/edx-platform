@@ -290,6 +290,12 @@
             width: 25%;
           }
 
+          &.input-checkbox {
+            width: auto;
+            height: auto;
+            display: inline;
+          }
+
           ::-webkit-input-placeholder {
              color: $gray-l4;
           }
@@ -512,6 +518,125 @@
         &:hover {
           color: $blue;
         }
+      }
+    }
+  }
+}
+
+// * +Organizations - Certificate
+// ====================
+.view-certificates .certificates {
+  .organization-details {
+    display: table;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .organization-logo,
+  .organization-name,
+  .organization-details-error,
+  .organization-actions-wrapper {
+    display: table-cell;
+    vertical-align: middle;
+    height: 100%;
+  }
+
+  .organization-logo,
+  .organization-logo-image,
+  .no-image {
+    width: ($baseline*4);
+    min-width: ($baseline*4);
+  }
+
+  .organization-logo-image {
+    display: block;
+  }
+
+  .no-image {
+    padding: $baseline ($baseline/7);
+    box-sizing: border-box;
+    text-align: center;
+    font-size: 75%;
+    line-height: $body-line-height;
+    color: $black-t2;
+    background-color: $red-l5;
+    border: solid 1px $black-t0;
+    border-radius: 2px;
+  }
+
+  .organization-name {
+    padding-left: ($baseline/2);
+  }
+
+  .organization-long-name-value {
+    display: block;
+    font-weight: 600;
+  }
+
+  .organization-details-error {
+      color: $red;
+  }
+
+  .organization-details.editable {
+    padding: ($baseline/4);
+    margin-bottom: ($baseline/4);
+    border: 1px solid $gray-l4;
+    border-radius: 2px;
+    background-color: $gray-l5;
+
+    .organization-name,
+    .organization-details-error
+    {
+      width: 100%; // hack to make it stretch as much as possible
+      font-size: 1.4rem;
+    }
+
+    .action-delete-organization {
+      float: right;
+      padding: ($baseline/4);
+    }
+  }
+
+  .organization-add-wrapper {
+    @include clearfix();
+    width: flex-grid(12,12);
+    margin-top: ($baseline/4);
+
+    .organization-add-input-wrapper {
+      float: left;
+      width: flex-grid(9,12);
+      margin-right: flex-gutter();
+      margin-top: 2px;
+    }
+
+    .organization-short_name-input {
+      font-size: 1.6rem;
+      width: 100%;
+    }
+
+    .action-add-organization {
+      @extend %ui-btn-flat-outline;
+      float: right;
+      width: flex-grid(3,12);
+      padding: ($baseline/2) $baseline;
+    }
+
+    .message-error {
+        display: none;
+    }
+
+    .error {
+      input {
+        border-color: $red;
+        @include border-bottom-radius(0);
+      }
+
+      .message-error{
+        display: block;
+        color: $white;
+        background-color: $red;
+        font-size: 1.4rem;
+        padding: ($baseline/4) ($baseline/2);
       }
     }
   }

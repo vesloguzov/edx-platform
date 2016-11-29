@@ -1,0 +1,9 @@
+        <div class="organizations-edit-list"> </div>
+        <span class="organization-add-wrapper">
+          <div class="organization-add-input-wrapper">
+            <input id="organization-short_name" class="input-text organization-short_name-input" name="organization-short_name" type="text" placeholder="<%= gettext("Organization short name") %>" value=""  aria-describedby="organization-add-tip" />
+            <div class="message-error organization-add-error"></div>
+            <span id="organization-add-tip" class="tip tip-stacked"><%= gettext("Search for organization by its abbreviation or full name, only existing organizations allowed.") %></span>
+          </div>
+          <button class="action action-add-organization" type="button"><%= gettext("Add Organization") %></button>
+        </span>

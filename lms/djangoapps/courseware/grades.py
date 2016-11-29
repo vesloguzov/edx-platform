@@ -484,6 +484,7 @@ def _grade(student, request, course, keep_raw_scores, field_data_cache, scores_c
         letter_grade = grade_for_percentage(course.grade_cutoffs, grade_summary['percent'])
         grade_summary['grade'] = letter_grade
         grade_summary['totaled_scores'] = totaled_scores   # make this available, eg for instructor download & debugging
+        grade_summary['distinction'] = distinction_for_percentage(course.grade_cutoffs, grade_summary['percent'])
         if keep_raw_scores:
             # way to get all RAW scores out to instructor
             # so grader can be double-checked
@@ -514,6 +515,21 @@ def grade_for_percentage(grade_cutoffs, percentage):
             break
 
     return letter_grade
+
+
+def distinction_for_percentage(grade_cutoffs, percentage):
+    """
+    Returns distinction calculated from percentage using grade cutoffs
+
+    Arguments
+    - grade_cutoffs is a dictionary mapping a grade to the lowest
+        possible percentage to earn that grade.
+    - percentage is the final percent across all problems in a course
+    """
+    if len(grade_cutoffs) <= 1:
+        return False
+
+    return percentage >= max(grade_cutoffs.values())
 
 
 def progress_summary(student, request, course, field_data_cache=None, scores_client=None):

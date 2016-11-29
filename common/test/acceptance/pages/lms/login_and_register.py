@@ -191,7 +191,7 @@ class CombinedLoginAndRegisterPage(PageObject):
             self.q(css="#register-email").fill(email)
         if full_name:
             self.q(css="#register-name").fill(full_name)
-        if username:
+        if nickname:
             self.q(css="#register-nickname").fill(nickname)
         if password:
             self.q(css="#register-password").fill(password)

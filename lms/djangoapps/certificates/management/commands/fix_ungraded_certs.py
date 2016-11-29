@@ -42,8 +42,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         course_id = options['course']
         print "Fetching ungraded students for {0}".format(course_id)
-        ungraded = GeneratedCertificate.objects.filter(
-            course_id__exact=course_id).filter(grade__exact='')
+        ungraded = GeneratedCertificate.objects.filter(  # pylint: disable=no-member
+            course_id__exact=course_id
+        ).filter(grade__exact='')
         course = courses.get_course_by_id(course_id)
         factory = RequestFactory(HTTP_HOST='127.0.0.1')
         request = factory.get('/')

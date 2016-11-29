@@ -1,5 +1,5 @@
 import json
-import  urllib
+import urllib
 
 import requests
 
@@ -13,6 +13,7 @@ from celery.utils.log import get_task_logger
 # TODO: task queue
 
 log = get_task_logger(__name__)
+
 
 def sync_user_profile(username):
     """
@@ -38,6 +39,7 @@ def sync_user_profile(username):
             e.__class__,
             e.message,
         ))
+
 
 @task
 def _sync_user_profile(username):

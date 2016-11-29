@@ -18,6 +18,7 @@ function(Backbone, gettext, Certificate) {
         initialize: function(attr, options) {
             // Set up the attributes for this collection instance
             this.url = options.certificateUrl;
+            this.newCertificateAttributes = options.newCertificateAttributes || {};
             this.bind('remove', this.onModelRemoved, this);
             this.bind('add', this.onModelAdd, this);
         },

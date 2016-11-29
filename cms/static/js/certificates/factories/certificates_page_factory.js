@@ -21,12 +21,14 @@ define([ // jshint ignore:line
 function($, CertificatesCollection, Certificate, CertificatesPage, CertificatePreview) {
     'use strict';
     return function (certificatesJson, certificateUrl, courseOutlineUrl, course_modes, certificate_web_view_url,
-                     is_active, certificate_activation_handler_url) {
+                     is_active, certificate_activation_handler_url, default_organizations, organizationsList) {
         // Initialize the model collection, passing any necessary options to the constructor
         var certificatesCollection = new CertificatesCollection(certificatesJson, {
             parse: true,
             canBeEmpty: true,
-            certificateUrl: certificateUrl
+            certificateUrl: certificateUrl,
+            newCertificateAttributes: {'organizations': default_organizations},
+            organizationsList: organizationsList
         });
 
         // associating the certificate_preview globally.
@@ -38,6 +40,11 @@ function($, CertificatesCollection, Certificate, CertificatesPage, CertificatePr
                 certificate_activation_handler_url: certificate_activation_handler_url,
                 is_active: is_active
             });
+        }
+
+        // associating the organizations list globally to avoid duplication of attributes
+        if (!window.organizationsList) {
+            window.organizationsList = organizationsList;
         }
 
         // Execute the page object's rendering workflow

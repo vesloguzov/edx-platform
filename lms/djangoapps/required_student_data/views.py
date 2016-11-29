@@ -56,14 +56,15 @@ def postpone_required_data_update(request):
     _postpone_student_data_update(request.session)
     return JsonResponse({'success': True})
 
+
 def _postpone_student_data_update(session):
     timeout = getattr(settings, 'USER_DATA_REQUEST_TIMEOUT', datetime.timedelta(hours=24))
     session['REQUIRE_USER_DATA'] = datetime.datetime.now() + timeout
 
 
-
 class RequiredStudentDataForm(forms.ModelForm):
     birthdate = forms.DateField(required=False, localize=True, widget=forms.DateInput(attrs={'class': 'date'}))
+
     class Meta:
         model = UserProfile
         fields = ('first_name', 'last_name', 'birthdate', 'city')

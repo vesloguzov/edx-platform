@@ -2,10 +2,9 @@
 Views related to operations on course objects
 """
 import copy
-from django.shortcuts import redirect
 import json
-import random
 import logging
+import random
 import string  # pylint: disable=deprecated-module
 from django.utils.translation import ugettext as _
 import django.utils
@@ -15,25 +14,19 @@ from django.views.decorators.http import require_http_methods, require_GET
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseBadRequest, HttpResponseNotFound, HttpResponse, Http404
+from django.shortcuts import redirect
 from util.json_request import JsonResponse, JsonResponseBadRequest
 from util.date_utils import get_default_time_display
 from edxmako.shortcuts import render_to_response
 
-from xmodule.course_module import DEFAULT_START_DATE
-from xmodule.error_module import ErrorDescriptor
-from xmodule.modulestore.django import modulestore
-from xmodule.contentstore.content import StaticContent
-from xmodule.tabs import CourseTab, CourseTabList, InvalidTabsException
 from openedx.core.lib.course_tabs import CourseTabPluginManager
 from openedx.core.djangoapps.credit.api import is_credit_course, get_credit_requirements
 from openedx.core.djangoapps.credit.tasks import update_credit_course_requirements
 from openedx.core.djangoapps.content.course_structures.api.v0 import api, errors
 from openedx.core.djangoapps.self_paced.models import SelfPacedConfiguration
-from xmodule.modulestore import EdxJSONEncoder
-from xmodule.modulestore.exceptions import ItemNotFoundError, DuplicateCourseError
 from opaque_keys import InvalidKeyError
-from opaque_keys.edx.locations import Location
 from opaque_keys.edx.keys import CourseKey
+from opaque_keys.edx.locations import Location
 
 from django.views.decorators.csrf import ensure_csrf_cookie
 from openedx.core.lib.js_utils import escape_json_dumps
@@ -93,6 +86,21 @@ from util.milestones_helpers import (
     is_prerequisite_courses_enabled,
     is_entrance_exams_enabled
 )
+from util.organizations_helpers import (
+    add_organization_course,
+    get_organization_by_short_name,
+    organizations_enabled,
+)
+from util.string_utils import _has_non_ascii_characters
+from xmodule.contentstore.content import StaticContent
+from xmodule.course_module import CourseFields
+from xmodule.course_module import DEFAULT_START_DATE
+from xmodule.error_module import ErrorDescriptor
+from xmodule.modulestore import EdxJSONEncoder
+from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.exceptions import ItemNotFoundError, DuplicateCourseError
+from xmodule.tabs import CourseTab, CourseTabList, InvalidTabsException
+
 
 log = logging.getLogger(__name__)
 
@@ -727,8 +735,17 @@ def _create_new_course(request, org, number, run, fields):
     Returns the URL for the course overview page.
     Raises DuplicateCourseError if the course already exists
     """
+    org_data = get_organization_by_short_name(org)
+    if not org_data and organizations_enabled():
+        return JsonResponse(
+            {'error': _('You must link this course to an organization in order to continue. '
+                        'Organization you selected does not exist in the system, '
+                        'you will need to add it to the system')},
+            status=400
+        )
     store_for_new_course = modulestore().default_modulestore.get_modulestore_type()
     new_course = create_new_course_in_store(store_for_new_course, request.user, org, number, run, fields)
+    add_organization_course(org_data, new_course.id)
     return JsonResponse({
         'url': reverse_course_url('course_handler', new_course.id),
         'course_key': unicode(new_course.id),
@@ -741,8 +758,11 @@ def create_new_course_in_store(store, user, org, number, run, fields):
     Separated out b/c command line course creation uses this as well as the web interface.
     """
 
-    # Set default language from settings
-    fields.update({'language': getattr(settings, 'DEFAULT_COURSE_LANGUAGE', 'en')})
+    # Set default language from settings and enable web certs
+    fields.update({
+        'language': getattr(settings, 'DEFAULT_COURSE_LANGUAGE', 'en'),
+        'cert_html_view_enabled': True,
+    })
 
     with modulestore().default_store(store):
         # Creating the course raises DuplicateCourseError if an existing course with this org/name is found

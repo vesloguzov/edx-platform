@@ -1,7 +1,7 @@
 from django.conf.urls import include, patterns, url
 from routers import Router, NestedRouter
 
-from api import views as api_views
+from lek_api import views as api_views
 
 
 api_router = Router()

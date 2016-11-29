@@ -274,6 +274,10 @@ def get_email_params(course, auto_enroll, secure=True, course_key=None, display_
     course_key = course_key or course.id.to_deprecated_string()
     display_name = display_name or course.display_name_with_default
 
+    mktg_site_name = microsite.get_value(
+        'MKTG_SITE_NAME',
+        microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+    )
     stripped_site_name = microsite.get_value(
         'SITE_NAME',
         settings.SITE_NAME
@@ -304,6 +308,7 @@ def get_email_params(course, auto_enroll, secure=True, course_key=None, display_
 
     # Composition of email
     email_params = {
+        'mktg_site_name': mktg_site_name,
         'site_name': stripped_site_name,
         'registration_url': registration_url,
         'course': course,
@@ -418,6 +423,7 @@ def render_message_to_string(subject_template, message_template, param_dict, lan
     Returns two strings that correspond to the rendered, translated email
     subject and message.
     """
+    language = language or settings.LANGUAGE_CODE
     with override_language(language):
         return get_subject_and_message(subject_template, message_template, param_dict)
 

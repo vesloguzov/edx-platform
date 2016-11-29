@@ -7,10 +7,12 @@
                 course_key: null,
                 type: null,
                 status: null,
+                error_reason: null,
                 download_url: null,
                 grade: null,
                 created: null,
-                modified: null
+                modified: null,
+                regeneratable: false
             }
         });
     });

@@ -33,7 +33,8 @@ class CourseMasquerade(object):
     """
     Masquerade settings for a particular course.
     """
-    def __init__(self, course_key, role='student', user_partition_id=None, group_id=None, user_name=None):
+    def __init__(self, course_key, role='student',
+                 user_partition_id=None, group_id=None, user_name=None, user_info=None):
         # All parameters to this function must be named identically to the corresponding attribute.
         # If you remove or rename an attribute, also update the __setstate__() method to migrate
         # old data from users' sessions.
@@ -42,6 +43,7 @@ class CourseMasquerade(object):
         self.user_partition_id = user_partition_id
         self.group_id = group_id
         self.user_name = user_name
+        self.user_info = user_info
 
     def __setstate__(self, state):
         """
@@ -70,13 +72,14 @@ def handle_ajax(request, course_key_string):
     group_id = request_json.get('group_id', None)
     user_partition_id = request_json.get('user_partition_id', None) if group_id is not None else None
     user_name = request_json.get('user_name', None)
+    user_info = None
     if user_name:
         users_in_course = CourseEnrollment.objects.users_enrolled_in(course_key)
         try:
             if '@' in user_name:
-                user_name = users_in_course.get(email=user_name).username
+                user = users_in_course.get(email=user_name)
             else:
-                users_in_course.get(username=user_name)
+                user = users_in_course.get(username=user_name)
         except User.DoesNotExist:
             return JsonResponse({
                 'success': False,
@@ -85,12 +88,16 @@ def handle_ajax(request, course_key_string):
                     'enrolled in this course.'
                 ).format(user_name=user_name)
             })
+        else:
+            user_name = user.username
+            user_info = u'{} ({})'.format(user.profile.nickname_or_default, user.email)
     masquerade_settings[course_key] = CourseMasquerade(
         course_key,
         role=role,
         user_partition_id=user_partition_id,
         group_id=group_id,
         user_name=user_name,
+        user_info=user_info,
     )
     request.session[MASQUERADE_SETTINGS_KEY] = masquerade_settings
     return JsonResponse({'success': True})

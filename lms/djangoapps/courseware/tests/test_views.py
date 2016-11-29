@@ -414,7 +414,7 @@ class ViewsTestCase(ModuleStoreTestCase):
         url = reverse('submission_history', kwargs={
             'course_id': self.course_key.to_deprecated_string(),
             'location': 'dummy'
-            }) + urlencode({'student_identifier': '<script>alert("hello");</script>'})
+        }) + urlencode({'student_identifier': '<script>alert("hello");</script>'})
         response = self.client.get(url)
         self.assertFalse('<script>' in response.content)
 
@@ -678,7 +678,7 @@ class ProgressPageTests(ModuleStoreTestCase):
 
         # pylint: disable=attribute-defined-outside-init
         self.course = modulestore().get_course(course.id)
-        CourseEnrollmentFactory(user=self.user, course_id=self.course.id)
+        CourseEnrollmentFactory(user=self.user, course_id=self.course.id, mode=CourseMode.HONOR)
 
         self.chapter = ItemFactory.create(category='chapter', parent_location=self.course.location)
         self.section = ItemFactory.create(category='sequential', parent_location=self.chapter.location)
@@ -792,11 +792,9 @@ class ProgressPageTests(ModuleStoreTestCase):
         resp = views.progress(self.request, course_id=unicode(self.course.id))
         self.assertContains(resp, u"View Certificate")
 
-        self.assertContains(resp, u"You can keep working for a higher grade")
-        cert_url = certs_api.get_certificate_url(
-            user_id=self.user.id,
-            course_id=self.course.id
-        )
+        # Removed as inconsistent
+        # self.assertContains(resp, u"You can keep working for a higher grade")
+        cert_url = certs_api.get_certificate_url(course_id=self.course.id, uuid=certificate.verify_uuid)
         self.assertContains(resp, cert_url)
 
         # when course certificate is not active
@@ -834,7 +832,7 @@ class ProgressPageTests(ModuleStoreTestCase):
         self.assertContains(resp, u"Download Your Certificate")
 
     @ddt.data(
-        *itertools.product(((39, 4, True), (39, 4, False)), (True, False))
+        *itertools.product(((40, 4, True), (40, 4, False)), (True, False))
     )
     @ddt.unpack
     def test_query_counts(self, (sql_calls, mongo_calls, self_paced), self_paced_enabled):
@@ -844,6 +842,63 @@ class ProgressPageTests(ModuleStoreTestCase):
         with self.assertNumQueries(sql_calls), check_mongo_calls(mongo_calls):
             resp = views.progress(self.request, course_id=unicode(self.course.id))
         self.assertEqual(resp.status_code, 200)
+
+    @patch('courseware.grades.grade', Mock(return_value={
+        'grade': 'Pass', 'percent': 0.75, 'section_breakdown': [], 'grade_breakdown': []
+    }))
+    @ddt.data(
+        *itertools.product(
+            (
+                CourseMode.AUDIT,
+                CourseMode.HONOR,
+                CourseMode.VERIFIED,
+                CourseMode.PROFESSIONAL,
+                CourseMode.NO_ID_PROFESSIONAL_MODE,
+                CourseMode.CREDIT_MODE,
+            ),
+            (True, False)
+        )
+    )
+    @ddt.unpack
+    def test_show_certificate_request_button(self, course_mode, user_verified):
+        """Verify that the Request Certificate is not displayed in audit mode."""
+        CertificateGenerationConfiguration(enabled=True).save()
+        certs_api.set_cert_generation_enabled(self.course.id, True)
+        CourseEnrollment.enroll(self.user, self.course.id, mode=course_mode)
+        with patch(
+            'lms.djangoapps.verify_student.models.SoftwareSecurePhotoVerification.user_is_verified'
+        ) as user_verify:
+            user_verify.return_value = user_verified
+            resp = views.progress(self.request, course_id=unicode(self.course.id))
+
+            cert_button_hidden = course_mode is CourseMode.AUDIT or \
+                course_mode in CourseMode.VERIFIED_MODES and not user_verified
+
+            self.assertEqual(cert_button_hidden, 'Request Certificate' not in resp.content)
+
+    @patch('courseware.grades.grade', Mock(return_value={
+        'grade': 'Pass', 'percent': 0.75, 'section_breakdown': [], 'grade_breakdown': []
+    }))
+    @ddt.data(True, False)
+    def test_certificate_request_button_and_profile_name(self, name_filled):
+        profile = self.user.profile
+        profile.name = 'Jay Doe' if name_filled else ''
+        profile.save()
+
+        CertificateGenerationConfiguration(enabled=True).save()
+        certs_api.set_cert_generation_enabled(self.course.id, True)
+        CourseEnrollment.enroll(self.user, self.course.id, mode='honor')
+
+        resp = views.progress(self.request, course_id=unicode(self.course.id))
+
+        if name_filled:
+            # assert button exists and enabled
+            self.assertIn('Request Certificate', resp.content)
+            self.assertNotRegexpMatches(resp.content, '<button [^>]* disabled[^>]*>[^<]*Request Certificate')
+        else:
+            # assert button disabled
+            self.assertRegexpMatches(resp.content, '<button [^>]* disabled[^>]*>[^<]*Request Certificate')
+            self.assertIn('as soon as you fill your full name', resp.content)
 
 
 @attr('shard_1')

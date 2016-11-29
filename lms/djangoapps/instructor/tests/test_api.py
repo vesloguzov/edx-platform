@@ -692,6 +692,7 @@ class TestInstructorAPIBulkAccountCreationAndEnrollment(SharedModuleStoreTestCas
 
 @attr('shard_1')
 @ddt.ddt
+@override_settings(MKTG_SITE_NAME='openedx.driven.site.org')
 class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test enrollment modification endpoint.
@@ -709,6 +710,10 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
         cls.site_name = microsite.get_value(
             'SITE_NAME',
             settings.SITE_NAME
+        )
+        cls.mktg_site_name = microsite.get_value(
+            'MKTG_SITE_NAME',
+            microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
         )
         cls.about_path = '/courses/{}/about'.format(cls.course.id)
         cls.course_path = '/courses/{}/'.format(cls.course.id)
@@ -924,13 +929,14 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
         self.assertEqual(
             mail.outbox[0].body,
             "Dear NotEnrolled Student,\n\nYou have been enrolled in {} "
-            "at edx.org by a member of the course staff. "
-            "The course should now appear on your edx.org dashboard.\n\n"
+            "at {mktg_site_name} by a member of the course staff. "
+            "The course should now appear on your {mktg_site_name} dashboard.\n\n"
             "To start accessing course materials, please visit "
             "{proto}://{site}{course_path}\n\n----\n"
-            "This email was automatically sent from edx.org to NotEnrolled Student".format(
+            "This email was automatically sent from {mktg_site_name} to NotEnrolled Student".format(
                 self.course.display_name,
-                proto=protocol, site=self.site_name, course_path=self.course_path
+                proto=protocol, site=self.site_name,
+                mktg_site_name=self.mktg_site_name, course_path=self.course_path
             )
         )
 
@@ -953,13 +959,13 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
         )
         self.assertEqual(
             mail.outbox[0].body,
-            "Dear student,\n\nYou have been invited to join {} at edx.org by a member of the course staff.\n\n"
+            "Dear student,\n\nYou have been invited to join {} at {mktg_site_name} by a member of the course staff.\n\n"
             "To finish your registration, please visit {proto}://{site}/register and fill out the "
             "registration form making sure to use robot-not-an-email-yet@robot.org in the E-mail field.\n"
             "Once you have registered and activated your account, "
             "visit {proto}://{site}{about_path} to join the course.\n\n----\n"
-            "This email was automatically sent from edx.org to robot-not-an-email-yet@robot.org".format(
-                self.course.display_name, proto=protocol, site=self.site_name, about_path=self.about_path
+            "This email was automatically sent from {mktg_site_name} to robot-not-an-email-yet@robot.org".format(
+                self.course.display_name, proto=protocol, site=self.site_name, mktg_site_name=self.mktg_site_name, about_path=self.about_path
             )
         )
 
@@ -978,12 +984,12 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
         self.assertEqual(
             mail.outbox[0].body,
             "Dear student,\n\nYou have been invited to join {display_name}"
-            " at edx.org by a member of the course staff.\n\n"
+            " at {mktg_site_name} by a member of the course staff.\n\n"
             "To finish your registration, please visit {proto}://{site}/register and fill out the registration form "
             "making sure to use robot-not-an-email-yet@robot.org in the E-mail field.\n"
             "You can then enroll in {display_name}.\n\n----\n"
-            "This email was automatically sent from edx.org to robot-not-an-email-yet@robot.org".format(
-                display_name=self.course.display_name, proto=protocol, site=self.site_name
+            "This email was automatically sent from {mktg_site_name} to robot-not-an-email-yet@robot.org".format(
+                display_name=self.course.display_name, proto=protocol, site=self.site_name, mktg_site_name=self.mktg_site_name
             )
         )
 
@@ -1009,13 +1015,13 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
         self.assertEqual(
             mail.outbox[0].body,
             "Dear student,\n\nYou have been invited to join {display_name}"
-            " at edx.org by a member of the course staff.\n\n"
+            " at {mktg_site_name} by a member of the course staff.\n\n"
             "To finish your registration, please visit {proto}://{site}/register and fill out the registration form "
             "making sure to use robot-not-an-email-yet@robot.org in the E-mail field.\n"
             "Once you have registered and activated your account,"
             " you will see {display_name} listed on your dashboard.\n\n----\n"
-            "This email was automatically sent from edx.org to robot-not-an-email-yet@robot.org".format(
-                proto=protocol, site=self.site_name, display_name=self.course.display_name
+            "This email was automatically sent from {mktg_site_name} to robot-not-an-email-yet@robot.org".format(
+                proto=protocol, site=self.site_name, mktg_site_name=self.mktg_site_name, display_name=self.course.display_name
             )
         )
 
@@ -1111,11 +1117,11 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
         self.assertEqual(
             mail.outbox[0].body,
             "Dear Enrolled Student,\n\nYou have been un-enrolled in {display_name} "
-            "at edx.org by a member of the course staff. "
-            "The course will no longer appear on your edx.org dashboard.\n\n"
+            "at {mktg_site_name} by a member of the course staff. "
+            "The course will no longer appear on your {mktg_site_name} dashboard.\n\n"
             "Your other courses have not been affected.\n\n----\n"
-            "This email was automatically sent from edx.org to Enrolled Student".format(
-                display_name=self.course.display_name,
+            "This email was automatically sent from {mktg_site_name} to Enrolled Student".format(
+                display_name=self.course.display_name, mktg_site_name=self.mktg_site_name
             )
         )
 
@@ -1165,8 +1171,9 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
             mail.outbox[0].body,
             "Dear Student,\n\nYou have been un-enrolled from course {display_name} by a member of the course staff. "
             "Please disregard the invitation previously sent.\n\n----\n"
-            "This email was automatically sent from edx.org to robot-allowed@robot.org".format(
+            "This email was automatically sent from {mktg_site_name} to robot-allowed@robot.org".format(
                 display_name=self.course.display_name,
+                mktg_site_name=self.mktg_site_name,
             )
         )
 
@@ -1190,10 +1197,10 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
 
         self.assertEqual(
             mail.outbox[0].body,
-            "Dear student,\n\nYou have been invited to join {display_name} at edx.org by a member of the course staff.\n\n"
+            "Dear student,\n\nYou have been invited to join {display_name} at {mktg_site_name} by a member of the course staff.\n\n"
             "To access the course visit {proto}://{site}{about_path} and register for the course.\n\n----\n"
-            "This email was automatically sent from edx.org to robot-not-an-email-yet@robot.org".format(
-                proto=protocol, site=self.site_name, about_path=self.about_path,
+            "This email was automatically sent from {mktg_site_name} to robot-not-an-email-yet@robot.org".format(
+                proto=protocol, site=self.site_name, mktg_site_name=self.mktg_site_name, about_path=self.about_path,
                 display_name=self.course.display_name,
             )
         )
@@ -1213,9 +1220,9 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             mail.outbox[0].body,
-            "Dear student,\n\nYou have been invited to join {} at edx.org by a member of the course staff.\n\n----\n"
-            "This email was automatically sent from edx.org to robot-not-an-email-yet@robot.org".format(
-                self.course.display_name,
+            "Dear student,\n\nYou have been invited to join {} at {mktg_site_name} by a member of the course staff.\n\n----\n"
+            "This email was automatically sent from {mktg_site_name} to robot-not-an-email-yet@robot.org".format(
+                self.course.display_name, mktg_site_name=self.mktg_site_name
             )
         )
 
@@ -1242,11 +1249,11 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
         self.assertEqual(
             mail.outbox[0].body,
             "Dear student,\n\nYou have been invited to join {display_name}"
-            " at edx.org by a member of the course staff.\n\n"
+            " at {mktg_site_name} by a member of the course staff.\n\n"
             "To access the course visit {proto}://{site}{course_path} and login.\n\n----\n"
-            "This email was automatically sent from edx.org to robot-not-an-email-yet@robot.org".format(
+            "This email was automatically sent from {mktg_site_name} to robot-not-an-email-yet@robot.org".format(
                 display_name=self.course.display_name,
-                proto=protocol, site=self.site_name, course_path=self.course_path
+                proto=protocol, site=self.site_name, mktg_site_name=self.mktg_site_name, course_path=self.course_path
             )
         )
 
@@ -1451,6 +1458,7 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
 
 @attr('shard_1')
 @ddt.ddt
+@override_settings(MKTG_SITE_NAME='openedx.driven.site.org')
 class TestInstructorAPIBulkBetaEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Test bulk beta modify access endpoint.
@@ -1463,6 +1471,10 @@ class TestInstructorAPIBulkBetaEnrollment(SharedModuleStoreTestCase, LoginEnroll
         cls.site_name = microsite.get_value(
             'SITE_NAME',
             settings.SITE_NAME
+        )
+        cls.mktg_site_name = microsite.get_value(
+            'MKTG_SITE_NAME',
+            microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
         )
         cls.about_path = '/courses/{}/about'.format(cls.course.id)
         cls.course_path = '/courses/{}/'.format(cls.course.id)
@@ -1599,15 +1611,16 @@ class TestInstructorAPIBulkBetaEnrollment(SharedModuleStoreTestCase, LoginEnroll
         self.assertEqual(
             mail.outbox[0].body,
             u"Dear {student_name},\n\nYou have been invited to be a beta tester "
-            "for {display_name} at edx.org by a member of the course staff.\n\n"
+            "for {display_name} at {mktg_site_name} by a member of the course staff.\n\n"
             "Visit {proto}://{site}{about_path} to join "
             "the course and begin the beta test.\n\n----\n"
-            "This email was automatically sent from edx.org to {student_email}".format(
+            "This email was automatically sent from {mktg_site_name} to {student_email}".format(
                 display_name=self.course.display_name,
                 student_name=self.notenrolled_student.profile.name,
                 student_email=self.notenrolled_student.email,
                 proto=protocol,
                 site=self.site_name,
+                mktg_site_name=self.mktg_site_name,
                 about_path=self.about_path
             )
         )
@@ -1647,15 +1660,16 @@ class TestInstructorAPIBulkBetaEnrollment(SharedModuleStoreTestCase, LoginEnroll
         self.assertEqual(
             mail.outbox[0].body,
             u"Dear {student_name},\n\nYou have been invited to be a beta tester "
-            "for {display_name} at edx.org by a member of the course staff.\n\n"
+            "for {display_name} at {mktg_site_name} by a member of the course staff.\n\n"
             "To start accessing course materials, please visit "
             "{proto}://{site}{course_path}\n\n----\n"
-            "This email was automatically sent from edx.org to {student_email}".format(
+            "This email was automatically sent from {mktg_site_name} to {student_email}".format(
                 display_name=self.course.display_name,
                 student_name=self.notenrolled_student.profile.name,
                 student_email=self.notenrolled_student.email,
                 proto=protocol,
                 site=self.site_name,
+                mktg_site_name=self.mktg_site_name,
                 course_path=self.course_path
             )
         )
@@ -1670,12 +1684,13 @@ class TestInstructorAPIBulkBetaEnrollment(SharedModuleStoreTestCase, LoginEnroll
         self.assertEqual(
             mail.outbox[0].body,
             u"Dear {},\n\nYou have been invited to be a beta tester "
-            "for {} at edx.org by a member of the course staff.\n\n"
-            "Visit edx.org to enroll in the course and begin the beta test.\n\n----\n"
-            "This email was automatically sent from edx.org to {}".format(
+            "for {} at {mktg_site_name} by a member of the course staff.\n\n"
+            "Visit {mktg_site_name} to enroll in the course and begin the beta test.\n\n----\n"
+            "This email was automatically sent from {mktg_site_name} to {}".format(
                 self.notenrolled_student.profile.name,
                 self.course.display_name,
                 self.notenrolled_student.email,
+                mktg_site_name=self.mktg_site_name,
             )
         )
 
@@ -1771,14 +1786,15 @@ class TestInstructorAPIBulkBetaEnrollment(SharedModuleStoreTestCase, LoginEnroll
         self.assertEqual(
             mail.outbox[0].body,
             "Dear {full_name},\n\nYou have been removed as a beta tester for "
-            "{display_name} at edx.org by a member of the course staff. "
+            "{display_name} at {mktg_site_name} by a member of the course staff. "
             "The course will remain on your dashboard, but you will no longer "
             "be part of the beta testing group.\n\n"
             "Your other courses have not been affected.\n\n----\n"
-            "This email was automatically sent from edx.org to {email_address}".format(
+            "This email was automatically sent from {mktg_site_name} to {email_address}".format(
                 display_name=self.course.display_name,
                 full_name=self.beta_tester.profile.name,
-                email_address=self.beta_tester.email
+                email_address=self.beta_tester.email,
+                mktg_site_name=self.mktg_site_name
             )
         )
 
@@ -2148,7 +2164,7 @@ class TestInstructorAPILevelsDataDump(SharedModuleStoreTestCase, LoginEnrollment
 
         self.students_who_may_enroll = self.students + [UserFactory() for _ in range(5)]
         for student in self.students_who_may_enroll:
-            UserProfile.objects.filter(user=student).update(nickname='nick_'+student.username)
+            UserProfile.objects.filter(user=student).update(nickname='nick_' + student.username)
             CourseEnrollmentAllowed.objects.create(
                 email=student.email, course_id=self.course.id
             )
@@ -2939,7 +2955,7 @@ class TestInstructorAPIRegradeTask(SharedModuleStoreTestCase, LoginEnrollmentTes
         self.client.login(username=self.instructor.username, password='test')
 
         self.student = UserFactory()
-        UserProfile.objects.filter(user=self.student).update(nickname='nick_'+self.student.username)
+        UserProfile.objects.filter(user=self.student).update(nickname='nick_' + self.student.username)
         CourseEnrollment.enroll(self.student, self.course.id)
 
         self.module_to_reset = StudentModule.objects.create(
@@ -3435,9 +3451,11 @@ class TestInstructorAPITaskLists(SharedModuleStoreTestCase, LoginEnrollmentTestC
             'duration_sec'
         ]
 
-        def __init__(self, completion):
+        def __init__(self, requester, completion):
             for feature in self.FEATURES:
                 setattr(self, feature, 'expected')
+            # requester needs to be a user with profile
+            self.requester = requester
             # created needs to be a datetime
             self.created = datetime.datetime(2013, 10, 25, 11, 42, 35)
             # set 'status' and 'task_message' attrs
@@ -3462,6 +3480,9 @@ class TestInstructorAPITaskLists(SharedModuleStoreTestCase, LoginEnrollmentTestC
             """ Convert fake task to dictionary representation. """
             attr_dict = {key: getattr(self, key) for key in self.FEATURES}
             attr_dict['created'] = attr_dict['created'].isoformat()
+            attr_dict['requester'] = u'{} ({})'.format(
+                self.requester.profile.nickname_or_default, self.requester.email
+            )
             return attr_dict
 
     @classmethod
@@ -3491,7 +3512,7 @@ class TestInstructorAPITaskLists(SharedModuleStoreTestCase, LoginEnrollmentTestC
             state=json.dumps({'attempts': 10}),
         )
         mock_factory = MockCompletionInfo()
-        self.tasks = [self.FakeTask(mock_factory.mock_get_task_completion_info) for _ in xrange(7)]
+        self.tasks = [self.FakeTask(self.instructor, mock_factory.mock_get_task_completion_info) for _ in xrange(7)]
         self.tasks[-1].make_invalid_output()
 
     @patch.object(instructor_task.api, 'get_running_instructor_tasks')

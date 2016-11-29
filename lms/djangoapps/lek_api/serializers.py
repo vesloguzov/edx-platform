@@ -1,5 +1,6 @@
 import re
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 from django.core.urlresolvers import reverse
@@ -12,10 +13,12 @@ from rest_framework.validators import UniqueValidator
 from student.models import UserProfile, CourseEnrollment
 from courseware.courses import course_image_url
 from certificates.models import GeneratedCertificate
+from certificates.api import get_certificate_url
 
 
 UID_PATTERN = r'[\w.-]+'
 UID_REGEX = re.compile('^%s$' % UID_PATTERN)
+
 
 class UserSerializer(serializers.ModelSerializer):
     """
@@ -33,10 +36,13 @@ class UserSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(source='profile.last_name', default='', max_length=255, required=False, allow_blank=True)
     birthdate = serializers.DateField(source='profile.birthdate', default=None, required=False, allow_null=True)
     city = serializers.CharField(source='profile.city', default='', required=False, allow_blank=True)
+    gender = serializers.ChoiceField(source='profile.gender', choices=UserProfile.GENDER_CHOICES,
+                                     default=None, required=False, allow_null=True)
 
     class Meta:
         model = User
-        fields = ('uid', 'email', 'name', 'nickname', 'first_name', 'last_name', 'birthdate', 'city')
+        fields = ('uid', 'email', 'name', 'nickname', 'first_name', 'last_name',
+                  'birthdate', 'city', 'gender')
         lookup_field = 'uid'
 
     def validate_uid(self, value):
@@ -114,12 +120,12 @@ class CourseSerializer(serializers.Serializer):
 
     def get_about_url(self, course):
         url = reverse('about_course',
-                kwargs={'course_id': course.id.to_deprecated_string()})
+                      kwargs={'course_id': course.id.to_deprecated_string()})
         return self._get_absolute_url(url)
 
     def get_root_url(self, course):
         url = reverse('course_root',
-                kwargs={'course_id': course.id.to_deprecated_string()})
+                      kwargs={'course_id': course.id.to_deprecated_string()})
         return self._get_absolute_url(url)
 
     def _get_absolute_url(self, url):
@@ -127,6 +133,20 @@ class CourseSerializer(serializers.Serializer):
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
+    """
+    Serializes enrollment information for course summary
+    """
+    uid = serializers.CharField(source='username', required=True, allow_blank=False, validators=[UniqueValidator(queryset=User.objects)])
+
+    class Meta:
+        model = CourseEnrollment
+        fields = ('uid', 'mode', 'is_active', 'created')
+
+
+class UserEnrollmentSerializer(serializers.ModelSerializer):
+    """
+    Serializes enrollment information for user dashboard
+    """
     grade = serializers.SerializerMethodField()
     certificate_url = serializers.SerializerMethodField()
 
@@ -140,10 +160,17 @@ class CourseEnrollmentSerializer(serializers.ModelSerializer):
 
     def get_certificate_url(self, enrollment):
         certificate = self._get_certificate(enrollment)
-        return certificate.download_url if certificate else None
+        if not certificate:
+            return None
+        if certificate.download_url:
+            return certificate.download_url
+        else:
+            url = get_certificate_url(course_id=enrollment.course_id, uuid=certificate.verify_uuid)
+            scheme = 'https' if settings.HTTPS == 'on' else 'http'
+            return u'{}://{}{}'.format(scheme, settings.LMS_BASE, url)
 
     def _get_certificate(self, enrollment):
         if not hasattr(enrollment, '_certificate'):
             enrollment._certificate = GeneratedCertificate.certificate_for_student(
-                                 enrollment.user, enrollment.course_id)
+                enrollment.user, enrollment.course_id)
         return enrollment._certificate

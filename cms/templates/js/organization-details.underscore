@@ -1,0 +1,33 @@
+<div class="organization-panel-default">
+  <% if (error) { %>
+  <span class="error organization-details-error">
+    <i class="icon fa fa-warning"></i>
+    <span class="organization-short-name-value"><%= short_name %>:</span>
+    <%= error %>
+  </span>
+  <% } else { %>
+  <span class="organization-logo">
+    <% if (logo != "") { %>
+      <img class="organization-logo-image" src="<%= logo %>" alt="<%= gettext('Organization Logo') %>">
+    <% }  else { %>
+      <div class="no-image">
+          <i class="icon fa fa-exclamation-circle"></i>
+          <%= gettext("No logo") %>
+      </div>
+    <% } %>
+  </span>
+  <span class="organization-name">
+    <span class="organization-short-name-value"><%= short_name %></span>
+    <span class="organization-long-name-value"><%= long_name %></span>
+    <span class="sr"><%= gettext('Organization name') %></span>
+  </span>
+  <% } %>
+  <% if (editable) { %>
+  <span class="organization-actions-wrapper">
+     <a class="action action-delete-organization" href="#" data-tooltip="Delete">
+        <i class="icon fa fa-trash-o" aria-hidden="true"></i>
+        <span class="sr action-button-text"><%= gettext("Delete") %></span>
+     </a>
+  </span>
+  <% }%>
+</div>

@@ -11,7 +11,7 @@ from openedx.core.lib.js_utils import escape_json_dumps
 <%block name="bodyclass">is-signedin course view-certificates</%block>
 
 <%block name="header_extras">
-% for template_name in ["certificate-details", "certificate-editor", "signatory-editor", "signatory-details", "basic-modal", "modal-button", "list", "upload-dialog", "certificate-web-preview", "signatory-actions"]:
+% for template_name in ["certificate-details", "certificate-editor", "signatory-editor", "signatory-details", "organization-details", "organizations-editor", "basic-modal", "modal-button", "list", "upload-dialog", "certificate-web-preview", "signatory-actions"]:
   <script type="text/template" id="${template_name}-tpl">
     <%static:include path="js/${template_name}.underscore" />
   </script>
@@ -30,7 +30,17 @@ CMS.User.isGlobalStaff = '${is_global_staff}'=='True' ? true : false;
 
 <%block name="requirejs">
   require(["js/certificates/factories/certificates_page_factory"], function(CertificatesPageFactory) {
-      CertificatesPageFactory(${escape_json_dumps(certificates) | n}, "${certificate_url}", "${course_outline_url}", ${escape_json_dumps(course_modes) | n}, ${escape_json_dumps(certificate_web_view_url) | n}, ${escape_json_dumps(is_active) | n}, ${escape_json_dumps(certificate_activation_handler_url) | n} );
+      CertificatesPageFactory(
+          ${escape_json_dumps(certificates) | n},
+          "${certificate_url}",
+          "${course_outline_url}",
+          ${escape_json_dumps(course_modes) | n},
+          ${escape_json_dumps(certificate_web_view_url) | n},
+          ${escape_json_dumps(is_active) | n},
+          ${escape_json_dumps(certificate_activation_handler_url) | n},
+          ${escape_json_dumps(default_organizations) | n},
+          ${escape_json_dumps(organizations_list) | n}
+      );
   });
 </%block>
 

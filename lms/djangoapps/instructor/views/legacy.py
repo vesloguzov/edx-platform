@@ -794,6 +794,10 @@ def _do_enroll_students(course, course_key, students, secure=False, overload=Fal
             'SITE_NAME',
             settings.SITE_NAME
         )
+        mktg_site_name = microsite.get_value(
+            'MKTG_SITE_NAME',
+            microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+        )
         # TODO: Use request.build_absolute_uri rather than '{proto}://{site}{path}'.format
         # and check with the Services team that this works well with microsites
         registration_url = u'{proto}://{site}{path}'.format(
@@ -818,6 +822,7 @@ def _do_enroll_students(course, course_key, students, secure=False, overload=Fal
         # Composition of email
         email_data = {
             'site_name': stripped_site_name,
+            'mktg_site_name': mktg_site_name,
             'registration_url': registration_url,
             'course': course,
             'auto_enroll': auto_enroll,
@@ -909,11 +914,16 @@ def _do_unenroll_students(course_key, students, email_students=False):
         'SITE_NAME',
         settings.SITE_NAME
     )
+    mktg_site_name = microsite.get_value(
+        'MKTG_SITE_NAME',
+        microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+    )
     if email_students:
         course = modulestore().get_course(course_key)
         # Composition of email
         data = {
             'site_name': stripped_site_name,
+            'mktg_site_name': mktg_site_name,
             'course': course
         }
 

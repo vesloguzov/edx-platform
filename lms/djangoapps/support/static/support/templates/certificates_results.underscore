@@ -17,7 +17,10 @@
     <tr>
         <td><%- cert.get("course_key") %></td>
         <td><%- cert.get("type") %></td>
-        <td><%- cert.get("status") %></td>
+        <td><%- cert.get("status") %><%
+            if (cert.get("status") == "error") {
+                %>: <%- cert.get("error_reason") %><%
+            } %></td>
         <td>
             <% if (cert.get("download_url")) { %>
                 <a href="<%- cert.get("download_url") %>">Download</a>
@@ -29,12 +32,16 @@
         <td><%- cert.get("grade") %></td>
         <td><%- cert.get("modified") %></td>
         <td>
+            <% if (cert.get('regeneratable')) { %>
             <button
                 class="btn-cert-regenerate btn-disable-on-submit"
                 data-username="<%- cert.get("username") %>"
                 data-course-key="<%- cert.get("course_key") %>"
             ><%- gettext("Regenerate") %></button>
             <span class="sr"><%- gettext("Regenerate the user's certificate") %></span>
+            <% } else { %>
+            <%- gettext("Certificate could not be regenerated") %>
+            <% } %>
         </td>
     </tr>
     <% } %>

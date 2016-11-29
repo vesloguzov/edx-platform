@@ -14,6 +14,7 @@ from util.request import course_id_from_url
 
 WIKI_ROOT_URL = u'{}/wiki/'.format(settings.ROOT_URL_PREFIX)
 
+
 class WikiAccessMiddleware(object):
     """
     This middleware wraps calls to django-wiki in order to handle authentication and redirection

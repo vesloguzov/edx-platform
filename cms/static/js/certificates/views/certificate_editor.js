@@ -7,10 +7,11 @@ define([ // jshint ignore:line
     'gettext',
     'js/views/list_item_editor',
     'js/certificates/models/signatory',
-    'js/certificates/views/signatory_editor'
+    'js/certificates/views/signatory_editor',
+    'js/certificates/views/organizations_editor'
 ],
 function($, _, Backbone, gettext,
-         ListItemEditorView, SignatoryModel, SignatoryEditorView) {
+         ListItemEditorView, SignatoryModel, SignatoryEditorView, OrganizationsEditorView) {
     'use strict';
 
     // If signatories limit is required to specific value then we can change it.
@@ -22,6 +23,9 @@ function($, _, Backbone, gettext,
             'change .collection-name-input': 'setName',
             'change .certificate-description-input': 'setDescription',
             'change .certificate-course-title-input': 'setCourseTitle',
+            'change .certificate-course-description-input': 'setCourseDescription',
+            'change .certificate-show-grade-input': 'setShowGrade',
+            'change .certificate-honor-code-disclaimer-input': 'setHonorCodeDisclaimer',
             'focus .input-text': 'onFocus',
             'blur .input-text': 'onBlur',
             'submit': 'setAndClose',
@@ -76,6 +80,11 @@ function($, _, Backbone, gettext,
                 self.$('div.signatory-edit-list').append($(signatory_view.render()));
             });
             this.disableAddSignatoryButton();
+
+            var organizations_editor = new OrganizationsEditorView({
+                collection: this.model.get("organizations")
+            });
+            this.$('div.organizations-wrapper').append(organizations_editor.render().$el);
             return this;
         },
 
@@ -100,6 +109,9 @@ function($, _, Backbone, gettext,
                 name: this.model.escape('name'),
                 description: this.model.escape('description'),
                 course_title: this.model.escape('course_title'),
+                course_description: this.model.escape('course_description'),
+                show_grade: this.model.get('show_grade'),
+                honor_code_disclaimer: this.model.escape('honor_code_disclaimer'),
                 org_logo_path: this.model.escape('org_logo_path'),
                 is_active: this.model.escape('is_active'),
                 isNew: this.model.isNew()
@@ -112,30 +124,41 @@ function($, _, Backbone, gettext,
         },
 
         setName: function(event) {
-            // Updates the indicated model field (still requires persistence on server)
-            if (event && event.preventDefault) { event.preventDefault(); }
-            this.model.set(
-                'name', this.$('.collection-name-input').val(),
-                { silent: true }
-            );
+            this._setTextModelField(event, 'name', '.collection-name-input');
         },
 
         setDescription: function(event) {
+            this._setTextModelField(event, 'description', '.certificate-description-input');
+        },
+
+        setCourseTitle: function(event) {
+            this._setTextModelField(event, 'course_title', '.certificate-course-title-input');
+        },
+
+        setCourseDescription: function(event) {
+            this._setTextModelField(event, 'course_description', '.certificate-course-description-input');
+        },
+
+        setHonorCodeDisclaimer: function(event) {
+            this._setTextModelField(event, 'honor_code_disclaimer', '.certificate-honor-code-disclaimer-input');
+        },
+
+        setShowGrade: function(event) {
             // Updates the indicated model field (still requires persistence on server)
             if (event && event.preventDefault) { event.preventDefault(); }
             this.model.set(
-                'description',
-                this.$('.certificate-description-input').val(),
+                'show_grade',
+                this.$('.certificate-show-grade-input').is(':checked'),
                 { silent: true }
             );
         },
 
-        setCourseTitle: function(event) {
+        _setTextModelField: function(event, model_field_name, input_selector) {
             // Updates the indicated model field (still requires persistence on server)
             if (event && event.preventDefault) { event.preventDefault(); }
             this.model.set(
-                'course_title',
-                this.$('.certificate-course-title-input').val(),
+                model_field_name,
+                this.$(input_selector).val(),
                 { silent: true }
             );
         },
@@ -145,6 +168,9 @@ function($, _, Backbone, gettext,
             this.setName();
             this.setDescription();
             this.setCourseTitle();
+            this.setCourseDescription();
+            this.setShowGrade();
+            this.setHonorCodeDisclaimer();
             return this;
         }
     });

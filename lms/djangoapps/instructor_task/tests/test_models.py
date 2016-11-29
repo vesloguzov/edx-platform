@@ -114,10 +114,10 @@ class S3ReportStoreTestCase(ReportStoreTestMixin, TestReportMixin, TestCase):
 
 @override_settings(
     GRADES_DOWNLOAD={
-        'STORAGE_TYPE' : 'protectedfs',
-        'ROOT_PATH' : '/tmp/path-to-report-store/',
-        'PROTECTED_URL' : '/reports_storage/'
-        }
+        'STORAGE_TYPE': 'protectedfs',
+        'ROOT_PATH': '/tmp/path-to-report-store/',
+        'PROTECTED_URL': '/reports_storage/'
+    }
 )
 class ProtectedFSReportStoreTestCase(UrlResetMixin, ReportStoreTestMixin, TestReportMixin, TestCase):
     """

@@ -8,10 +8,13 @@ define([ // jshint ignore:line
     'js/views/baseview',
     'js/certificates/models/signatory',
     'js/certificates/views/signatory_details',
+    'js/certificates/models/organization',
+    'js/certificates/views/organization_details',
     'common/js/components/utils/view_utils',
     'jquery.smoothScroll'
 ],
-function($, _, str, gettext, BaseView, SignatoryModel, SignatoryDetailsView, ViewUtils) {
+function($, _, str, gettext, BaseView, SignatoryModel, SignatoryDetailsView,
+         OrganizationModel, OrganizationDetailsView, ViewUtils) {
     'use strict';
     var CertificateDetailsView = BaseView.extend({
         tagName: 'div',
@@ -62,11 +65,16 @@ function($, _, str, gettext, BaseView, SignatoryModel, SignatoryDetailsView, Vie
                 showDetails: this.showDetails || showDetails || false
             });
             this.$el.html(this.template(attrs));
+
             if(this.showDetails || showDetails) {
                 var self = this;
                 this.model.get("signatories").each(function (modelSignatory) {
                     var signatory_detail_view = new SignatoryDetailsView({model: modelSignatory});
                     self.$('div.signatory-details-list').append($(signatory_detail_view.render().$el));
+                });
+                this.model.get("organizations").each(function(modelOrganization) {
+                    var organization_detail_view = new OrganizationDetailsView({model: modelOrganization});
+                    self.$('div.organization-details-list').append($(organization_detail_view.render().$el));
                 });
             }
 

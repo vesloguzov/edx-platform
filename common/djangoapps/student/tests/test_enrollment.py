@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 from course_modes.models import CourseMode
 from django.core import mail
+from course_modes.models import CourseMode
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 from util.testing import UrlResetMixin
@@ -46,10 +47,17 @@ class EnrollmentTest(UrlResetMixin, ModuleStoreTestCase):
         # and automatically enrolled
         ([], '', CourseMode.DEFAULT_MODE_SLUG),
 
-        # Audit / Verified / Honor
+        # Audit / Verified
         # We should always go to the "choose your course" page.
         # We should also be enrolled as the default mode.
-        (['honor', 'verified', 'audit'], 'course_modes_choose', CourseMode.DEFAULT_MODE_SLUG),
+        (['verified', 'audit'], 'course_modes_choose', CourseMode.AUDIT),
+
+        # Audit / Verified / Honor
+        # We should always go to the "choose your course" page.
+        # We should also be enrolled as the honor mode.
+        # Since honor and audit are currently offered together this precedence must
+        # be maintained.
+        (['honor', 'verified', 'audit'], 'course_modes_choose', CourseMode.HONOR),
 
         # Professional ed
         # Expect that we're sent to the "choose your track" page
@@ -205,7 +213,6 @@ class EnrollmentTest(UrlResetMixin, ModuleStoreTestCase):
         CourseEnrollment.enroll(self.user, self.course.id, mode="honor")
         resp = self._change_enrollment('unenroll', course_id="edx/")
         self.assertEqual(resp.status_code, 400)
-
 
     def _change_enrollment(self, action, course_id=None, email_opt_in=None):
         """

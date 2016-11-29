@@ -38,7 +38,7 @@ class CertificatesTest(StudioCourseTest):
             'organization': '{prefix} Signatory Organization'.format(prefix=prefix),
         }
 
-    def create_and_verify_certificate(self, course_title_override, existing_certs, signatories):
+    def create_and_verify_certificate(self, course_title_override, existing_certs, signatories, additional_organizations=None):
         """
         Creates a new certificate and verifies that it was properly created.
         """
@@ -66,6 +66,11 @@ class CertificatesTest(StudioCourseTest):
             added_signatories += 1
             if len(signatories) > added_signatories:
                 certificate.click_add_signatory_button()
+
+        # add organizations
+        if additional_organizations:
+            for idx, organization in enumerate(additional_organizations):
+                certificate.add_organization(organization)
 
         # Save the certificate
         self.assertEqual(certificate.get_text('.action-primary'), "Create")
@@ -195,6 +200,56 @@ class CertificatesTest(StudioCourseTest):
 
         self.assertIn("Updated signatory name", signatory.name)
 
+    def test_can_add_and_edit_organizations_of_certficate(self):
+        """
+        Scenario: Ensure that the certificates can be created with organizations and edited correctly.
+        Given I have a course without certificates
+        When I click button 'Add your first Certificate'
+        Then I see default course organizations
+        When I add new course organization and click the button 'Create'
+        Then I see the new certificate is added and has three organizations inside it
+        When I edit the certificate
+        And I remove the first organization and click the button 'Save' icon
+        Then I can see course has one certificate with two organizations left
+        When I click 'Edit' button of certificate
+        And click on 'Close' button
+        Then I can see no change in cerfificate organizations
+        """
+        self.certificates_page.visit()
+        certificate = self.create_and_verify_certificate(
+            "Course Title Override",
+            0,
+            [self.make_signatory_data('first'), self.make_signatory_data('second')],
+            ['orgX'],
+        )
+        self.assertEqual(len(self.certificates_page.certificates), 1)
+        # Check three organizations present:
+        # platform organization, course organization and additional 'other' organization
+        organizations = self.certificates_page.certificates[0].organizations
+        self.assertEqual(len(organizations), 3)
+
+        # Edit the organizations in certificate
+        certificate.click_edit_certificate_button()
+        organization_to_delete = certificate.organizations[0].short_name
+        certificate.organizations[0].delete()
+        certificate.click_save_certificate_button()
+
+        self.assertEqual(len(self.certificates_page.certificates), 1)
+
+        # Refreshing the page, so page have the updated certificate object.
+        self.certificates_page.refresh()
+        organizations = self.certificates_page.certificates[0].organizations
+        self.assertEqual(len(organizations), 2)
+        self.assertNotIn(organization_to_delete, organizations)
+        self.assertIn('orgX', organizations)
+
+        certificate.click_edit_certificate_button()
+        certificate.click_save_certificate_button()
+
+        organizations = self.certificates_page.certificates[0].organizations
+        self.assertEqual(len(organizations), 2)
+        self.assertIn('orgX', organizations)
+
     def test_can_cancel_creation_of_certificate(self):
         """
         Scenario: Ensure that creation of a certificate can be canceled correctly.
@@ -225,7 +280,7 @@ class CertificatesTest(StudioCourseTest):
             [
                 {
                     'name': 'Signatory Name',
-                    'title': 'Signatory title with new line character \n',
+                    'title': 'Signatory title with new line character \n not in the end',
                     'organization': 'Signatory Organization',
                 }
             ]

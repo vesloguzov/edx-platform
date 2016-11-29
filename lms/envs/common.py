@@ -49,7 +49,7 @@ from lms.djangoapps.lms_xblock.mixin import LmsBlockMixin
 PLATFORM_NAME = "Your Platform Name Here"
 CC_MERCHANT_NAME = PLATFORM_NAME
 # Shows up in the platform footer, eg "(c) COPYRIGHT_YEAR"
-COPYRIGHT_YEAR = "2015"
+COPYRIGHT_YEAR = "2016"
 
 PLATFORM_FACEBOOK_ACCOUNT = "http://www.facebook.com/YourPlatformFacebookAccount"
 PLATFORM_TWITTER_ACCOUNT = "@YourPlatformTwitterAccount"
@@ -369,8 +369,14 @@ FEATURES = {
     # Certificates Web/HTML Views
     'CERTIFICATES_HTML_VIEW': False,
 
+    # Use external service to generate certificates
+    'CERTIFICATES_USE_CERTS_SERVICE': True,
+
     # Batch-Generated Certificates from Instructor Dashboard
     'CERTIFICATES_INSTRUCTOR_GENERATION': False,
+
+    # Use custom certificate templates stored in database
+    'CUSTOM_CERTIFICATE_TEMPLATES_ENABLED': False,
 
     # Course discovery feature
     'ENABLE_COURSE_DISCOVERY': False,
@@ -2069,6 +2075,8 @@ MKTG_URL_LINK_MAP = {
     # Verified Certificates
     'WHAT_IS_VERIFIED_CERT': 'verified-certificate',
 }
+# site name used in emails
+MKTG_SITE_NAME = SITE_NAME
 
 ############################# SOCIAL MEDIA SHARING #############################
 # Social Media Sharing on Student Dashboard
@@ -2755,7 +2763,7 @@ PROCTORING_SETTINGS = {}
 
 
 INSTALLED_APPS += (
-    'api',
+    'lek_api',
     'required_student_data',
     'sync',
 )

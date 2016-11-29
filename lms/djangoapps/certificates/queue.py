@@ -3,7 +3,7 @@ import json
 import random
 import logging
 import lxml.html
-from lxml.etree import XMLSyntaxError, ParserError  # pylint:disable=no-name-in-module
+from lxml.etree import XMLSyntaxError, ParserError
 from uuid import uuid4
 
 from django.test.client import RequestFactory
@@ -20,11 +20,13 @@ from student.models import UserProfile, CourseEnrollment
 from lms.djangoapps.verify_student.models import SoftwareSecurePhotoVerification
 
 from certificates.models import (
+    CertificateStatuses,
     GeneratedCertificate,
     certificate_status_for_student,
     CertificateStatuses as status,
     CertificateWhitelist,
-    ExampleCertificate
+    ExampleCertificate,
+    CertificateHtmlViewConfiguration
 )
 
 
@@ -47,6 +49,13 @@ class XQueueAddToQueueError(Exception):
             code=self.error_code,
             msg=self.error_msg
         )
+
+
+class CertsServiceNotConfiguredError(Exception):
+    """
+    An error occured when calling external certificates service is not possible
+    """
+    message = 'External certificates service is not configured'
 
 
 class XQueueCertInterface(object):
@@ -121,14 +130,14 @@ class XQueueCertInterface(object):
         Change the certificate status to unavailable (if it exists) and request
         grading. Passing grades will put a certificate request on the queue.
 
-        Return the status object.
+        Return the certificate.
         """
         # TODO: when del_cert is implemented and plumbed through certificates
         #       repo also, do a deletion followed by a creation r/t a simple
         #       recreation. XXX: this leaves orphan cert files laying around in
         #       AWS. See note in the docstring too.
         try:
-            certificate = GeneratedCertificate.objects.get(user=student, course_id=course_id)
+            certificate = GeneratedCertificate.eligible_certificates.get(user=student, course_id=course_id)
 
             LOGGER.info(
                 (
@@ -184,8 +193,7 @@ class XQueueCertInterface(object):
         raise NotImplementedError
 
     # pylint: disable=too-many-statements
-    def add_cert(self, student, course_id, course=None, forced_grade=None, template_file=None,
-                 title='None', generate_pdf=True):
+    def add_cert(self, student, course_id, course=None, forced_grade=None, template_file=None, generate_pdf=True):
         """
         Request a new certificate for a student.
 
@@ -212,7 +220,7 @@ class XQueueCertInterface(object):
         If a student does not have a passing grade the status
         will change to status.notpassing
 
-        Returns the student's status and newly created certificate instance
+        Returns the newly created certificate instance
         """
 
         valid_statuses = [
@@ -221,11 +229,13 @@ class XQueueCertInterface(object):
             status.deleted,
             status.error,
             status.notpassing,
-            status.downloadable
+            status.downloadable,
+            status.auditing,
+            status.audit_passing,
+            status.audit_notpassing,
         ]
 
         cert_status = certificate_status_for_student(student, course_id)['status']
-        new_status = cert_status
         cert = None
 
         if cert_status not in valid_statuses:
@@ -240,169 +250,216 @@ class XQueueCertInterface(object):
                 cert_status,
                 unicode(valid_statuses)
             )
+            return None
+
+        # The caller can optionally pass a course in to avoid
+        # re-fetching it from Mongo. If they have not provided one,
+        # get it from the modulestore.
+        if course is None:
+            course = modulestore().get_course(course_id, depth=0)
+
+        profile = UserProfile.objects.get(user=student)
+        profile_name = profile.name
+
+        # Needed for access control in grading.
+        self.request.user = student
+        self.request.session = {}
+
+        is_whitelisted = self.whitelist.filter(user=student, course_id=course_id, whitelist=True).exists()
+        grade = grades.grade(student, self.request, course)
+        enrollment_mode, __ = CourseEnrollment.enrollment_mode_for_user(student, course_id)
+        mode_is_verified = enrollment_mode in GeneratedCertificate.VERIFIED_CERTS_MODES
+        user_is_verified = SoftwareSecurePhotoVerification.user_is_verified(student)
+        cert_mode = enrollment_mode
+        is_eligible_for_certificate = is_whitelisted or CourseMode.is_eligible_for_certificate(enrollment_mode)
+
+        # For credit mode generate verified certificate
+        if cert_mode == CourseMode.CREDIT_MODE:
+            cert_mode = CourseMode.VERIFIED
+
+        if template_file is not None:
+            template_pdf = template_file
+        elif mode_is_verified and user_is_verified:
+            template_pdf = "certificate-template-{id.org}-{id.course}-verified.pdf".format(id=course_id)
+        elif mode_is_verified and not user_is_verified:
+            template_pdf = "certificate-template-{id.org}-{id.course}.pdf".format(id=course_id)
+            cert_mode = GeneratedCertificate.MODES.honor
         else:
-            # grade the student
+            # honor code and audit students
+            template_pdf = "certificate-template-{id.org}-{id.course}.pdf".format(id=course_id)
+        if forced_grade:
+            grade['grade'] = forced_grade
 
-            # re-use the course passed in optionally so we don't have to re-fetch everything
-            # for every student
-            if course is None:
-                course = modulestore().get_course(course_id, depth=0)
-            profile = UserProfile.objects.get(user=student)
-            profile_name = profile.name
+        cert, created = GeneratedCertificate.objects.get_or_create(user=student, course_id=course_id)  # pylint: disable=no-member
 
-            # Needed
-            self.request.user = student
-            self.request.session = {}
+        if created or cert_mode != cert.mode:
+            # set/update template version only if it was not stored earlier for current mode
+            cert.template_version = CertificateHtmlViewConfiguration.get_template_version(cert_mode)
 
-            course_name = course.display_name or unicode(course_id)
-            is_whitelisted = self.whitelist.filter(user=student, course_id=course_id, whitelist=True).exists()
-            grade = grades.grade(student, self.request, course)
-            enrollment_mode, __ = CourseEnrollment.enrollment_mode_for_user(student, course_id)
-            mode_is_verified = enrollment_mode in GeneratedCertificate.VERIFIED_CERTS_MODES
-            user_is_verified = SoftwareSecurePhotoVerification.user_is_verified(student)
-            cert_mode = enrollment_mode
+        cert.mode = cert_mode
+        cert.user = student
+        cert.grade = grade['percent']
+        cert.distinction = grade.get('distinction', False)
+        cert.course_id = course_id
+        cert.name = profile_name
+        cert.download_url = ''
 
-            # For credit mode generate verified certificate
-            if cert_mode == CourseMode.CREDIT_MODE:
-                cert_mode = CourseMode.VERIFIED
+        # Strip HTML from grade range label
+        grade_contents = grade.get('grade', None)
+        try:
+            grade_contents = lxml.html.fromstring(grade_contents).text_content()
+            passing = True
+        except (TypeError, XMLSyntaxError, ParserError) as exc:
+            LOGGER.info(
+                (
+                    u"Could not retrieve grade for student %s "
+                    u"in the course '%s' "
+                    u"because an exception occurred while parsing the "
+                    u"grade contents '%s' as HTML. "
+                    u"The exception was: '%s'"
+                ),
+                student.id,
+                unicode(course_id),
+                grade_contents,
+                unicode(exc)
+            )
 
-            if mode_is_verified and user_is_verified:
-                template_pdf = "certificate-template-{id.org}-{id.course}-verified.pdf".format(id=course_id)
-            elif mode_is_verified and not user_is_verified:
-                template_pdf = "certificate-template-{id.org}-{id.course}.pdf".format(id=course_id)
-                cert_mode = GeneratedCertificate.MODES.honor
+            # Log if the student is whitelisted
+            if is_whitelisted:
+                LOGGER.info(
+                    u"Student %s is whitelisted in '%s'",
+                    student.id,
+                    unicode(course_id)
+                )
+                passing = True
             else:
-                # honor code and audit students
-                template_pdf = u"certificate-template-{id.org}-{id.course}.pdf".format(id=course_id)
-            if forced_grade:
-                grade['grade'] = forced_grade
+                passing = False
 
-            cert, __ = GeneratedCertificate.objects.get_or_create(user=student, course_id=course_id)
+        # If this user's enrollment is not eligible to receive a
+        # certificate, mark it as such for reporting and
+        # analytics. Only do this if the certificate is new -- we
+        # don't want to mark existing audit certs as ineligible.
+        if created and not is_eligible_for_certificate:
+            cert.status = CertificateStatuses.audit_passing if passing else CertificateStatuses.audit_notpassing
+            cert.save()
+            LOGGER.info(
+                u"Student %s with enrollment mode %s is not eligible for a certificate.",
+                student.id,
+                enrollment_mode
+            )
+            return cert
+        # If they are not passing, short-circuit and don't generate cert
+        elif not passing:
+            cert.status = status.notpassing
+            cert.save()
 
-            cert.mode = cert_mode
-            cert.user = student
-            cert.grade = grade['percent']
-            cert.course_id = course_id
-            cert.name = profile_name
-            cert.download_url = ''
-            # Strip HTML from grade range label
-            grade_contents = grade.get('grade', None)
+            LOGGER.info(
+                (
+                    u"Student %s does not have a grade for '%s', "
+                    u"so their certificate status has been set to '%s'. "
+                    u"No certificate generation task was sent to the XQueue."
+                ),
+                student.id,
+                unicode(course_id),
+                cert.status
+            )
+            return cert
+
+        # Check to see whether the student is on the the embargoed
+        # country restricted list. If so, they should not receive a
+        # certificate -- set their status to restricted and log it.
+        if self.restricted.filter(user=student).exists():
+            cert.status = status.restricted
+            cert.save()
+
+            LOGGER.info(
+                (
+                    u"Student %s is in the embargoed country restricted "
+                    u"list, so their certificate status has been set to '%s' "
+                    u"for the course '%s'. "
+                    u"No certificate generation task was sent to the XQueue."
+                ),
+                student.id,
+                cert.status,
+                unicode(course_id)
+            )
+            return cert
+
+        # If the name of the student is not filled in userprofile,
+        # return a certificate with error status.
+        if not profile_name.strip():
+            cert.status = status.error
+            cert.error_reason = u'The name of the learner is not filled'
+            cert.save()
+
+            LOGGER.info(
+                (
+                    u"Student %s has not filled the name field in userprofile, "
+                    u"so their certificate status has been set to '%s' "
+                    u"for the course '%s'. "
+                    u"No certificate generation task was sent to the XQueue."
+                ),
+                student.id,
+                cert.status,
+                unicode(course_id)
+            )
+            return cert
+
+        # Finally, generate the certificate and send it off.
+        return self._generate_cert(cert, course, student, grade_contents, template_pdf, generate_pdf)
+
+    def _generate_cert(self, cert, course, student, grade_contents, template_pdf, generate_pdf):
+        """
+        Generate a certificate for the student. If `generate_pdf` is True,
+        sends a request to XQueue.
+        """
+        course_id = unicode(course.id)
+
+        key = make_hashkey(random.random())
+        cert.key = key
+        contents = {
+            'action': 'create',
+            'username': student.username,
+            'course_id': course_id,
+            'course_name': course.display_name or course_id,
+            'name': cert.name,
+            'grade': grade_contents,
+            'template_pdf': template_pdf,
+        }
+        if generate_pdf:
+            cert.status = status.generating
+        else:
+            cert.status = status.downloadable
+            cert.verify_uuid = uuid4().hex
+
+        cert.save()
+
+        if generate_pdf:
             try:
-                grade_contents = lxml.html.fromstring(grade_contents).text_content()
-            except (TypeError, XMLSyntaxError, ParserError) as exc:
-                LOGGER.info(
-                    (
-                        u"Could not retrieve grade for student %s "
-                        u"in the course '%s' "
-                        u"because an exception occurred while parsing the "
-                        u"grade contents '%s' as HTML. "
-                        u"The exception was: '%s'"
-                    ),
-                    student.id,
-                    unicode(course_id),
-                    grade_contents,
-                    unicode(exc)
-                )
-
-                #   Despite blowing up the xml parser, bad values here are fine
-                grade_contents = None
-
-            if is_whitelisted or grade_contents is not None:
-
-                if is_whitelisted:
-                    LOGGER.info(
-                        u"Student %s is whitelisted in '%s'",
-                        student.id,
-                        unicode(course_id)
-                    )
-
-                # check to see whether the student is on the
-                # the embargoed country restricted list
-                # otherwise, put a new certificate request
-                # on the queue
-
-                if self.restricted.filter(user=student).exists():
-                    new_status = status.restricted
-                    cert.status = new_status
-                    cert.save()
-
-                    LOGGER.info(
-                        (
-                            u"Student %s is in the embargoed country restricted "
-                            u"list, so their certificate status has been set to '%s' "
-                            u"for the course '%s'. "
-                            u"No certificate generation task was sent to the XQueue."
-                        ),
-                        student.id,
-                        new_status,
-                        unicode(course_id)
-                    )
-                else:
-                    key = make_hashkey(random.random())
-                    cert.key = key
-                    contents = {
-                        'action': 'create',
-                        'username': student.username,
-                        'course_id': unicode(course_id),
-                        'course_name': course_name,
-                        'name': profile_name,
-                        'grade': grade_contents,
-                        'template_pdf': template_pdf,
-                    }
-                    if template_file:
-                        contents['template_pdf'] = template_file
-                    if generate_pdf:
-                        new_status = status.generating
-                    else:
-                        new_status = status.downloadable
-                        cert.verify_uuid = uuid4().hex
-
-                    cert.status = new_status
-                    cert.save()
-
-                    if generate_pdf:
-                        try:
-                            self._send_to_xqueue(contents, key)
-                        except XQueueAddToQueueError as exc:
-                            new_status = ExampleCertificate.STATUS_ERROR
-                            cert.status = new_status
-                            cert.error_reason = unicode(exc)
-                            cert.save()
-                            LOGGER.critical(
-                                (
-                                    u"Could not add certificate task to XQueue.  "
-                                    u"The course was '%s' and the student was '%s'."
-                                    u"The certificate task status has been marked as 'error' "
-                                    u"and can be re-submitted with a management command."
-                                ), course_id, student.id
-                            )
-                        else:
-                            LOGGER.info(
-                                (
-                                    u"The certificate status has been set to '%s'.  "
-                                    u"Sent a certificate grading task to the XQueue "
-                                    u"with the key '%s'. "
-                                ),
-                                new_status,
-                                key
-                            )
-            else:
-                new_status = status.notpassing
-                cert.status = new_status
+                self._send_to_xqueue(contents, key)
+            except (XQueueAddToQueueError, CertsServiceNotConfiguredError) as exc:
+                cert.status = ExampleCertificate.STATUS_ERROR
+                cert.error_reason = unicode(exc)
                 cert.save()
-
+                LOGGER.critical(
+                    (
+                        u"Could not add certificate task to XQueue.  "
+                        u"The course was '%s' and the student was '%s'."
+                        u"The certificate task status has been marked as 'error' "
+                        u"and can be re-submitted with a management command."
+                    ), course_id, student.id
+                )
+            else:
                 LOGGER.info(
                     (
-                        u"Student %s does not have a grade for '%s', "
-                        u"so their certificate status has been set to '%s'. "
-                        u"No certificate generation task was sent to the XQueue."
+                        u"The certificate status has been set to '%s'.  "
+                        u"Sent a certificate grading task to the XQueue "
+                        u"with the key '%s'. "
                     ),
-                    student.id,
-                    unicode(course_id),
-                    new_status
+                    cert.status,
+                    key
                 )
-
-        return new_status, cert
+        return cert
 
     def add_example_cert(self, example_cert):
         """Add a task to create an example certificate.
@@ -453,7 +510,7 @@ class XQueueCertInterface(object):
                 callback_url_path=callback_url_path
             )
             LOGGER.info(u"Started generating example certificates for course '%s'.", example_cert.course_key)
-        except XQueueAddToQueueError as exc:
+        except (XQueueAddToQueueError, CertsServiceNotConfiguredError) as exc:
             example_cert.update_status(
                 ExampleCertificate.STATUS_ERROR,
                 error_reason=unicode(exc)
@@ -482,6 +539,9 @@ class XQueueCertInterface(object):
                 certificates.
 
         """
+        if not settings.FEATURES.get('CERTIFICATES_USE_CERTS_SERVICE', False):
+            raise CertsServiceNotConfiguredError
+
         callback_url = u'{protocol}://{base_url}{path}'.format(
             protocol=("https" if self.use_https else "http"),
             base_url=settings.SITE_NAME,

@@ -37,7 +37,7 @@ from student.models import CourseEnrollment
 from shoppingcart.models import Coupon, PaidCourseRegistration, CourseRegCodeItem
 from course_modes.models import CourseMode, CourseModesArchive
 from student.roles import CourseFinanceAdminRole, CourseSalesAdminRole
-from certificates.models import CertificateGenerationConfiguration, CertificateWhitelist
+from certificates.models import CertificateGenerationConfiguration, CertificateWhitelist, GeneratedCertificate
 from certificates import api as certs_api
 from util.date_utils import get_default_time_display
 
@@ -165,9 +165,17 @@ def instructor_dashboard_2(request, course_id):
     disable_buttons = not _is_small_course(course_key)
 
     certificate_white_list = CertificateWhitelist.get_certificate_white_list(course_key)
-    certificate_exception_url = reverse(
-        'create_certificate_exception',
-        kwargs={'course_id': unicode(course_key), 'white_list_student': ''}
+    generate_certificate_exceptions_url = reverse(  # pylint: disable=invalid-name
+        'generate_certificate_exceptions',
+        kwargs={'course_id': unicode(course_key), 'generate_for': ''}
+    )
+    generate_bulk_certificate_exceptions_url = reverse(  # pylint: disable=invalid-name
+        'generate_bulk_certificate_exceptions',
+        kwargs={'course_id': unicode(course_key)}
+    )
+    certificate_exception_view_url = reverse(
+        'certificate_exception_view',
+        kwargs={'course_id': unicode(course_key)}
     )
 
     context = {
@@ -177,7 +185,9 @@ def instructor_dashboard_2(request, course_id):
         'disable_buttons': disable_buttons,
         'analytics_dashboard_message': analytics_dashboard_message,
         'certificate_white_list': certificate_white_list,
-        'certificate_exception_url': certificate_exception_url
+        'generate_certificate_exceptions_url': generate_certificate_exceptions_url,
+        'generate_bulk_certificate_exceptions_url': generate_bulk_certificate_exceptions_url,
+        'certificate_exception_view_url': certificate_exception_view_url
     }
     if settings.FEATURES['ENABLE_INSTRUCTOR_LEGACY_DASHBOARD']:
         context['old_dashboard_url'] = reverse('instructor_dashboard_legacy', kwargs={'course_id': unicode(course_key)})
@@ -301,6 +311,8 @@ def _section_certificates(course):
         'enabled_for_course': certs_api.cert_generation_enabled(course.id),
         'instructor_generation_enabled': instructor_generation_enabled,
         'html_cert_enabled': html_cert_enabled,
+        'active_certificate': certs_api.get_active_web_certificate(course),
+        'certificate_statuses': GeneratedCertificate.get_unique_statuses(course_key=course.id),
         'urls': {
             'generate_example_certificates': reverse(
                 'generate_example_certificates',

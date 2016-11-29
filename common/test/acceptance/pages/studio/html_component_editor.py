@@ -45,12 +45,7 @@ class HtmlComponentEditorView(ComponentEditorView):
             content (str): The content to be used.
         """
         self.q(css=self.editor_mode_css).click()
-
-        selector = '.html-editor .mce-edit-area'
-        editor = self.q(css=self._bounded_selector(selector))[0]
-        ActionChains(self.browser).click(editor).\
-            send_keys([Keys.CONTROL, 'a']).key_up(Keys.CONTROL).\
-            senf_keys(Keys.DELETE).send_keys(content).perform()
+        self.browser.execute_script("tinyMCE.activeEditor.setContent('%s')" % content)
 
     def set_raw_content(self, content):
         """Types content in raw html mode, leaving the component open.

@@ -6,7 +6,13 @@
     </span>
   </div>
   <% } %>
-  <div class="signatory-panel-header">Signatory <%= signatory_number %>&nbsp;</div>
+  <div class="signatory-panel-header">
+      <%= interpolate(
+          gettext('Signatory %(number)s'),
+          {number: signatory_number},
+          true
+      ) %>
+  </div>
   <div class="signatory-panel-body">
     <div>
         <div>
@@ -14,7 +20,7 @@
           <span class="signatory-name-value"><%= name %></span>
         </div>
         <div>
-          <span class="signatory-title-label"><b><%= gettext("Title") %>:</b>&nbsp;</span>
+          <span class="signatory-title-label"><b><%= pgettext("person's title", "Title") %>:</b>&nbsp;</span>
           <span class="signatory-title-value"><%= title.replace(new RegExp('\r?\n','g'), '<br />') %></span>
         </div>
         <div>

@@ -111,6 +111,7 @@ def require_student_from_identifier(unique_student_identifier):
             )
         )
 
+
 def get_student_from_email_or_nickname(identifier):
     """
     Get a student object using an email address or nickname

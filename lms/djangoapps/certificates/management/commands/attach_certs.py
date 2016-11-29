@@ -50,7 +50,6 @@ class Command(BaseCommand):
         else:
             raise CommandError("You must specify a course")
 
-
         if not options['src_dir']:
             raise CommandError("You must specify a directory")
         elif not os.path.exists(options['src_dir']) or not os.path.isdir(options['src_dir']):
@@ -66,6 +65,7 @@ class Command(BaseCommand):
             for v in values:
                 print v
 
+
 def _attach_certificates(course, src_dir):
     pending_certificates = GeneratedCertificate.objects.filter(course_id=course.id, status=CertificateStatuses.generating)
     files = {os.path.splitext(fn)[0]: fn for fn in os.listdir(src_dir) if fn.lower().endswith('.pdf')}
@@ -80,6 +80,7 @@ def _attach_certificates(course, src_dir):
             result['missing'].append(certificate.user.username)
     result['files_left'] = files.values()
     return result
+
 
 def _attach_certificate(src_filename, certificate):
     dst_dir = os.path.join(settings.CERT_STORAGE_PATH, certificate.download_uuid)

@@ -10,8 +10,10 @@ from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from xmodule.modulestore.django import modulestore
 from xmodule_django.models import CourseKeyField
 
+
 class Command(BaseCommand):
     help = '''Cleanup database after deletion of the course'''
+
 
 class Command(BaseCommand):
     help = '''Delete a MongoDB backed course'''

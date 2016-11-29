@@ -190,6 +190,7 @@ class AdvancedSettingsPage(CoursePage):
             'default_tab',
             'disable_progress_graph',
             'discussion_blackouts',
+            'discussion_link',
             'discussion_sort_alpha',
             'discussion_topics',
             'due',

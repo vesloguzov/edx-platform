@@ -5,6 +5,7 @@ define([ // jshint ignore:line
     'js/models/course',
     'js/certificates/collections/certificates',
     'js/certificates/models/certificate',
+    'js/certificates/models/organization',
     'js/certificates/views/certificate_details',
     'js/certificates/views/certificate_preview',
     'common/js/components/views/feedback_notification',
@@ -14,7 +15,7 @@ define([ // jshint ignore:line
     'js/spec_helpers/validation_helpers',
     'js/certificates/spec/custom_matchers'
 ],
-function(_, Course, CertificatesCollection, CertificateModel, CertificateDetailsView, CertificatePreview,
+function(_, Course, CertificatesCollection, CertificateModel, OrganizationModel, CertificateDetailsView, CertificatePreview,
          Notification, AjaxHelpers, TemplateHelpers, ViewHelpers, ValidationHelpers, CustomMatchers) {
     'use strict';
 
@@ -25,6 +26,9 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
         name: '.certificate-name',
         description: '.certificate-description',
         course_title: '.course-title-override .certificate-value',
+        course_description: '.course-description .certificate-value',
+        show_grade: '.show-grade .certificate-value',
+        honor_code_disclaimer: '.honor-code-disclaimer .certificate-value',
         errorMessage: '.certificate-edit-error',
         inputName: '.collection-name-input',
         inputDescription: '.certificate-description-input',
@@ -60,6 +64,7 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
             course_modes: ['honor', 'test'],
             certificate_web_view_url: '/users/1/courses/orgX/009/2016'
         });
+        window.organizationsList = [];
         window.CMS.User = {isGlobalStaff: true};
     });
 
@@ -79,13 +84,18 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
         };
 
         beforeEach(function() {
-            TemplateHelpers.installTemplates(['certificate-details', 'signatory-details', 'signatory-editor', 'signatory-actions'], true);
+            TemplateHelpers.installTemplates([
+                'certificate-details',
+                'signatory-details', 'signatory-editor', 'signatory-actions',
+                'organization-details'
+            ], true);
 
             this.newModelOptions = {add: true};
             this.model = new CertificateModel({
                 name: 'Test Name',
                 description: 'Test Description',
                 course_title: 'Test Course Title Override',
+                show_grade: false,
                 is_active: true
             }, this.newModelOptions);
 
@@ -96,6 +106,7 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
             this.view = new CertificateDetailsView({
                 model: this.model
             });
+
             appendSetFixtures(this.view.render().el);
             CustomMatchers(this); // jshint ignore:line
         });
@@ -132,6 +143,11 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
             it('should display the certificate course title override', function () {
                 expect(this.view.$(SELECTORS.course_title)).toExist();
                 expect(this.view.$(SELECTORS.course_title)).toContainText('Test Course Title Override');
+            });
+
+            it('should display verbose show_grade setting for certificate', function() {
+                expect(this.view.$(SELECTORS.show_grade)).toExist();
+                expect(this.view.$(SELECTORS.show_grade)).toContainText('No');
             });
 
             it('should present an Edit action', function () {
@@ -180,6 +196,15 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
                 expect($.smoothScroll).toHaveBeenCalled();
             });
 
+            it('should display error message if organization is not found', function() {
+                var invalid_organization = new OrganizationModel({
+                    certificate: this.model,
+                    short_name: 'INVALID'
+                });
+                this.view.render();
+                expect(this.view.$('.organization-details .error')).toExist();
+            });
+
         });
 
         describe('Signatory details', function(){
@@ -195,11 +220,11 @@ function(_, Course, CertificatesCollection, CertificateModel, CertificateDetails
                 expect(this.view.$(SELECTORS.signatory_organization_value)).toContainText('');
             });
 
-            it('should present Edit action on signaotry', function () {
+            it('should present Edit action on signatory', function () {
                 expect(this.view.$(SELECTORS.edit_signatory)).toExist();
             });
 
-            it('should not present Edit action on signaotry if user is not global staff and certificate is active', function () {
+            it('should not present Edit action on signatory if user is not global staff and certificate is active', function () {
                 window.CMS.User = {isGlobalStaff: false};
                 this.view.render();
                 expect(this.view.$(SELECTORS.edit_signatory)).not.toExist();

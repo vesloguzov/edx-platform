@@ -43,7 +43,36 @@
                     </div>
                 <% } %>
             </div>
+             <div class='course-description-section pull-left'>
+                <% if (course_description) { %>
+                <div class="course-description">
+                        <span class="certificate-label"><b><%= gettext('Additional Course Description') %>: </b> </span>
+                        <span class="certificate-value"><%= course_description %></span>
+                </div>
+                <% } %>
+            </div>
+         </div>
+
+         <header style='margin-top: 30px;'>
+           <span class="title"><%= gettext("Additional certificate information") %></span>
+         </header>
+         <div class='certificate-additional-info-section'>
+                <div class="show-grade">
+                        <span class="certificate-label"><b><%= gettext("Show learner's grade on certificate") %>: </b> </span>
+                        <span class="certificate-value"><%= show_grade ? gettext('Yes') : gettext('No') %></span>
+                </div>
+                <% if (honor_code_disclaimer) { %>
+                <div class="honor-code-disclaimer">
+                        <span class="certificate-label"><b><%= gettext('Honor Code Disclaimer') %>: </b> </span>
+                        <span class="certificate-value"><%= honor_code_disclaimer %></span>
+                </div>
+                <% } %>
         </div>
+
+         <header style='margin-top: 30px;'>
+           <span class="title"><%= gettext("Certificate Organizations") %></span>
+         </header>
+         <div class="organization-details-list"></div>
 
          <header style='margin-top: 30px;'>
            <span class="title"><%= gettext("Certificate Signatories") %></span>
