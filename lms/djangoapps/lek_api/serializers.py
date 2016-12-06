@@ -12,7 +12,7 @@ from rest_framework.validators import UniqueValidator
 
 from student.models import UserProfile, CourseEnrollment
 from courseware.courses import course_image_url
-from certificates.models import GeneratedCertificate
+from certificates.models import certificate_status_for_student, CertificateStatuses
 from certificates.api import get_certificate_url
 
 
@@ -155,22 +155,21 @@ class UserEnrollmentSerializer(serializers.ModelSerializer):
         fields = ('course_id', 'mode', 'grade', 'certificate_url')
 
     def get_grade(self, enrollment):
-        certificate = self._get_certificate(enrollment)
-        return certificate.grade if certificate else None
+        certificate_status = self._get_certificate_status(enrollment)
+        return certificate_status.get('grade')
 
     def get_certificate_url(self, enrollment):
-        certificate = self._get_certificate(enrollment)
-        if not certificate:
+        certificate_status = self._get_certificate_status(enrollment)
+        if certificate_status['status'] != CertificateStatuses.downloadable:
             return None
-        if certificate.download_url:
-            return certificate.download_url
+        if certificate_status.get('download_url'):
+            return certificate_status['download_url']
         else:
-            url = get_certificate_url(course_id=enrollment.course_id, uuid=certificate.verify_uuid)
-            scheme = 'https' if settings.HTTPS == 'on' else 'http'
-            return u'{}://{}{}'.format(scheme, settings.LMS_BASE, url)
+            url = get_certificate_url(course_id=enrollment.course_id, uuid=certificate_status['uuid'])
+            return self.context['request'].build_absolute_uri(url)
 
-    def _get_certificate(self, enrollment):
-        if not hasattr(enrollment, '_certificate'):
-            enrollment._certificate = GeneratedCertificate.certificate_for_student(
+    def _get_certificate_status(self, enrollment):
+        if not hasattr(enrollment, '_certificate_status'):
+            enrollment._certificate_status = certificate_status_for_student(
                 enrollment.user, enrollment.course_id)
-        return enrollment._certificate
+        return enrollment._certificate_status

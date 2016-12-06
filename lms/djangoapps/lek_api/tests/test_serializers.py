@@ -6,13 +6,16 @@ when you run "manage.py test".
 Replace this with more appropriate tests for your application.
 """
 import datetime
+from mock import Mock, patch
 
 from django.test import TestCase
 from django.contrib.auth.models import User
 
-from student.tests.factories import UserFactory
+from student.tests.factories import UserFactory, CourseEnrollmentFactory
+from certificates.models import CertificateStatuses, GeneratedCertificate
+from certificates.tests.factories import GeneratedCertificateFactory
 
-from lek_api.serializers import UserSerializer
+from lek_api.serializers import UserSerializer, UserEnrollmentSerializer
 
 
 API_PROFILE_FIELDS = (
@@ -24,6 +27,9 @@ API_PROFILE_FIELDS = (
     'city',
     'gender',
 )
+
+def mock_build_absolute_uri(uri):
+    return 'https://localhost:8000' + uri
 
 
 class UserSerializerTest(TestCase):
@@ -158,3 +164,59 @@ class UserSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid(), 'Validation unexpectedly succeded')
         self.assertIn('uid', serializer.errors)
 
+
+class UserEnrollmentSerializerTest(TestCase):
+    """
+    Test serialization of course enrollment details for particular user
+    """
+    def setUp(self):
+        self.user = UserFactory.create(username='test', email='test@example.com')
+        self.enrollment = CourseEnrollmentFactory(user=self.user)
+
+    def tearDown(self):
+        GeneratedCertificate.objects.all().delete()
+
+    def test_pdf_certificate_url(self):
+        certificate_url = "https://certificate.storage.com/download_uuid"
+        certificate = GeneratedCertificateFactory(
+                user=self.user,
+                course_id=self.enrollment.course_id,
+                status=CertificateStatuses.downloadable,
+                download_url=certificate_url
+        )
+
+        serializer = UserEnrollmentSerializer(self.enrollment)
+        self.assertEqual(serializer.data['certificate_url'], certificate_url)
+
+    def test_html_certificate_url(self):
+        certificate = GeneratedCertificateFactory(
+                user=self.user,
+                course_id=self.enrollment.course_id,
+                status=CertificateStatuses.downloadable
+        )
+        mock_request = Mock()
+        mock_request.build_absolute_uri = mock_build_absolute_uri
+
+        with patch('certificates.api.has_html_certificates_enabled') as mock_tester:
+            mock_tester.return_value = True
+
+            serializer = UserEnrollmentSerializer(self.enrollment, context={'request': mock_request})
+            certificate_url = serializer.data['certificate_url']
+            self.assertIsNotNone(certificate_url)
+            self.assertIn(certificate.verify_uuid, certificate_url)
+
+    def test_unavailable_certificate_url(self):
+        """
+        Test serializer sets certificate url to None if certificate is not downloadable
+        """
+        certificate = GeneratedCertificateFactory(
+                user=self.user,
+                course_id=self.enrollment.course_id,
+                status=CertificateStatuses.unavailable
+        )
+
+        with patch('certificates.api.has_html_certificates_enabled') as mock_tester:
+            mock_tester.return_value = True
+
+            serializer = UserEnrollmentSerializer(self.enrollment)
+            self.assertIsNone(serializer.data['certificate_url'])

@@ -137,7 +137,7 @@ class EnrollmentViewSet(ServerAPIViewSet):
 
     def list(self, request, *args, **kwargs):
         enrollments = self._get_enrollments(*args, **kwargs)
-        serializer = UserEnrollmentSerializer(enrollments, many=True)
+        serializer = UserEnrollmentSerializer(enrollments, many=True, context={'request': request})
         return RESTResponse(serializer.data)
 
     @detail_route(methods=['post'])
