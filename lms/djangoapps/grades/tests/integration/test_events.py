@@ -8,7 +8,6 @@ from lms.djangoapps.instructor.enrollment import reset_student_attempts
 from lms.djangoapps.instructor_task.api import submit_rescore_problem_for_student
 from mock import patch
 from openedx.core.djangolib.testing.utils import get_mock_request
-from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 
@@ -28,9 +27,16 @@ class GradesEventIntegrationTest(ProblemSubmissionTestMixin, SharedModuleStoreTe
     of the grading infrastructure.
     """
     @classmethod
+<<<<<<< HEAD
     def setUpClass(cls):
         super(GradesEventIntegrationTest, cls).setUpClass()
         cls.store = modulestore()
+=======
+    def reset_course(cls):
+        """
+        Sets up the course anew.
+        """
+>>>>>>> 7d82f32... Fix issue with test ordering
         with cls.store.default_store(ModuleStoreEnum.Type.split):
             cls.course = CourseFactory.create()
             cls.chapter = ItemFactory.create(
@@ -64,6 +70,7 @@ class GradesEventIntegrationTest(ProblemSubmissionTestMixin, SharedModuleStoreTe
             )
 
     def setUp(self):
+        self.reset_course()
         super(GradesEventIntegrationTest, self).setUp()
         self.request = get_mock_request(UserFactory())
         self.student = self.request.user
