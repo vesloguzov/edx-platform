@@ -7,15 +7,16 @@ import ddt
 import itertools
 import pytz
 
-from django.test import TestCase
+from django.contrib.auth.models import User
+from ccx_keys.locator import CCXLocator
+from django.test.client import RequestFactory
 from django.core.urlresolvers import reverse
+from django.test import TestCase
 from mock import Mock, patch
 from nose.plugins.attrib import attr
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
-from ccx_keys.locator import CCXLocator
 
 from ccx.tests.factories import CcxFactory
-
 import courseware.access as access
 import courseware.access_response as access_response
 from courseware.masquerade import CourseMasquerade
@@ -28,11 +29,15 @@ from courseware.tests.factories import (
 )
 from courseware.tests.helpers import LoginEnrollmentTestCase
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+from student.models import CourseEnrollment
+from student.roles import CourseCcxCoachRole, CourseStaffRole
 from student.tests.factories import (
+    AdminFactory,
     AnonymousUserFactory,
     CourseEnrollmentAllowedFactory,
     CourseEnrollmentFactory,
 )
+
 from xmodule.course_module import (
     CATALOG_VISIBILITY_CATALOG_AND_ABOUT,
     CATALOG_VISIBILITY_ABOUT,
@@ -51,15 +56,113 @@ from xmodule.tests import get_test_system
 from util.milestones_helpers import (
     set_prerequisite_courses,
     fulfill_course_milestone,
-    seed_milestone_relationship_types,
 )
+from milestones.tests.utils import MilestonesTestCaseMixin
+
+from lms.djangoapps.ccx.models import CustomCourseForEdX
 
 # pylint: disable=protected-access
 
 
-@attr('shard_1')
+class CoachAccessTestCaseCCX(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
+    """
+    Test if user is coach on ccx.
+    """
+    MODULESTORE = TEST_DATA_SPLIT_MODULESTORE
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up course for tests
+        """
+        super(CoachAccessTestCaseCCX, cls).setUpClass()
+        cls.course = CourseFactory.create()
+
+    def setUp(self):
+        """
+        Set up tests
+        """
+        super(CoachAccessTestCaseCCX, self).setUp()
+
+        # Create ccx coach account
+        self.coach = AdminFactory.create(password="test")
+        self.client.login(username=self.coach.username, password="test")
+
+        # assign role to coach
+        role = CourseCcxCoachRole(self.course.id)
+        role.add_users(self.coach)
+        self.request_factory = RequestFactory()
+
+    def make_ccx(self):
+        """
+        create ccx
+        """
+        ccx = CustomCourseForEdX(
+            course_id=self.course.id,
+            coach=self.coach,
+            display_name="Test CCX"
+        )
+        ccx.save()
+
+        ccx_locator = CCXLocator.from_course_locator(self.course.id, unicode(ccx.id))
+        role = CourseCcxCoachRole(ccx_locator)
+        role.add_users(self.coach)
+        CourseEnrollment.enroll(self.coach, ccx_locator)
+        return ccx_locator
+
+    def test_has_ccx_coach_role(self):
+        """
+        Assert that user has coach access on ccx.
+        """
+        ccx_locator = self.make_ccx()
+
+        # user have access as coach on ccx
+        self.assertTrue(access.has_ccx_coach_role(self.coach, ccx_locator))
+
+        # user dont have access as coach on ccx
+        self.setup_user()
+        self.assertFalse(access.has_ccx_coach_role(self.user, ccx_locator))
+
+    def test_ccx_coach_has_staff_role(self):
+        """
+        Assert that user has staff access on ccx.
+        """
+        ccx_locator = self.make_ccx()
+
+        # coach user has access as staff on ccx
+        self.assertTrue(access.has_access(self.coach, 'staff', ccx_locator))
+
+        # basic user doesn't have staff access on ccx..
+        self.setup_user()
+        self.assertFalse(access.has_access(self.user, 'staff', ccx_locator))
+
+        # until we give her a staff role.
+        CourseStaffRole(ccx_locator).add_users(self.user)
+        self.assertTrue(access.has_access(self.user, 'staff', ccx_locator))
+
+    def test_access_student_progress_ccx(self):
+        """
+        Assert that only a coach can see progress of student.
+        """
+        ccx_locator = self.make_ccx()
+        student = UserFactory()
+
+        # Enroll user
+        CourseEnrollment.enroll(student, ccx_locator)
+
+        # Test for access of a coach
+        resp = self.client.get(reverse('student_progress', args=[unicode(ccx_locator), student.id]))
+        self.assertEqual(resp.status_code, 200)
+
+        # Assert access of a student
+        self.client.login(username=student.username, password='test')
+        resp = self.client.get(reverse('student_progress', args=[unicode(ccx_locator), self.coach.id]))
+        self.assertEqual(resp.status_code, 404)
+
+
+@attr(shard=1)
 @ddt.ddt
-class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
+class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase, MilestonesTestCaseMixin):
     """
     Tests for the various access controls on the student dashboard
     """
@@ -80,8 +183,7 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
 
     def verify_access(self, mock_unit, student_should_have_access, expected_error_type=None):
         """ Verify the expected result from _has_access_descriptor """
-        response = access._has_access_descriptor(self.anonymous_user, 'load',
-                                                 mock_unit, course_key=self.course.id)
+        response = access._has_access_descriptor(self.anonymous_user, 'load', mock_unit, course_key=self.course.id)
         self.assertEqual(student_should_have_access, bool(response))
 
         if expected_error_type is not None:
@@ -297,7 +399,7 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         Tests that "visible_to_staff_only" overrides start date.
         """
         expected_access = expected_error_type is None
-        mock_unit = Mock(user_partitions=[])
+        mock_unit = Mock(location=self.course.location, user_partitions=[])
         mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
         mock_unit.visible_to_staff_only = visible_to_staff_only
         mock_unit.start = start
@@ -320,7 +422,7 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         """
         Tests that descriptor has access in preview mode.
         """
-        mock_unit = Mock(user_partitions=[])
+        mock_unit = Mock(location=self.course.location, user_partitions=[])
         mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
         mock_unit.visible_to_staff_only = False
         mock_unit.start = start
@@ -339,7 +441,7 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         Tests that descriptor has no access when start date in future & without preview.
         """
         expected_access = expected_error_type is None
-        mock_unit = Mock(user_partitions=[])
+        mock_unit = Mock(location=self.course.location, user_partitions=[])
         mock_unit._class_tags = {}  # Needed for detached check in _has_access_descriptor
         mock_unit.visible_to_staff_only = False
         mock_unit.start = start
@@ -435,7 +537,6 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         """
         Test course access when a course has pre-requisite course yet to be completed
         """
-        seed_milestone_relationship_types()
         user = UserFactory.create()
 
         pre_requisite_course = CourseFactory.create(
@@ -470,7 +571,7 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         """
         Test course access on mobile for staff and students.
         """
-        descriptor = Mock(user_partitions=[])
+        descriptor = Mock(id=self.course.id, user_partitions=[])
         descriptor._class_tags = {}
         descriptor.visible_to_staff_only = False
         descriptor.mobile_available = mobile_available
@@ -486,7 +587,6 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         """
         Test courseware access when a course has pre-requisite course yet to be completed
         """
-        seed_milestone_relationship_types()
         pre_requisite_course = CourseFactory.create(
             org='edX',
             course='900',
@@ -524,11 +624,12 @@ class AccessTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.assertEqual(response.status_code, 200)
 
 
-@attr('shard_1')
+@attr(shard=1)
 class UserRoleTestCase(TestCase):
     """
     Tests for user roles.
     """
+
     def setUp(self):
         super(UserRoleTestCase, self).setUp()
         self.course_key = SlashSeparatedCourseKey('edX', 'toy', '2012_Fall')
@@ -580,6 +681,7 @@ class UserRoleTestCase(TestCase):
         )
 
 
+@attr(shard=3)
 @ddt.ddt
 class CourseOverviewAccessTestCase(ModuleStoreTestCase):
     """
@@ -609,19 +711,13 @@ class CourseOverviewAccessTestCase(ModuleStoreTestCase):
         self.user_normal = UserFactory.create()
         self.user_beta_tester = BetaTesterFactory.create(course_key=self.course_not_started.id)
         self.user_completed_pre_requisite = UserFactory.create()
-        fulfill_course_milestone(self.user_completed_pre_requisite, self.course_started.id)
+        fulfill_course_milestone(self.course_started.id, self.user_completed_pre_requisite)
         self.user_staff = UserFactory.create(is_staff=True)
         self.user_anonymous = AnonymousUserFactory.create()
 
-    ENROLL_TEST_DATA = list(itertools.product(
+    COURSE_TEST_DATA = list(itertools.product(
         ['user_normal', 'user_staff', 'user_anonymous'],
-        ['enroll'],
-        ['course_default', 'course_started', 'course_not_started', 'course_staff_only'],
-    ))
-
-    LOAD_TEST_DATA = list(itertools.product(
-        ['user_normal', 'user_beta_tester', 'user_staff'],
-        ['load'],
+        ['enroll', 'load', 'staff', 'instructor', 'see_exists', 'see_in_catalog', 'see_about_page'],
         ['course_default', 'course_started', 'course_not_started', 'course_staff_only'],
     ))
 
@@ -637,8 +733,9 @@ class CourseOverviewAccessTestCase(ModuleStoreTestCase):
         ['course_default', 'course_with_pre_requisite', 'course_with_pre_requisites'],
     ))
 
-    @ddt.data(*(ENROLL_TEST_DATA + LOAD_TEST_DATA + LOAD_MOBILE_TEST_DATA + PREREQUISITES_TEST_DATA))
+    @ddt.data(*(COURSE_TEST_DATA + LOAD_MOBILE_TEST_DATA + PREREQUISITES_TEST_DATA))
     @ddt.unpack
+    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
     def test_course_overview_access(self, user_attr_name, action, course_attr_name):
         """
         Check that a user's access to a course is equal to the user's access to
@@ -671,3 +768,35 @@ class CourseOverviewAccessTestCase(ModuleStoreTestCase):
         overview = CourseOverview.get_from_id(self.course_default.id)
         with self.assertRaises(ValueError):
             access.has_access(self.user, '_non_existent_action', overview)
+
+    @ddt.data(
+        *itertools.product(
+            ['user_normal', 'user_staff', 'user_anonymous'],
+            ['see_exists', 'see_in_catalog', 'see_about_page'],
+            ['course_default', 'course_started', 'course_not_started'],
+        )
+    )
+    @ddt.unpack
+    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
+    def test_course_catalog_access_num_queries(self, user_attr_name, action, course_attr_name):
+        course = getattr(self, course_attr_name)
+
+        # get a fresh user object that won't have any cached role information
+        if user_attr_name == 'user_anonymous':
+            user = AnonymousUserFactory()
+        else:
+            user = getattr(self, user_attr_name)
+            user = User.objects.get(id=user.id)
+
+        if user_attr_name == 'user_staff' and action == 'see_exists' and course_attr_name == 'course_not_started':
+            # checks staff role
+            num_queries = 1
+        elif user_attr_name == 'user_normal' and action == 'see_exists' and course_attr_name != 'course_started':
+            # checks staff role and enrollment data
+            num_queries = 2
+        else:
+            num_queries = 0
+
+        course_overview = CourseOverview.get_from_id(course.id)
+        with self.assertNumQueries(num_queries):
+            bool(access.has_access(user, action, course_overview, course_key=course.id))

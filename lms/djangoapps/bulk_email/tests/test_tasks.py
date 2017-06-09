@@ -32,13 +32,14 @@ from django.core.management import call_command
 
 from xmodule.modulestore.tests.factories import CourseFactory
 
-from bulk_email.models import CourseEmail, Optout, SEND_TO_ALL
+from bulk_email.models import CourseEmail, Optout, SEND_TO_MYSELF, SEND_TO_STAFF, SEND_TO_LEARNERS
+from bulk_email.tasks import _get_course_email_context
 
-from instructor_task.tasks import send_bulk_course_email
-from instructor_task.subtasks import update_subtask_status, SubtaskStatus
-from instructor_task.models import InstructorTask
-from instructor_task.tests.test_base import InstructorTaskCourseTestCase
-from instructor_task.tests.factories import InstructorTaskFactory
+from lms.djangoapps.instructor_task.tasks import send_bulk_course_email
+from lms.djangoapps.instructor_task.subtasks import update_subtask_status, SubtaskStatus
+from lms.djangoapps.instructor_task.models import InstructorTask
+from lms.djangoapps.instructor_task.tests.test_base import InstructorTaskCourseTestCase
+from lms.djangoapps.instructor_task.tests.factories import InstructorTaskFactory
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 
@@ -75,7 +76,7 @@ def my_update_subtask_status(entry_id, current_task_id, new_subtask_status):
         update_subtask_status(entry_id, current_task_id, new_subtask_status)
 
 
-@attr('shard_1')
+@attr(shard=3)
 @patch('bulk_email.models.html_to_text', Mock(return_value='Mocking CourseEmail.text_message', autospec=True))
 class TestBulkEmailInstructorTask(InstructorTaskCourseTestCase):
     """Tests instructor task that send bulk email."""
@@ -94,10 +95,10 @@ class TestBulkEmailInstructorTask(InstructorTaskCourseTestCase):
 
         Overrides the base class version in that this creates CourseEmail.
         """
-        to_option = SEND_TO_ALL
+        targets = [SEND_TO_MYSELF, SEND_TO_STAFF, SEND_TO_LEARNERS]
         course_id = course_id or self.course.id
         course_email = CourseEmail.create(
-            course_id, self.instructor, to_option, "Test Subject", "<p>This is a test message</p>"
+            course_id, self.instructor, targets, "Test Subject", "<p>This is a test message</p>"
         )
         task_input = {'email_id': course_email.id}
         task_id = str(uuid4())
@@ -427,9 +428,21 @@ class TestBulkEmailInstructorTask(InstructorTaskCourseTestCase):
         course_image = u'在淡水測試.jpg'
         self.course = CourseFactory.create(course_image=course_image)
 
-        num_emails = 1
-        self._create_students(num_emails)
+        num_emails = 2
+        # We also send email to the instructor:
+        self._create_students(num_emails - 1)
 
         with patch('bulk_email.tasks.get_connection', autospec=True) as get_conn:
             get_conn.return_value.send_messages.side_effect = cycle([None])
             self._test_run_with_task(send_bulk_course_email, 'emailed', num_emails, num_emails)
+
+    def test_get_course_email_context_has_correct_keys(self):
+        result = _get_course_email_context(self.course)
+        self.assertIn('course_title', result)
+        self.assertIn('course_root', result)
+        self.assertIn('course_url', result)
+        self.assertIn('course_image_url', result)
+        self.assertIn('course_end_date', result)
+        self.assertIn('account_settings_url', result)
+        self.assertIn('email_settings_url', result)
+        self.assertIn('platform_name', result)

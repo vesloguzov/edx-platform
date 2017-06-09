@@ -5,7 +5,7 @@
     display: table-cell; // needed to extend the sidebar the full height of the area
 
     // provides sufficient contrast for all screen reader-only elements
-    .sr {
+    .sr, .sr-only {
         color: $black;
         background: $white;
     }
@@ -129,6 +129,10 @@
                                         color: $alert-color;
                                     }
                                 }
+
+                                .subtitle-name {
+                                    margin-right: 5px;
+                                }
                             }
 
                             &:hover,
@@ -145,7 +149,7 @@
                         &.graded {
 
                             .menu-icon {
-                                @include right($baseline/2);
+                                @include right($baseline/2.5);
                                 position: absolute;
                                 bottom: ($baseline/2);
                                 color: $link-color;

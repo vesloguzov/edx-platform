@@ -4,17 +4,20 @@ Acceptance tests for the Import and Export pages
 from nose.plugins.attrib import attr
 from datetime import datetime
 
-from abc import abstractmethod
-from bok_choy.promise import EmptyPromise
+from flaky import flaky
 
-from .base_studio_test import StudioLibraryTest, StudioCourseTest
-from ...fixtures.course import XBlockFixtureDesc
-from ...pages.studio.import_export import ExportLibraryPage, ExportCoursePage, ImportLibraryPage, ImportCoursePage
-from ...pages.studio.library import LibraryEditPage
-from ...pages.studio.container import ContainerPage
-from ...pages.studio.overview import CourseOutlinePage
-from ...pages.lms.courseware import CoursewarePage
-from ...pages.lms.staff_view import StaffPage
+from abc import abstractmethod
+
+from common.test.acceptance.tests.studio.base_studio_test import StudioLibraryTest, StudioCourseTest
+from common.test.acceptance.pages.studio.import_export import (
+    ExportLibraryPage,
+    ExportCoursePage,
+    ImportLibraryPage,
+    ImportCoursePage)
+from common.test.acceptance.pages.studio.library import LibraryEditPage
+from common.test.acceptance.pages.studio.overview import CourseOutlinePage
+from common.test.acceptance.pages.lms.courseware import CoursewarePage
+from common.test.acceptance.pages.lms.staff_view import StaffPage
 
 
 class ExportTestMixin(object):
@@ -34,7 +37,7 @@ class ExportTestMixin(object):
         self.assertTrue(is_tarball_mimetype)
 
 
-@attr('shard_4')
+@attr(shard=7)
 class TestCourseExport(ExportTestMixin, StudioCourseTest):
     """
     Export tests for courses.
@@ -57,7 +60,7 @@ class TestCourseExport(ExportTestMixin, StudioCourseTest):
         self.assertEqual(self.export_page.header_text, 'Course Export')
 
 
-@attr('shard_4')
+@attr(shard=7)
 class TestLibraryExport(ExportTestMixin, StudioLibraryTest):
     """
     Export tests for libraries.
@@ -80,89 +83,7 @@ class TestLibraryExport(ExportTestMixin, StudioLibraryTest):
         self.assertEqual(self.export_page.header_text, 'Library Export')
 
 
-class BadExportMixin(object):
-    """
-    Test mixin for bad exports.
-    """
-    def test_bad_export(self):
-        """
-        Scenario: I should receive an error when attempting to export a broken course or library.
-            Given that I have a course or library
-            No error modal should be showing
-            When I click the export button
-            An error modal should be shown
-            When I click the modal's action button
-            I should arrive at the edit page for the broken component
-        """
-        # No error should be there to start.
-        self.assertFalse(self.export_page.is_error_modal_showing())
-        self.export_page.click_export()
-        self.export_page.wait_for_error_modal()
-        self.export_page.click_modal_button()
-        EmptyPromise(
-            lambda: self.edit_page.is_browser_on_page,
-            'Arrived at component edit page',
-            timeout=30
-        )
-
-
-@attr('shard_4')
-class TestLibraryBadExport(BadExportMixin, StudioLibraryTest):
-    """
-    Verify exporting a bad library causes an error.
-    """
-
-    def setUp(self):
-        """
-        Set up the pages and start the tests.
-        """
-        super(TestLibraryBadExport, self).setUp()
-        self.export_page = ExportLibraryPage(self.browser, self.library_key)
-        self.edit_page = LibraryEditPage(self.browser, self.library_key)
-        self.export_page.visit()
-
-    def populate_library_fixture(self, library_fixture):
-        """
-        Create a library with a bad component.
-        """
-        library_fixture.add_children(
-            XBlockFixtureDesc("problem", "Bad Problem", data='<'),
-        )
-
-
-@attr('shard_4')
-class TestCourseBadExport(BadExportMixin, StudioCourseTest):
-    """
-    Verify exporting a bad course causes an error.
-    """
-    ready_method = 'wait_for_component_menu'
-
-    def setUp(self):  # pylint: disable=arguments-differ
-        super(TestCourseBadExport, self).setUp()
-        self.export_page = ExportCoursePage(
-            self.browser,
-            self.course_info['org'], self.course_info['number'], self.course_info['run'],
-        )
-        self.edit_page = ContainerPage(self.browser, self.unit.locator)
-        self.export_page.visit()
-
-    def populate_course_fixture(self, course_fixture):
-        """
-        Populate the course with a unit that has a bad problem.
-        """
-        self.unit = XBlockFixtureDesc('vertical', 'Unit')
-        course_fixture.add_children(
-            XBlockFixtureDesc('chapter', 'Main Section').add_children(
-                XBlockFixtureDesc('sequential', 'Subsection').add_children(
-                    self.unit.add_children(
-                        XBlockFixtureDesc("problem", "Bad Problem", data='<')
-                    )
-                )
-            )
-        )
-
-
-@attr('shard_4')
+@attr(shard=7)
 class ImportTestMixin(object):
     """
     Tests to run for both course and library import pages.
@@ -277,7 +198,7 @@ class ImportTestMixin(object):
         self.import_page.wait_for_tasks(fail_on='Updating')
 
 
-@attr('shard_4')
+@attr(shard=7)
 class TestEntranceExamCourseImport(ImportTestMixin, StudioCourseTest):
     """
     Tests the Course import page
@@ -290,6 +211,7 @@ class TestEntranceExamCourseImport(ImportTestMixin, StudioCourseTest):
     def page_args(self):
         return [self.browser, self.course_info['org'], self.course_info['number'], self.course_info['run']]
 
+    @flaky  # TODO fix this, see TNL-6009
     def test_course_updated_with_entrance_exam(self):
         """
         Given that I visit an empty course before import
@@ -323,7 +245,7 @@ class TestEntranceExamCourseImport(ImportTestMixin, StudioCourseTest):
         )
 
 
-@attr('shard_4')
+@attr(shard=7)
 class TestCourseImport(ImportTestMixin, StudioCourseTest):
     """
     Tests the Course import page
@@ -336,6 +258,7 @@ class TestCourseImport(ImportTestMixin, StudioCourseTest):
     def page_args(self):
         return [self.browser, self.course_info['org'], self.course_info['number'], self.course_info['run']]
 
+    @flaky  # TNL-6042
     def test_course_updated(self):
         """
         Given that I visit an empty course before import
@@ -364,8 +287,36 @@ class TestCourseImport(ImportTestMixin, StudioCourseTest):
         """
         self.assertEqual(self.import_page.header_text, 'Course Import')
 
+    def test_multiple_course_import_message(self):
+        """
+        Given that I visit an empty course before import
+        When I visit the import page
+        And I upload a course with file name 2015.lzdwNM.tar.gz
+        Then timestamp is visible after course is updated successfully
+        And then I create a new course
+        When I visit the import page of this new course
+        Then timestamp is not visible
+        """
+        self.import_page.visit()
+        self.import_page.upload_tarball(self.tarball_name)
+        self.import_page.wait_for_upload()
+        self.assertTrue(self.import_page.is_timestamp_visible())
 
-@attr('shard_4')
+        # Create a new course and visit the import page
+        self.course_info = {
+            'org': 'orgX',
+            'number': self.unique_id + '_2',
+            'run': 'test_run_2',
+            'display_name': 'Test Course 2' + self.unique_id
+        }
+        self.install_course_fixture()
+        self.import_page = self.import_page_class(*self.page_args())
+        self.import_page.visit()
+        # As this is new course which is never import so timestamp should not present
+        self.assertFalse(self.import_page.is_timestamp_visible())
+
+
+@attr(shard=7)
 class TestLibraryImport(ImportTestMixin, StudioLibraryTest):
     """
     Tests the Library import page
@@ -378,6 +329,7 @@ class TestLibraryImport(ImportTestMixin, StudioLibraryTest):
     def page_args(self):
         return [self.browser, self.library_key]
 
+    @flaky  # TODO: SOL-430
     def test_library_updated(self):
         """
         Given that I visit an empty library

@@ -543,10 +543,8 @@ class SplitModuleTest(unittest.TestCase):
         """
         Clear persistence between each test.
         """
-        collection_prefix = SplitModuleTest.MODULESTORE['DOC_STORE_CONFIG']['collection'] + '.'
         if SplitModuleTest.modulestore:
-            for collection in ('active_versions', 'structures', 'definitions'):
-                modulestore().db.drop_collection(collection_prefix + collection)
+            modulestore()._drop_database(database=False, connections=False)  # pylint: disable=protected-access
             # drop the modulestore to force re init
             SplitModuleTest.modulestore = None
         super(SplitModuleTest, self).tearDown()
@@ -1198,6 +1196,10 @@ class SplitModuleItemTests(SplitModuleTest):
         self.assertEqual(len(matches), 3)
         matches = modulestore().get_items(locator, qualifiers={'category': 'garbage'})
         self.assertEqual(len(matches), 0)
+        matches = modulestore().get_items(locator, qualifiers={'name': 'chapter1'})
+        self.assertEqual(len(matches), 1)
+        matches = modulestore().get_items(locator, qualifiers={'name': ['chapter1', 'chapter2']})
+        self.assertEqual(len(matches), 2)
         matches = modulestore().get_items(
             locator,
             qualifiers={'category': 'chapter'},

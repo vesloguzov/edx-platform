@@ -3,42 +3,40 @@ metadata:
     display_name: Задача с динамической подсказкой
     markdown: !!null
 data: |
-        <problem>
-          <text>
+    <problem>
+      <text>
 
-            <h4>Задача с динамической подсказкой</h4>
+        <h4>Задача с динамической подсказкой</h4>
+        <p>Этот тип задачи демонстрирует возможность добавления динамических подсказок, с использованием функции <tt class="tt">hintfn</tt>.</p>
 
-            <p>
-              Этот тип задачи демонстрирует возможность добавления динамических подсказок, с использованием функции <tt class="tt">hintfn</tt>.
-            </p>
+        <customresponse cfn="test_str" expect="python">
         <script type="text/python" system_path="python_lib">
-        def test_str(expect, ans):
-          print expect, ans
-          ans = ans.strip("'")
-          ans = ans.strip('"')
-          return expect == ans.lower()
+    def test_str(expect, ans):
+      print expect, ans
+      ans = ans.strip("'")
+      ans = ans.strip('"')
+      return expect == ans.lower()
 
-        def hint_fn(answer_ids, student_answers, new_cmap, old_cmap):
-          aid = answer_ids[0]
-          ans = str(student_answers[aid]).lower()
-          print 'hint_fn called, ans=', ans
-          hint = ''
-          if 'java' in ans:
-            hint = 'только для кофеварок'
-          elif 'perl' in ans:
-            hint = 'не настолько'
-          elif 'pascal' in ans:
-            hint = 'только для обучения программированию'
-          elif 'fortran' in ans:
-            hint = 'был, когда-то'
-          if hint:
-            hint = "&lt;font color='blue'&gt;Подсказка: {0}&lt;/font&gt;".format(hint)
-          new_cmap.set_hint_and_mode(aid,hint,'always')
+    def hint_fn(answer_ids, student_answers, new_cmap, old_cmap):
+      aid = answer_ids[0]
+      ans = str(student_answers[aid]).lower()
+      print 'hint_fn called, ans=', ans
+      hint = ''
+      if 'java' in ans:
+        hint = 'только для кофеварок'
+      elif 'perl' in ans:
+        hint = 'не настолько'
+      elif 'pascal' in ans:
+        hint = 'только для обучения программированию'
+      elif 'fortran' in ans:
+        hint = 'был, когда-то'
+      if hint:
+        hint = "&lt;font color='blue'&gt;Подсказка: {0}&lt;/font&gt;".format(hint)
+      new_cmap.set_hint_and_mode(aid,hint,'always')
         </script>
-            <p>Какой самый лучший язык программирования на сегодня?</p>
-            <customresponse cfn="test_str" expect="python">
-              <textline correct_answer="python"/>
-              <hintgroup hintfn="hint_fn"/>
-            </customresponse>
-          </text>
-        </problem>
+          <label>Какой самый лучший язык программирования на сегодня?</label>
+          <textline correct_answer="python"/>
+          <hintgroup hintfn="hint_fn"/>
+        </customresponse>
+      </text>
+    </problem>

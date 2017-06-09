@@ -18,38 +18,40 @@ data: |
       <p>После добавления задачи не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
       <p>Вы можете использовать следующую задачу в качестве примера.</p>
 
+          <customresponse cfn="check_function">
       <script type="loncapa/python">
       <![CDATA[
       import json
-      def vglcfn(e, ans):
-        '''
-        par is a dictionary that contains two keys, "answer" and "state".
+      def check_function(e, ans):
+        """
+        "response" is a dictionary that contains two keys, "answer" and "state".
         The value of "answer" is the JSON string that "getGrade" returns.
         The value of "state" is the JSON string that "getState" returns.
-        Clicking either "Check" or "Save" registers the current state.
+        Clicking either "Submit" or "Save" registers the current state.
+        """
+        response = json.loads(ans)
 
-        '''
-        par = json.loads(ans)
         # You can use the value of the answer key to grade:
-        answer = json.loads(par["answer"])
-        return answer["cylinder"] and not answer["cube"]
-        '''
+        answer = json.loads(response["answer"])
+        return answer == "correct"
+
         # Or you can use the value of the state key to grade:
-        state = json.loads(par["state"])
-        selectedObjects = state["selectedObjects"]
-        return selectedObjects["cylinder"] and not selectedObjects["cube"]
-        '''
+        """
+        state = json.loads(response["state"])
+        return state["selectedChoice"] == "correct"
+        """
       ]]>
       </script>
-      <p>Кликайте по объектам на картинке, пока конус не станет жёлтым, а куб — голубым.</p>
-      <customresponse cfn="vglcfn">
-        <jsinput gradefn="WebGLDemo.getGrade"
-          get_statefn="WebGLDemo.getState"
-          set_statefn="WebGLDemo.setState"
-          initial_state='{"selectedObjects":{"cube":true,"cylinder":false}}'
-          width="400"
-          height="400"
-          html_file="https://studio.edx.org/c4x/edX/DemoX/asset/webGLDemo.html"
-          sop="false"/>
-      </customresponse>
+            <p>Данный абзац текста отображается перед IFrame.</p>
+            <jsinput
+              gradefn="JSInputDemo.getGrade"
+              get_statefn="JSInputDemo.getState"
+              set_statefn="JSInputDemo.setState"
+              initial_state='{"selectedChoice": "incorrect1", "availableChoices": ["incorrect1", "correct", "incorrect2"]}'
+              width="600"
+              height="100"
+              html_file="https://files.edx.org/custom-js-example/jsinput_example.html"
+              title="Dropdown with Dynamic Text"
+              sop="false"/>
+          </customresponse>
       </problem>

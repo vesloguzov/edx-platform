@@ -1,6 +1,9 @@
 """
 Utility functions for validating forms
 """
+from importlib import import_module
+import re
+
 from django import forms
 from django.forms import widgets
 from django.core.exceptions import ValidationError
@@ -14,8 +17,9 @@ from django.utils.translation import ugettext_lazy as _
 from django.template import loader
 
 from django.conf import settings
-from microsite_configuration import microsite
+from student.models import CourseEnrollmentAllowed
 from util.password_policy_validators import validate_password_strength
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 
 
 class PasswordResetFormNoActive(PasswordResetForm):
@@ -49,7 +53,7 @@ class PasswordResetFormNoActive(PasswordResetForm):
             email_template_name='registration/password_reset_email.html',
             use_https=False,
             token_generator=default_token_generator,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=configuration_helpers.get_value('email_from_address', settings.DEFAULT_FROM_EMAIL),
             request=None
     ):
         """
@@ -59,12 +63,12 @@ class PasswordResetFormNoActive(PasswordResetForm):
         # This import is here because we are copying and modifying the .save from Django 1.4.5's
         # django.contrib.auth.forms.PasswordResetForm directly, which has this import in this place.
         from django.core.mail import send_mail
-        mktg_site_name = microsite.get_value(
+        mktg_site_name = configuration_helpers.get_value(
             'MKTG_SITE_NAME',
-            microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+            configuration_helpers.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
         )
         if not domain_override:
-            site_name = microsite.get_value(
+            site_name = configuration_helpers.get_value(
                 'SITE_NAME',
                 settings.SITE_NAME
             )
@@ -80,7 +84,7 @@ class PasswordResetFormNoActive(PasswordResetForm):
                 'user': user,
                 'token': token_generator.make_token(user),
                 'protocol': 'https' if use_https else 'http',
-                'platform_name': microsite.get_value('platform_name', settings.PLATFORM_NAME)
+                'platform_name': configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME)
             }
             subject = loader.render_to_string(subject_template_name, context)
             # Email subject *must not* contain newlines
@@ -122,13 +126,14 @@ class AccountCreationForm(forms.Form):
         max_length=30,
         error_messages={
             "required": _USERNAME_TOO_SHORT_MSG,
-            "invalid": _("Usernames must contain only letters, numbers, underscores (_), and hyphens (-)."),
+            "invalid": _("Usernames can only contain Roman letters, western numerals (0-9), underscores (_), and "
+                         "hyphens (-)."),
             "min_length": _USERNAME_TOO_SHORT_MSG,
             "max_length": _("Username cannot be more than %(limit_value)s characters long"),
         }
     )
     email = forms.EmailField(
-        max_length=75,  # Limit per RFCs is 254, but User's email field in django 1.4 only takes 75
+        max_length=254,  # Limit per RFCs is 254
         error_messages={
             "required": _EMAIL_INVALID_MSG,
             "invalid": _EMAIL_INVALID_MSG,
@@ -189,6 +194,19 @@ class AccountCreationForm(forms.Form):
                                 "required": _("To enroll, you must follow the honor code.")
                             }
                         )
+                elif field_name == 'data_sharing_consent':
+                    if field_value == "required":
+                        self.fields[field_name] = TrueField(
+                            error_messages={
+                                "required": _(
+                                    "You must consent to data sharing to register."
+                                )
+                            }
+                        )
+                    elif field_value == 'optional':
+                        self.fields[field_name] = forms.BooleanField(
+                            required=False
+                        )
                 else:
                     required = field_value == "required"
                     min_length = 1 if field_name in ("gender", "level_of_education") else 2
@@ -225,6 +243,28 @@ class AccountCreationForm(forms.Form):
                 raise ValidationError(_("Password: ") + "; ".join(err.messages))
         return password
 
+    def clean_email(self):
+        """ Enforce email restrictions (if applicable) """
+        email = self.cleaned_data["email"]
+        if settings.REGISTRATION_EMAIL_PATTERNS_ALLOWED is not None:
+            # This Open edX instance has restrictions on what email addresses are allowed.
+            allowed_patterns = settings.REGISTRATION_EMAIL_PATTERNS_ALLOWED
+            # We append a '$' to the regexs to prevent the common mistake of using a
+            # pattern like '.*@edx\\.org' which would match 'bob@edx.org.badguy.com'
+            if not any(re.match(pattern + "$", email) for pattern in allowed_patterns):
+                # This email is not on the whitelist of allowed emails. Check if
+                # they may have been manually invited by an instructor and if not,
+                # reject the registration.
+                if not CourseEnrollmentAllowed.objects.filter(email=email).exists():
+                    raise ValidationError(_("Unauthorized email address."))
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationError(
+                _(
+                    "It looks like {email} belongs to an existing account. Try again with a different email address."
+                ).format(email=email)
+            )
+        return email
+
     def clean_year_of_birth(self):
         """
         Parse year_of_birth to an integer, but just use None instead of raising
@@ -246,3 +286,18 @@ class AccountCreationForm(forms.Form):
             for key, value in self.cleaned_data.items()
             if key in self.extended_profile_fields and value is not None
         }
+
+
+def get_registration_extension_form(*args, **kwargs):
+    """
+    Convenience function for getting the custom form set in settings.REGISTRATION_EXTENSION_FORM.
+
+    An example form app for this can be found at http://github.com/open-craft/custom-form-app
+    """
+    if not settings.FEATURES.get("ENABLE_COMBINED_LOGIN_REGISTRATION"):
+        return None
+    if not getattr(settings, 'REGISTRATION_EXTENSION_FORM', None):
+        return None
+    module, klass = settings.REGISTRATION_EXTENSION_FORM.rsplit('.', 1)
+    module = import_module(module)
+    return getattr(module, klass)(*args, **kwargs)

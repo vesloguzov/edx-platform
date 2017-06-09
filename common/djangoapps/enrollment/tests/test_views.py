@@ -9,6 +9,7 @@ import datetime
 import ddt
 from django.core.cache import cache
 from mock import patch
+from nose.plugins.attrib import attr
 from django.test import Client
 from django.core.handlers.wsgi import WSGIRequest
 from django.core.urlresolvers import reverse
@@ -21,7 +22,6 @@ from django.test.utils import override_settings
 import pytz
 
 from course_modes.models import CourseMode
-from embargo.models import CountryAccessRule, Country, RestrictedCourse
 from enrollment.views import EnrollmentUserThrottle
 from util.models import RateLimitConfiguration
 from util.testing import UrlResetMixin
@@ -33,7 +33,8 @@ from openedx.core.lib.django_test_client_utils import get_absolute_url
 from student.models import CourseEnrollment
 from student.roles import CourseStaffRole
 from student.tests.factories import AdminFactory, CourseModeFactory, UserFactory
-from embargo.test_utils import restrict_course
+from openedx.core.djangoapps.embargo.models import CountryAccessRule, Country, RestrictedCourse
+from openedx.core.djangoapps.embargo.test_utils import restrict_course
 
 
 class EnrollmentTestMixin(object):
@@ -125,6 +126,7 @@ class EnrollmentTestMixin(object):
         self.assertEqual(actual_mode, expected_mode)
 
 
+@attr(shard=3)
 @override_settings(EDX_API_KEY="i am a key")
 @ddt.ddt
 @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
@@ -139,6 +141,8 @@ class EnrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase, APITestCase):
     OTHER_USERNAME = "Jane"
     OTHER_EMAIL = "jane@example.com"
 
+    ENABLED_CACHES = ['default', 'mongo_metadata_inheritance', 'loc_cache']
+
     def setUp(self):
         """ Create a course and user, then log in. """
         super(EnrollmentTest, self).setUp()
@@ -148,7 +152,7 @@ class EnrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase, APITestCase):
         self.rate_limit_config.save()
 
         throttle = EnrollmentUserThrottle()
-        self.rate_limit, rate_duration = throttle.parse_rate(throttle.rate)
+        self.rate_limit, __ = throttle.parse_rate(throttle.rate)
 
         # Pass emit_signals when creating the course so it would be cached
         # as a CourseOverview.
@@ -187,8 +191,13 @@ class EnrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase, APITestCase):
             )
 
         # Create an enrollment
-        self.assert_enrollment_status()
+        resp = self.assert_enrollment_status()
 
+        # Verify that the response contains the correct course_name
+        data = json.loads(resp.content)
+        self.assertEqual(self.course.display_name_with_default, data['course_details']['course_name'])
+
+        # Verify that the enrollment was created correctly
         self.assertTrue(CourseEnrollment.is_enrolled(self.user, self.course.id))
         course_mode, is_active = CourseEnrollment.enrollment_mode_for_user(self.user, self.course.id)
         self.assertTrue(is_active)
@@ -208,6 +217,7 @@ class EnrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase, APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         data = json.loads(resp.content)
         self.assertEqual(unicode(self.course.id), data['course_details']['course_id'])
+        self.assertEqual(self.course.display_name_with_default, data['course_details']['course_name'])
         self.assertEqual(CourseMode.DEFAULT_MODE_SLUG, data['mode'])
         self.assertTrue(data['is_active'])
 
@@ -325,8 +335,8 @@ class EnrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = json.loads(response.content)
         self.assertItemsEqual(
-            [enrollment['course_details']['course_id'] for enrollment in data],
-            [unicode(course.id) for course in courses]
+            [(datum['course_details']['course_id'], datum['course_details']['course_name']) for datum in data],
+            [(unicode(course.id), course.display_name_with_default) for course in courses]
         )
 
     def test_enrollment_list_permissions(self):
@@ -398,6 +408,7 @@ class EnrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase, APITestCase):
             mode_slug=CourseMode.HONOR,
             mode_display_name=CourseMode.HONOR,
             sku='123',
+            bulk_sku="BULK123"
         )
         resp = self.client.get(
             reverse('courseenrollmentdetails', kwargs={"course_id": unicode(self.course.id)})
@@ -406,9 +417,11 @@ class EnrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase, APITestCase):
 
         data = json.loads(resp.content)
         self.assertEqual(unicode(self.course.id), data['course_id'])
+        self.assertEqual(self.course.display_name_with_default, data['course_name'])
         mode = data['course_modes'][0]
         self.assertEqual(mode['slug'], CourseMode.HONOR)
         self.assertEqual(mode['sku'], '123')
+        self.assertEqual(mode['bulk_sku'], 'BULK123')
         self.assertEqual(mode['name'], CourseMode.HONOR)
 
     def test_get_course_details_with_credit_course(self):
@@ -537,7 +550,7 @@ class EnrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase, APITestCase):
             mode_display_name=CourseMode.DEFAULT_MODE_SLUG,
         )
 
-        for attempt in xrange(self.rate_limit + 10):
+        for __ in xrange(self.rate_limit + 10):
             self.assert_enrollment_status(as_server=True)
 
     def test_create_enrollment_with_mode(self):
@@ -879,6 +892,37 @@ class EnrollmentTest(EnrollmentTestMixin, ModuleStoreTestCase, APITestCase):
         self.assert_enrollment_status(username='fake-user', expected_status=status.HTTP_406_NOT_ACCEPTABLE,
                                       as_server=True)
 
+    def test_update_enrollment_with_expired_mode_throws_error(self):
+        """Verify that if verified mode is expired than it's enrollment cannot be updated. """
+        for mode in [CourseMode.DEFAULT_MODE_SLUG, CourseMode.VERIFIED]:
+            CourseModeFactory.create(
+                course_id=self.course.id,
+                mode_slug=mode,
+                mode_display_name=mode,
+            )
+
+        # Create an enrollment
+        self.assert_enrollment_status(as_server=True)
+
+        # Check that the enrollment is the default.
+        self.assertTrue(CourseEnrollment.is_enrolled(self.user, self.course.id))
+        course_mode, is_active = CourseEnrollment.enrollment_mode_for_user(self.user, self.course.id)
+        self.assertTrue(is_active)
+        self.assertEqual(course_mode, CourseMode.DEFAULT_MODE_SLUG)
+
+        # Change verified mode expiration.
+        mode = CourseMode.objects.get(course_id=self.course.id, mode_slug=CourseMode.VERIFIED)
+        mode.expiration_datetime = datetime.datetime(year=1970, month=1, day=1, tzinfo=pytz.utc)
+        mode.save()
+        self.assert_enrollment_status(
+            as_server=True,
+            mode=CourseMode.VERIFIED,
+            expected_status=status.HTTP_400_BAD_REQUEST
+        )
+        course_mode, is_active = CourseEnrollment.enrollment_mode_for_user(self.user, self.course.id)
+        self.assertTrue(is_active)
+        self.assertEqual(course_mode, CourseMode.DEFAULT_MODE_SLUG)
+
 
 @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 class EnrollmentEmbargoTest(EnrollmentTestMixin, UrlResetMixin, ModuleStoreTestCase):
@@ -888,10 +932,12 @@ class EnrollmentEmbargoTest(EnrollmentTestMixin, UrlResetMixin, ModuleStoreTestC
     EMAIL = "bob@example.com"
     PASSWORD = "edx"
 
+    URLCONF_MODULES = ['openedx.core.djangoapps.embargo']
+
     @patch.dict(settings.FEATURES, {'EMBARGO': True})
     def setUp(self):
         """ Create a course and user, then log in. """
-        super(EnrollmentEmbargoTest, self).setUp('embargo')
+        super(EnrollmentEmbargoTest, self).setUp()
 
         self.course = CourseFactory.create()
         # Load a CourseOverview. This initial load should result in a cache

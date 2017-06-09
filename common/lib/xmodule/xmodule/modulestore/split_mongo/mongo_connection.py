@@ -21,16 +21,18 @@ except ImportError:
     DJANGO_AVAILABLE = False
 
 import dogstats_wrapper as dog_stats_api
+import logging
 
 from contracts import check, new_contract
 from mongodb_proxy import autoretry_read
 from xmodule.exceptions import HeartbeatFailure
 from xmodule.modulestore import BlockData
 from xmodule.modulestore.split_mongo import BlockKey
-from xmodule.mongo_connection import connect_to_mongodb
+from xmodule.mongo_utils import connect_to_mongodb, create_collection_index
 
 
 new_contract('BlockData', BlockData)
+log = logging.getLogger(__name__)
 
 
 def get_cache(alias):
@@ -315,7 +317,7 @@ class MongoConnection(object):
         """
         Get the structure from the persistence mechanism whose id is the given key.
 
-        This method will use a cached version of the structure if it is availble.
+        This method will use a cached version of the structure if it is available.
         """
         with TIMER.timer("get_structure", course_context) as tagger_get_structure:
             cache = CourseStructureCache()
@@ -328,6 +330,12 @@ class MongoConnection(object):
 
                 with TIMER.timer("get_structure.find_one", course_context) as tagger_find_one:
                     doc = self.structures.find_one({'_id': key})
+                    if doc is None:
+                        log.warning(
+                            "doc was None when attempting to retrieve structure for item with key %s",
+                            unicode(key)
+                        )
+                        return None
                     tagger_find_one.measure("blocks", len(doc['blocks']))
                     structure = structure_from_mongo(doc, course_context)
                     tagger_find_one.sample_rate = 1
@@ -349,6 +357,26 @@ class MongoConnection(object):
             docs = [
                 structure_from_mongo(structure, course_context)
                 for structure in self.structures.find({'_id': {'$in': ids}})
+            ]
+            tagger.measure("structures", len(docs))
+            return docs
+
+    @autoretry_read()
+    def find_course_blocks_by_id(self, ids, course_context=None):
+        """
+        Find all structures that specified in `ids`. Among the blocks only return block whose type is `course`.
+
+        Arguments:
+            ids (list): A list of structure ids
+        """
+        with TIMER.timer("find_course_blocks_by_id", course_context) as tagger:
+            tagger.measure("requested_ids", len(ids))
+            docs = [
+                structure_from_mongo(structure, course_context)
+                for structure in self.structures.find(
+                    {'_id': {'$in': ids}},
+                    {'blocks': {'$elemMatch': {'block_type': 'course'}}, 'root': 1}
+                )
             ]
             tagger.measure("structures", len(docs))
             return docs
@@ -526,7 +554,8 @@ class MongoConnection(object):
         This method is intended for use by tests and administrative commands, and not
         to be run during server startup.
         """
-        self.course_index.create_index(
+        create_collection_index(
+            self.course_index,
             [
                 ('org', pymongo.ASCENDING),
                 ('course', pymongo.ASCENDING),
@@ -535,3 +564,43 @@ class MongoConnection(object):
             unique=True,
             background=True
         )
+
+    def close_connections(self):
+        """
+        Closes any open connections to the underlying databases
+        """
+        self.database.connection.close()
+
+    def mongo_wire_version(self):
+        """
+        Returns the wire version for mongo. Only used to unit tests which instrument the connection.
+        """
+        return self.database.connection.max_wire_version
+
+    def _drop_database(self, database=True, collections=True, connections=True):
+        """
+        A destructive operation to drop the underlying database and close all connections.
+        Intended to be used by test code for cleanup.
+
+        If database is True, then this should drop the entire database.
+        Otherwise, if collections is True, then this should drop all of the collections used
+        by this modulestore.
+        Otherwise, the modulestore should remove all data from the collections.
+
+        If connections is True, then close the connection to the database as well.
+        """
+        connection = self.database.connection
+
+        if database:
+            connection.drop_database(self.database.name)
+        elif collections:
+            self.course_index.drop()
+            self.structures.drop()
+            self.definitions.drop()
+        else:
+            self.course_index.remove({})
+            self.structures.remove({})
+            self.definitions.remove({})
+
+        if connections:
+            connection.close()

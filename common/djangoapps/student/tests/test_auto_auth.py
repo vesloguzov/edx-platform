@@ -14,12 +14,18 @@ import ddt
 import json
 
 
+class AutoAuthTestCase(UrlResetMixin, TestCase):
+    """
+    Base class for AutoAuth Tests that properly resets the urls.py
+    """
+    URLCONF_MODULES = ['student.urls']
+
+
 @ddt.ddt
-class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
+class AutoAuthEnabledTestCase(AutoAuthTestCase):
     """
     Tests for the Auto auth view that we have for load testing.
     """
-
     COURSE_ID_MONGO = 'edX/Test101/2014_Spring'
     COURSE_ID_SPLIT = 'course-v1:edX+Test101+2014_Spring'
     COURSE_IDS_DDT = (
@@ -59,6 +65,7 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
         Test to make sure multiple users are created.
         """
         self._auto_auth()
+        self.client.logout()
         self._auto_auth()
         self.assertEqual(User.objects.all().count(), 2)
 
@@ -138,6 +145,7 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
         self.assertEqual(len(user_roles), 1)
         self.assertEqual(user_roles[0], course_roles[FORUM_ROLE_STUDENT])
 
+        self.client.logout()
         self._auto_auth({'username': 'a_moderator', 'course_id': course_id, 'roles': 'Moderator'})
         user = User.objects.get(username='a_moderator')
         user_roles = user.roles.all()
@@ -147,6 +155,7 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
                 course_roles[FORUM_ROLE_MODERATOR]]))
 
         # check multiple roles work.
+        self.client.logout()
         self._auto_auth({
             'username': 'an_admin', 'course_id': course_id,
             'roles': '{},{}'.format(FORUM_ROLE_MODERATOR, FORUM_ROLE_ADMINISTRATOR)
@@ -216,6 +225,17 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
 
         self.assertTrue(response.url.endswith(url_pattern))  # pylint: disable=no-member
 
+    def test_redirect_to_specified(self):
+        # Create user and redirect to specified url
+        url_pattern = '/u/test#about_me'
+        response = self._auto_auth({
+            'username': 'test',
+            'redirect_to': url_pattern,
+            'staff': 'true',
+        }, status_code=302)
+
+        self.assertTrue(response.url.endswith(url_pattern))  # pylint: disable=no-member
+
     def _auto_auth(self, params=None, status_code=None, **kwargs):
         """
         Make a request to the auto-auth end-point and check
@@ -242,7 +262,7 @@ class AutoAuthEnabledTestCase(UrlResetMixin, TestCase):
         return response
 
 
-class AutoAuthDisabledTestCase(UrlResetMixin, TestCase):
+class AutoAuthDisabledTestCase(AutoAuthTestCase):
     """
     Test that the page is inaccessible with default settings
     """

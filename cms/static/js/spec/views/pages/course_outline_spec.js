@@ -1,15 +1,15 @@
-define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/utils/view_utils", "js/views/pages/course_outline",
-        "js/models/xblock_outline_info", "js/utils/date_utils", "js/spec_helpers/edit_helpers",
-        "common/js/spec_helpers/template_helpers"],
-    function($, AjaxHelpers, ViewUtils, CourseOutlinePage, XBlockOutlineInfo, DateUtils, EditHelpers, TemplateHelpers) {
-
-        describe("CourseOutlinePage", function() {
+define(['jquery', 'edx-ui-toolkit/js/utils/spec-helpers/ajax-helpers', 'common/js/components/utils/view_utils',
+        'js/views/pages/course_outline', 'js/models/xblock_outline_info', 'js/utils/date_utils',
+        'js/spec_helpers/edit_helpers', 'common/js/spec_helpers/template_helpers', 'js/models/course'],
+    function($, AjaxHelpers, ViewUtils, CourseOutlinePage, XBlockOutlineInfo, DateUtils,
+             EditHelpers, TemplateHelpers, Course) {
+        describe('CourseOutlinePage', function() {
             var createCourseOutlinePage, displayNameInput, model, outlinePage, requests,
                 getItemsOfType, getItemHeaders, verifyItemsExpanded, expandItemsAndVerifyState,
-                collapseItemsAndVerifyState, createMockCourseJSON, createMockSectionJSON, createMockSubsectionJSON,
-                verifyTypePublishable, mockCourseJSON, mockEmptyCourseJSON, mockSingleSectionCourseJSON,
-                createMockVerticalJSON, createMockIndexJSON, mockCourseEntranceExamJSON
-                mockOutlinePage = readFixtures('mock/mock-course-outline-page.underscore'),
+                collapseItemsAndVerifyState, selectBasicSettings, selectAdvancedSettings, createMockCourseJSON,
+                createMockSectionJSON, createMockSubsectionJSON, verifyTypePublishable, mockCourseJSON,
+                mockEmptyCourseJSON, mockSingleSectionCourseJSON, createMockVerticalJSON, createMockIndexJSON,
+                mockCourseEntranceExamJSON, mockOutlinePage = readFixtures('mock/mock-course-outline-page.underscore'),
                 mockRerunNotification = readFixtures('mock/mock-course-rerun-notification.underscore');
 
             createMockCourseJSON = function(options, children) {
@@ -65,8 +65,12 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     published: true,
                     edited_on: 'Jul 02, 2014 at 20:56 UTC',
                     edited_by: 'MockUser',
-                    course_graders: ["Lab", "Howework"],
+                    course_graders: ['Lab', 'Howework'],
                     has_explicit_staff_lock: false,
+                    is_prereq: false,
+                    prereqs: [],
+                    prereq: '',
+                    prereq_min_score: '',
                     child_info: {
                         category: 'vertical',
                         display_name: 'Unit',
@@ -91,16 +95,16 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
             };
 
             createMockIndexJSON = function(option) {
-                if(option){
+                if (option) {
                     return JSON.stringify({
-                        "developer_message" : "Course has been successfully reindexed.",
-                        "user_message": "Course has been successfully reindexed."
+                        'developer_message': 'Course has been successfully reindexed.',
+                        'user_message': 'Course has been successfully reindexed.'
                     });
                 }
                 else {
                     return JSON.stringify({
-                        "developer_message" : "Could not reindex course.",
-                        "user_message": "Could not reindex course."
+                        'developer_message': 'Could not reindex course.',
+                        'user_message': 'Could not reindex course.'
                     });
                 }
             };
@@ -132,9 +136,17 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 verifyItemsExpanded(type, false);
             };
 
+            selectBasicSettings = function() {
+                this.$(".modal-section .settings-tab-button[data-tab='basic']").click();
+            };
+
+            selectAdvancedSettings = function() {
+                this.$(".modal-section .settings-tab-button[data-tab='advanced']").click();
+            };
+
             createCourseOutlinePage = function(test, courseJSON, createOnly) {
                 requests = AjaxHelpers.requests(test);
-                model = new XBlockOutlineInfo(courseJSON, { parse: true });
+                model = new XBlockOutlineInfo(courseJSON, {parse: true});
                 outlinePage = new CourseOutlinePage({
                     model: model,
                     el: $('#content')
@@ -145,17 +157,17 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 return outlinePage;
             };
 
-            verifyTypePublishable = function (type, getMockCourseJSON) {
+            verifyTypePublishable = function(type, getMockCourseJSON) {
                 var createCourseOutlinePageAndShowUnit, verifyPublishButton;
 
-                createCourseOutlinePageAndShowUnit = function (test, courseJSON, createOnly) {
+                createCourseOutlinePageAndShowUnit = function(test, courseJSON, createOnly) {
                     outlinePage = createCourseOutlinePage.apply(this, arguments);
                     if (type === 'unit') {
                         expandItemsAndVerifyState('subsection');
                     }
                 };
 
-                verifyPublishButton = function (test, courseJSON, createOnly) {
+                verifyPublishButton = function(test, courseJSON, createOnly) {
                     createCourseOutlinePageAndShowUnit.apply(this, arguments);
                     expect(getItemHeaders(type).find('.publish-button')).toExist();
                 };
@@ -166,9 +178,9 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     });
                     createCourseOutlinePageAndShowUnit(this, mockCourseJSON);
                     getItemHeaders(type).find('.publish-button').click();
-                    $(".wrapper-modal-window .action-publish").click();
+                    $('.wrapper-modal-window .action-publish').click();
                     AjaxHelpers.expectJsonRequest(requests, 'POST', '/xblock/mock-' + type, {
-                        publish : 'make_public'
+                        publish: 'make_public'
                     });
                     expect(requests[0].requestHeaders['X-HTTP-Method-Override']).toBe('PATCH');
                     AjaxHelpers.respondWithJson(requests, {});
@@ -209,14 +221,24 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 });
             };
 
-            beforeEach(function () {
+            beforeEach(function() {
+                window.course = new Course({
+                    id: '5',
+                    name: 'Course Name',
+                    url_name: 'course_name',
+                    org: 'course_org',
+                    num: 'course_num',
+                    revision: 'course_rev'
+                });
+
                 EditHelpers.installMockAnalytics();
                 EditHelpers.installViewTemplates();
                 TemplateHelpers.installTemplates([
                     'course-outline', 'xblock-string-field-editor', 'modal-button',
                     'basic-modal', 'course-outline-modal', 'release-date-editor',
                     'due-date-editor', 'grading-editor', 'publish-editor',
-                    'staff-lock-editor', 'timed-examination-preference-editor'
+                    'staff-lock-editor', 'content-visibility-editor', 'settings-modal-tabs',
+                    'timed-examination-preference-editor', 'access-editor'
                 ]);
                 appendSetFixtures(mockOutlinePage);
                 mockCourseJSON = createMockCourseJSON({}, [
@@ -238,15 +260,25 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     ])
                 ]);
 
+                // Create a mock Course object as the JS now expects it.
+                window.course = new Course({
+                    id: '333',
+                    name: 'Course Name',
+                    url_name: 'course_name',
+                    org: 'course_org',
+                    num: 'course_num',
+                    revision: 'course_rev'
+                });
             });
 
-            afterEach(function () {
+            afterEach(function() {
                 EditHelpers.removeMockAnalytics();
                 EditHelpers.cancelModalIfShowing();
                 // Clean up after the $.datepicker
-                $("#start_date").datepicker( "destroy" );
-                $("#due_date").datepicker( "destroy" );
+                $('#start_date').datepicker('destroy');
+                $('#due_date').datepicker('destroy');
                 $('.ui-datepicker').remove();
+                delete window.course;
             });
 
             describe('Initial display', function() {
@@ -276,8 +308,8 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 });
             });
 
-            describe("Rerun notification", function () {
-                it("can be dismissed", function () {
+            describe('Rerun notification', function() {
+                it('can be dismissed', function() {
                     appendSetFixtures(mockRerunNotification);
                     createCourseOutlinePage(this, mockEmptyCourseJSON);
                     expect($('.wrapper-alert-announcement')).not.toHaveClass('is-hidden');
@@ -288,7 +320,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 });
             });
 
-            describe("Button bar", function() {
+            describe('Button bar', function() {
                 it('can add a section', function() {
                     createCourseOutlinePage(this, mockEmptyCourseJSON);
                     outlinePage.$('.nav-actions .button-new').click();
@@ -298,8 +330,8 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                         'parent_locator': 'mock-course'
                     });
                     AjaxHelpers.respondWithJson(requests, {
-                        "locator": 'mock-section',
-                        "courseKey": 'slashes:MockCourse'
+                        'locator': 'mock-section',
+                        'courseKey': 'slashes:MockCourse'
                     });
                     AjaxHelpers.expectJsonRequest(requests, 'GET', '/xblock/outline/mock-course');
                     AjaxHelpers.respondWithJson(requests, mockSingleSectionCourseJSON);
@@ -317,8 +349,8 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                         'parent_locator': 'mock-course'
                     });
                     AjaxHelpers.respondWithJson(requests, {
-                        "locator": 'mock-section-2',
-                        "courseKey": 'slashes:MockCourse'
+                        'locator': 'mock-section-2',
+                        'courseKey': 'slashes:MockCourse'
                     });
                     // Expect the UI to just fetch the new section and repaint it
                     AjaxHelpers.expectJsonRequest(requests, 'GET', '/xblock/outline/mock-section-2');
@@ -341,11 +373,11 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
 
                 it('can start reindex of a course', function() {
                     createCourseOutlinePage(this, mockSingleSectionCourseJSON);
-                    var reindexSpy = spyOn(outlinePage, 'startReIndex').andCallThrough();
-                    var successSpy = spyOn(outlinePage, 'onIndexSuccess').andCallThrough();
+                    var reindexSpy = spyOn(outlinePage, 'startReIndex').and.callThrough();
+                    var successSpy = spyOn(outlinePage, 'onIndexSuccess').and.callThrough();
                     var reindexButton = outlinePage.$('.button.button-reindex');
                     var test_url = '/course/5/search_reindex';
-                    reindexButton.attr('href', test_url)
+                    reindexButton.attr('href', test_url);
                     reindexButton.trigger('click');
                     AjaxHelpers.expectJsonRequest(requests, 'GET', test_url);
                     AjaxHelpers.respondWithJson(requests, createMockIndexJSON(true));
@@ -355,11 +387,11 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
 
                 it('shows an error message when reindexing fails', function() {
                     createCourseOutlinePage(this, mockSingleSectionCourseJSON);
-                    var reindexSpy = spyOn(outlinePage, 'startReIndex').andCallThrough();
-                    var errorSpy = spyOn(outlinePage, 'onIndexError').andCallThrough();
+                    var reindexSpy = spyOn(outlinePage, 'startReIndex').and.callThrough();
+                    var errorSpy = spyOn(outlinePage, 'onIndexError').and.callThrough();
                     var reindexButton = outlinePage.$('.button.button-reindex');
                     var test_url = '/course/5/search_reindex';
-                    reindexButton.attr('href', test_url)
+                    reindexButton.attr('href', test_url);
                     reindexButton.trigger('click');
                     AjaxHelpers.expectJsonRequest(requests, 'GET', test_url);
                     AjaxHelpers.respondWithError(requests, 500, createMockIndexJSON(false));
@@ -368,7 +400,71 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 });
             });
 
-            describe("Empty course", function() {
+            describe('Duplicate an xblock', function() {
+                var duplicateXBlockWithSuccess;
+
+                duplicateXBlockWithSuccess = function(xblockLocator, parentLocator, xblockType, xblockIndex) {
+                    getItemHeaders(xblockType).find('.duplicate-button')[xblockIndex].click();
+
+                    // verify content of request
+                    AjaxHelpers.expectJsonRequest(requests, 'POST', '/xblock/', {
+                        duplicate_source_locator: xblockLocator,
+                        parent_locator: parentLocator
+                    });
+
+                    // send the response
+                    AjaxHelpers.respondWithJson(requests, {
+                        locator: 'locator-duplicated-xblock'
+                    });
+                };
+
+                it('section can be duplicated', function() {
+                    createCourseOutlinePage(this, mockCourseJSON);
+                    expect(outlinePage.$('.list-sections li.outline-section').length).toEqual(1);
+                    expect(getItemsOfType('section').length, 1);
+                    duplicateXBlockWithSuccess('mock-section', 'mock-course', 'section', 0);
+                    expect(getItemHeaders('section').length, 2);
+                });
+
+                it('subsection can be duplicated', function() {
+                    createCourseOutlinePage(this, mockCourseJSON);
+                    expect(getItemsOfType('subsection').length, 1);
+                    duplicateXBlockWithSuccess('mock-subsection', 'mock-section', 'subsection', 0);
+                    expect(getItemHeaders('subsection').length, 2);
+                });
+
+                it('unit can be duplicated', function() {
+                    createCourseOutlinePage(this, mockCourseJSON);
+                    expandItemsAndVerifyState('subsection');
+                    expect(getItemsOfType('unit').length, 1);
+                    duplicateXBlockWithSuccess('mock-unit', 'mock-subsection', 'unit', 0);
+                    expect(getItemHeaders('unit').length, 2);
+                });
+
+                it('shows a notification when duplicating', function() {
+                    var notificationSpy = EditHelpers.createNotificationSpy();
+                    createCourseOutlinePage(this, mockCourseJSON);
+                    getItemHeaders('section').find('.duplicate-button').first()
+                        .click();
+                    EditHelpers.verifyNotificationShowing(notificationSpy, /Duplicating/);
+                    AjaxHelpers.respondWithJson(requests, {locator: 'locator-duplicated-xblock'});
+                    EditHelpers.verifyNotificationHidden(notificationSpy);
+                });
+
+                it('does not duplicate an xblock upon failure', function() {
+                    var notificationSpy = EditHelpers.createNotificationSpy();
+                    createCourseOutlinePage(this, mockCourseJSON);
+                    expect(getItemHeaders('section').length, 1);
+                    getItemHeaders('section').find('.duplicate-button').first()
+                        .click();
+                    EditHelpers.verifyNotificationShowing(notificationSpy, /Duplicating/);
+                    AjaxHelpers.respondWithError(requests);
+                    expect(getItemHeaders('section').length, 2);
+                    EditHelpers.verifyNotificationShowing(notificationSpy, /Duplicating/);
+                });
+            });
+
+            describe('Empty course', function() {
                 it('shows an empty course message initially', function() {
                     createCourseOutlinePage(this, mockEmptyCourseJSON);
                     expect(outlinePage.$('.no-content')).not.toHaveClass('is-hidden');
@@ -384,8 +480,8 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                         'parent_locator': 'mock-course'
                     });
                     AjaxHelpers.respondWithJson(requests, {
-                        "locator": "mock-section",
-                        "courseKey": "slashes:MockCourse"
+                        'locator': 'mock-section',
+                        'courseKey': 'slashes:MockCourse'
                     });
                     AjaxHelpers.expectJsonRequest(requests, 'GET', '/xblock/outline/mock-course');
                     AjaxHelpers.respondWithJson(requests, mockSingleSectionCourseJSON);
@@ -409,7 +505,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 });
             });
 
-            describe("Section", function() {
+            describe('Section', function() {
                 var getDisplayNameWrapper;
 
                 getDisplayNameWrapper = function() {
@@ -465,13 +561,12 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                         'parent_locator': 'mock-section'
                     });
                     AjaxHelpers.respondWithJson(requests, {
-                        "locator": "new-mock-subsection",
-                        "courseKey": "slashes:MockCourse"
+                        'locator': 'new-mock-subsection',
+                        'courseKey': 'slashes:MockCourse'
                     });
                     // Note: verification of the server response and the UI's handling of it
                     // is handled in the acceptance tests.
                     AjaxHelpers.expectJsonRequest(requests, 'GET', '/xblock/outline/mock-section');
-
                 });
 
                 it('can be renamed inline', function() {
@@ -485,7 +580,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     // This is the response for the change operation.
                     AjaxHelpers.respondWithJson(requests, { });
                     // This is the response for the subsequent fetch operation.
-                    AjaxHelpers.respondWithJson(requests, {"display_name":  updatedDisplayName});
+                    AjaxHelpers.respondWithJson(requests, {'display_name': updatedDisplayName});
                     EditHelpers.verifyInlineEditChange(displayNameWrapper, updatedDisplayName);
                     sectionModel = outlinePage.model.get('child_info').children[0];
                     expect(sectionModel.get('display_name')).toBe(updatedDisplayName);
@@ -503,18 +598,20 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     outlinePage.$('.section-header-actions .configure-button').click();
                     $("#start_date").val("2015-1-2");
                     // Section release date can't be cleared.
-                    expect($(".wrapper-modal-window .action-clear")).not.toExist();
+                    expect($('.wrapper-modal-window .action-clear')).not.toExist();
 
                     // Section does not contain due_date or grading type selector
-                    expect($("due_date")).not.toExist();
-                    expect($("grading_format")).not.toExist();
+                    expect($('due_date')).not.toExist();
+                    expect($('grading_format')).not.toExist();
 
-                    // Staff lock controls are always visible
-                    expect($("#staff_lock")).toExist();
-                    $(".wrapper-modal-window .action-save").click();
+                    // Staff lock controls are always visible on the advanced tab
+                    selectAdvancedSettings();
+                    expect($('#staff_lock')).toExist();
+                    selectBasicSettings();
+                    $('.wrapper-modal-window .action-save').click();
                     AjaxHelpers.expectJsonRequest(requests, 'POST', '/xblock/mock-section', {
-                        "metadata":{
-                            "start":"2015-01-02T00:00:00.000Z"
+                        'metadata': {
+                            'start': '2015-01-02T00:00:00.000Z'
                         }
                     });
                     expect(requests[0].requestHeaders['X-HTTP-Method-Override']).toBe('PATCH');
@@ -522,22 +619,22 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     // This is the response for the change operation.
                     AjaxHelpers.respondWithJson(requests, {});
                     var mockResponseSectionJSON = createMockSectionJSON({
-                            release_date: 'Jan 02, 2015 at 00:00 UTC'
-                        }, [
-                            createMockSubsectionJSON({}, [
-                                createMockVerticalJSON({
-                                    has_changes: true,
-                                    published: false
-                                })
-                            ])
-                        ]);
+                        release_date: 'Jan 02, 2015 at 00:00 UTC'
+                    }, [
+                        createMockSubsectionJSON({}, [
+                            createMockVerticalJSON({
+                                has_changes: true,
+                                published: false
+                            })
+                        ])
+                    ]);
                     AjaxHelpers.expectJsonRequest(requests, 'GET', '/xblock/outline/mock-section');
                     AjaxHelpers.respondWithJson(requests, mockResponseSectionJSON);
                     AjaxHelpers.expectNoRequests(requests);
-                    expect($(".outline-section .status-release-value")).toContainText("Jan 02, 2015 at 00:00 UTC");
+                    expect($('.outline-section .status-release-value')).toContainText('Jan 02, 2015 at 00:00 UTC');
                 });
 
-                verifyTypePublishable('section', function (options) {
+                verifyTypePublishable('section', function(options) {
                     return createMockCourseJSON({}, [
                         createMockSectionJSON(options, [
                             createMockSubsectionJSON({}, [
@@ -547,7 +644,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     ]);
                 });
 
-                it('can display a publish modal with a list of unpublished subsections and units', function () {
+                it('can display a publish modal with a list of unpublished subsections and units', function() {
                     var mockCourseJSON = createMockCourseJSON({}, [
                             createMockSectionJSON({has_changes: true}, [
                                 createMockSubsectionJSON({has_changes: true}, [
@@ -571,74 +668,96 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     getItemHeaders('section').first().find('.publish-button').click();
                     modalWindow = $('.wrapper-modal-window');
                     expect(modalWindow.find('.outline-unit').length).toBe(3);
-                    expect(_.compact(_.map(modalWindow.find('.outline-unit').text().split("\n"), $.trim))).toEqual(
+                    expect(_.compact(_.map(modalWindow.find('.outline-unit').text().split('\n'), $.trim))).toEqual(
                         ['Unit 100', 'Unit 50', 'Unit 1']
                     );
                     expect(modalWindow.find('.outline-subsection').length).toBe(2);
                 });
             });
 
-            describe("Subsection", function() {
-                var getDisplayNameWrapper, setEditModalValues, mockServerValuesJson,
-                    selectDisableSpecialExams, selectTimedExam, selectProctoredExam, selectPracticeExam;
+            describe('Subsection', function() {
+                var getDisplayNameWrapper, setEditModalValues, setContentVisibility, mockServerValuesJson,
+                    selectDisableSpecialExams, selectTimedExam, selectProctoredExam, selectPracticeExam,
+                    selectPrerequisite, selectLastPrerequisiteSubsection, checkOptionFieldVisibility;
 
                 getDisplayNameWrapper = function() {
                     return getItemHeaders('subsection').find('.wrapper-xblock-field');
                 };
 
-                setEditModalValues = function (start_date, due_date, grading_type, is_locked) {
-                    $("#start_date").val(start_date);
-                    $("#due_date").val(due_date);
-                    $("#grading_type").val(grading_type);
-                    $("#staff_lock").prop('checked', is_locked);
+                setEditModalValues = function(start_date, due_date, grading_type) {
+                    $('#start_date').val(start_date);
+                    $('#due_date').val(due_date);
+                    $('#grading_type').val(grading_type);
+                };
+
+                setContentVisibility = function(visibility) {
+                    $('input[name=content-visibility][value=' + visibility + ']').prop('checked', true);
                 };
 
                 selectDisableSpecialExams = function() {
-                    this.$("#id_not_timed").prop('checked', true).trigger('change');
+                    this.$('input.no_special_exam').prop('checked', true).trigger('change');
                 };
 
                 selectTimedExam = function(time_limit) {
-                    this.$("#id_timed_exam").prop('checked', true).trigger('change');
-                    this.$("#id_time_limit").val(time_limit);
-                    this.$("#id_time_limit").trigger('focusout');
+                    this.$('input.timed_exam').prop('checked', true).trigger('change');
+                    this.$('.field-time-limit input').val(time_limit);
+                    this.$('.field-time-limit input').trigger('focusout');
+                    setContentVisibility('hide_after_due');
                 };
 
                 selectProctoredExam = function(time_limit) {
-                    this.$("#id_proctored_exam").prop('checked', true).trigger('change');
-                    this.$("#id_time_limit").val(time_limit);
-                    this.$("#id_time_limit").trigger('focusout');
+                    this.$('input.proctored_exam').prop('checked', true).trigger('change');
+                    this.$('.field-time-limit input').val(time_limit);
+                    this.$('.field-time-limit input').trigger('focusout');
                 };
 
                 selectPracticeExam = function(time_limit) {
-                    this.$("#id_practice_exam").prop('checked', true).trigger('change');
-                    this.$("#id_time_limit").val(time_limit);
-                    this.$("#id_time_limit").trigger('focusout');
+                    this.$('input.practice_exam').prop('checked', true).trigger('change');
+                    this.$('.field-time-limit input').val(time_limit);
+                    this.$('.field-time-limit input').trigger('focusout');
+                };
+
+                selectPrerequisite = function() {
+                    this.$('#is_prereq').prop('checked', true).trigger('change');
+                };
+
+                selectLastPrerequisiteSubsection = function(minScore) {
+                    this.$('#prereq option:last').prop('selected', true).trigger('change');
+                    this.$('#prereq_min_score').val(minScore).trigger('keyup');
+                };
+
+                // Helper to validate oft-checked additional option fields' visibility
+                checkOptionFieldVisibility = function(time_limit, review_rules) {
+                    expect($('.field-time-limit').is(':visible')).toBe(time_limit);
+                    expect($('.field-exam-review-rules').is(':visible')).toBe(review_rules);
                 };
 
                 // Contains hard-coded dates because dates are presented in different formats.
                 mockServerValuesJson = createMockSectionJSON({
-                        release_date: 'Jan 01, 2970 at 05:00 UTC'
+                    release_date: 'Jan 01, 2970 at 05:00 UTC'
+                }, [
+                    createMockSubsectionJSON({
+                        graded: true,
+                        due_date: 'Jul 10, 2014 at 00:00 UTC',
+                        release_date: 'Jul 09, 2014 at 00:00 UTC',
+                        start: '2014-07-09T00:00:00Z',
+                        format: 'Lab',
+                        due: '2014-07-10T00:00:00Z',
+                        has_explicit_staff_lock: true,
+                        staff_only_message: true,
+                        is_prereq: false,
+                        'is_time_limited': true,
+                        'is_practice_exam': false,
+                        'is_proctored_exam': false,
+                        'default_time_limit_minutes': 150,
+                        'hide_after_due': true
                     }, [
-                        createMockSubsectionJSON({
-                            graded: true,
-                            due_date: 'Jul 10, 2014 at 00:00 UTC',
-                            release_date: 'Jul 09, 2014 at 00:00 UTC',
-                            start: "2014-07-09T00:00:00Z",
-                            format: "Lab",
-                            due: "2014-07-10T00:00:00Z",
-                            has_explicit_staff_lock: true,
-                            staff_only_message: true,
-                            "is_time_limited": true,
-                            "is_practice_exam": false,
-                            "is_proctored_exam": true,
-                            "default_time_limit_minutes": 150
-                        }, [
-                            createMockVerticalJSON({
-                                has_changes: true,
-                                published: false
-                            })
-                        ])
-                    ]);
+                        createMockVerticalJSON({
+                            has_changes: true,
+                            published: false
+                        })
+                    ])
+                ]);
 
                 it('can be deleted', function() {
                     var promptSpy = EditHelpers.createPromptSpy();
@@ -663,8 +782,8 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                         'parent_locator': 'mock-subsection'
                     });
                     AjaxHelpers.respondWithJson(requests, {
-                        "locator": "new-mock-unit",
-                        "courseKey": "slashes:MockCourse"
+                        'locator': 'new-mock-unit',
+                        'courseKey': 'slashes:MockCourse'
                     });
                     expect(redirectSpy).toHaveBeenCalledWith('/container/new-mock-unit?action=new');
                 });
@@ -702,23 +821,100 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     expandItemsAndVerifyState('subsection');
                 });
 
+                it('can show basic settings', function() {
+                    createCourseOutlinePage(this, mockCourseJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    selectBasicSettings();
+                    expect($('.modal-section .settings-tab-button[data-tab="basic"]')).toHaveClass('active');
+                    expect($('.modal-section .settings-tab-button[data-tab="advanced"]')).not.toHaveClass('active');
+                });
+
+                it('can show advanced settings', function() {
+                    createCourseOutlinePage(this, mockCourseJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    selectAdvancedSettings();
+                    expect($('.modal-section .settings-tab-button[data-tab="basic"]')).not.toHaveClass('active');
+                    expect($('.modal-section .settings-tab-button[data-tab="advanced"]')).toHaveClass('active');
+                });
+
+                it('does not show settings tab headers if there is only one tab to show', function() {
+                    var mockVerticalJSON = createMockVerticalJSON({}, []);
+                    var mockSubsectionJSON = createMockSubsectionJSON({}, [mockVerticalJSON]);
+                    delete mockSubsectionJSON.is_prereq;
+                    delete mockSubsectionJSON.prereqs;
+                    delete mockSubsectionJSON.prereq;
+                    delete mockSubsectionJSON.prereq_min_score;
+                    var mockCourseJSON = createMockCourseJSON({
+                        enable_proctored_exams: false,
+                        enable_timed_exams: false
+                    }, [
+                        createMockSectionJSON({}, [mockSubsectionJSON])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseJSON, false);
+                    outlinePage.$('.outline-unit .configure-button').click();
+                    expect($('.settings-tabs-header').length).toBe(0);
+                });
+
+                it('can show correct editors for self_paced course', function() {
+                    var mockCourseJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({}, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseJSON, false);
+                    /* global course */
+                    course.set('self_paced', true);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    expect($('.edit-settings-release').length).toBe(0);
+                    expect($('.grading-due-date').length).toBe(0);
+                    expect($('.edit-settings-grading').length).toBe(1);
+                    expect($('.edit-content-visibility').length).toBe(1);
+                });
+
+                it('can select valid time', function() {
+                    createCourseOutlinePage(this, mockCourseJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    selectAdvancedSettings();
+
+                    var default_time = '00:30';
+                    var valid_times = ['00:30', '23:00', '24:00', '99:00'];
+                    var invalid_times = ['00:00', '100:00', '01:60'];
+                    var time_limit, i;
+
+                    for (i = 0; i < valid_times.length; i++) {
+                        time_limit = valid_times[i];
+                        selectTimedExam(time_limit);
+                        expect($('.field-time-limit input').val()).toEqual(time_limit);
+                    }
+                    for (i = 0; i < invalid_times.length; i++) {
+                        time_limit = invalid_times[i];
+                        selectTimedExam(time_limit);
+                        expect($('.field-time-limit input').val()).not.toEqual(time_limit);
+                        expect($('.field-time-limit input').val()).toEqual(default_time);
+                    }
+                });
+
                 it('can be edited', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    setEditModalValues("2014-07-09", "2014-07-10", "Lab", true);
-                    selectProctoredExam("02:30");
-                    $(".wrapper-modal-window .action-save").click();
+                    setEditModalValues('2014-07-09', '2014-07-10', 'Lab');
+                    selectAdvancedSettings();
+                    selectTimedExam('02:30');
+                    $('.wrapper-modal-window .action-save').click();
                     AjaxHelpers.expectJsonRequest(requests, 'POST', '/xblock/mock-subsection', {
-                        "graderType":"Lab",
-                        "publish": "republish",
-                        "metadata":{
-                            "visible_to_staff_only": true,
-                            "start":"2014-07-09T00:00:00.000Z",
-                            "due":"2014-07-10T00:00:00.000Z",
-                            "is_time_limited": true,
-                            "is_practice_exam": false,
-                            "is_proctored_enabled": true,
-                            "default_time_limit_minutes": 150
+                        'graderType': 'Lab',
+                        'publish': 'republish',
+                        'isPrereq': false,
+                        'metadata': {
+                            'visible_to_staff_only': null,
+                            'start': '2014-07-09T00:00:00.000Z',
+                            'due': '2014-07-10T00:00:00.000Z',
+                            'exam_review_rules': '',
+                            'is_time_limited': true,
+                            'is_practice_exam': false,
+                            'is_proctored_enabled': false,
+                            'default_time_limit_minutes': 150,
+                            'hide_after_due': true
                         }
                     });
                     expect(requests[0].requestHeaders['X-HTTP-Method-Override']).toBe('PATCH');
@@ -728,256 +924,479 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     AjaxHelpers.respondWithJson(requests, mockServerValuesJson);
                     AjaxHelpers.expectNoRequests(requests);
 
-                    expect($(".outline-subsection .status-release-value")).toContainText(
-                        "Jul 09, 2014 at 00:00 UTC"
+                    expect($('.outline-subsection .status-release-value')).toContainText(
+                        'Jul 09, 2014 at 00:00 UTC'
                     );
-                    expect($(".outline-subsection .status-grading-date")).toContainText(
-                        "Due: Jul 10, 2014 at 00:00 UTC"
+                    expect($('.outline-subsection .status-grading-date')).toContainText(
+                        'Due: Jul 10, 2014 at 00:00 UTC'
                     );
-                    expect($(".outline-subsection .status-grading-value")).toContainText(
-                        "Lab"
+                    expect($('.outline-subsection .status-grading-value')).toContainText(
+                        'Lab'
                     );
-                    expect($(".outline-subsection .status-message-copy")).toContainText(
-                        "Contains staff only content"
+                    expect($('.outline-subsection .status-message-copy')).toContainText(
+                        'Contains staff only content'
                     );
 
-                    expect($(".outline-item .outline-subsection .status-grading-value")).toContainText("Lab");
+                    expect($('.outline-item .outline-subsection .status-grading-value')).toContainText('Lab');
                     outlinePage.$('.outline-item .outline-subsection .configure-button').click();
-                    expect($("#start_date").val()).toBe('2014-07-09');
-                    expect($("#due_date").val()).toBe('2014-07-10');
-                    expect($("#grading_type").val()).toBe('Lab');
-                    expect($("#staff_lock").is(":checked")).toBe(true);
-                    expect($("#id_timed_exam").is(":checked")).toBe(false);
-                    expect($("#id_proctored_exam").is(":checked")).toBe(true);
-                    expect($("#id_not_timed").is(":checked")).toBe(false);
-                    expect($("#id_practice_exam").is(":checked")).toBe(false);
-                    expect($("#id_time_limit").val()).toBe("02:30");
+                    expect($('#start_date').val()).toBe('2014-07-09');
+                    expect($('#due_date').val()).toBe('2014-07-10');
+                    expect($('#grading_type').val()).toBe('Lab');
+                    expect($('input[name=content-visibility][value=staff_only]').is(':checked')).toBe(true);
+                    expect($('input.timed_exam').is(':checked')).toBe(true);
+                    expect($('input.proctored_exam').is(':checked')).toBe(false);
+                    expect($('input.no_special_exam').is(':checked')).toBe(false);
+                    expect($('input.practice_exam').is(':checked')).toBe(false);
+                    expect($('.field-time-limit input').val()).toBe('02:30');
                 });
 
-                it('can hide the time limit field when the None radio box is selected', function() {
+                it('can hide time limit and hide after due fields when the None radio box is selected', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    setEditModalValues("2014-07-09", "2014-07-10", "Lab", true);
+                    setEditModalValues('2014-07-09', '2014-07-10', 'Lab');
+                    selectAdvancedSettings();
                     selectDisableSpecialExams();
+                    setContentVisibility('staff_only');
 
-                    // id_time_limit_div should be hidden when None is specified
-                    expect($('#id_time_limit_div')).toHaveClass('is-hidden');
+                    // all additional options should be hidden
+                    expect($('.exam-options').is(':hidden')).toBe(true);
                 });
 
                 it('can select the practice exam', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    setEditModalValues("7/9/2014", "7/10/2014", "Lab", true);
-                    selectPracticeExam("00:30");
-                    // id_time_limit_div should not be hidden when practice exam is specified
-                    expect($('#id_time_limit_div')).not.toHaveClass('is-hidden"');
-                    $(".wrapper-modal-window .action-save").click();
+                    setEditModalValues('7/9/2014', '7/10/2014', 'Lab');
+                    selectAdvancedSettings();
+                    selectPracticeExam('00:30');
+                    setContentVisibility('staff_only');
+
+                    // time limit should be visible, review rules should be hidden
+                    checkOptionFieldVisibility(true, false);
+
+                    $('.wrapper-modal-window .action-save').click();
                 });
 
                 it('can select the timed exam', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    setEditModalValues("7/9/2014", "7/10/2014", "Lab", true);
-                    selectTimedExam("00:30");
-                    // id_time_limit_div should not be hidden when timed exam is specified
-                    expect($('#id_time_limit_div')).not.toHaveClass('is-hidden"');
-                    $(".wrapper-modal-window .action-save").click();
+                    setEditModalValues('7/9/2014', '7/10/2014', 'Lab');
+                    selectAdvancedSettings();
+                    selectTimedExam('00:30');
+
+                    // time limit should be visible, review rules should be hidden
+                    checkOptionFieldVisibility(true, false);
+
+                    $('.wrapper-modal-window .action-save').click();
                 });
 
                 it('can select the Proctored exam option', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    setEditModalValues("7/9/2014", "7/10/2014", "Lab", true);
-                    selectProctoredExam("00:30");
-                    // id_time_limit_div should not be hidden when timed exam is specified
-                    expect($('#id_time_limit_div')).not.toHaveClass('is-hidden"');
-                    $(".wrapper-modal-window .action-save").click();
+                    setEditModalValues('7/9/2014', '7/10/2014', 'Lab');
+                    selectAdvancedSettings();
+                    selectProctoredExam('00:30');
+                    setContentVisibility('staff_only');
 
+                    // time limit and review rules should be visible
+                    checkOptionFieldVisibility(true, true);
+
+                    $('.wrapper-modal-window .action-save').click();
                 });
 
                 it('entering invalid time format uses default value of 30 minutes.', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    setEditModalValues("7/9/2014", "7/10/2014", "Lab", true);
-                    selectProctoredExam("abcd");
-                    // id_time_limit_div should not be hidden when timed exam is specified
-                    expect($('#id_time_limit_div')).not.toHaveClass('is-hidden"');
-                    expect($('#id_time_limit')).toHaveValue('00:30');
+                    setEditModalValues('7/9/2014', '7/10/2014', 'Lab');
+                    selectAdvancedSettings();
+                    selectProctoredExam('abcd');
+                    setContentVisibility('staff_only');
 
+                    // time limit field should be visible and have the correct value
+                    expect($('.field-time-limit').is(':visible')).toBe(true);
+                    expect($('.field-time-limit input').val()).toEqual('00:30');
                 });
 
                 it('can show a saved non-special exam correctly', function() {
                     var mockCourseWithSpecialExamJSON = createMockCourseJSON({}, [
-                            createMockSectionJSON({
-                                has_changes: true,
-                                enable_proctored_exams: true,
-                                enable_timed_exams: true
+                        createMockSectionJSON({
+                            has_changes: true,
+                            enable_proctored_exams: true,
+                            enable_timed_exams: true
 
+                        }, [
+                            createMockSubsectionJSON({
+                                has_changes: true,
+                                'is_time_limited': false,
+                                'is_practice_exam': false,
+                                'is_proctored_exam': false,
+                                'default_time_limit_minutes': 150,
+                                'hide_after_due': false
                             }, [
-                                createMockSubsectionJSON({
-                                    has_changes: true,
-                                    "is_time_limited": false,
-                                    "is_practice_exam": false,
-                                    "is_proctored_exam": false,
-                                    "default_time_limit_minutes": 150
-                                }, [
-                                ]),
                             ])
-                        ]);
+                        ])
+                    ]);
                     createCourseOutlinePage(this, mockCourseWithSpecialExamJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    expect($("#id_timed_exam").is(":checked")).toBe(false);
-                    expect($("#id_proctored_exam").is(":checked")).toBe(false);
-                    expect($("#id_not_timed").is(":checked")).toBe(true);
-                    expect($("#id_practice_exam").is(":checked")).toBe(false);
-                    expect($("#id_time_limit").val()).toBe("02:30");
+                    selectAdvancedSettings();
+                    expect($('input.timed_exam').is(':checked')).toBe(false);
+                    expect($('input.proctored_exam').is(':checked')).toBe(false);
+                    expect($('input.no_special_exam').is(':checked')).toBe(true);
+                    expect($('input.practice_exam').is(':checked')).toBe(false);
+                    expect($('.field-time-limit input').val()).toBe('02:30');
                 });
 
-                it('can show a saved timed exam correctly', function() {
+                it('can show a saved timed exam correctly when hide_after_due is true', function() {
                     var mockCourseWithSpecialExamJSON = createMockCourseJSON({}, [
-                            createMockSectionJSON({
-                                has_changes: true,
-                                enable_proctored_exams: true,
-                                enable_timed_exams: true
+                        createMockSectionJSON({
+                            has_changes: true,
+                            enable_proctored_exams: true,
+                            enable_timed_exams: true
 
+                        }, [
+                            createMockSubsectionJSON({
+                                has_changes: true,
+                                'is_time_limited': true,
+                                'is_practice_exam': false,
+                                'is_proctored_exam': false,
+                                'default_time_limit_minutes': 10,
+                                'hide_after_due': true
                             }, [
-                                createMockSubsectionJSON({
-                                    has_changes: true,
-                                    "is_time_limited": true,
-                                    "is_practice_exam": false,
-                                    "is_proctored_exam": false,
-                                    "default_time_limit_minutes": 10
-                                }, [
-                                ]),
                             ])
-                        ]);
+                        ])
+                    ]);
                     createCourseOutlinePage(this, mockCourseWithSpecialExamJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    expect($("#id_timed_exam").is(":checked")).toBe(true);
-                    expect($("#id_proctored_exam").is(":checked")).toBe(false);
-                    expect($("#id_not_timed").is(":checked")).toBe(false);
-                    expect($("#id_practice_exam").is(":checked")).toBe(false);
-                    expect($("#id_time_limit").val()).toBe("00:10");
+                    selectAdvancedSettings();
+                    expect($('input.timed_exam').is(':checked')).toBe(true);
+                    expect($('input.proctored_exam').is(':checked')).toBe(false);
+                    expect($('input.no_special_exam').is(':checked')).toBe(false);
+                    expect($('input.practice_exam').is(':checked')).toBe(false);
+                    expect($('.field-time-limit input').val()).toBe('00:10');
+                });
+
+                it('can show a saved timed exam correctly when hide_after_due is true', function() {
+                    var mockCourseWithSpecialExamJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({
+                            has_changes: true,
+                            enable_proctored_exams: true,
+                            enable_timed_exams: true
+
+                        }, [
+                            createMockSubsectionJSON({
+                                has_changes: true,
+                                'is_time_limited': true,
+                                'is_practice_exam': false,
+                                'is_proctored_exam': false,
+                                'default_time_limit_minutes': 10,
+                                'hide_after_due': false
+                            }, [
+                            ])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithSpecialExamJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    selectAdvancedSettings();
+                    expect($('input.timed_exam').is(':checked')).toBe(true);
+                    expect($('input.proctored_exam').is(':checked')).toBe(false);
+                    expect($('input.no_special_exam').is(':checked')).toBe(false);
+                    expect($('input.practice_exam').is(':checked')).toBe(false);
+                    expect($('.field-time-limit input').val()).toBe('00:10');
+                    expect($('.field-hide-after-due input').is(':checked')).toBe(false);
                 });
 
                 it('can show a saved practice exam correctly', function() {
                     var mockCourseWithSpecialExamJSON = createMockCourseJSON({}, [
-                            createMockSectionJSON({
-                                has_changes: true,
-                                enable_proctored_exams: true,
-                                enable_timed_exams: true
+                        createMockSectionJSON({
+                            has_changes: true,
+                            enable_proctored_exams: true,
+                            enable_timed_exams: true
 
+                        }, [
+                            createMockSubsectionJSON({
+                                has_changes: true,
+                                'is_time_limited': true,
+                                'is_practice_exam': true,
+                                'is_proctored_exam': true,
+                                'default_time_limit_minutes': 150
                             }, [
-                                createMockSubsectionJSON({
-                                    has_changes: true,
-                                    "is_time_limited": true,
-                                    "is_practice_exam": true,
-                                    "is_proctored_exam": true,
-                                    "default_time_limit_minutes": 150
-                                }, [
-                                ]),
                             ])
-                        ]);
+                        ])
+                    ]);
                     createCourseOutlinePage(this, mockCourseWithSpecialExamJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    expect($("#id_timed_exam").is(":checked")).toBe(false);
-                    expect($("#id_proctored_exam").is(":checked")).toBe(false);
-                    expect($("#id_not_timed").is(":checked")).toBe(false);
-                    expect($("#id_practice_exam").is(":checked")).toBe(true);
-                    expect($("#id_time_limit").val()).toBe("02:30");
+                    selectAdvancedSettings();
+                    expect($('input.timed_exam').is(':checked')).toBe(false);
+                    expect($('input.proctored_exam').is(':checked')).toBe(false);
+                    expect($('input.no_special_exam').is(':checked')).toBe(false);
+                    expect($('input.practice_exam').is(':checked')).toBe(true);
+                    expect($('.field-time-limit input').val()).toBe('02:30');
                 });
 
                 it('can show a saved proctored exam correctly', function() {
                     var mockCourseWithSpecialExamJSON = createMockCourseJSON({}, [
-                            createMockSectionJSON({
-                                has_changes: true,
-                                enable_proctored_exams: true,
-                                enable_timed_exams: true
+                        createMockSectionJSON({
+                            has_changes: true,
+                            enable_proctored_exams: true,
+                            enable_timed_exams: true
 
+                        }, [
+                            createMockSubsectionJSON({
+                                has_changes: true,
+                                'is_time_limited': true,
+                                'is_practice_exam': false,
+                                'is_proctored_exam': true,
+                                'default_time_limit_minutes': 150
                             }, [
-                                createMockSubsectionJSON({
-                                    has_changes: true,
-                                    "is_time_limited": true,
-                                    "is_practice_exam": false,
-                                    "is_proctored_exam": true,
-                                    "default_time_limit_minutes": 150
-                                }, [
-                                ]),
                             ])
-                        ]);
+                        ])
+                    ]);
                     createCourseOutlinePage(this, mockCourseWithSpecialExamJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    expect($("#id_timed_exam").is(":checked")).toBe(false);
-                    expect($("#id_proctored_exam").is(":checked")).toBe(true);
-                    expect($("#id_not_timed").is(":checked")).toBe(false);
-                    expect($("#id_practice_exam").is(":checked")).toBe(false);
-                    expect($("#id_time_limit").val()).toBe("02:30");
+                    selectAdvancedSettings();
+                    expect($('input.timed_exam').is(':checked')).toBe(false);
+                    expect($('input.proctored_exam').is(':checked')).toBe(true);
+                    expect($('input.no_special_exam').is(':checked')).toBe(false);
+                    expect($('input.practice_exam').is(':checked')).toBe(false);
+                    expect($('.field-time-limit input').val()).toBe('02:30');
                 });
 
                 it('does not show proctored settings if proctored exams not enabled', function() {
                     var mockCourseWithSpecialExamJSON = createMockCourseJSON({}, [
-                            createMockSectionJSON({
-                                has_changes: true,
-                                enable_proctored_exams: false,
-                                enable_timed_exams: true
+                        createMockSectionJSON({
+                            has_changes: true,
+                            enable_proctored_exams: false,
+                            enable_timed_exams: true
 
+                        }, [
+                            createMockSubsectionJSON({
+                                has_changes: true,
+                                'is_time_limited': true,
+                                'is_practice_exam': false,
+                                'is_proctored_exam': false,
+                                'default_time_limit_minutes': 150,
+                                'hide_after_due': true
                             }, [
-                                createMockSubsectionJSON({
-                                    has_changes: true,
-                                    "is_time_limited": true,
-                                    "is_practice_exam": false,
-                                    "is_proctored_exam": false,
-                                    "default_time_limit_minutes": 150
-                                }, [
-                                ]),
                             ])
-                        ]);
+                        ])
+                    ]);
                     createCourseOutlinePage(this, mockCourseWithSpecialExamJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    expect($("#id_timed_exam").is(":checked")).toBe(true);
-                    expect($("#id_not_timed").is(":checked")).toBe(false);
-                    expect($("#id_time_limit").val()).toBe("02:30");
+                    selectAdvancedSettings();
+                    expect($('input.timed_exam').is(':checked')).toBe(true);
+                    expect($('input.no_special_exam').is(':checked')).toBe(false);
+                    expect($('.field-time-limit input').val()).toBe('02:30');
+                });
+
+                it('can select prerequisite', function() {
+                    createCourseOutlinePage(this, mockCourseJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    selectPrerequisite();
+                    expect($('#is_prereq').is(':checked')).toBe(true);
+                    $('.wrapper-modal-window .action-save').click();
+                });
+
+                it('can be deleted when it is a prerequisite', function() {
+                    var promptSpy = EditHelpers.createPromptSpy();
+                    var mockCourseWithPrequisiteJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({
+                                is_prereq: true
+                            }, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithPrequisiteJSON, false);
+                    getItemHeaders('subsection').find('.delete-button').click();
+                    EditHelpers.confirmPrompt(promptSpy);
+                    AjaxHelpers.expectJsonRequest(requests, 'DELETE', '/xblock/mock-subsection');
+                    AjaxHelpers.respondWithJson(requests, {});
+                    AjaxHelpers.expectJsonRequest(requests, 'GET', '/xblock/outline/mock-section');
+                });
+
+                it('can show a saved prerequisite correctly', function() {
+                    var mockCourseWithPrequisiteJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({
+                                is_prereq: true
+                            }, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithPrequisiteJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    expect($('#is_prereq').is(':checked')).toBe(true);
+                });
+
+                it('does not display prerequisite subsections if none are available', function() {
+                    createCourseOutlinePage(this, mockCourseJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    expect($('.gating-prereq').length).toBe(0);
+                });
+
+                it('can display available prerequisite subsections', function() {
+                    var mockCourseWithPreqsJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({
+                                prereqs: [{block_usage_key: 'usage_key', block_display_name: 'Prereq Subsection 1'}]
+                            }, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithPreqsJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    expect($('.gating-prereq').length).toBe(1);
+                });
+
+                it('can select prerequisite subsection', function() {
+                    var mockCourseWithPreqsJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({
+                                prereqs: [{block_usage_key: 'usage_key', block_display_name: 'Prereq Subsection 1'}]
+                            }, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithPreqsJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    selectLastPrerequisiteSubsection('80');
+                    expect($('#prereq_min_score_input').css('display')).not.toBe('none');
+                    expect($('#prereq option:selected').val()).toBe('usage_key');
+                    expect($('#prereq_min_score').val()).toBe('80');
+                    $('.wrapper-modal-window .action-save').click();
+                });
+
+                it('can display gating correctly', function() {
+                    var mockCourseWithPreqsJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({
+                                visibility_state: 'gated',
+                                prereqs: [{block_usage_key: 'usage_key', block_display_name: 'Prereq Subsection 1'}],
+                                prereq: 'usage_key',
+                                prereq_min_score: '80'
+                            }, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithPreqsJSON, false);
+                    expect($('.outline-subsection .status-message-copy')).toContainText(
+                        'Prerequisite: Prereq Subsection 1'
+                    );
+                });
+
+                it('can show a saved prerequisite subsection correctly', function() {
+                    var mockCourseWithPreqsJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({
+                                prereqs: [{block_usage_key: 'usage_key', block_display_name: 'Prereq Subsection 1'}],
+                                prereq: 'usage_key',
+                                prereq_min_score: '80'
+                            }, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithPreqsJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    expect($('.gating-prereq').length).toBe(1);
+                    expect($('#prereq option:selected').val()).toBe('usage_key');
+                    expect($('#prereq_min_score_input').css('display')).not.toBe('none');
+                    expect($('#prereq_min_score').val()).toBe('80');
+                });
+
+                it('can display validation error on non-integer minimum score', function() {
+                    var mockCourseWithPreqsJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({
+                                prereqs: [{block_usage_key: 'usage_key', block_display_name: 'Prereq Subsection 1'}]
+                            }, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithPreqsJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    selectLastPrerequisiteSubsection('abc');
+                    expect($('#prereq_min_score_error').css('display')).not.toBe('none');
+                    expect($('.wrapper-modal-window .action-save').prop('disabled')).toBe(true);
+                    expect($('.wrapper-modal-window .action-save').hasClass('is-disabled')).toBe(true);
+                    selectLastPrerequisiteSubsection('5.5');
+                    expect($('#prereq_min_score_error').css('display')).not.toBe('none');
+                    expect($('.wrapper-modal-window .action-save').prop('disabled')).toBe(true);
+                    expect($('.wrapper-modal-window .action-save').hasClass('is-disabled')).toBe(true);
+                });
+
+                it('can display validation error on out of bounds minimum score', function() {
+                    var mockCourseWithPreqsJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({
+                                prereqs: [{block_usage_key: 'usage_key', block_display_name: 'Prereq Subsection 1'}]
+                            }, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithPreqsJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    selectLastPrerequisiteSubsection('-5');
+                    expect($('#prereq_min_score_error').css('display')).not.toBe('none');
+                    expect($('.wrapper-modal-window .action-save').prop('disabled')).toBe(true);
+                    expect($('.wrapper-modal-window .action-save').hasClass('is-disabled')).toBe(true);
+                    selectLastPrerequisiteSubsection('105');
+                    expect($('#prereq_min_score_error').css('display')).not.toBe('none');
+                    expect($('.wrapper-modal-window .action-save').prop('disabled')).toBe(true);
+                    expect($('.wrapper-modal-window .action-save').hasClass('is-disabled')).toBe(true);
+                });
+
+                it('does not display validation error on valid minimum score', function() {
+                    var mockCourseWithPreqsJSON = createMockCourseJSON({}, [
+                        createMockSectionJSON({}, [
+                            createMockSubsectionJSON({
+                                prereqs: [{block_usage_key: 'usage_key', block_display_name: 'Prereq Subsection 1'}]
+                            }, [])
+                        ])
+                    ]);
+                    createCourseOutlinePage(this, mockCourseWithPreqsJSON, false);
+                    outlinePage.$('.outline-subsection .configure-button').click();
+                    selectAdvancedSettings();
+                    selectLastPrerequisiteSubsection('');
+                    expect($('#prereq_min_score_error').css('display')).toBe('none');
+                    selectLastPrerequisiteSubsection('80');
+                    expect($('#prereq_min_score_error').css('display')).toBe('none');
+                    selectLastPrerequisiteSubsection('0');
+                    expect($('#prereq_min_score_error').css('display')).toBe('none');
+                    selectLastPrerequisiteSubsection('100');
+                    expect($('#prereq_min_score_error').css('display')).toBe('none');
                 });
 
                 it('release date, due date, grading type, and staff lock can be cleared.', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-item .outline-subsection .configure-button').click();
-                    setEditModalValues("2014-07-09", "2014-07-10", "Lab", true);
-                    $(".wrapper-modal-window .action-save").click();
+                    setEditModalValues('2014-7-09', '2014-07-10', 'Lab');
+                    setContentVisibility('staff_only');
+                    $('.wrapper-modal-window .action-save').click();
 
                     // This is the response for the change operation.
                     AjaxHelpers.respondWithJson(requests, {});
                     // This is the response for the subsequent fetch operation.
                     AjaxHelpers.respondWithJson(requests, mockServerValuesJson);
 
-                    expect($(".outline-subsection .status-release-value")).toContainText(
-                        "Jul 09, 2014 at 00:00 UTC"
+                    expect($('.outline-subsection .status-release-value')).toContainText(
+                        'Jul 09, 2014 at 00:00 UTC'
                     );
-                    expect($(".outline-subsection .status-grading-date")).toContainText(
-                        "Due: Jul 10, 2014 at 00:00 UTC"
+                    expect($('.outline-subsection .status-grading-date')).toContainText(
+                        'Due: Jul 10, 2014 at 00:00 UTC'
                     );
-                    expect($(".outline-subsection .status-grading-value")).toContainText(
-                        "Lab"
+                    expect($('.outline-subsection .status-grading-value')).toContainText(
+                        'Lab'
                     );
-                    expect($(".outline-subsection .status-message-copy")).toContainText(
-                        "Contains staff only content"
+                    expect($('.outline-subsection .status-message-copy')).toContainText(
+                        'Contains staff only content'
                     );
 
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    expect($("#start_date").val()).toBe('2014-07-09');
-                    expect($("#due_date").val()).toBe('2014-07-10');
-                    expect($("#grading_type").val()).toBe('Lab');
-                    expect($("#staff_lock").is(":checked")).toBe(true);
+                    expect($('#start_date').val()).toBe('2014-07-09');
+                    expect($('#due_date').val()).toBe('2014-07-10');
+                    expect($('#grading_type').val()).toBe('Lab');
+                    expect($('input[name=content-visibility][value=staff_only]').is(':checked')).toBe(true);
 
-                    $(".wrapper-modal-window .scheduled-date-input .action-clear").click();
-                    $(".wrapper-modal-window .due-date-input .action-clear").click();
-                    expect($("#start_date").val()).toBe('');
-                    expect($("#due_date").val()).toBe('');
+                    $('.wrapper-modal-window .scheduled-date-input .action-clear').click();
+                    $('.wrapper-modal-window .due-date-input .action-clear').click();
+                    expect($('#start_date').val()).toBe('');
+                    expect($('#due_date').val()).toBe('');
 
-                    $("#grading_type").val('notgraded');
-                    $("#staff_lock").prop('checked', false);
+                    $('#grading_type').val('notgraded');
+                    setContentVisibility('visible');
 
-                    $(".wrapper-modal-window .action-save").click();
+                    $('.wrapper-modal-window .action-save').click();
 
                     // This is the response for the change operation.
                     AjaxHelpers.respondWithJson(requests, {});
@@ -985,17 +1404,17 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     AjaxHelpers.respondWithJson(requests,
                         createMockSectionJSON({}, [createMockSubsectionJSON()])
                     );
-                    expect($(".outline-subsection .status-release-value")).not.toContainText(
-                        "Jul 09, 2014 at 00:00 UTC"
+                    expect($('.outline-subsection .status-release-value')).not.toContainText(
+                        'Jul 09, 2014 at 00:00 UTC'
                     );
-                    expect($(".outline-subsection .status-grading-date")).not.toExist();
-                    expect($(".outline-subsection .status-grading-value")).not.toExist();
-                    expect($(".outline-subsection .status-message-copy")).not.toContainText(
-                        "Contains staff only content"
+                    expect($('.outline-subsection .status-grading-date')).not.toExist();
+                    expect($('.outline-subsection .status-grading-value')).not.toExist();
+                    expect($('.outline-subsection .status-message-copy')).not.toContainText(
+                        'Contains staff only content'
                     );
                 });
 
-                verifyTypePublishable('subsection', function (options) {
+                verifyTypePublishable('subsection', function(options) {
                     return createMockCourseJSON({}, [
                         createMockSectionJSON({}, [
                             createMockSubsectionJSON(options, [
@@ -1005,13 +1424,13 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     ]);
                 });
 
-                it('can display a publish modal with a list of unpublished units', function () {
+                it('can display a publish modal with a list of unpublished units', function() {
                     var mockCourseJSON = createMockCourseJSON({}, [
                             createMockSectionJSON({has_changes: true}, [
                                 createMockSubsectionJSON({has_changes: true}, [
                                     createMockVerticalJSON(),
-                                    createMockVerticalJSON({has_changes: true, display_name: "Unit 100"}),
-                                    createMockVerticalJSON({published: false, display_name: "Unit 50"})
+                                    createMockVerticalJSON({has_changes: true, display_name: 'Unit 100'}),
+                                    createMockVerticalJSON({published: false, display_name: 'Unit 50'})
                                 ]),
                                 createMockSubsectionJSON({has_changes: true}, [
                                     createMockVerticalJSON({has_changes: true})
@@ -1024,7 +1443,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     getItemHeaders('subsection').first().find('.publish-button').click();
                     modalWindow = $('.wrapper-modal-window');
                     expect(modalWindow.find('.outline-unit').length).toBe(2);
-                    expect(_.compact(_.map(modalWindow.find('.outline-unit').text().split("\n"), $.trim))).toEqual(
+                    expect(_.compact(_.map(modalWindow.find('.outline-unit').text().split('\n'), $.trim))).toEqual(
                         ['Unit 100', 'Unit 50']
                     );
                     expect(modalWindow.find('.outline-subsection')).not.toExist();
@@ -1032,7 +1451,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
             });
 
             // Note: most tests for units can be found in Bok Choy
-            describe("Unit", function() {
+            describe('Unit', function() {
                 it('can be deleted', function() {
                     var promptSpy = EditHelpers.createPromptSpy();
                     createCourseOutlinePage(this, mockCourseJSON);
@@ -1054,7 +1473,7 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                     expect(unitAnchor.attr('href')).toBe('/container/mock-unit');
                 });
 
-                verifyTypePublishable('unit', function (options) {
+                verifyTypePublishable('unit', function(options) {
                     return createMockCourseJSON({}, [
                         createMockSectionJSON({}, [
                             createMockSubsectionJSON({}, [
@@ -1065,19 +1484,19 @@ define(["jquery", "common/js/spec_helpers/ajax_helpers", "common/js/components/u
                 });
             });
 
-            describe("Date and Time picker", function() {
+            describe('Date and Time picker', function() {
                 // Two datetime formats can came from server: '%Y-%m-%dT%H:%M:%SZ' and %Y-%m-%dT%H:%M:%S+TZ:TZ'
                 it('can parse dates in both formats that can come from server', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-subsection .configure-button').click();
-                    expect($("#start_date").val()).toBe('');
-                    expect($("#start_time").val()).toBe('');
-                    DateUtils.setDate($("#start_date"), ("#start_time"), "2015-08-10T05:10:00Z");
-                    expect($("#start_date").val()).toBe('2015-08-10');
-                    expect($("#start_time").val()).toBe('05:10');
-                    DateUtils.setDate($("#start_date"), ("#start_time"), "2014-07-09T00:00:00+00:00");
-                    expect($("#start_date").val()).toBe('2014-07-09');
-                    expect($("#start_time").val()).toBe('00:00');
+                    expect($('#start_date').val()).toBe('');
+                    expect($('#start_time').val()).toBe('');
+                    DateUtils.setDate($('#start_date'), ('#start_time'), '2015-08-10T05:10:00Z');
+                    expect($('#start_date').val()).toBe('2015-08-10');
+                    expect($('#start_time').val()).toBe('05:10');
+                    DateUtils.setDate($('#start_date'), ('#start_time'), '2014-07-09T00:00:00+00:00');
+                    expect($('#start_date').val()).toBe('2014-07-09');
+                    expect($('#start_time').val()).toBe('00:00');
                 });
             });
         });

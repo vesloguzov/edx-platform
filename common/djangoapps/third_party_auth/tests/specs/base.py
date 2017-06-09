@@ -5,6 +5,7 @@ import unittest
 import json
 import mock
 
+from contextlib import contextmanager
 from django import test
 from django.contrib import auth
 from django.contrib.auth import models as auth_models
@@ -13,10 +14,11 @@ from django.contrib.sessions.backends import cache
 from django.core.urlresolvers import reverse
 from django.test import utils as django_utils
 from django.conf import settings as django_settings
-from edxmako.tests import mako_middleware_process_request
 from social import actions, exceptions
 from social.apps.django_app import utils as social_utils
 from social.apps.django_app import views as social_views
+
+from lms.djangoapps.commerce.tests import TEST_API_URL, TEST_API_SIGNING_KEY
 from student import models as student_models
 from student import views as student_views
 from student.tests.factories import UserFactory
@@ -75,15 +77,16 @@ class IntegrationTestMixin(object):
         self.assertEqual(form_fields['email']['defaultValue'], self.USER_EMAIL)
         self.assertEqual(form_fields['name']['defaultValue'], self.USER_NAME)
         self.assertEqual(form_fields['username']['defaultValue'], self.USER_USERNAME)
+        registration_values = {
+            'email': 'email-edited@tpa-test.none',
+            'name': 'My Customized Name',
+            'username': 'new_username',
+            'honor_code': True,
+        }
         # Now complete the form:
         ajax_register_response = self.client.post(
             reverse('user_api_registration'),
-            {
-                'email': 'email-edited@tpa-test.none',
-                'name': 'My Customized Name',
-                'username': 'new_username',
-                'honor_code': True,
-            }
+            registration_values
         )
         self.assertEqual(ajax_register_response.status_code, 200)
         # Then the AJAX will finish the third party auth:
@@ -101,7 +104,7 @@ class IntegrationTestMixin(object):
         self._test_return_login(user_is_activated=True)
 
     def test_login(self):
-        user = UserFactory.create()
+        self.user = UserFactory.create()  # pylint: disable=attribute-defined-outside-init
         # The user goes to the login page, and sees a button to login with this provider:
         provider_login_url = self._check_login_page()
         # The user clicks on the provider's button:
@@ -121,7 +124,7 @@ class IntegrationTestMixin(object):
         # The AJAX on the page will log them in:
         ajax_login_response = self.client.post(
             reverse('user_api_login_session'),
-            {'email': user.email, 'password': 'test'}
+            {'email': self.user.email, 'password': 'test'}
         )
         self.assertEqual(ajax_login_response.status_code, 200)
         # Then the AJAX will finish the third party auth:
@@ -361,7 +364,7 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
         self.assertEqual(200, response.status_code)  # Yes, it's a 200 even though it's a failure.
         payload = json.loads(response.content)
         self.assertFalse(payload.get('success'))
-        self.assertIn('This account has not been activated', payload.get('value'))
+        self.assertIn('Before you sign in, you need to activate your account', payload.get('value'))
 
     def assert_json_failure_response_is_missing_social_auth(self, response):
         """Asserts failure on /login for missing social auth looks right."""
@@ -376,7 +379,7 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
         self.assertEqual(400, response.status_code)
         payload = json.loads(response.content)
         self.assertFalse(payload.get('success'))
-        self.assertIn('already exists', payload.get('value'))
+        self.assertIn('belongs to an existing account', payload.get('value'))
 
     def assert_json_success_response_looks_correct(self, response):
         """Asserts the json response indicates success and redirection."""
@@ -526,6 +529,13 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
 
         return request, strategy
 
+    @contextmanager
+    def _patch_edxmako_current_request(self, request):
+        """Make ``request`` be the current request for edxmako template rendering."""
+
+        with mock.patch('edxmako.request_context.get_current_request', return_value=request):
+            yield
+
     def get_user_by_email(self, strategy, email):
         """Gets a user by email, using the given strategy."""
         return strategy.storage.user.user_model().objects.get(email=email)
@@ -579,7 +589,6 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
             pipeline.get_login_url(self.provider.provider_id, pipeline.AUTH_ENTRY_LOGIN))
         actions.do_complete(request.backend, social_views._do_login)  # pylint: disable=protected-access
 
-        mako_middleware_process_request(strategy.request)
         student_views.signin_user(strategy.request)
         student_views.login_user(strategy.request)
         actions.do_complete(request.backend, social_views._do_login)  # pylint: disable=protected-access
@@ -627,10 +636,10 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
             pipeline.get_login_url(self.provider.provider_id, pipeline.AUTH_ENTRY_LOGIN))
         actions.do_complete(request.backend, social_views._do_login)  # pylint: disable=protected-access
 
-        mako_middleware_process_request(strategy.request)
-        student_views.signin_user(strategy.request)
-        student_views.login_user(strategy.request)
-        actions.do_complete(request.backend, social_views._do_login, user=user)  # pylint: disable=protected-access
+        with self._patch_edxmako_current_request(strategy.request):
+            student_views.signin_user(strategy.request)
+            student_views.login_user(strategy.request)
+            actions.do_complete(request.backend, social_views._do_login, user=user)  # pylint: disable=protected-access
 
         # First we expect that we're in the linked state, with a backend entry.
         self.assert_account_settings_context_looks_correct(account_settings_context(request), user, linked=True)
@@ -686,10 +695,10 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
         self.client.get(pipeline.get_login_url(self.provider.provider_id, pipeline.AUTH_ENTRY_LOGIN))
         actions.do_complete(request.backend, social_views._do_login)  # pylint: disable=protected-access
 
-        mako_middleware_process_request(strategy.request)
-        student_views.signin_user(strategy.request)
-        student_views.login_user(strategy.request)
-        actions.do_complete(request.backend, social_views._do_login, user=user)  # pylint: disable=protected-access
+        with self._patch_edxmako_current_request(strategy.request):
+            student_views.signin_user(strategy.request)
+            student_views.login_user(strategy.request)
+            actions.do_complete(request.backend, social_views._do_login, user=user)  # pylint: disable=protected-access
 
         # Monkey-patch storage for messaging; pylint: disable=protected-access
         request._messages = fallback.FallbackStorage(request)
@@ -727,10 +736,10 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
         # pylint: disable=protected-access
         self.assert_redirect_to_login_looks_correct(actions.do_complete(request.backend, social_views._do_login))
 
-        mako_middleware_process_request(strategy.request)
         # At this point we know the pipeline has resumed correctly. Next we
         # fire off the view that displays the login form and posts it via JS.
-        self.assert_login_response_in_pipeline_looks_correct(student_views.signin_user(strategy.request))
+        with self._patch_edxmako_current_request(strategy.request):
+            self.assert_login_response_in_pipeline_looks_correct(student_views.signin_user(strategy.request))
 
         # Next, we invoke the view that handles the POST, and expect it
         # redirects to /auth/complete. In the browser ajax handlers will
@@ -760,8 +769,8 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
         user.is_active = False
         user.save()
 
-        mako_middleware_process_request(strategy.request)
-        self.assert_json_failure_response_is_inactive_account(student_views.login_user(strategy.request))
+        with self._patch_edxmako_current_request(strategy.request):
+            self.assert_json_failure_response_is_inactive_account(student_views.login_user(strategy.request))
 
     def test_signin_fails_if_no_account_associated(self):
         _, strategy = self.get_request_and_strategy(
@@ -806,11 +815,11 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
         # pylint: disable=protected-access
         self.assert_redirect_to_register_looks_correct(actions.do_complete(request.backend, social_views._do_login))
 
-        mako_middleware_process_request(strategy.request)
         # At this point we know the pipeline has resumed correctly. Next we
         # fire off the view that displays the registration form.
-        self.assert_register_response_in_pipeline_looks_correct(
-            student_views.register_user(strategy.request), pipeline.get(request)['kwargs'])
+        with self._patch_edxmako_current_request(request):
+            self.assert_register_response_in_pipeline_looks_correct(
+                student_views.register_user(strategy.request), pipeline.get(request)['kwargs'])
 
         # Next, we invoke the view that handles the POST. Not all providers
         # supply email. Manually add it as the user would have to; this
@@ -828,7 +837,8 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
 
         # ...but when we invoke create_account the existing edX view will make
         # it, but not social auths. The pipeline creates those later.
-        self.assert_json_success_response_looks_correct(student_views.create_account(strategy.request))
+        with self._patch_edxmako_current_request(strategy.request):
+            self.assert_json_success_response_looks_correct(student_views.create_account(strategy.request))
         # We've overridden the user's password, so authenticate() with the old
         # value won't work:
         created_user = self.get_user_by_email(strategy, email)
@@ -876,12 +886,14 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
         # pylint: disable=protected-access
         self.assert_redirect_to_register_looks_correct(actions.do_complete(backend, social_views._do_login))
 
-        mako_middleware_process_request(strategy.request)
-        self.assert_register_response_in_pipeline_looks_correct(
-            student_views.register_user(strategy.request), pipeline.get(request)['kwargs'])
-        strategy.request.POST = self.get_registration_post_vars()
-        # Create twice: once successfully, and once causing a collision.
-        student_views.create_account(strategy.request)
+        with self._patch_edxmako_current_request(request):
+            self.assert_register_response_in_pipeline_looks_correct(
+                student_views.register_user(strategy.request), pipeline.get(request)['kwargs'])
+
+        with self._patch_edxmako_current_request(strategy.request):
+            strategy.request.POST = self.get_registration_post_vars()
+            # Create twice: once successfully, and once causing a collision.
+            student_views.create_account(strategy.request)
         self.assert_json_failure_response_is_username_collision(student_views.create_account(strategy.request))
 
     def test_pipeline_raises_auth_entry_error_if_auth_entry_invalid(self):
@@ -900,7 +912,9 @@ class IntegrationTest(testutil.TestCase, test.TestCase):
             strategy.request.backend.auth_complete = mock.MagicMock(return_value=self.fake_auth_complete(strategy))
 
 
-class Oauth2IntegrationTest(IntegrationTest):  # pylint: disable=abstract-method
+# pylint: disable=test-inherits-tests, abstract-method
+@django_utils.override_settings(ECOMMERCE_API_URL=TEST_API_URL, ECOMMERCE_API_SIGNING_KEY=TEST_API_SIGNING_KEY)
+class Oauth2IntegrationTest(IntegrationTest):
     """Base test case for integration tests of Oauth2 providers."""
 
     # Dict of string -> object. Information about the token granted to the

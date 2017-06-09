@@ -20,7 +20,7 @@ def view_word_cloud(_step):
 
 @step('I press the Save button')
 def press_the_save_button(_step):
-    button_css = '.input_cloud_section input.save'
+    button_css = '.input_cloud_section .save'
     world.css_click(button_css)
 
 
@@ -40,6 +40,9 @@ def fill_inputs(_step):
 
 @step('I see the result with words count')
 def see_result(_step):
+    """
+    Uppercasing since CSS capitalizes the headings
+    """
     strong_css = '.your_words strong'
     target_text = set([world.css_text(strong_css, i) for i in range(2)])
     assert set(['text1', 'text2']) == target_text

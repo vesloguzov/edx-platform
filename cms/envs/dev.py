@@ -60,6 +60,7 @@ DATABASES = {
 }
 
 LMS_BASE = "localhost:8000"
+LMS_ROOT_URL = "http://{}".format(LMS_BASE)
 FEATURES['PREVIEW_LMS_BASE'] = "localhost:8000"
 
 REPOS = {
@@ -132,7 +133,7 @@ SECRET_KEY = '85920908f28904ed733fe576320db18cabd7b6cd'
 
 ################################ PIPELINE #################################
 
-PIPELINE_SASS_ARGUMENTS = '--debug-info --require {proj_dir}/static/sass/bourbon/lib/bourbon.rb'.format(proj_dir=PROJECT_ROOT)
+PIPELINE_SASS_ARGUMENTS = '--debug-info'
 
 ################################# CELERY ######################################
 

@@ -51,7 +51,7 @@ Feature: LMS.LTI component
   Then I see text "Problem Scores: 5/10"
   And I see graph with total progress "5%"
   Then I click on the "Instructor" tab
-  And I click on the "Student Admin" tab
+  And I click the "Student Admin" button
   And I click on the "View Gradebook" link
   And I see in the gradebook table that "HW" is "50"
   And I see in the gradebook table that "Total" is "5"
@@ -90,7 +90,7 @@ Feature: LMS.LTI component
   Then I see text "Problem Scores: 8/10"
   And I see graph with total progress "8%"
   Then I click on the "Instructor" tab
-  And I click on the "Student Admin" tab
+  And I click the "Student Admin" button
   And I click on the "View Gradebook" link
   And I see in the gradebook table that "HW" is "80"
   And I see in the gradebook table that "Total" is "8"
@@ -116,7 +116,7 @@ Feature: LMS.LTI component
   Then I see text "Problem Scores: 0/10"
   And I see graph with total progress "0%"
   Then I click on the "Instructor" tab
-  And I click on the "Student Admin" tab
+  And I click the "Student Admin" button
   And I click on the "View Gradebook" link
   And I see in the gradebook table that "HW" is "0"
   And I see in the gradebook table that "Total" is "0"
@@ -128,7 +128,7 @@ Feature: LMS.LTI component
   | open_in_a_new_page | hide_launch |
   | False              | True        |
   Then in the LTI component I do not see a launch button
-  Then I see LTI component module title with text "LTI (EXTERNAL RESOURCE)"
+  Then I see LTI component module title with text "LTI (External resource)"
 
   #12
   Scenario: LTI component that set to hide_launch and not open_in_a_new_page shows no iframe
@@ -137,7 +137,7 @@ Feature: LMS.LTI component
   | open_in_a_new_page | hide_launch |
   | True               | True        |
   Then in the LTI component I do not see an provider iframe
-  Then I see LTI component module title with text "LTI (EXTERNAL RESOURCE)"
+  Then I see LTI component module title with text "LTI (External resource)"
 
   #13
   Scenario: LTI component button text is correctly displayed

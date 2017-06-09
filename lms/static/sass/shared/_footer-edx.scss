@@ -18,6 +18,10 @@ footer#footer-edx-v3 {
   padding: 20px;
   border-top: 1px solid $courseware-button-border-color;
 
+  // To match the Pattern Library
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
   .footer-content-wrapper {
     @include outer-container;
     @include box-sizing(border-box);
@@ -79,6 +83,15 @@ footer#footer-edx-v3 {
       width: 100%;
     }
   }
+  
+  .social-media-links,
+  .mobile-app-links {
+      @extend %ui-no-list;
+      
+      .list-item {
+          display: inline-block;
+      }
+  }
 
   .mobile-app-links {
     @include clearfix();
@@ -122,8 +135,6 @@ footer#footer-edx-v3 {
   }
 
   .app-link {
-    position: absolute;
-    top: 0;
 
     &:first-of-type {
       @include left(0);
@@ -161,11 +172,11 @@ footer#footer-edx-v3 {
     padding: 20px 10px;
 
     .site-details {
-      @include span-columns(7);
+      @include span-columns(8);
     }
 
     .external-links {
-      @include span-columns(5);
+      @include span-columns(4);
     }
 
     .social-media-links,
@@ -174,7 +185,6 @@ footer#footer-edx-v3 {
     }
 
     .social-media-links {
-      width: calc();
       margin-bottom: 40px;
     }
   }
@@ -185,11 +195,11 @@ footer#footer-edx-v3 {
     }
 
     .site-details {
-      @include span-columns(6);
+      @include span-columns(7);
     }
 
     .external-links {
-      @include span-columns(4);
+      @include span-columns(3);
     }
 
     .social-media-links {

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Video xmodule tests in mongo."""
+
 import ddt
-import itertools
 import json
 from collections import OrderedDict
 from path import Path as path
@@ -14,7 +14,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.test.utils import override_settings
 
-from xmodule.video_module import VideoDescriptor, bumper_utils, video_utils
+from xmodule.video_module import VideoDescriptor, bumper_utils, video_utils, rewrite_video_url
 from xmodule.x_module import STUDENT_VIEW
 from xmodule.tests.test_video import VideoDescriptorTestBase, instantiate_descriptor
 from xmodule.tests.test_import import DummySystem
@@ -34,7 +34,7 @@ from .test_video_xml import SOURCE_XML
 from .test_video_handlers import TestVideo
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestVideoYouTube(TestVideo):
     METADATA = {}
 
@@ -79,6 +79,7 @@ class TestVideoYouTube(TestVideo):
                     self.item_descriptor, 'transcript', 'available_translations'
                 ).rstrip('/?'),
                 "autohideHtml5": False,
+                "recordedYoutubeIsAvailable": True,
             })),
             'track': None,
             'transcript_download_format': 'srt',
@@ -95,7 +96,7 @@ class TestVideoYouTube(TestVideo):
         )
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestVideoNonYouTube(TestVideo):
     """Integration tests: web client + mongo."""
     DATA = """
@@ -157,6 +158,7 @@ class TestVideoNonYouTube(TestVideo):
                     self.item_descriptor, 'transcript', 'available_translations'
                 ).rstrip('/?'),
                 "autohideHtml5": False,
+                "recordedYoutubeIsAvailable": True,
             })),
             'track': None,
             'transcript_download_format': 'srt',
@@ -173,7 +175,7 @@ class TestVideoNonYouTube(TestVideo):
         )
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestGetHtmlMethod(BaseTestXmodule):
     '''
     Make sure that `get_html` works correctly.
@@ -211,6 +213,7 @@ class TestGetHtmlMethod(BaseTestXmodule):
                 self.item_descriptor, 'transcript', 'available_translations'
             ).rstrip('/?'),
             "autohideHtml5": False,
+            "recordedYoutubeIsAvailable": True,
         })
 
     def test_get_html_track(self):
@@ -479,23 +482,7 @@ class TestGetHtmlMethod(BaseTestXmodule):
         # it'll just fall back to the values in the VideoDescriptor.
         self.assertIn("example_source.mp4", self.item_descriptor.render(STUDENT_VIEW).content)
 
-    @patch('edxval.api.get_video_info')
-    def test_get_html_with_mocked_edx_video_id(self, mock_get_video_info):
-        mock_get_video_info.return_value = {
-            'url': '/edxval/video/example',
-            'edx_video_id': u'example',
-            'duration': 111.0,
-            'client_video_id': u'The example video',
-            'encoded_videos': [
-                {
-                    'url': u'http://www.meowmix.com',
-                    'file_size': 25556,
-                    'bitrate': 9600,
-                    'profile': u'desktop_mp4'
-                }
-            ]
-        }
-
+    def test_get_html_with_mocked_edx_video_id(self):
         SOURCE_XML = """
             <video show_captions="true"
             display_name="A Name"
@@ -555,7 +542,23 @@ class TestGetHtmlMethod(BaseTestXmodule):
             edx_video_id=data['edx_video_id']
         )
         self.initialize_module(data=DATA)
-        context = self.item_descriptor.render(STUDENT_VIEW).content
+
+        with patch('edxval.api.get_video_info') as mock_get_video_info:
+            mock_get_video_info.return_value = {
+                'url': '/edxval/video/example',
+                'edx_video_id': u'example',
+                'duration': 111.0,
+                'client_video_id': u'The example video',
+                'encoded_videos': [
+                    {
+                        'url': u'http://www.meowmix.com',
+                        'file_size': 25556,
+                        'bitrate': 9600,
+                        'profile': u'desktop_mp4'
+                    }
+                ]
+            }
+            context = self.item_descriptor.render(STUDENT_VIEW).content
 
         expected_context = dict(initial_context)
         expected_context['metadata'].update({
@@ -580,30 +583,97 @@ class TestGetHtmlMethod(BaseTestXmodule):
         )
 
     def test_get_html_with_existing_edx_video_id(self):
-        # create test profiles and their encodings
+        """
+        Tests the `VideoModule` `get_html` where `edx_video_id` is given and related video is found
+        """
+        edx_video_id = 'thundercats'
+        # create video with provided edx_video_id and return encoded_videos
+        encoded_videos = self.encode_and_create_video(edx_video_id)
+        # data to be used to retrieve video by edxval API
+        data = {
+            'download_video': 'true',
+            'source': 'example_source.mp4',
+            'sources': """
+                <source src="example.mp4"/>
+                <source src="example.webm"/>
+            """,
+            'edx_video_id': edx_video_id,
+            'result': {
+                'download_video_link': u'http://fake-video.edx.org/{}.mp4'.format(edx_video_id),
+                'sources': [u'example.mp4', u'example.webm'] + [video['url'] for video in encoded_videos],
+            },
+        }
+        # context returned by get_html when provided with above data
+        # expected_context, a dict to assert with context
+        context, expected_context = self.helper_get_html_with_edx_video_id(data)
+        self.assertEqual(
+            context,
+            self.item_descriptor.xmodule_runtime.render_template('video.html', expected_context)
+        )
+
+    def test_get_html_with_existing_unstripped_edx_video_id(self):
+        """
+        Tests the `VideoModule` `get_html` where `edx_video_id` with some unwanted tab(\t)
+        is given and related video is found
+        """
+        edx_video_id = 'thundercats'
+        # create video with provided edx_video_id and return encoded_videos
+        encoded_videos = self.encode_and_create_video(edx_video_id)
+        # data to be used to retrieve video by edxval API
+        # unstripped edx_video_id is provided here
+        data = {
+            'download_video': 'true',
+            'source': 'example_source.mp4',
+            'sources': """
+                <source src="example.mp4"/>
+                <source src="example.webm"/>
+            """,
+            'edx_video_id': "{}\t".format(edx_video_id),
+            'result': {
+                'download_video_link': u'http://fake-video.edx.org/{}.mp4'.format(edx_video_id),
+                'sources': [u'example.mp4', u'example.webm'] + [video['url'] for video in encoded_videos],
+            },
+        }
+        # context returned by get_html when provided with above data
+        # expected_context, a dict to assert with context
+        context, expected_context = self.helper_get_html_with_edx_video_id(data)
+        self.assertEqual(
+            context,
+            self.item_descriptor.xmodule_runtime.render_template('video.html', expected_context)
+        )
+
+    def encode_and_create_video(self, edx_video_id):
+        """
+        Create and encode video to be used for tests
+        """
         encoded_videos = []
         for profile, extension in [("desktop_webm", "webm"), ("desktop_mp4", "mp4")]:
             create_profile(profile)
             encoded_videos.append(
                 dict(
-                    url=u"http://fake-video.edx.org/thundercats.{}".format(extension),
+                    url=u"http://fake-video.edx.org/{}.{}".format(edx_video_id, extension),
                     file_size=9000,
                     bitrate=42,
                     profile=profile,
                 )
             )
-
         result = create_video(
             dict(
-                client_video_id="Thunder Cats",
+                client_video_id='A Client Video id',
                 duration=111,
-                edx_video_id="thundercats",
+                edx_video_id=edx_video_id,
                 status='test',
-                encoded_videos=encoded_videos
+                encoded_videos=encoded_videos,
             )
         )
-        self.assertEqual(result, "thundercats")
+        self.assertEqual(result, edx_video_id)
+        return encoded_videos
 
+    def helper_get_html_with_edx_video_id(self, data):
+        """
+        Create expected context and get actual context returned by `get_html` method.
+        """
+        # make sure the urls for the various encodings are included as part of the alternative sources.
         SOURCE_XML = """
             <video show_captions="true"
             display_name="A Name"
@@ -615,22 +685,6 @@ class TestGetHtmlMethod(BaseTestXmodule):
                 {sources}
             </video>
         """
-
-        data = {
-            'download_video': 'true',
-            'source': 'example_source.mp4',
-            'sources': """
-                <source src="example.mp4"/>
-                <source src="example.webm"/>
-            """,
-            'edx_video_id': "thundercats",
-            'result': {
-                'download_video_link': u'http://fake-video.edx.org/thundercats.mp4',
-                # make sure the urls for the various encodings are included as part of the alternative sources.
-                'sources': [u'example.mp4', u'example.webm'] +
-                           [video['url'] for video in encoded_videos],
-            }
-        }
 
         # Video found for edx_video_id
         metadata = self.default_metadata_dict
@@ -655,6 +709,7 @@ class TestGetHtmlMethod(BaseTestXmodule):
             'metadata': metadata,
         }
 
+        # pylint: disable=invalid-name
         DATA = SOURCE_XML.format(
             download_video=data['download_video'],
             source=data['source'],
@@ -662,8 +717,10 @@ class TestGetHtmlMethod(BaseTestXmodule):
             edx_video_id=data['edx_video_id']
         )
         self.initialize_module(data=DATA)
+        # context returned by get_html
         context = self.item_descriptor.render(STUDENT_VIEW).content
 
+        # expected_context, expected context to be returned by get_html
         expected_context = dict(initial_context)
         expected_context['metadata'].update({
             'transcriptTranslationUrl': self.item_descriptor.xmodule_runtime.handler_url(
@@ -680,18 +737,14 @@ class TestGetHtmlMethod(BaseTestXmodule):
             'download_video_link': data['result']['download_video_link'],
             'metadata': json.dumps(expected_context['metadata'])
         })
-
-        self.assertEqual(
-            context,
-            self.item_descriptor.xmodule_runtime.render_template('video.html', expected_context)
-        )
+        return context, expected_context
 
     # pylint: disable=invalid-name
     @patch('xmodule.video_module.video_module.BrandingInfoConfig')
-    @patch('xmodule.video_module.video_module.get_video_from_cdn')
+    @patch('xmodule.video_module.video_module.rewrite_video_url')
     def test_get_html_cdn_source(self, mocked_get_video, mock_BrandingInfoConfig):
         """
-        Test if sources got from CDN.
+        Test if sources got from CDN
         """
 
         mock_BrandingInfoConfig.get_config.return_value = {
@@ -704,8 +757,8 @@ class TestGetHtmlMethod(BaseTestXmodule):
 
         def side_effect(*args, **kwargs):
             cdn = {
-                'http://example.com/example.mp4': 'http://cdn_example.com/example.mp4',
-                'http://example.com/example.webm': 'http://cdn_example.com/example.webm',
+                'http://example.com/example.mp4': 'http://cdn-example.com/example.mp4',
+                'http://example.com/example.webm': 'http://cdn-example.com/example.webm',
             }
             return cdn.get(args[1])
 
@@ -733,8 +786,8 @@ class TestGetHtmlMethod(BaseTestXmodule):
             'result': {
                 'download_video_link': u'example_source.mp4',
                 'sources': [
-                    u'http://cdn_example.com/example.mp4',
-                    u'http://cdn_example.com/example.webm'
+                    u'http://cdn-example.com/example.mp4',
+                    u'http://cdn-example.com/example.webm'
                 ],
             },
         }
@@ -802,7 +855,64 @@ class TestGetHtmlMethod(BaseTestXmodule):
             )
 
 
-@attr('shard_1')
+@attr(shard=1)
+class TestVideoCDNRewriting(BaseTestXmodule):
+    """
+    Tests for Video CDN.
+    """
+
+    def setUp(self, *args, **kwargs):
+        super(TestVideoCDNRewriting, self).setUp(*args, **kwargs)
+        self.original_video_file = "original_video.mp4"
+        self.original_video_url = "http://www.originalvideo.com/" + self.original_video_file
+
+    @patch.dict("django.conf.settings.CDN_VIDEO_URLS",
+                {"CN": "https://chinacdn.cn/"})
+    def test_rewrite_video_url_success(self):
+        """
+        Test successful CDN request.
+        """
+        cdn_response_video_url = settings.CDN_VIDEO_URLS["CN"] + self.original_video_file
+
+        self.assertEqual(
+            rewrite_video_url(settings.CDN_VIDEO_URLS["CN"], self.original_video_url),
+            cdn_response_video_url
+        )
+
+    @patch.dict("django.conf.settings.CDN_VIDEO_URLS",
+                {"CN": "https://chinacdn.cn/"})
+    def test_rewrite_url_concat(self):
+        """
+        Test that written URLs are returned clean despite input
+        """
+        cdn_response_video_url = settings.CDN_VIDEO_URLS["CN"] + "original_video.mp4"
+
+        self.assertEqual(
+            rewrite_video_url(settings.CDN_VIDEO_URLS["CN"] + "///", self.original_video_url),
+            cdn_response_video_url
+        )
+
+    def test_rewrite_video_url_invalid_url(self):
+        """
+        Test if no alternative video in CDN exists.
+        """
+        invalid_cdn_url = 'http://http://fakecdn.com/'
+        self.assertIsNone(rewrite_video_url(invalid_cdn_url, self.original_video_url))
+
+    def test_none_args(self):
+        """
+        Ensure None args return None
+        """
+        self.assertIsNone(rewrite_video_url(None, None))
+
+    def test_emptystring_args(self):
+        """
+        Ensure emptyrstring args return None
+        """
+        self.assertIsNone(rewrite_video_url("", ""))
+
+
+@attr(shard=1)
 class TestVideoDescriptorInitialization(BaseTestXmodule):
     """
     Make sure that module initialization works correctly.
@@ -873,7 +983,7 @@ class TestVideoDescriptorInitialization(BaseTestXmodule):
         self.assertFalse(self.item_descriptor.download_video)
 
 
-@attr('shard_1')
+@attr(shard=1)
 @ddt.ddt
 class TestEditorSavedMethod(BaseTestXmodule):
     """
@@ -956,14 +1066,17 @@ class TestVideoDescriptorStudentViewJson(TestCase):
         'file_size': 222,
     }
     TEST_EDX_VIDEO_ID = 'test_edx_video_id'
+    TEST_YOUTUBE_ID = 'test_youtube_id'
+    TEST_YOUTUBE_EXPECTED_URL = 'https://www.youtube.com/watch?v=test_youtube_id'
 
     def setUp(self):
         super(TestVideoDescriptorStudentViewJson, self).setUp()
-        sample_xml = (
-            "<video display_name='Test Video'> " +
-            "<source src='" + self.TEST_SOURCE_URL + "'/> " +
-            "<transcript language='" + self.TEST_LANGUAGE + "' src='german_translation.srt' /> " +
-            "</video>"
+        video_declaration = "<video display_name='Test Video' youtube_id_1_0=\'" + self.TEST_YOUTUBE_ID + "\'>"
+        sample_xml = ''.join([
+            video_declaration,
+            "<source src='", self.TEST_SOURCE_URL, "'/> ",
+            "<transcript language='", self.TEST_LANGUAGE, "' src='german_translation.srt' /> ",
+            "</video>"]
         )
         self.transcript_url = "transcript_url"
         self.video = instantiate_descriptor(data=sample_xml)
@@ -998,7 +1111,7 @@ class TestVideoDescriptorStudentViewJson(TestCase):
         }
         return self.video.student_view_data(context)
 
-    def verify_result_with_fallback_url(self, result):
+    def verify_result_with_fallback_and_youtube(self, result):
         """
         Verifies the result is as expected when returning "fallback" video data (not from VAL).
         """
@@ -1008,7 +1121,24 @@ class TestVideoDescriptorStudentViewJson(TestCase):
                 "only_on_web": False,
                 "duration": None,
                 "transcripts": {self.TEST_LANGUAGE: self.transcript_url},
-                "encoded_videos": {"fallback": {"url": self.TEST_SOURCE_URL, "file_size": 0}},
+                "encoded_videos": {
+                    "fallback": {"url": self.TEST_SOURCE_URL, "file_size": 0},
+                    "youtube": {"url": self.TEST_YOUTUBE_EXPECTED_URL, "file_size": 0}
+                },
+            }
+        )
+
+    def verify_result_with_youtube_url(self, result):
+        """
+        Verifies the result is as expected when returning "fallback" video data (not from VAL).
+        """
+        self.assertDictEqual(
+            result,
+            {
+                "only_on_web": False,
+                "duration": None,
+                "transcripts": {self.TEST_LANGUAGE: self.transcript_url},
+                "encoded_videos": {"youtube": {"url": self.TEST_YOUTUBE_EXPECTED_URL, "file_size": 0}},
             }
         )
 
@@ -1036,24 +1166,58 @@ class TestVideoDescriptorStudentViewJson(TestCase):
 
     def test_no_edx_video_id(self):
         result = self.get_result()
-        self.verify_result_with_fallback_url(result)
+        self.verify_result_with_fallback_and_youtube(result)
 
-    @ddt.data(
-        *itertools.product([True, False], [True, False], [True, False])
-    )
-    @ddt.unpack
-    def test_with_edx_video_id(self, allow_cache_miss, video_exists_in_val, associate_course_in_val):
+    def test_no_edx_video_id_and_no_fallback(self):
+        video_declaration = "<video display_name='Test Video' youtube_id_1_0=\'{}\'>".format(self.TEST_YOUTUBE_ID)
+        # the video has no source listed, only a youtube link, so no fallback url will be provided
+        sample_xml = ''.join([
+            video_declaration,
+            "<transcript language='", self.TEST_LANGUAGE, "' src='german_translation.srt' /> ",
+            "</video>"
+        ])
+        self.transcript_url = "transcript_url"
+        self.video = instantiate_descriptor(data=sample_xml)
+        self.video.runtime.handler_url = Mock(return_value=self.transcript_url)
+        result = self.get_result()
+        self.verify_result_with_youtube_url(result)
+
+    @ddt.data(True, False)
+    def test_with_edx_video_id_video_associated_in_val(self, allow_cache_miss):
+        """
+        Tests retrieving a video that is stored in VAL and associated with a course in VAL.
+        """
         self.video.edx_video_id = self.TEST_EDX_VIDEO_ID
-        if video_exists_in_val:
-            self.setup_val_video(associate_course_in_val)
+        self.setup_val_video(associate_course_in_val=True)
+        # the video is associated in VAL so no cache miss should ever happen but test retrieval in both contexts
         result = self.get_result(allow_cache_miss)
-        if video_exists_in_val and (associate_course_in_val or allow_cache_miss):
+        self.verify_result_with_val_profile(result)
+
+    @ddt.data(True, False)
+    def test_with_edx_video_id_video_unassociated_in_val(self, allow_cache_miss):
+        """
+        Tests retrieving a video that is stored in VAL but not associated with a course in VAL.
+        """
+        self.video.edx_video_id = self.TEST_EDX_VIDEO_ID
+        self.setup_val_video(associate_course_in_val=False)
+        result = self.get_result(allow_cache_miss)
+        if allow_cache_miss:
             self.verify_result_with_val_profile(result)
         else:
-            self.verify_result_with_fallback_url(result)
+            self.verify_result_with_fallback_and_youtube(result)
+
+    @ddt.data(True, False)
+    def test_with_edx_video_id_video_not_in_val(self, allow_cache_miss):
+        """
+        Tests retrieving a video that is not stored in VAL.
+        """
+        self.video.edx_video_id = self.TEST_EDX_VIDEO_ID
+        # The video is not in VAL so in contexts that do and don't allow cache misses we should always get a fallback
+        result = self.get_result(allow_cache_miss)
+        self.verify_result_with_fallback_and_youtube(result)
 
 
-@attr('shard_1')
+@attr(shard=1)
 class VideoDescriptorTest(TestCase, VideoDescriptorTestBase):
     """
     Tests for video descriptor that requires access to django settings.
@@ -1268,6 +1432,7 @@ class TestVideoWithBumper(TestVideo):
                     self.item_descriptor, 'transcript', 'available_translations'
                 ).rstrip('/?'),
                 "autohideHtml5": False,
+                "recordedYoutubeIsAvailable": True,
             })),
             'track': None,
             'transcript_download_format': 'srt',

@@ -22,6 +22,7 @@ course.certificates: {
 }
 """
 import json
+import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -33,6 +34,7 @@ from django.views.decorators.http import require_http_methods
 from contentstore.utils import reverse_course_url
 from edxmako.shortcuts import render_to_response
 from opaque_keys.edx.keys import CourseKey, AssetKey
+from opaque_keys import InvalidKeyError
 from eventtracking import tracker
 from student.auth import has_studio_write_access
 from student.roles import GlobalStaff
@@ -48,6 +50,8 @@ from contentstore.utils import get_lms_link_for_certificate_web_view
 
 CERTIFICATE_SCHEMA_VERSION = 1
 CERTIFICATE_MINIMUM_ID = 100
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _get_course_and_check_access(course_key, user, depth=0):
@@ -67,11 +71,32 @@ def _delete_asset(course_key, asset_key_string):
     remove asset by calling delete_asset method of assets module.
     """
     if asset_key_string:
-        # remove first slash in asset path
-        # otherwise it generates InvalidKeyError in case of split modulestore
-        if '/' == asset_key_string[0]:
-            asset_key_string = asset_key_string[1:]
-        asset_key = AssetKey.from_string(asset_key_string)
+        try:
+            asset_key = AssetKey.from_string(asset_key_string)
+        except InvalidKeyError:
+            # remove first slash in asset path
+            # otherwise it generates InvalidKeyError in case of split modulestore
+            if '/' == asset_key_string[0]:
+                asset_key_string = asset_key_string[1:]
+                try:
+                    asset_key = AssetKey.from_string(asset_key_string)
+                except InvalidKeyError:
+                    # Unable to parse the asset key, log and return
+                    LOGGER.info(
+                        "In course %r, unable to parse asset key %r, not attempting to delete signatory.",
+                        course_key,
+                        asset_key_string,
+                    )
+                    return
+            else:
+                # Unable to parse the asset key, log and return
+                LOGGER.info(
+                    "In course %r, unable to parse asset key %r, not attempting to delete signatory.",
+                    course_key,
+                    asset_key_string,
+                )
+                return
+
         try:
             delete_asset(course_key, asset_key)
         # If the asset was not found, it doesn't have to be deleted...
@@ -297,9 +322,6 @@ def certificate_activation_handler(request, course_key_string):
     POST
         json: is_active. update the activation state of certificate
     """
-    # Only global staff (PMs) are able to activate/deactivate certificate configuration
-    if not GlobalStaff().has_user(request.user):
-        raise PermissionDenied()
     course_key = CourseKey.from_string(course_key_string)
     store = modulestore()
     try:
@@ -359,7 +381,10 @@ def certificates_list_handler(request, course_key_string):
                     course_id=course.id, include_expired=True
                 ) if mode.slug != 'audit'
             ]
-            if len(course_modes) > 0:
+
+            has_certificate_modes = len(course_modes) > 0
+
+            if has_certificate_modes:
                 certificate_web_view_url = get_lms_link_for_certificate_web_view(
                     user_id=request.user.id,
                     course_key=course_key,
@@ -382,6 +407,7 @@ def certificates_list_handler(request, course_key_string):
                 'course_outline_url': course_outline_url,
                 'upload_asset_url': upload_asset_url,
                 'certificates': certificates,
+                'has_certificate_modes': has_certificate_modes,
                 'course_modes': course_modes,
                 'certificate_web_view_url': certificate_web_view_url,
                 'is_active': is_active,

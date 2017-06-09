@@ -23,25 +23,26 @@ from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext as _, ugettext_lazy
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.views.generic.base import View, RedirectView
+from django.views.generic.base import View
 
 import analytics
 from eventtracking import tracker
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey, UsageKey
 
-from commerce.utils import audit_log
+from commerce.utils import EcommerceService
 from course_modes.models import CourseMode
 from courseware.url_helpers import get_redirect_url
 from edx_rest_api_client.exceptions import SlumberBaseException
 from edxmako.shortcuts import render_to_response, render_to_string
-from embargo import api as embargo_api
-from microsite_configuration import microsite
+from openedx.core.djangoapps.embargo import api as embargo_api
 from openedx.core.djangoapps.commerce.utils import ecommerce_api_client
 from openedx.core.djangoapps.user_api.accounts import NAME_MIN_LENGTH
 from openedx.core.djangoapps.user_api.accounts.api import update_account_settings
 from openedx.core.djangoapps.user_api.errors import UserNotFound, AccountValidationError
 from openedx.core.djangoapps.credit.api import set_credit_requirement_status
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
+from openedx.core.lib.log_utils import audit_log
 from student.models import CourseEnrollment
 from shoppingcart.models import Order, CertificateItem
 from shoppingcart.processors import (
@@ -333,12 +334,19 @@ class PayAndVerifyView(View):
         # Redirect the user to a more appropriate page if the
         # messaging won't make sense based on the user's
         # enrollment / payment / verification status.
+        sku_to_use = relevant_course_mode.sku
+        purchase_workflow = request.GET.get('purchase_workflow', 'single')
+        if purchase_workflow == 'bulk' and relevant_course_mode.bulk_sku:
+            sku_to_use = relevant_course_mode.bulk_sku
         redirect_response = self._redirect_if_necessary(
             message,
             already_verified,
             already_paid,
             is_enrolled,
-            course_key
+            course_key,
+            user_is_trying_to_pay,
+            request.user,
+            sku_to_use
         )
         if redirect_response is not None:
             return redirect_response
@@ -410,15 +418,13 @@ class PayAndVerifyView(View):
             'disable_courseware_js': True,
             'display_steps': display_steps,
             'is_active': json.dumps(request.user.is_active),
+            'user_email': request.user.email,
             'message_key': message,
-            'platform_name': settings.PLATFORM_NAME,
+            'platform_name': configuration_helpers.get_value('PLATFORM_NAME', settings.PLATFORM_NAME),
             'processors': processors,
             'requirements': requirements,
             'user_full_name': full_name,
-            'verification_deadline': (
-                get_default_time_display(verification_deadline)
-                if verification_deadline else ""
-            ),
+            'verification_deadline': verification_deadline or "",
             'already_verified': already_verified,
             'verification_good_until': verification_good_until,
             'capture_sound': staticfiles_storage.url("audio/camera_capture.wav"),
@@ -429,12 +435,8 @@ class PayAndVerifyView(View):
         return render_to_response("verify_student/pay_and_verify.html", context)
 
     def _redirect_if_necessary(
-        self,
-        message,
-        already_verified,
-        already_paid,
-        is_enrolled,
-        course_key
+            self, message, already_verified, already_paid, is_enrolled, course_key,  # pylint: disable=bad-continuation
+            user_is_trying_to_pay, user, sku  # pylint: disable=bad-continuation
     ):
         """Redirect the user to a more appropriate page if necessary.
 
@@ -493,6 +495,13 @@ class PayAndVerifyView(View):
             else:
                 url = reverse('verify_student_start_flow', kwargs=course_kwargs)
 
+        if user_is_trying_to_pay and user.is_active and not already_paid:
+            # If the user is trying to pay, has activated their account, and the ecommerce service
+            # is enabled redirect him to the ecommerce checkout page.
+            ecommerce_service = EcommerceService()
+            if ecommerce_service.is_enabled(user):
+                url = ecommerce_service.checkout_page_url(sku)
+
         # Redirect if necessary, otherwise implicitly return None
         if url is not None:
             return redirect(url)
@@ -522,9 +531,9 @@ class PayAndVerifyView(View):
             if mode.min_price > 0 and not CourseMode.is_credit_mode(mode):
                 return mode
 
-        # Otherwise, find the first expired mode
+        # Otherwise, find the first non credit expired paid mode
         for mode in all_modes[course_key]:
-            if mode.min_price > 0:
+            if mode.min_price > 0 and not CourseMode.is_credit_mode(mode):
                 return mode
 
         # Otherwise, return None and so the view knows to respond with a 404.
@@ -685,10 +694,7 @@ class PayAndVerifyView(View):
             context = {
                 'course': course,
                 'deadline_name': deadline_name,
-                'deadline': (
-                    get_default_time_display(deadline_datetime)
-                    if deadline_datetime else ""
-                )
+                'deadline': deadline_datetime
             }
             return render_to_response("verify_student/missed_deadline.html", context)
 
@@ -872,6 +878,11 @@ class SubmitPhotosView(View):
         face_image, photo_id_image, response = self._decode_image_data(
             params["face_image"], params.get("photo_id_image")
         )
+
+        # If we have a photo_id we do not want use the initial verification image.
+        if photo_id_image is not None:
+            initial_verification = None
+
         if response is not None:
             return response
 
@@ -1084,12 +1095,12 @@ class SubmitPhotosView(View):
         """
         context = {
             'full_name': user.profile.name,
-            'platform_name': microsite.get_value("PLATFORM_NAME", settings.PLATFORM_NAME)
+            'platform_name': configuration_helpers.get_value("PLATFORM_NAME", settings.PLATFORM_NAME)
         }
 
         subject = _("Verification photos received")
         message = render_to_string('emails/photo_submission_confirmation.txt', context)
-        from_address = microsite.get_value('default_from_email', settings.DEFAULT_FROM_EMAIL)
+        from_address = configuration_helpers.get_value('email_from_address', settings.DEFAULT_FROM_EMAIL)
         to_address = user.email
 
         try:
@@ -1150,7 +1161,7 @@ def _compose_message_reverification_email(
         subject = "Re-verification Status"
         context = {
             "status": status,
-            "course_name": course.display_name_with_default,
+            "course_name": course.display_name_with_default_escaped,
             "assessment": reverification_block.related_assessment
         }
 
@@ -1168,10 +1179,10 @@ def _compose_message_reverification_email(
         context["verification_open"] = verification_open
         context["due_date"] = get_default_time_display(reverification_block.due)
 
-        context['platform_name'] = settings.PLATFORM_NAME
+        context['platform_name'] = configuration_helpers.get_value('PLATFORM_NAME', settings.PLATFORM_NAME)
         context["used_attempts"] = used_attempts
         context["allowed_attempts"] = allowed_attempts
-        context["support_link"] = microsite.get_value('email_from_address', settings.CONTACT_EMAIL)
+        context["support_link"] = configuration_helpers.get_value('email_from_address', settings.CONTACT_EMAIL)
 
         re_verification_link = reverse(
             'verify_student_incourse_reverify',
@@ -1208,7 +1219,7 @@ def _send_email(user_id, subject, message):
     Returns:
         None
     """
-    from_address = microsite.get_value(
+    from_address = configuration_helpers.get_value(
         'email_from_address',
         settings.DEFAULT_FROM_EMAIL
     )
@@ -1229,7 +1240,7 @@ def _set_user_requirement_status(attempt, namespace, status, reason=None):
     if checkpoint is not None:
         try:
             set_credit_requirement_status(
-                attempt.user.username,
+                attempt.user,
                 checkpoint.course_id,
                 namespace,
                 checkpoint.checkpoint_location,
@@ -1360,15 +1371,25 @@ class ReverifyView(View):
         """
         status, _ = SoftwareSecurePhotoVerification.user_status(request.user)
 
+        expiration_datetime = SoftwareSecurePhotoVerification.get_expiration_datetime(request.user)
+        can_reverify = False
+        if expiration_datetime:
+            if SoftwareSecurePhotoVerification.is_verification_expiring_soon(expiration_datetime):
+                # The user has an active verification, but the verification
+                # is set to expire within "EXPIRING_SOON_WINDOW" days (default is 4 weeks).
+                # In this case user can resubmit photos for reverification.
+                can_reverify = True
+
         # If the user has no initial verification or if the verification
         # process is still ongoing 'pending' or expired then allow the user to
         # submit the photo verification.
         # A photo verification is marked as 'pending' if its status is either
         # 'submitted' or 'must_retry'.
-        if status in ["none", "must_reverify", "expired", "pending"]:
+
+        if status in ["none", "must_reverify", "expired", "pending"] or can_reverify:
             context = {
                 "user_full_name": request.user.profile.name,
-                "platform_name": settings.PLATFORM_NAME,
+                "platform_name": configuration_helpers.get_value('PLATFORM_NAME', settings.PLATFORM_NAME),
                 "capture_sound": staticfiles_storage.url("audio/camera_capture.wav"),
             }
             return render_to_response("verify_student/reverify.html", context)
@@ -1431,9 +1452,9 @@ class InCourseReverifyView(View):
 
         context = {
             'course_key': unicode(course_key),
-            'course_name': course.display_name_with_default,
+            'course_name': course.display_name_with_default_escaped,
             'checkpoint_name': checkpoint.checkpoint_name,
-            'platform_name': settings.PLATFORM_NAME,
+            'platform_name': configuration_helpers.get_value('PLATFORM_NAME', settings.PLATFORM_NAME),
             'usage_id': usage_id,
             'capture_sound': staticfiles_storage.url("audio/camera_capture.wav"),
         }

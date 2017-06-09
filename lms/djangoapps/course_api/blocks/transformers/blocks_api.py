@@ -1,7 +1,7 @@
 """
 Blocks API Transformer
 """
-from openedx.core.lib.block_cache.transformer import BlockStructureTransformer
+from openedx.core.lib.block_structure.transformer import BlockStructureTransformer
 from .block_counts import BlockCountsTransformer
 from .block_depth import BlockDepthTransformer
 from .navigation import BlockNavigationTransformer
@@ -43,7 +43,7 @@ class BlocksAPITransformer(BlockStructureTransformer):
         transform method.
         """
         # collect basic xblock fields
-        block_structure.request_xblock_fields('graded', 'format', 'display_name', 'category')
+        block_structure.request_xblock_fields('graded', 'format', 'display_name', 'category', 'due')
 
         # collect data from containing transformers
         StudentViewTransformer.collect(block_structure)

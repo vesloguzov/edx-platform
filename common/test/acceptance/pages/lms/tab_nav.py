@@ -21,7 +21,7 @@ class TabNavPage(PageObject):
         Navigate to the tab `tab_name`.
         """
 
-        if tab_name not in ['Courseware', 'Course Info', 'Discussion', 'Wiki', 'Progress']:
+        if tab_name not in ['Course', 'Home', 'Discussion', 'Wiki', 'Progress']:
             self.warning("'{0}' is not a valid tab name".format(tab_name))
 
         # The only identifier for individual tabs is the link href
@@ -35,6 +35,16 @@ class TabNavPage(PageObject):
 
         self.wait_for_page()
         self._is_on_tab_promise(tab_name).fulfill()
+
+    def mathjax_has_rendered(self):
+        """
+        Check that MathJax has rendered in tab content
+        """
+        mathjax_container = self.q(css=".static_tab_wrapper .MathJax_SVG")
+        EmptyPromise(
+            lambda: mathjax_container.present and mathjax_container.visible,
+            "MathJax is not visible"
+        ).fulfill()
 
     def is_on_tab(self, tab_name):
         """
@@ -94,3 +104,10 @@ class TabNavPage(PageObject):
             lambda: self._is_on_tab(tab_name),
             "{0} is the current tab".format(tab_name)
         )
+
+    def has_new_post_button_visible_on_tab(self):
+        """
+        Check if new post button present and visible on course tab page
+        """
+        new_post_btn = self.q(css='ol.course-tabs .new-post-btn')
+        return new_post_btn.present and new_post_btn.visible

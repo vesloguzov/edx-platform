@@ -2,7 +2,6 @@
 
 import copy
 import mock
-from mock import patch
 import shutil
 import lxml.html
 from lxml import etree
@@ -15,7 +14,7 @@ from path import Path as path
 from textwrap import dedent
 from uuid import uuid4
 from functools import wraps
-from unittest import SkipTest, expectedFailure
+from unittest import SkipTest
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -476,12 +475,12 @@ class ImportRequiredTestCases(ContentStoreTestCase):
         renamed_chapter = [item for item in all_items if item.location.block_id == 'renamed_chapter'][0]
         self.assertIsNotNone(renamed_chapter.published_on)
         self.assertIsNotNone(renamed_chapter.parent)
-        self.assertTrue(renamed_chapter.location in course_after_rename[0].children)
+        self.assertIn(renamed_chapter.location, course_after_rename[0].children)
         original_chapter = [item for item in all_items
                             if item.location.block_id == 'b9870b9af59841a49e6e02765d0e3bbf'][0]
         self.assertIsNone(original_chapter.published_on)
         self.assertIsNone(original_chapter.parent)
-        self.assertFalse(original_chapter.location in course_after_rename[0].children)
+        self.assertNotIn(original_chapter.location, course_after_rename[0].children)
 
     def test_empty_data_roundtrip(self):
         """
@@ -692,7 +691,6 @@ class MiscCourseTests(ContentStoreTestCase):
         # Test that malicious code does not appear in html
         self.assertNotIn(malicious_code, resp.content)
 
-    @patch('django.conf.settings.DEPRECATED_ADVANCED_COMPONENT_TYPES', [])
     def test_advanced_components_in_edit_unit(self):
         # This could be made better, but for now let's just assert that we see the advanced modules mentioned in the page
         # response HTML
@@ -732,6 +730,29 @@ class MiscCourseTests(ContentStoreTestCase):
         # Verify that only single asset has been exported with the expected asset name.
         self.assertTrue(filesystem.exists(exported_asset_name))
         self.assertEqual(len(exported_static_files), 1)
+
+        # Remove tempdir
+        shutil.rmtree(root_dir)
+
+    @mock.patch(
+        'lms.djangoapps.ccx.modulestore.CCXModulestoreWrapper.get_item',
+        mock.Mock(return_value=mock.Mock(children=[]))
+    )
+    def test_export_with_orphan_vertical(self):
+        """
+        Tests that, export does not fail when a parent xblock does not have draft child xblock
+        information but the draft child xblock has parent information.
+        """
+        # Make an existing unit a draft
+        self.store.convert_to_draft(self.problem.location, self.user.id)
+        root_dir = path(mkdtemp_clean())
+        export_course_to_xml(self.store, None, self.course.id, root_dir, 'test_export')
+
+        # Verify that problem is exported in the drafts. This is expected because we are
+        # mocking get_item to for drafts. Expect no draft is exported.
+        # Specifically get_item is used in `xmodule.modulestore.xml_exporter._export_drafts`
+        export_draft_dir = OSFS(root_dir / 'test_export/drafts')
+        self.assertEqual(len(export_draft_dir.listdir()), 0)
 
         # Remove tempdir
         shutil.rmtree(root_dir)
@@ -914,7 +935,7 @@ class MiscCourseTests(ContentStoreTestCase):
 
     def test_import_polls(self):
         items = self.store.get_items(self.course.id, qualifiers={'category': 'poll_question'})
-        self.assertTrue(len(items) > 0)
+        self.assertGreater(len(items), 0)
         # check that there's actually content in the 'question' field
         self.assertGreater(len(items[0].question), 0)
 
@@ -978,7 +999,7 @@ class MiscCourseTests(ContentStoreTestCase):
           3) computing thumbnail location of asset
           4) deleting the asset from the course
         """
-        asset_key = self.course.id.make_asset_key('asset', 'sample_static.txt')
+        asset_key = self.course.id.make_asset_key('asset', 'sample_static.html')
         content = StaticContent(
             asset_key, "Fake asset", "application/text", "test",
         )
@@ -1050,7 +1071,7 @@ class MiscCourseTests(ContentStoreTestCase):
         draft content is also deleted
         """
         # add an asset
-        asset_key = self.course.id.make_asset_key('asset', 'sample_static.txt')
+        asset_key = self.course.id.make_asset_key('asset', 'sample_static.html')
         content = StaticContent(
             asset_key, "Fake asset", "application/text", "test",
         )
@@ -1131,6 +1152,9 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
     """
     Tests for the CMS ContentStore application.
     """
+    duplicate_course_error = ("There is already a course defined with the same organization and course number. "
+                              "Please change either organization or course number to be unique.")
+
     def setUp(self):
         super(ContentStoreTest, self).setUp()
 
@@ -1182,6 +1206,22 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         self.course_data['number'] = 'course.number'
         self.course_data['run'] = 'run.name'
         self.assert_created_course()
+
+    @ddt.data(ModuleStoreEnum.Type.split, ModuleStoreEnum.Type.mongo)
+    def test_course_with_different_cases(self, default_store):
+        """
+        Tests that course can not be created with different case using an AJAX request to
+        course handler.
+        """
+        course_number = '99x'
+        with self.store.default_store(default_store):
+            # Verify create a course passes with lower case.
+            self.course_data['number'] = course_number.lower()
+            self.assert_created_course()
+
+            # Verify create a course fail when same course number is provided with different case.
+            self.course_data['number'] = course_number.upper()
+            self.assert_course_creation_failed(self.duplicate_course_error)
 
     def test_create_course_check_forum_seeding(self):
         """Test new course creation and verify forum seeding """
@@ -1244,7 +1284,7 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
 
         auth.add_users(self.user, instructor_role, self.user)
 
-        self.assertTrue(len(instructor_role.users_with_role()) > 0)
+        self.assertGreater(len(instructor_role.users_with_role()), 0)
 
         # Now delete course and check that user not in instructor groups of this course
         delete_course_and_groups(course_id, self.user.id)
@@ -1269,7 +1309,7 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
     def test_create_course_duplicate_course(self):
         """Test new course creation - error path"""
         self.client.ajax_post('/course/', self.course_data)
-        self.assert_course_creation_failed('There is already a course defined with the same organization and course number. Please change either organization or course number to be unique.')
+        self.assert_course_creation_failed(self.duplicate_course_error)
 
     def assert_course_creation_failed(self, error_message):
         """
@@ -1298,21 +1338,38 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         self.course_data['display_name'] = 'Robot Super Course Two'
         self.course_data['run'] = '2013_Summer'
 
-        self.assert_course_creation_failed('There is already a course defined with the same organization and course number. Please change either organization or course number to be unique.')
+        self.assert_course_creation_failed(self.duplicate_course_error)
 
-    def test_create_course_case_change(self):
+    @ddt.data(ModuleStoreEnum.Type.split, ModuleStoreEnum.Type.mongo)
+    def test_create_course_case_change(self, default_store):
         """Test new course creation - error path due to case insensitive name equality"""
-        self.course_data['number'] = 'capital'
-        self.client.ajax_post('/course/', self.course_data)
-        cache_current = self.course_data['org']
-        self.course_data['org'] = self.course_data['org'].lower()
-        self.assert_course_creation_failed('There is already a course defined with the same organization and course number. Please change either organization or course number to be unique.')
-        self.course_data['org'] = cache_current
+        self.course_data['number'] = '99x'
 
-        self.client.ajax_post('/course/', self.course_data)
-        cache_current = self.course_data['number']
-        self.course_data['number'] = self.course_data['number'].upper()
-        self.assert_course_creation_failed('There is already a course defined with the same organization and course number. Please change either organization or course number to be unique.')
+        with self.store.default_store(default_store):
+
+            # Verify that the course was created properly.
+            self.assert_created_course()
+
+            # Keep the copy of original org
+            cache_current = self.course_data['org']
+
+            # Change `org` to lower case and verify that course did not get created
+            self.course_data['org'] = self.course_data['org'].lower()
+            self.assert_course_creation_failed(self.duplicate_course_error)
+
+            # Replace the org with its actual value, and keep the copy of course number.
+            self.course_data['org'] = cache_current
+            cache_current = self.course_data['number']
+
+            self.course_data['number'] = self.course_data['number'].upper()
+            self.assert_course_creation_failed(self.duplicate_course_error)
+
+            # Replace the org with its actual value, and keep the copy of course number.
+            self.course_data['number'] = cache_current
+            __ = self.course_data['run']
+
+            self.course_data['run'] = self.course_data['run'].upper()
+            self.assert_course_creation_failed(self.duplicate_course_error)
 
     def test_course_substring(self):
         """
@@ -1431,7 +1488,7 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
             html = '<script>alert("{name} XSS")</script>'.format(
                 name=xss
             )
-            self.assert_xss(resp, html)
+            self.assert_no_xss(resp, html)
 
     def test_course_overview_view_with_course(self):
         """Test viewing the course overview page with an existing course"""
@@ -1703,8 +1760,6 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         self.assertEqual(fetched_course.start, fetched_item.start)
         self.assertEqual(course.textbooks, fetched_course.textbooks)
 
-    # out-of-date fallback, not relevant for new courses and new edx instances
-    @expectedFailure
     def test_image_import(self):
         """Test backwards compatibilty of course image."""
         content_store = contentstore()
@@ -1727,13 +1782,6 @@ class ContentStoreTest(ContentStoreTestCase, XssTestMixin):
         # Ensure that the imported course image is present -- this shouldn't raise an exception
         asset_key = course.id.make_asset_key('asset', course.course_image)
         content_store.find(asset_key)
-
-    def test_default_course_image(self):
-        """Test course image for course created in Studio is empty by default"""
-        test_course_data = self.assert_created_course()
-        course_id = _get_course_id(self.store, test_course_data)
-        course = self.store.get_course(course_id)
-        self.assertEqual(course.course_image, '')
 
     def _show_course_overview(self, course_key):
         """

@@ -8,10 +8,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import get_storage_class
 from django.contrib.staticfiles.storage import staticfiles_storage
 
-from microsite_configuration import microsite
-
 from student.models import UserProfile
 from ..errors import UserNotFound
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 
 
 PROFILE_IMAGE_FILE_EXTENSION = 'jpg'   # All processed profile images are converted to JPEGs
@@ -39,7 +38,8 @@ def _make_profile_image_name(username):
     Returns the user-specific part of the image filename, based on a hash of
     the username.
     """
-    return hashlib.md5(settings.PROFILE_IMAGE_SECRET_KEY + username).hexdigest()
+    hash_input = settings.PROFILE_IMAGE_SECRET_KEY + username
+    return hashlib.md5(hash_input.encode('utf-8')).hexdigest()
 
 
 def _get_profile_image_filename(name, size, file_extension=PROFILE_IMAGE_FILE_EXTENSION):
@@ -92,13 +92,18 @@ def get_profile_image_urls_for_user(user, request=None):
         dictionary of {size_display_name: url} for each image.
 
     """
-    if user.profile.has_profile_image:
-        urls = _get_profile_image_urls(
-            _make_profile_image_name(user.username),
-            get_profile_image_storage(),
-            version=user.profile.profile_image_uploaded_at.strftime("%s"),
-        )
-    else:
+    try:
+        if user.profile.has_profile_image:
+            urls = _get_profile_image_urls(
+                _make_profile_image_name(user.username),
+                get_profile_image_storage(),
+                version=user.profile.profile_image_uploaded_at.strftime("%s"),
+            )
+        else:
+            urls = _get_default_profile_image_urls()
+    except UserProfile.DoesNotExist:
+        # when user does not have profile it raises exception, when exception
+        # occur we can simply get default image.
         urls = _get_default_profile_image_urls()
 
     if request:
@@ -116,7 +121,7 @@ def _get_default_profile_image_urls():
     TODO The result of this function should be memoized, but not in tests.
     """
     return _get_profile_image_urls(
-        microsite.get_value('PROFILE_IMAGE_DEFAULT_FILENAME', settings.PROFILE_IMAGE_DEFAULT_FILENAME),
+        configuration_helpers.get_value('PROFILE_IMAGE_DEFAULT_FILENAME', settings.PROFILE_IMAGE_DEFAULT_FILENAME),
         staticfiles_storage,
         file_extension=settings.PROFILE_IMAGE_DEFAULT_FILE_EXTENSION,
     )

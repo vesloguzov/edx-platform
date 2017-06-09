@@ -476,6 +476,21 @@ class ImportTestCase(BaseCourseTestCase):
         # appropriate attribute maps -- 'graded' should be True, not 'true'
         self.assertEqual(toy.graded, True)
 
+    def test_static_tabs_import(self):
+        """Make sure that the static tabs are imported correctly"""
+
+        modulestore = XMLModuleStore(DATA_DIR, source_dirs=['toy'])
+
+        location_tab_syllabus = Location("edX", "toy", "2012_Fall", "static_tab", "syllabus", None)
+        toy_tab_syllabus = modulestore.get_item(location_tab_syllabus)
+        self.assertEqual(toy_tab_syllabus.display_name, 'Syllabus')
+        self.assertEqual(toy_tab_syllabus.course_staff_only, False)
+
+        location_tab_resources = Location("edX", "toy", "2012_Fall", "static_tab", "resources", None)
+        toy_tab_resources = modulestore.get_item(location_tab_resources)
+        self.assertEqual(toy_tab_resources.display_name, 'Resources')
+        self.assertEqual(toy_tab_resources.course_staff_only, True)
+
     def test_definition_loading(self):
         """When two courses share the same org and course name and
         both have a module with the same url_name, the definitions shouldn't clash.
@@ -613,22 +628,6 @@ class ImportTestCase(BaseCourseTestCase):
         system = self.get_system(False)
 
         self.assertRaises(etree.XMLSyntaxError, system.process_xml, bad_xml)
-
-    def test_graphicslidertool_import(self):
-        '''
-        Check to see if definition_from_xml in gst_module.py
-        works properly.  Pulls data from the graphic_slider_tool directory
-        in the test data directory.
-        '''
-        modulestore = XMLModuleStore(DATA_DIR, source_dirs=['graphic_slider_tool'])
-
-        sa_id = SlashSeparatedCourseKey("edX", "gst_test", "2012_Fall")
-        location = sa_id.make_usage_key("graphical_slider_tool", "sample_gst")
-        gst_sample = modulestore.get_item(location)
-        render_string_from_sample_gst_xml = """
-        <slider var="a" style="width:400px;float:left;"/>\
-<plot style="margin-top:15px;margin-bottom:15px;"/>""".strip()
-        self.assertIn(render_string_from_sample_gst_xml, gst_sample.data)
 
     def test_word_cloud_import(self):
         modulestore = XMLModuleStore(DATA_DIR, source_dirs=['word_cloud'])

@@ -30,8 +30,8 @@
     }
 
     %print-black-on-white {
-        background: palette(grayscale, white-t) !important;
-        color: palette(grayscale, black-t) !important;
+        background: $white !important;
+        color: $black !important;
     }
 
     %print-layout-wrapper {
@@ -134,8 +134,8 @@
     }
 
     .hd-3 {
-        font-size: font-size(mid-large);
-        line-height: line-height(mid-large);
+        font-size: font-size(large);
+        line-height: line-height(large);
     }
 
     .hd-4 {
@@ -144,18 +144,18 @@
     }
 
     .hd-5 {
-        font-size: font-size(mid-small);
-        line-height: line-height(mid-small);
-    }
-
-    .hd-6 {
         font-size: font-size(small);
         line-height: line-height(small);
     }
 
-    .hd-7 {
+    .hd-6 {
         font-size: font-size(x-small);
-        line-height: line-height(small);
+        line-height: line-height(x-small);
+    }
+
+    .hd-7 {
+        font-size: font-size(xx-small);
+        line-height: line-height(x-small);
     }
 
     // copy
@@ -191,7 +191,7 @@
 
     .accomplishment-rendering {
         top: 0 !important;
-        border: rem(1) solid palette(grayscale, light);
+        border: rem(1) solid palette(grayscale, back);
         border-top: rem(2) solid $cert-base-color;
         box-shadow: none;
         padding: spacing-vertical(small) spacing-horizontal(mid-large);
@@ -207,12 +207,12 @@
         }
 
         .wrapper-statement-and-signatories {
-            border-bottom: rem(2) solid palette(grayscale-cool, x-light);
+            border-bottom: rem(2) solid palette(grayscale, x-back);
         }
 
         .accomplishment-statement {
             @extend %print-rendering-section;
-            width: span(8);
+            @include span(8);
             margin: 0 auto;
         }
 
@@ -244,7 +244,7 @@
 
         .accomplishment-signatories {
             @extend %print-rendering-section;
-            @include span(12 last);
+            @include span(12, before);
 
             .signatory-credentials {
                 font-size: 8pt;
@@ -271,7 +271,7 @@
             &.has-many {
 
                 .signatory {
-                    @include gallery(2);
+                    @include span(2);
                 }
             }
         }

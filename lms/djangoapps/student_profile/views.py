@@ -1,23 +1,23 @@
 """ Views for a student's profile information. """
 
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
-from django_countries import countries
-
-from django.core.urlresolvers import reverse
 from django.contrib.auth.decorators import user_passes_test
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.urlresolvers import reverse
 from django.http import Http404
 from django.views.decorators.http import require_http_methods
+from django_countries import countries
+from django.contrib.staticfiles.storage import staticfiles_storage
 
-from edxmako.shortcuts import render_to_response
+from badges.utils import badges_enabled
+from edxmako.shortcuts import render_to_response, marketing_link
 from openedx.core.djangoapps.user_api.accounts.api import get_account_settings
-from openedx.core.djangoapps.user_api.accounts.serializers import PROFILE_IMAGE_KEY_PREFIX
 from openedx.core.djangoapps.user_api.errors import UserNotFound, UserNotAuthorized
 from openedx.core.djangoapps.user_api.accounts import ACCOUNT_VISIBILITY_PREF_KEY, ALL_USERS_VISIBILITY
 from openedx.core.djangoapps.user_api.preferences.api import get_user_preferences
 from openedx.core.djangoapps.course_owners.views import get_accessible_owner_courses
 from student.models import User
-from microsite_configuration import microsite
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 
 
 @user_passes_test(lambda u: settings.FEATURES['ALLOW_PROFILE_ANONYMOUS_ACCESS'] or u.is_authenticated())
@@ -66,7 +66,7 @@ def learner_profile_context(request, profile_username):
 
     own_profile = (request.user.username == profile_username)
 
-    account_settings_data = get_account_settings(request, profile_username)
+    account_settings_data = get_account_settings(request, [profile_username])[0]
 
     preferences_data = get_user_preferences(profile_user, profile_username)
 
@@ -87,8 +87,12 @@ def learner_profile_context(request, profile_username):
             'has_preferences_access': (request.user.username == profile_username or request.user.is_staff),
             'own_profile': own_profile,
             'country_options': list(countries),
+            'find_courses_url': marketing_link('COURSES'),
             'language_options': settings.ALL_LANGUAGES,
-            'platform_name': microsite.get_value('platform_name', settings.PLATFORM_NAME),
+            'badges_logo': staticfiles_storage.url('certificates/images/backpack-logo.png'),
+            'badges_icon': staticfiles_storage.url('certificates/images/ico-mozillaopenbadges.png'),
+            'backpack_ui_img': staticfiles_storage.url('certificates/images/backpack-ui.png'),
+            'platform_name': configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME),
             'owned_courses_data': {
                 'paid_courses_available': settings.FEATURES['ENABLE_SHOPPING_CART'],
                 'owned_courses': _get_owned_courses(request, profile_user, preferences_data),
@@ -96,6 +100,10 @@ def learner_profile_context(request, profile_username):
         },
         'disable_courseware_js': True,
     }
+
+    if badges_enabled():
+        context['data']['badges_api_url'] = reverse("badges_api:user_assertions", kwargs={'username': profile_username})
+
     return context
 
 

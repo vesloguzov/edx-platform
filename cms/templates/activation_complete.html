@@ -1,10 +1,16 @@
-<%! from django.utils.translation import ugettext as _ %>
+<%!
+from openedx.core.djangolib.markup import Text
+from django.utils.translation import ugettext as _
+%>
+<%page expression_filter="h"/>
 <%inherit file="base.html" />
 
 <%block name="content">
 <div class="wrapper-mast wrapper sr">
   <header class="mast">
-    <h1 class="page-header">${_("Studio Account Activation")}</h1>
+    <h1 class="page-header">
+      ${Text(_("Studio Account Activation"))}
+    </h1>
   </header>
 </div>
 
@@ -17,14 +23,16 @@
       <div class="msg">
         <h1 class="title">${_("Your account activation is complete!")}</h1>
         <div class="copy">
-          <p>${_("Thank you for activating your account. You may now sign in and start using Studio to author courses.")}</p>
+          <p>
+            ${Text(_("Thank you for activating your account. You may now sign in and start using Studio to author courses."))}
+          </p>
         </div>
       </div>
 
       <ul class="list-actions">
         <li class="action-item">
           <a href="/signin" class="action-primary action-signin">
-            ${_("Sign into Studio")}
+            ${Text(_("Sign into Studio"))}
           </a>
         </li>
       </ul>

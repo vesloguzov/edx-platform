@@ -4,14 +4,49 @@ metadata:
     markdown: !!null
 data: |
       <problem>
-      <p>
-      В этом типе задач для оценивания введенных ответов и выдачи подсказок используется программа на Python.
-      Задачи могут быть любого типа; чаще всего используются числовые и текстовые поля ввода.
-      </p>
+          <p>
+              В этом типе задач для оценивания введенных ответов и выдачи подсказок используется программа на Python.
+              Задачи могут быть любого типа; чаще всего используются числовые и текстовые поля ввода.
+          </p>
 
-      <p>После добавления задачи не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
-      <p>Вы можете использовать следующую задачу как пример.</p>
+          <p>
+              Для таких задач вы можете использовать тег script или answer.
+          </p>
+          <p>
+              Вы можете создать задание, ответ на которое может быть оценен как
+              частично верный, или генерацию случайных значений параметров на Python.
+              Также мы можете добавлять в решения изображения, используя HTML-тег «img».
+              Обратите внимание, что тег «img» должен располагаться внутри тега «div»,
+              вложенного в тег «solution», чтобы слушатели не смогли увидеть изображение
+              до того, как нажмут кнопку «Показать ответ».
+          </p>
 
+
+          <p>
+              После добавления задачи не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.
+          </p>
+          <p>
+              Вы можете использовать следующую задачу как пример.
+          </p>
+        <customresponse cfn="test_add_to_ten">
+      <script type="loncapa/python">
+
+      def test_add_to_ten(expect, ans):
+          return test_add(10, ans)
+
+      </script>
+            <label>Enter two integers that sum to 10.</label>
+            <textline size="40" correct_answer="3" label="Enter first number" /><br/>
+            <textline size="40" correct_answer="7" label="Enter second number" />
+            <solution>
+                <div class="detailed-solution">
+                    <p>Explanation</p>
+                    <p>Any set of integers on the line \(y = 10 - x\) satisfy these constraints.</p>
+                </div>
+            </solution>
+        </customresponse>
+
+        <customresponse cfn="test_add" expect="20">
       <script type="loncapa/python">
 
       def test_add(expect, ans):
@@ -22,24 +57,19 @@ data: |
           except ValueError:
               return False
 
-      def test_add_to_ten(expect, ans):
-          return test_add(10, ans)
-
       </script>
-        <p>Введите два числа, сумма которых равна 10.</p>
-        <customresponse cfn="test_add_to_ten">
-          <textline size="40" correct_answer="3" label="Число №1"/><br/>
-          <textline size="40" correct_answer="7" label="Число №2"/>
+            <label>Введите два числа, сумма которых равна 20.</label>
+            <textline size="40" correct_answer="11" label="Число №1" /><br/>
+            <textline size="40" correct_answer="9" label="Число №2" />
+            <solution>
+                <div class="detailed-solution">
+                    <p>Пояснение</p>
+                    <p>Любой набор чисел вида \(y = 20 - x\) подходит в качестве решения.</p>
+                    <p>Для добавления изображения к решению используйте тег «img».Не забудьте добавить alt-текст.</p>
+                    <img src="/static/images/placeholder-image.png" width="400"
+                    alt="Описание изображения, поясняющее его суть и относимость к заданию
+                    для тех, кто не сможет просмотреть изображение."/>
+                </div>
+            </solution>
         </customresponse>
-        <p>Введите два числа, сумма которых равна 20.</p>
-        <customresponse cfn="test_add" expect="20">
-          <textline size="40" correct_answer="11" label="Число №1"/><br/>
-          <textline size="40" correct_answer="9" label="Число №2"/>
-        </customresponse>
-      <solution>
-        <div class="detailed-solution">
-          <p>Пояснение</p>
-          <p>Любой набор чисел вида \(y = 10 - x\) и \(y = 20 - x\) подходит в качестве решения.</p>
-        </div>
-      </solution>
       </problem>

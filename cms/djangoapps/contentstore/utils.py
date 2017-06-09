@@ -3,8 +3,6 @@ Common utility functions useful throughout the contentstore
 """
 
 import logging
-from opaque_keys import InvalidKeyError
-import re
 from datetime import datetime
 from pytz import UTC
 import itertools
@@ -14,6 +12,9 @@ from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext as _
 from django_comment_common.models import assign_default_role
 from django_comment_common.utils import seed_permissions_roles
+
+from openedx.core.djangoapps.self_paced.models import SelfPacedConfiguration
+from openedx.core.djangoapps.site_configuration.models import SiteConfiguration
 
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.django import modulestore
@@ -93,54 +94,30 @@ def get_lms_link_for_item(location, preview=False):
     """
     assert isinstance(location, UsageKey)
 
-    if settings.LMS_BASE is None:
+    # checks LMS_BASE value in site configuration for the given course_org_filter(org)
+    # if not found returns settings.LMS_BASE
+    lms_base = SiteConfiguration.get_value_for_org(
+        location.org,
+        "LMS_BASE",
+        settings.LMS_BASE
+    )
+
+    if lms_base is None:
         return None
 
     if preview:
-        lms_base = settings.FEATURES.get('PREVIEW_LMS_BASE')
-    else:
-        lms_base = settings.LMS_BASE
+        # checks PREVIEW_LMS_BASE value in site configuration for the given course_org_filter(org)
+        # if not found returns settings.FEATURES.get('PREVIEW_LMS_BASE')
+        lms_base = SiteConfiguration.get_value_for_org(
+            location.org,
+            "PREVIEW_LMS_BASE",
+            settings.FEATURES.get('PREVIEW_LMS_BASE')
+        )
 
     return u"//{lms_base}/courses/{course_key}/jump_to/{location}".format(
         lms_base=lms_base,
         course_key=location.course_key.to_deprecated_string(),
         location=location.to_deprecated_string(),
-    )
-
-
-def get_lms_link_for_about_page(course_key):
-    """
-    Returns the url to the course about page from the location tuple.
-    """
-
-    assert isinstance(course_key, CourseKey)
-
-    if settings.FEATURES.get('ENABLE_MKTG_SITE', False):
-        if not hasattr(settings, 'MKTG_URLS'):
-            log.exception("ENABLE_MKTG_SITE is True, but MKTG_URLS is not defined.")
-            return None
-
-        marketing_urls = settings.MKTG_URLS
-
-        # Root will be "https://www.edx.org". The complete URL will still not be exactly correct,
-        # but redirects exist from www.edx.org to get to the Drupal course about page URL.
-        about_base = marketing_urls.get('ROOT', None)
-
-        if about_base is None:
-            log.exception('There is no ROOT defined in MKTG_URLS')
-            return None
-
-        # Strip off https:// (or http://) to be consistent with the formatting of LMS_BASE.
-        about_base = re.sub(r"^https?://", "", about_base)
-
-    elif settings.LMS_BASE is not None:
-        about_base = settings.LMS_BASE
-    else:
-        return None
-
-    return u"//{about_base_url}/courses/{course_key}/about".format(
-        about_base_url=about_base,
-        course_key=course_key.to_deprecated_string()
     )
 
 
@@ -151,11 +128,14 @@ def get_lms_link_for_certificate_web_view(user_id, course_key, mode):
     """
     assert isinstance(course_key, CourseKey)
 
-    if settings.LMS_BASE is None:
+    # checks LMS_BASE value in SiteConfiguration against course_org_filter if not found returns settings.LMS_BASE
+    lms_base = SiteConfiguration.get_value_for_org(course_key.org, "LMS_BASE", settings.LMS_BASE)
+
+    if lms_base is None:
         return None
 
     return u"//{certificate_web_base}/certificates/user/{user_id}/course/{course_id}?preview={mode}".format(
-        certificate_web_base=settings.LMS_BASE,
+        certificate_web_base=lms_base,
         user_id=user_id,
         course_id=unicode(course_key),
         mode=mode
@@ -488,3 +468,10 @@ def has_access_to_advanced_settings(user, course_key):
     return (auth.has_studio_read_access(user, course_key)
             and (settings.FEATURES.get('ALLOW_ADVANCED_SETTINGS_ACCESS_FOR_COURSE_STAFF')
                  or GlobalStaff().has_user(user)))
+
+
+def is_self_paced(course):
+    """
+    Returns True if course is self-paced, False otherwise.
+    """
+    return course and course.self_paced and SelfPacedConfiguration.current().enabled

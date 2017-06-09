@@ -58,6 +58,9 @@ class CourseTab(object):
     # If there is a single view associated with this tab, this is the name of it
     view_name = None
 
+    # True if this tab should be displayed only for instructors
+    course_staff_only = False
+
     def __init__(self, tab_dict):
         """
         Initializes class members with values passed in by subclasses.
@@ -69,6 +72,7 @@ class CourseTab(object):
         self.name = tab_dict.get('name', self.title)
         self.tab_id = tab_dict.get('tab_id', getattr(self, 'tab_id', self.type))
         self.link_func = tab_dict.get('link_func', link_reverse_func(self.view_name))
+        self.course_staff_only = tab_dict.get('course_staff_only', False)
 
         self.is_hidden = tab_dict.get('is_hidden', False)
 
@@ -105,6 +109,8 @@ class CourseTab(object):
             return self.tab_id
         elif key == 'is_hidden':
             return self.is_hidden
+        elif key == 'course_staff_only':
+            return self.course_staff_only
         else:
             raise KeyError('Key {0} not present in tab {1}'.format(key, self.to_json()))
 
@@ -121,6 +127,8 @@ class CourseTab(object):
             self.tab_id = value
         elif key == 'is_hidden':
             self.is_hidden = value
+        elif key == 'course_staff_only':
+            self.course_staff_only = value
         else:
             raise KeyError('Key {0} cannot be set in tab {1}'.format(key, self.to_json()))
 
@@ -179,7 +187,7 @@ class CourseTab(object):
         Returns:
             a dictionary with keys for the properties of the CourseTab object.
         """
-        to_json_val = {'type': self.type, 'name': self.name}
+        to_json_val = {'type': self.type, 'name': self.name, 'course_staff_only': self.course_staff_only}
         if self.is_hidden:
             to_json_val.update({'is_hidden': True})
         return to_json_val
@@ -305,8 +313,8 @@ class CourseTabList(List):
         """
 
         course.tabs.extend([
-            CourseTab.load('courseware'),
-            CourseTab.load('course_info')
+            CourseTab.load('course_info'),
+            CourseTab.load('courseware')
         ])
 
         # Presence of syllabus tab is indicated by a course attribute
@@ -390,6 +398,19 @@ class CourseTabList(List):
                     yield tab
 
     @classmethod
+    def upgrade_tabs(cls, tabs):
+        """
+        Reverse and Rename Courseware to Course and Course Info to Home Tabs.
+        """
+        if tabs and len(tabs) > 1:
+            if tabs[0].get('type') == 'courseware' and tabs[1].get('type') == 'course_info':
+                tabs[0], tabs[1] = tabs[1], tabs[0]
+                tabs[0]['name'] = _('Home')
+                tabs[1]['name'] = _('Course')
+
+        return tabs
+
+    @classmethod
     def validate_tabs(cls, tabs):
         """
         Check that the tabs set for the specified course is valid.  If it
@@ -406,13 +427,13 @@ class CourseTabList(List):
         if len(tabs) < 2:
             raise InvalidTabsException("Expected at least two tabs.  tabs: '{0}'".format(tabs))
 
-        if tabs[0].get('type') != 'courseware':
+        if tabs[0].get('type') != 'course_info':
             raise InvalidTabsException(
-                "Expected first tab to have type 'courseware'.  tabs: '{0}'".format(tabs))
+                "Expected first tab to have type 'course_info'.  tabs: '{0}'".format(tabs))
 
-        if tabs[1].get('type') != 'course_info':
+        if tabs[1].get('type') != 'courseware':
             raise InvalidTabsException(
-                "Expected second tab to have type 'course_info'.  tabs: '{0}'".format(tabs))
+                "Expected second tab to have type 'courseware'.  tabs: '{0}'".format(tabs))
 
         # the following tabs should appear only once
         # TODO: don't import openedx capabilities from common
@@ -455,6 +476,7 @@ class CourseTabList(List):
         """
         Overrides the from_json method to de-serialize the CourseTab objects from a json-like representation.
         """
+        self.upgrade_tabs(values)
         self.validate_tabs(values)
         tabs = []
         for tab_dict in values:

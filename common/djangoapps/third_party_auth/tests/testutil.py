@@ -7,12 +7,14 @@ Used by Django and non-Django tests; must not have Django deps.
 from contextlib import contextmanager
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
 from provider.oauth2.models import Client as OAuth2Client
 from provider import constants
 import django.test
 from mako.template import Template
 import mock
 import os.path
+from storages.backends.overwrite import OverwriteStorage
 
 from third_party_auth.models import (
     OAuth2ProviderConfig,
@@ -52,6 +54,17 @@ class FakeDjangoSettings(object):
 class ThirdPartyAuthTestMixin(object):
     """ Helper methods useful for testing third party auth functionality """
 
+    def setUp(self, *args, **kwargs):
+        # Django's FileSystemStorage will rename files if they already exist.
+        # This storage backend overwrites files instead, which makes it easier
+        # to make assertions about filenames.
+        icon_image_field = OAuth2ProviderConfig._meta.get_field('icon_image')  # pylint: disable=protected-access
+        patch = mock.patch.object(icon_image_field, 'storage', OverwriteStorage())
+        patch.start()
+        self.addCleanup(patch.stop)
+
+        super(ThirdPartyAuthTestMixin, self).setUp(*args, **kwargs)
+
     def tearDown(self):
         config_cache.clear()
         super(ThirdPartyAuthTestMixin, self).tearDown()
@@ -64,13 +77,17 @@ class ThirdPartyAuthTestMixin(object):
     @staticmethod
     def configure_oauth_provider(**kwargs):
         """ Update the settings for an OAuth2-based third party auth provider """
+        kwargs.setdefault('provider_slug', kwargs['backend_name'])
         obj = OAuth2ProviderConfig(**kwargs)
         obj.save()
         return obj
 
     def configure_saml_provider(self, **kwargs):
         """ Update the settings for a SAML-based third party auth provider """
-        self.assertTrue(SAMLConfiguration.is_enabled(), "SAML Provider Configuration only works if SAML is enabled.")
+        self.assertTrue(
+            SAMLConfiguration.is_enabled(Site.objects.get_current()),
+            "SAML Provider Configuration only works if SAML is enabled."
+        )
         obj = SAMLProviderConfig(**kwargs)
         obj.save()
         return obj
@@ -113,6 +130,16 @@ class ThirdPartyAuthTestMixin(object):
         return cls.configure_oauth_provider(**kwargs)
 
     @classmethod
+    def configure_azure_ad_provider(cls, **kwargs):
+        """ Update the settings for the Azure AD third party auth provider/backend """
+        kwargs.setdefault("name", "Azure AD")
+        kwargs.setdefault("backend_name", "azuread-oauth2")
+        kwargs.setdefault("icon_class", "fa-azuread")
+        kwargs.setdefault("key", "test")
+        kwargs.setdefault("secret", "test")
+        return cls.configure_oauth_provider(**kwargs)
+
+    @classmethod
     def configure_twitter_provider(cls, **kwargs):
         """ Update the settings for the Twitter third party auth provider/backend """
         kwargs.setdefault("name", "Twitter")
@@ -124,7 +151,7 @@ class ThirdPartyAuthTestMixin(object):
 
     @classmethod
     def configure_dummy_provider(cls, **kwargs):
-        """ Update the settings for the Twitter third party auth provider/backend """
+        """ Update the settings for the Dummy third party auth provider/backend """
         kwargs.setdefault("name", "Dummy")
         kwargs.setdefault("backend_name", "dummy")
         return cls.configure_oauth_provider(**kwargs)

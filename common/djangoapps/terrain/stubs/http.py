@@ -3,6 +3,8 @@ Stub implementation of an HTTP service.
 """
 
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from SocketServer import ThreadingMixIn
+import urllib
 import urlparse
 import threading
 import json
@@ -217,6 +219,8 @@ class StubHttpRequestHandler(BaseHTTPRequestHandler, object):
         `format_str` is a string with old-style Python format escaping;
         `args` is an array of values to fill into the string.
         """
+        if not args:
+            format_str = urllib.unquote(format_str)
         return u"{0} - - [{1}] {2}\n".format(
             self.client_address[0],
             self.log_date_time_string(),
@@ -230,7 +234,7 @@ class StubHttpRequestHandler(BaseHTTPRequestHandler, object):
         self.send_response(200)
 
 
-class StubHttpService(HTTPServer, object):
+class StubHttpService(ThreadingMixIn, HTTPServer, object):
     """
     Stub HTTP service implementation.
     """

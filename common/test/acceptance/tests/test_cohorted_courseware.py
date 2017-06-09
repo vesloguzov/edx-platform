@@ -7,29 +7,33 @@ from nose.plugins.attrib import attr
 
 from studio.base_studio_test import ContainerBase
 
-from ..pages.studio.settings_group_configurations import GroupConfigurationsPage
-from ..pages.studio.auto_auth import AutoAuthPage as StudioAutoAuthPage
-from ..fixtures.course import XBlockFixtureDesc
-from ..fixtures import LMS_BASE_URL
-from ..pages.studio.component_editor import ComponentVisibilityEditorView
-from ..pages.lms.instructor_dashboard import InstructorDashboardPage
-from ..pages.lms.courseware import CoursewarePage
-from ..pages.lms.auto_auth import AutoAuthPage as LmsAutoAuthPage
-from ..tests.lms.test_lms_user_preview import verify_expected_problem_visibility
+from common.test.acceptance.pages.studio.settings_group_configurations import GroupConfigurationsPage
+from common.test.acceptance.pages.studio.auto_auth import AutoAuthPage as StudioAutoAuthPage
+from common.test.acceptance.fixtures.course import XBlockFixtureDesc
+from common.test.acceptance.fixtures import LMS_BASE_URL
+from common.test.acceptance.pages.studio.component_editor import ComponentVisibilityEditorView
+from common.test.acceptance.pages.lms.instructor_dashboard import InstructorDashboardPage
+from common.test.acceptance.pages.lms.courseware import CoursewarePage
+from common.test.acceptance.pages.lms.auto_auth import AutoAuthPage as LmsAutoAuthPage
+from common.test.acceptance.tests.lms.test_lms_user_preview import verify_expected_problem_visibility
 
 from bok_choy.promise import EmptyPromise
+from bok_choy.page_object import XSS_INJECTION
 
 
-@attr('shard_5')
+@attr(shard=5)
 class EndToEndCohortedCoursewareTest(ContainerBase):
+    """
+    End-to-end of cohorted courseware.
+    """
 
     def setUp(self, is_staff=True):
 
         super(EndToEndCohortedCoursewareTest, self).setUp(is_staff=is_staff)
         self.staff_user = self.user
 
-        self.content_group_a = "Content Group A"
-        self.content_group_b = "Content Group B"
+        self.content_group_a = "Content Group A" + XSS_INJECTION
+        self.content_group_b = "Content Group B" + XSS_INJECTION
 
         # Create a student who will be in "Cohort A"
         self.cohort_a_student_username = "cohort_a_student"
@@ -143,10 +147,6 @@ class EndToEndCohortedCoursewareTest(ContainerBase):
 
         def add_cohort_with_student(cohort_name, content_group, student):
             cohort_management_page.add_cohort(cohort_name, content_group=content_group)
-            # After adding the cohort, it should automatically be selected
-            EmptyPromise(
-                lambda: cohort_name == cohort_management_page.get_selected_cohort(), "Waiting for new cohort"
-            ).fulfill()
             cohort_management_page.add_students_to_selected_cohort([student])
 
         add_cohort_with_student("Cohort A", self.content_group_a, self.cohort_a_student_username)

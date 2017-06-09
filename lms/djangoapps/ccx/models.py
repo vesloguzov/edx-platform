@@ -1,15 +1,18 @@
 """
 Models for the custom course feature
 """
-from datetime import datetime
+from __future__ import unicode_literals
+import json
 import logging
+from datetime import datetime
 
 from django.contrib.auth.models import User
 from django.db import models
-from django.utils.timezone import UTC
-
+from pytz import utc
 from lazy import lazy
-from xmodule_django.models import CourseKeyField, LocationKeyField
+
+from ccx_keys.locator import CCXLocator
+from openedx.core.djangoapps.xmodule_django.models import CourseKeyField, LocationKeyField
 from xmodule.error_module import ErrorDescriptor
 from xmodule.modulestore.django import modulestore
 
@@ -24,6 +27,9 @@ class CustomCourseForEdX(models.Model):
     course_id = CourseKeyField(max_length=255, db_index=True)
     display_name = models.CharField(max_length=255)
     coach = models.ForeignKey(User, db_index=True)
+    # if not empty, this field contains a json serialized list of
+    # the master course modules
+    structure_json = models.TextField(verbose_name='Structure JSON', blank=True, null=True)
 
     class Meta(object):
         app_label = 'ccx'
@@ -68,44 +74,33 @@ class CustomCourseForEdX(models.Model):
 
     def has_started(self):
         """Return True if the CCX start date is in the past"""
-        return datetime.now(UTC()) > self.start
+        return datetime.now(utc) > self.start
 
     def has_ended(self):
         """Return True if the CCX due date is set and is in the past"""
         if self.due is None:
             return False
 
-        return datetime.now(UTC()) > self.due
+        return datetime.now(utc) > self.due
 
-    def start_datetime_text(self, format_string="SHORT_DATE"):
-        """Returns the desired text representation of the CCX start datetime
-
-        The returned value is always expressed in UTC
+    @property
+    def structure(self):
         """
-        i18n = self.course.runtime.service(self.course, "i18n")
-        strftime = i18n.strftime
-        value = strftime(self.start, format_string)
-        if format_string == 'DATE_TIME':
-            value += u' UTC'
-        return value
-
-    def end_datetime_text(self, format_string="SHORT_DATE"):
-        """Returns the desired text representation of the CCX due datetime
-
-        If the due date for the CCX is not set, the value returned is the empty
-        string.
-
-        The returned value is always expressed in UTC
+        Deserializes a course structure JSON object
         """
-        if self.due is None:
-            return ''
+        if self.structure_json:
+            return json.loads(self.structure_json)
+        return None
 
-        i18n = self.course.runtime.service(self.course, "i18n")
-        strftime = i18n.strftime
-        value = strftime(self.due, format_string)
-        if format_string == 'DATE_TIME':
-            value += u' UTC'
-        return value
+    @property
+    def locator(self):
+        """
+        Helper property that gets a corresponding CCXLocator for this CCX.
+
+        Returns:
+            The CCXLocator corresponding to this CCX.
+        """
+        return CCXLocator.from_course_locator(self.course_id, unicode(self.id))
 
 
 class CcxFieldOverride(models.Model):

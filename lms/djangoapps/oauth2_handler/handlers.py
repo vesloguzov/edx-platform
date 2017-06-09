@@ -5,10 +5,10 @@ from django.core.cache import cache
 
 from courseware.access import has_access
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+from openedx.core.djangoapps.lang_pref import LANGUAGE_KEY
 from openedx.core.djangoapps.user_api.models import UserPreference
 from student.models import anonymous_id_for_user
 from student.models import UserProfile
-from lang_pref import LANGUAGE_KEY
 from student.roles import GlobalStaff, CourseStaffRole, CourseInstructorRole
 
 
@@ -115,7 +115,7 @@ class CourseAccessHandler(object):
 
     For a description of the function naming and arguments, see:
 
-        `oauth2_provider/oidc/handlers.py`
+        `edx_oauth2_provider/oidc/handlers.py`
 
     """
 

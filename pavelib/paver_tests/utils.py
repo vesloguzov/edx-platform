@@ -1,8 +1,11 @@
 """Unit tests for the Paver server tasks."""
 
 import os
+import paver.easy
 from paver import tasks
 from unittest import TestCase
+
+from paver.easy import BuildFailure
 
 
 class PaverTestCase(TestCase):
@@ -31,6 +34,11 @@ class PaverTestCase(TestCase):
         """Returns the messages output by the Paver task."""
         return tasks.environment.messages
 
+    @property
+    def platform_root(self):
+        """Returns the current platform's root directory."""
+        return os.getcwd()
+
     def reset_task_messages(self):
         """Clear the recorded message"""
         tasks.environment.messages = []
@@ -52,4 +60,50 @@ class MockEnvironment(tasks.Environment):
         else:
             output = message
         if not output.startswith("--->"):
-            self.messages.append(output)
+            self.messages.append(unicode(output))
+
+
+def fail_on_eslint(arg):
+    """
+    For our tests, we need the call for diff-quality running pep8 reports to fail, since that is what
+    is going to fail when we pass in a percentage ("p") requirement.
+    """
+    if "eslint" in arg:
+        # Essentially mock diff-quality exiting with 1
+        paver.easy.sh("exit 1")
+    else:
+        return
+
+
+def fail_on_pylint(arg):
+    """
+    For our tests, we need the call for diff-quality running pep8 reports to fail, since that is what
+    is going to fail when we pass in a percentage ("p") requirement.
+    """
+    if "pylint" in arg:
+        # Essentially mock diff-quality exiting with 1
+        paver.easy.sh("exit 1")
+    else:
+        return
+
+
+def fail_on_npm_install(arg):
+    """
+    For our tests, we need the call for diff-quality running pep8 reports to fail, since that is what
+    is going to fail when we pass in a percentage ("p") requirement.
+    """
+    if "npm install" in arg:
+        raise BuildFailure('Subprocess return code: 1')
+    else:
+        return
+
+
+def unexpected_fail_on_npm_install(arg):
+    """
+    For our tests, we need the call for diff-quality running pep8 reports to fail, since that is what
+    is going to fail when we pass in a percentage ("p") requirement.
+    """
+    if "npm install" in arg:
+        raise BuildFailure('Subprocess return code: 50')
+    else:
+        return

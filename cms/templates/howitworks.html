@@ -1,9 +1,11 @@
+<%page expression_filter="h"/>
 <%inherit file="base.html" />
 <%def name="online_help_token()"><% return "welcome" %></%def>
 <%namespace name='static' file='static_content.html'/>
 <%!
   from django.core.urlresolvers import reverse
   from django.utils.translation import ugettext as _
+  from openedx.core.djangolib.markup import HTML, Text
 %>
 
 <%block name="title">${_("Welcome")}</%block>
@@ -14,9 +16,7 @@
 <div class="wrapper-content-header wrapper">
   <section class="content content-header">
     <header>
-      <h1><span class="wrapper-text-welcome">${_("Welcome to {studio_name}").format(
-        studio_name=u'</span><span class="logo">Studio</span>'
-      )}</h1>
+      <h1><span class="wrapper-text-welcome">${_("Welcome to Studio")}</span></h1>
       <p class="tagline">${_("Studio helps manage your online courses, so you can focus on teaching them")}</p>
     </header>
   </section>
@@ -35,19 +35,25 @@
             <img src="${static.url("images/thumb-hiw-feature1.png")}" alt="${_('Studio Helps You Keep Your Courses Organized')}" />
             <figcaption class="sr">${_("Studio Helps You Keep Your Courses Organized")}</figcaption>
             <span class="action-zoom">
-              <i class="icon fa fa-search-plus"></i>
+              <span class="icon fa fa-search-plus" aria-hidden="true"></span><span class="sr">${_("Enlarge image")}</span>
             </span>
           </a>
         </figure>
 
         <div class="copy">
           <h3>${_("Keeping Your Course Organized")}</h3>
-          <p>${_("The backbone of your course is how it is organized. Studio offers an <strong>Outline</strong> editor, providing a simple hierarchy and easy drag and drop to help you and your students stay organized.")}</p>
+          <p>${Text(_("The backbone of your course is how it is organized. Studio offers an {strong_start}Outline{strong_end} editor, providing a simple hierarchy and easy drag and drop to help you and your students stay organized.")).format(
+                  strong_start=HTML('<strong>'),
+                  strong_end=HTML('</strong>')
+              )}</p>
 
           <ul class="list-proofpoints">
             <li class="proofpoint">
               <h4 class="title">${_("Simple Organization For Content")}</h4>
-              <p>${_("Studio uses a simple hierarchy of <strong>sections</strong> and <strong>subsections</strong> to organize your content.")}</p>
+              <p>${Text(_("Studio uses a simple hierarchy of {strong_start}sections{strong_end} and {strong_start}subsections{strong_end} to organize your content.")).format(
+                    strong_start=HTML('<strong>'),
+                    strong_end=HTML('</strong>')
+                  )}</p>
             </li>
 
             <li class="proofpoint">
@@ -57,7 +63,10 @@
 
             <li class="proofpoint">
               <h4 class="title">${_("Go A Week Or A Semester At A Time")}</h4>
-              <p>${_("Build and release <strong>sections</strong> to your students incrementally. You don't have to have it all done at once.")}</p>
+              <p>${Text(_("Build and release {strong_start}sections{strong_end} to your students incrementally. You don't have to have it all done at once.")).format(
+                    strong_start=HTML('<strong>'),
+                    strong_end=HTML('</strong>')
+                  )}</p>
             </li>
           </ul>
         </div>
@@ -69,7 +78,7 @@
           <img src="${static.url("images/thumb-hiw-feature2.png")}" alt="${_('Learning is More than Just Lectures')}" />
           <figcaption class="sr">${_("Learning is More than Just Lectures")}</figcaption>
           <span class="action-zoom">
-            <i class="icon fa fa-search-plus"></i>
+            <span class="icon fa fa-search-plus" aria-hidden="true"></span><span class="sr">${_("Enlarge image")}</span>
           </span>
         </a>
         </figure>
@@ -103,7 +112,7 @@
             <img src="${static.url("images/thumb-hiw-feature3.png")}" alt="${_('Studio Gives You Simple, Fast, and Incremental Publishing. With Friends.')}" />
             <figcaption class="sr">${_("Studio Gives You Simple, Fast, and Incremental Publishing. With Friends.")}</figcaption>
             <span class="action-zoom">
-              <i class="icon fa fa-search-plus"></i>
+              <span class="icon fa fa-search-plus" aria-hidden="true"></span><span class="sr">${_("Enlarge image")}</span>
             </span>
           </a>
         </figure>
@@ -120,7 +129,10 @@
 
             <li class="proofpoint">
               <h4 class="title">${_("Release-On Date Publishing")}</h4>
-              <p>${_("When you've finished a <strong>section</strong>, pick when you want it to go live and Studio takes care of the rest. Build your course incrementally.")}</p>
+              <p>${Text(_("When you've finished a {strong_start}section{strong_end}, pick when you want it to go live and Studio takes care of the rest. Build your course incrementally.")).format(
+                      strong_start=HTML('<strong>'),
+                      strong_end=HTML('</strong>')
+                  )}</p>
             </li>
 
             <li class="proofpoint">
@@ -142,7 +154,7 @@
 
     <ul class="list-actions">
       <li class="action-item">
-        <a href="${reverse('signup')}" class="action action-primary">${_("Sign Up &amp; Start Making an {platform_name} Course").format(platform_name=settings.PLATFORM_NAME)}</a>
+        <a href="${reverse('signup')}" class="action action-primary">${_("Sign Up & Start Making Your {platform_name} Course").format(platform_name=settings.PLATFORM_NAME)}</a>
       </li>
       <li class="action-item">
         <a href="${reverse('login')}" class="action action-secondary">${_("Already have a Studio Account? Sign In")}</a>
@@ -155,11 +167,11 @@
   <h3 class="title">${_("Outlining Your Course")}</h3>
   <figure>
     <img src="${static.url("images/hiw-feature1.png")}" alt="" />
-    <figcaption class="description">${_("Simple two-level outline to organize your couse. Drag and drop, and see your course at a glance.")}</figcaption>
+    <figcaption class="description">${_("Simple two-level outline to organize your course. Drag and drop, and see your course at a glance.")}</figcaption>
   </figure>
 
   <a href="" rel="view" class="action action-modal-close">
-    <i class="icon fa fa-times-circle"></i>
+    <span class="icon fa fa-times-circle" aria-hidden="true"></span>
     <span class="label">${_("close modal")}</span>
   </a>
 </div>
@@ -172,7 +184,7 @@
   </figure>
 
   <a href="" rel="view" class="action action-modal-close">
-    <i class="icon fa fa-times-circle"></i>
+    <span class="icon fa fa-times-circle" aria-hidden="true"></span>
     <span class="label">${_("close modal")}</span>
   </a>
 </div>
@@ -185,7 +197,7 @@
   </figure>
 
   <a href="" rel="view" class="action action-modal-close">
-    <i class="icon fa fa-times-circle"></i>
+    <span class="icon fa fa-times-circle" aria-hidden="true"></span>
     <span class="label">${_("close modal")}</span>
   </a>
 </div>

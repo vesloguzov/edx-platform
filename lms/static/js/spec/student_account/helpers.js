@@ -3,8 +3,10 @@ define(['underscore'], function(_) {
 
     var USER_ACCOUNTS_API_URL = '/api/user/v0/accounts/student';
     var USER_PREFERENCES_API_URL = '/api/user/v0/preferences/student';
+    var BADGES_API_URL = '/api/badges/v1/assertions/user/student/';
     var IMAGE_UPLOAD_API_URL = '/api/profile_images/v0/staff/upload';
     var IMAGE_REMOVE_API_URL = '/api/profile_images/v0/staff/remove';
+    var FIND_COURSES_URL = '/courses';
 
     var PROFILE_IMAGE = {
         image_url_large: '/media/profile-images/image.jpg',
@@ -21,9 +23,10 @@ define(['underscore'], function(_) {
         requires_parental_consent: false,
         country: '1',
         language: null,
-        bio: "About the student",
+        bio: 'About the student',
         language_proficiencies: [{code: '1'}],
-        profile_image: PROFILE_IMAGE
+        profile_image: PROFILE_IMAGE,
+        accomplishments_shared: false
     };
 
     var createAccountSettingsData = function(options) {
@@ -31,7 +34,8 @@ define(['underscore'], function(_) {
     };
 
     var DEFAULT_USER_PREFERENCES_DATA = {
-        'pref-lang': '2'
+        'pref-lang': '2',
+        'time_zone': null
     };
 
     var createUserPreferencesData = function(options) {
@@ -45,10 +49,15 @@ define(['underscore'], function(_) {
         ['3', 'Option 3']
     ];
 
+    var TIME_ZONE_RESPONSE = [{
+        time_zone: 'America/Guyana',
+        description: 'America/Guyana (ECT, UTC-0500)'
+    }];
+
     var IMAGE_MAX_BYTES = 1024 * 1024;
     var IMAGE_MIN_BYTES = 100;
 
-    var expectLoadingIndicatorIsVisible = function (view, visible) {
+    var expectLoadingIndicatorIsVisible = function(view, visible) {
         if (visible) {
             expect($('.ui-loading-indicator')).not.toHaveClass('is-hidden');
         } else {
@@ -56,7 +65,7 @@ define(['underscore'], function(_) {
         }
     };
 
-    var expectLoadingErrorIsVisible = function (view, visible) {
+    var expectLoadingErrorIsVisible = function(view, visible) {
         if (visible) {
             expect(view.$('.ui-loading-error')).not.toHaveClass('is-hidden');
         } else {
@@ -72,21 +81,21 @@ define(['underscore'], function(_) {
 
         if ('fieldValue' in view) {
             expect(view.fieldValue()).toBe(view.modelValue());
-        } else if (view.fieldType === 'link') {
-            expect($(element).find('a').length).toBe(1);
+        } else if (view.fieldType === 'button') {
+            expect($(element).find('button').length).toBe(1);
         } else {
             throw new Error('Unexpected field type: ' + view.fieldType);
         }
     };
 
-    var expectSettingsSectionsButNotFieldsToBeRendered = function (accountSettingsView) {
-        expectSettingsSectionsAndFieldsToBeRendered(accountSettingsView, false)
+    var expectSettingsSectionsButNotFieldsToBeRendered = function(accountSettingsView) {
+        expectSettingsSectionsAndFieldsToBeRendered(accountSettingsView, false);
     };
 
-    var expectSettingsSectionsAndFieldsToBeRendered = function (accountSettingsView, fieldsAreRendered) {
-        var sectionsData = accountSettingsView.options.sectionsData;
+    var expectSettingsSectionsAndFieldsToBeRendered = function(accountSettingsView, fieldsAreRendered) {
+        var sectionsData = accountSettingsView.options.tabSections.aboutTabSections;
 
-        var sectionElements = accountSettingsView.$('.section');
+        var sectionElements = accountSettingsView.$('#aboutTabSections-tabpanel .section');
         expect(sectionElements.length).toBe(sectionsData.length);
 
         _.each(sectionElements, function(sectionElement, sectionIndex) {
@@ -99,7 +108,7 @@ define(['underscore'], function(_) {
             } else {
                 expect(sectionFieldElements.length).toBe(sectionsData[sectionIndex].fields.length);
 
-                _.each(sectionFieldElements, function (sectionFieldElement, fieldIndex) {
+                _.each(sectionFieldElements, function(sectionFieldElement, fieldIndex) {
                     expectElementContainsField(sectionFieldElement, sectionsData[sectionIndex].fields[fieldIndex]);
                 });
             }
@@ -109,6 +118,8 @@ define(['underscore'], function(_) {
     return {
         USER_ACCOUNTS_API_URL: USER_ACCOUNTS_API_URL,
         USER_PREFERENCES_API_URL: USER_PREFERENCES_API_URL,
+        BADGES_API_URL: BADGES_API_URL,
+        FIND_COURSES_URL: FIND_COURSES_URL,
         IMAGE_UPLOAD_API_URL: IMAGE_UPLOAD_API_URL,
         IMAGE_REMOVE_API_URL: IMAGE_REMOVE_API_URL,
         IMAGE_MAX_BYTES: IMAGE_MAX_BYTES,
@@ -117,10 +128,11 @@ define(['underscore'], function(_) {
         createAccountSettingsData: createAccountSettingsData,
         createUserPreferencesData: createUserPreferencesData,
         FIELD_OPTIONS: FIELD_OPTIONS,
+        TIME_ZONE_RESPONSE: TIME_ZONE_RESPONSE,
         expectLoadingIndicatorIsVisible: expectLoadingIndicatorIsVisible,
         expectLoadingErrorIsVisible: expectLoadingErrorIsVisible,
         expectElementContainsField: expectElementContainsField,
         expectSettingsSectionsButNotFieldsToBeRendered: expectSettingsSectionsButNotFieldsToBeRendered,
-        expectSettingsSectionsAndFieldsToBeRendered: expectSettingsSectionsAndFieldsToBeRendered,
+        expectSettingsSectionsAndFieldsToBeRendered: expectSettingsSectionsAndFieldsToBeRendered
     };
 });

@@ -8,20 +8,20 @@ from datetime import datetime
 from pytz import UTC, utc
 from bok_choy.promise import EmptyPromise
 from nose.plugins.attrib import attr
-from .helpers import CohortTestMixin
-from ..helpers import UniqueCourseTest, EventsTestMixin, create_user_partition_json
+from common.test.acceptance.tests.discussion.helpers import CohortTestMixin
+from common.test.acceptance.tests.helpers import UniqueCourseTest, EventsTestMixin, create_user_partition_json
 from xmodule.partitions.partitions import Group
-from ...fixtures.course import CourseFixture, XBlockFixtureDesc
-from ...pages.lms.auto_auth import AutoAuthPage
-from ...pages.lms.instructor_dashboard import InstructorDashboardPage, DataDownloadPage
-from ...pages.studio.settings_group_configurations import GroupConfigurationsPage
+from common.test.acceptance.fixtures.course import CourseFixture, XBlockFixtureDesc
+from common.test.acceptance.pages.lms.auto_auth import AutoAuthPage
+from common.test.acceptance.pages.lms.instructor_dashboard import InstructorDashboardPage, DataDownloadPage
+from common.test.acceptance.pages.studio.settings_group_configurations import GroupConfigurationsPage
 
 import os
 import unicodecsv
 import uuid
 
 
-@attr('shard_6')
+@attr(shard=8)
 class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin):
     """
     Tests for cohort management on the LMS Instructor Dashboard
@@ -88,12 +88,12 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         """
         self.verify_cohort_description(
             self.manual_cohort_name,
-            'Students are added to this cohort only when you provide '
+            'Learners are added to this cohort only when you provide '
             'their email addresses or usernames on this page',
         )
         self.verify_cohort_description(
             self.auto_cohort_name,
-            'Students are added to this cohort automatically',
+            'Learners are added to this cohort automatically',
         )
 
     def test_no_content_groups(self):
@@ -248,12 +248,8 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         Create a new cohort and verify the new and existing settings.
         """
         start_time = datetime.now(UTC)
-        self.assertFalse(cohort_name in self.cohort_management_page.get_cohorts())
+        self.assertNotIn(cohort_name, self.cohort_management_page.get_cohorts())
         self.cohort_management_page.add_cohort(cohort_name, assignment_type=assignment_type)
-        # After adding the cohort, it should automatically be selected
-        EmptyPromise(
-            lambda: cohort_name == self.cohort_management_page.get_selected_cohort(), "Waiting for new cohort to appear"
-        ).fulfill()
         self.assertEqual(0, self.cohort_management_page.get_selected_cohort_count())
         # After adding the cohort, it should automatically be selected and its
         # assignment_type should be "manual" as this is the default assignment type
@@ -306,7 +302,7 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
                 confirmation_messages = self.cohort_management_page.get_cohort_settings_messages()
                 self.assertEqual(["Saved cohort"], confirmation_messages)
                 self.assertEqual(new_cohort_name, self.cohort_management_page.cohort_name_in_header)
-                self.assertTrue(new_cohort_name in self.cohort_management_page.get_cohorts())
+                self.assertIn(new_cohort_name, self.cohort_management_page.get_cohorts())
                 self.assertEqual(1, self.cohort_management_page.get_selected_cohort_count())
                 self.assertEqual(
                     new_assignment_type,
@@ -547,6 +543,7 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         self._create_csv_file(filename, csv_contents)
         self._verify_csv_upload_acceptable_file(filename)
 
+    # TODO: Change unicode_hello_in_korean = u'ßßßßßß' to u'안녕하세요', after up gradation of Chrome driver. See TNL-3944
     def test_cohort_by_csv_unicode(self):
         """
         Scenario: the instructor can upload a file with user and cohort assignments, using both emails and usernames.
@@ -560,7 +557,7 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         TODO: refactor events verification to handle this scenario. Events verification assumes movements
         between other cohorts (manual and auto).
         """
-        unicode_hello_in_korean = u'안녕하세요'
+        unicode_hello_in_korean = u'ßßßßßß'
         self._verify_cohort_settings(cohort_name=unicode_hello_in_korean, assignment_type=None)
         csv_contents = [
             ['username', 'email', 'cohort'],
@@ -688,8 +685,15 @@ class CohortConfigurationTest(EventsTestMixin, UniqueCourseTest, CohortTestMixin
         messages = self.cohort_management_page.get_csv_messages()
         self.assertEquals(expected_message, messages[0])
 
+    @attr('a11y')
+    def test_cohorts_management_a11y(self):
+        """
+        Run accessibility audit for cohort management.
+        """
+        self.cohort_management_page.a11y_audit.check_for_accessibility_errors()
 
-@attr('shard_6')
+
+@attr(shard=6)
 class CohortDiscussionTopicsTest(UniqueCourseTest, CohortTestMixin):
     """
     Tests for cohorting the inline and course-wide discussion topics.
@@ -980,7 +984,7 @@ class CohortDiscussionTopicsTest(UniqueCourseTest, CohortTestMixin):
         self.verify_discussion_topics_after_reload(self.inline_key, cohorted_topics_after)
 
 
-@attr('shard_6')
+@attr(shard=6)
 class CohortContentGroupAssociationTest(UniqueCourseTest, CohortTestMixin):
     """
     Tests for linking between content groups and cohort in the instructor dashboard.
@@ -1146,10 +1150,6 @@ class CohortContentGroupAssociationTest(UniqueCourseTest, CohortTestMixin):
         Creates a new cohort linked to a content group.
         """
         self.cohort_management_page.add_cohort(new_cohort, content_group=cohort_group)
-        # After adding the cohort, it should automatically be selected
-        EmptyPromise(
-            lambda: new_cohort == self.cohort_management_page.get_selected_cohort(), "Waiting for new cohort to appear"
-        ).fulfill()
         self.assertEqual(cohort_group, self.cohort_management_page.get_cohort_associated_content_group())
 
     def _link_cohort_to_content_group(self, cohort_name, content_group):

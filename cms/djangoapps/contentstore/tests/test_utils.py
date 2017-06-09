@@ -2,17 +2,16 @@
 import collections
 from datetime import datetime, timedelta
 
-import mock
-import ddt
 from pytz import UTC
 from django.test import TestCase
-from django.test.utils import override_settings
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, SharedModuleStoreTestCase
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from xmodule.modulestore.django import modulestore
 from xmodule.partitions.partitions import UserPartition, Group
+
+from openedx.core.djangoapps.site_configuration.tests.test_util import with_site_configuration_context
 
 from contentstore import utils
 from contentstore.tests.utils import CourseTestCase
@@ -20,53 +19,6 @@ from contentstore.tests.utils import CourseTestCase
 
 class LMSLinksTestCase(TestCase):
     """ Tests for LMS links. """
-
-    def about_page_test(self):
-        """ Get URL for about page, no marketing site """
-        # default for ENABLE_MKTG_SITE is False.
-        self.assertEquals(self.get_about_page_link(), "//localhost:8000/courses/mitX/101/test/about")
-
-    @override_settings(MKTG_URLS={'ROOT': 'dummy-root'})
-    def about_page_marketing_site_test(self):
-        """ Get URL for about page, marketing root present. """
-        with mock.patch.dict('django.conf.settings.FEATURES', {'ENABLE_MKTG_SITE': True}):
-            self.assertEquals(self.get_about_page_link(), "//dummy-root/courses/mitX/101/test/about")
-        with mock.patch.dict('django.conf.settings.FEATURES', {'ENABLE_MKTG_SITE': False}):
-            self.assertEquals(self.get_about_page_link(), "//localhost:8000/courses/mitX/101/test/about")
-
-    @override_settings(MKTG_URLS={'ROOT': 'http://www.dummy'})
-    def about_page_marketing_site_remove_http_test(self):
-        """ Get URL for about page, marketing root present, remove http://. """
-        with mock.patch.dict('django.conf.settings.FEATURES', {'ENABLE_MKTG_SITE': True}):
-            self.assertEquals(self.get_about_page_link(), "//www.dummy/courses/mitX/101/test/about")
-
-    @override_settings(MKTG_URLS={'ROOT': 'https://www.dummy'})
-    def about_page_marketing_site_remove_https_test(self):
-        """ Get URL for about page, marketing root present, remove https://. """
-        with mock.patch.dict('django.conf.settings.FEATURES', {'ENABLE_MKTG_SITE': True}):
-            self.assertEquals(self.get_about_page_link(), "//www.dummy/courses/mitX/101/test/about")
-
-    @override_settings(MKTG_URLS={'ROOT': 'www.dummyhttps://x'})
-    def about_page_marketing_site_https__edge_test(self):
-        """ Get URL for about page, only remove https:// at the beginning of the string. """
-        with mock.patch.dict('django.conf.settings.FEATURES', {'ENABLE_MKTG_SITE': True}):
-            self.assertEquals(self.get_about_page_link(), "//www.dummyhttps://x/courses/mitX/101/test/about")
-
-    @override_settings(MKTG_URLS={})
-    def about_page_marketing_urls_not_set_test(self):
-        """ Error case. ENABLE_MKTG_SITE is True, but there is either no MKTG_URLS, or no MKTG_URLS Root property. """
-        with mock.patch.dict('django.conf.settings.FEATURES', {'ENABLE_MKTG_SITE': True}):
-            self.assertEquals(self.get_about_page_link(), None)
-
-    @override_settings(LMS_BASE=None)
-    def about_page_no_lms_base_test(self):
-        """ No LMS_BASE, nor is ENABLE_MKTG_SITE True """
-        self.assertEquals(self.get_about_page_link(), None)
-
-    def get_about_page_link(self):
-        """ create mock course and return the about page link """
-        course_key = SlashSeparatedCourseKey('mitX', '101', 'test')
-        return utils.get_lms_link_for_about_page(course_key)
 
     def lms_link_test(self):
         """ Tests get_lms_link_for_item. """
@@ -86,6 +38,31 @@ class LMSLinksTestCase(TestCase):
         location = course_key.make_usage_key('course', 'test')
         link = utils.get_lms_link_for_item(location)
         self.assertEquals(link, "//localhost:8000/courses/mitX/101/test/jump_to/i4x://mitX/101/course/test")
+
+    def lms_link_for_certificate_web_view_test(self):
+        """ Tests get_lms_link_for_certificate_web_view. """
+        course_key = SlashSeparatedCourseKey('mitX', '101', 'test')
+        dummy_user = ModuleStoreEnum.UserID.test
+        mode = 'professional'
+
+        self.assertEquals(
+            utils.get_lms_link_for_certificate_web_view(dummy_user, course_key, mode),
+            "//localhost:8000/certificates/user/{user_id}/course/{course_key}?preview={mode}".format(
+                user_id=dummy_user,
+                course_key=course_key,
+                mode=mode
+            )
+        )
+
+        with with_site_configuration_context(configuration={"course_org_filter": "mitX", "LMS_BASE": "dummyhost:8000"}):
+            self.assertEquals(
+                utils.get_lms_link_for_certificate_web_view(dummy_user, course_key, mode),
+                "//dummyhost:8000/certificates/user/{user_id}/course/{course_key}?preview={mode}".format(
+                    user_id=dummy_user,
+                    course_key=course_key,
+                    mode=mode
+                )
+            )
 
 
 class ExtraPanelTabTestCase(TestCase):
@@ -110,16 +87,17 @@ class ExtraPanelTabTestCase(TestCase):
         return course
 
 
-class XBlockVisibilityTestCase(ModuleStoreTestCase):
+class XBlockVisibilityTestCase(SharedModuleStoreTestCase):
     """Tests for xblock visibility for students."""
 
-    def setUp(self):
-        super(XBlockVisibilityTestCase, self).setUp()
+    @classmethod
+    def setUpClass(cls):
+        super(XBlockVisibilityTestCase, cls).setUpClass()
 
-        self.dummy_user = ModuleStoreEnum.UserID.test
-        self.past = datetime(1970, 1, 1, tzinfo=UTC)
-        self.future = datetime.now(UTC) + timedelta(days=1)
-        self.course = CourseFactory.create()
+        cls.dummy_user = ModuleStoreEnum.UserID.test
+        cls.past = datetime(1970, 1, 1, tzinfo=UTC)
+        cls.future = datetime.now(UTC) + timedelta(days=1)
+        cls.course = CourseFactory.create()
 
     def test_private_unreleased_xblock(self):
         """Verifies that a private unreleased xblock is not visible"""
@@ -484,18 +462,18 @@ class GetUserPartitionInfoTest(ModuleStoreTestCase):
         expected = [
             {
                 "id": 0,
-                "name": "Cohort user partition",
-                "scheme": "cohort",
+                "name": u"Cohort user partition",
+                "scheme": u"cohort",
                 "groups": [
                     {
                         "id": 0,
-                        "name": "Group A",
+                        "name": u"Group A",
                         "selected": False,
                         "deleted": False,
                     },
                     {
                         "id": 1,
-                        "name": "Group B",
+                        "name": u"Group B",
                         "selected": False,
                         "deleted": False,
                     },
@@ -503,12 +481,12 @@ class GetUserPartitionInfoTest(ModuleStoreTestCase):
             },
             {
                 "id": 1,
-                "name": "Random user partition",
-                "scheme": "random",
+                "name": u"Random user partition",
+                "scheme": u"random",
                 "groups": [
                     {
                         "id": 0,
-                        "name": "Group C",
+                        "name": u"Group C",
                         "selected": False,
                         "deleted": False,
                     },

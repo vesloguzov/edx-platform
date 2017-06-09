@@ -36,9 +36,10 @@ from xmodule.raw_module import EmptyDataRawDescriptor
 from xmodule.xml_module import is_pointer_tag, name_to_pathname, deserialize_field
 from xmodule.exceptions import NotFoundError
 from xmodule.contentstore.content import StaticContent
+from xmodule.validation import StudioValidationMessage, StudioValidation
 
 from .transcripts_utils import VideoTranscriptsMixin, Transcript, get_html5_ids
-from .video_utils import create_youtube_string, get_video_from_cdn, get_poster
+from .video_utils import create_youtube_string, get_poster, rewrite_video_url, format_xml_exception_message
 from .bumper_utils import bumperize
 from .video_xfields import VideoFields
 from .video_handlers import VideoStudentViewHandlers, VideoStudioViewHandlers
@@ -108,8 +109,11 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
     # To make sure that js files are called in proper order we use numerical
     # index. We do that to avoid issues that occurs in tests.
     module = __name__.replace('.video_module', '', 2)
+
+    #TODO: For each of the following, ensure that any generated html is properly escaped.
     js = {
         'js': [
+            resource_string(module, 'js/src/time.js'),
             resource_string(module, 'js/src/video/00_component.js'),
             resource_string(module, 'js/src/video/00_video_storage.js'),
             resource_string(module, 'js/src/video/00_resizer.js'),
@@ -148,6 +152,12 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
         resource_string(module, 'css/video/accessible_menu.scss'),
     ]}
     js_module_name = "Video"
+
+    def validate(self):
+        """
+        Validates the state of this Video Module Instance.
+        """
+        return self.descriptor.validate()
 
     def get_transcripts_for_student(self, transcripts):
         """Return transcript information necessary for rendering the XModule student view.
@@ -196,13 +206,20 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
         branding_info = None
         youtube_streams = ""
 
+        # Determine if there is an alternative source for this video
+        # based on user locale.  This exists to support cases where
+        # we leverage a geography specific CDN, like China.
+        cdn_url = getattr(settings, 'VIDEO_CDN_URL', {}).get(self.system.user_location)
+
         # If we have an edx_video_id, we prefer its values over what we store
         # internally for download links (source, html5_sources) and the youtube
         # stream.
         if self.edx_video_id and edxval_api:
             try:
                 val_profiles = ["youtube", "desktop_webm", "desktop_mp4"]
-                val_video_urls = edxval_api.get_urls_for_profiles(self.edx_video_id, val_profiles)
+
+                # strip edx_video_id to prevent ValVideoNotFoundError error if unwanted spaces are there. TNL-5769
+                val_video_urls = edxval_api.get_urls_for_profiles(self.edx_video_id.strip(), val_profiles)
 
                 # VAL will always give us the keys for the profiles we asked for, but
                 # if it doesn't have an encoded video entry for that Video + Profile, the
@@ -215,7 +232,12 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
                         if url not in sources:
                             sources.append(url)
                         if self.download_video:
-                            download_video_link = url
+                            # function returns None when the url cannot be re-written
+                            rewritten_link = rewrite_video_url(cdn_url, url)
+                            if rewritten_link:
+                                download_video_link = rewritten_link
+                            else:
+                                download_video_link = url
 
                 # set the youtube url
                 if val_video_urls["youtube"]:
@@ -231,12 +253,11 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
         # 'CN' is China ISO 3166-1 country code.
         # Video caching is disabled for Studio. User_location is always None in Studio.
         # CountryMiddleware disabled for Studio.
-        cdn_url = getattr(settings, 'VIDEO_CDN_URL', {}).get(self.system.user_location)
         if getattr(self, 'video_speed_optimizations', True) and cdn_url:
             branding_info = BrandingInfoConfig.get_config().get(self.system.user_location)
 
             for index, source_url in enumerate(sources):
-                new_url = get_video_from_cdn(cdn_url, source_url)
+                new_url = rewrite_video_url(cdn_url, source_url)
                 if new_url:
                     sources[index] = new_url
 
@@ -294,11 +315,7 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
             'end': self.end_time.total_seconds(),
             'transcriptLanguage': transcript_language,
             'transcriptLanguages': sorted_languages,
-
-            # TODO: Later on the value 1500 should be taken from some global
-            # configuration setting field.
-            'ytTestTimeout': 1500,
-
+            'ytTestTimeout': settings.YOUTUBE['TEST_TIMEOUT'],
             'ytApiUrl': settings.YOUTUBE['API'],
             'ytMetadataUrl': settings.YOUTUBE['METADATA_URL'],
             'ytKey': yt_api_key,
@@ -321,7 +338,12 @@ class VideoModule(VideoFields, VideoTranscriptsMixin, VideoStudentViewHandlers, 
             ## There is no option in the "Advanced Editor" to set this option. However,
             ## this option will have an effect if changed to "True". The code on
             ## front-end exists.
-            'autohideHtml5': False
+            'autohideHtml5': False,
+
+            # This is the server's guess at whether youtube is available for
+            # this user, based on what was recorded the last time we saw the
+            # user, and defaulting to True.
+            'recordedYoutubeIsAvailable': self.youtube_is_available,
         }
 
         bumperize(self)
@@ -410,6 +432,35 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
         if not self.fields['download_track'].is_set_on(self) and self.track:
             self.download_track = True
 
+    def validate(self):
+        """
+        Validates the state of this video Module Instance. This
+        is the override of the general XBlock method, and it will also ask
+        its superclass to validate.
+        """
+        validation = super(VideoDescriptor, self).validate()
+        if not isinstance(validation, StudioValidation):
+            validation = StudioValidation.copy(validation)
+
+        no_transcript_lang = []
+        for lang_code, transcript in self.transcripts.items():
+            if not transcript:
+                no_transcript_lang.append([label for code, label in settings.ALL_LANGUAGES if code == lang_code][0])
+
+        if no_transcript_lang:
+            ungettext = self.runtime.service(self, "i18n").ungettext
+            validation.set_summary(
+                StudioValidationMessage(
+                    StudioValidationMessage.WARNING,
+                    ungettext(
+                        'There is no transcript file associated with the {lang} language.',
+                        'There are no transcript files associated with the {lang} languages.',
+                        len(no_transcript_lang)
+                    ).format(lang=', '.join(no_transcript_lang))
+                )
+            )
+        return validation
+
     def editor_saved(self, user, old_metadata, old_content):
         """
         Used to update video values during `self`:save method from CMS.
@@ -475,7 +526,7 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
         else:
             editable_fields.pop('source')
 
-        languages = [{'label': label, 'code': lang} for lang, label in settings.ALL_LANGUAGES if lang != u'en']
+        languages = [{'label': label, 'code': lang} for lang, label in settings.ALL_LANGUAGES]
         languages.sort(key=lambda l: l['label'])
         editable_fields['transcripts']['languages'] = languages
         editable_fields['transcripts']['type'] = 'VideoTranslations'
@@ -545,7 +596,18 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
             # is set to its default value, we don't write it out.
             if value:
                 if key in self.fields and self.fields[key].is_set_on(self):
-                    xml.set(key, unicode(value))
+                    try:
+                        xml.set(key, unicode(value))
+                    except UnicodeDecodeError:
+                        exception_message = format_xml_exception_message(self.location, key, value)
+                        log.exception(exception_message)
+                        # If exception is UnicodeDecodeError set value using unicode 'utf-8' scheme.
+                        log.info("Setting xml value using 'utf-8' scheme.")
+                        xml.set(key, unicode(value, 'utf-8'))
+                    except ValueError:
+                        exception_message = format_xml_exception_message(self.location, key, value)
+                        log.exception(exception_message)
+                        raise
 
         for source in self.html5_sources:
             ele = etree.Element('source')
@@ -562,12 +624,13 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
             ele.set('src', self.handout)
             xml.append(ele)
 
-        # sorting for easy testing of resulting xml
-        for transcript_language in sorted(self.transcripts.keys()):
-            ele = etree.Element('transcript')
-            ele.set('language', transcript_language)
-            ele.set('src', self.transcripts[transcript_language])
-            xml.append(ele)
+        if self.transcripts is not None:
+            # sorting for easy testing of resulting xml
+            for transcript_language in sorted(self.transcripts.keys()):
+                ele = etree.Element('transcript')
+                ele.set('language', transcript_language)
+                ele.set('src', self.transcripts[transcript_language])
+                xml.append(ele)
 
         if self.edx_video_id and edxval_api:
             try:
@@ -579,6 +642,20 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
         self.add_license_to_xml(xml)
 
         return xml
+
+    def create_youtube_url(self, youtube_id):
+        """
+
+        Args:
+            youtube_id: The ID of the video to create a link for
+
+        Returns:
+            A full youtube url to the video whose ID is passed in
+        """
+        if youtube_id:
+            return u'https://www.youtube.com/watch?v={0}'.format(youtube_id)
+        else:
+            return u''
 
     def get_context(self):
         """
@@ -603,10 +680,7 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
                 if val_youtube_id:
                     video_id = val_youtube_id
 
-            if video_id:
-                return 'http://youtu.be/{0}'.format(video_id)
-            else:
-                return ''
+            return self.create_youtube_url(video_id)
 
         _ = self.runtime.service(self, "i18n").ugettext
         video_url.update({
@@ -839,7 +913,8 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
                     val_video_data = edxval_api.get_video_info(self.edx_video_id)
                     # Unfortunately, the VAL API is inconsistent in how it returns the encodings, so remap here.
                     for enc_vid in val_video_data.pop('encoded_videos'):
-                        encoded_videos[enc_vid['profile']] = {key: enc_vid[key] for key in ["url", "file_size"]}
+                        if enc_vid['profile'] in video_profile_names:
+                            encoded_videos[enc_vid['profile']] = {key: enc_vid[key] for key in ["url", "file_size"]}
                 except edxval_api.ValVideoNotFoundError:
                     pass
 
@@ -850,6 +925,14 @@ class VideoDescriptor(VideoFields, VideoTranscriptsMixin, VideoStudioViewHandler
                 encoded_videos["fallback"] = {
                     "url": video_url,
                     "file_size": 0,  # File size is unknown for fallback URLs
+                }
+
+            # Include youtube link if there is no encoding for mobile- ie only a fallback URL or no encodings at all
+            # We are including a fallback URL for older versions of the mobile app that don't handle Youtube urls
+            if self.youtube_id_1_0:
+                encoded_videos["youtube"] = {
+                    "url": self.create_youtube_url(self.youtube_id_1_0),
+                    "file_size": 0,  # File size is not relevant for external link
                 }
 
         transcripts_info = self.get_transcripts_info()

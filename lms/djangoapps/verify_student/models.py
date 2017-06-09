@@ -11,6 +11,7 @@ photo verification process as generic as possible.
 import functools
 import json
 import logging
+import os.path
 from datetime import datetime, timedelta
 from email.utils import formatdate
 
@@ -25,12 +26,13 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.core.cache import cache
+from django.core.files.base import ContentFile
 from django.dispatch import receiver
-from django.db import models, transaction, IntegrityError
+from django.db import models, transaction
+from django.utils.functional import cached_property
 from django.utils.translation import ugettext as _, ugettext_lazy
 
-from boto.s3.connection import S3Connection
-from boto.s3.key import Key
+from openedx.core.storage import get_storage
 from simple_history.models import HistoricalRecords
 from config_models.models import ConfigurationModel
 from course_modes.models import CourseMode
@@ -42,8 +44,8 @@ from lms.djangoapps.verify_student.ssencrypt import (
 )
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.exceptions import ItemNotFoundError
-from xmodule_django.models import CourseKeyField
-
+from openedx.core.djangoapps.xmodule_django.models import CourseKeyField
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 
 log = logging.getLogger(__name__)
 
@@ -256,6 +258,28 @@ class PhotoVerification(StatusModel):
         ).order_by('-created_at')
 
     @classmethod
+    def get_expiration_datetime(cls, user, queryset=None):
+        """
+        Check whether the user has an approved verification and return the
+        "expiration_datetime" of most recent "approved" verification.
+
+        Arguments:
+            user (Object): User
+            queryset: If a queryset is provided, that will be used instead
+                of hitting the database.
+
+        Returns:
+            expiration_datetime: expiration_datetime of most recent "approved"
+            verification.
+        """
+        if queryset is None:
+            queryset = cls.objects.filter(user=user)
+
+        photo_verification = queryset.filter(status='approved').first()
+        if photo_verification:
+            return photo_verification.expiration_datetime
+
+    @classmethod
     def user_has_valid_or_pending(cls, user, earliest_allowed_date=None, queryset=None):
         """
         Check whether the user has an active or pending verification attempt
@@ -319,7 +343,9 @@ class PhotoVerification(StatusModel):
             if attempt.created_at < cls._earliest_allowed_date():
                 return (
                     'expired',
-                    _("Your {platform_name} verification has expired.").format(platform_name=settings.PLATFORM_NAME)
+                    _("Your {platform_name} verification has expired.").format(
+                        platform_name=configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME),
+                    )
                 )
 
             # If someone is denied their original verification attempt, they can try to reverify.
@@ -380,7 +406,7 @@ class PhotoVerification(StatusModel):
 
         Arguments:
             deadline (datetime): The date at which the verification was active
-                (created before and expired after).
+                (created before and expiration datetime is after today).
 
         Returns:
             bool
@@ -388,7 +414,7 @@ class PhotoVerification(StatusModel):
         """
         return (
             self.created_at < deadline and
-            self.expiration_datetime > deadline
+            self.expiration_datetime > datetime.now(pytz.UTC)
         )
 
     def parsed_error_msg(self):
@@ -592,18 +618,22 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
     copy_id_photo_from = models.ForeignKey("self", null=True, blank=True)
 
     @classmethod
-    def get_initial_verification(cls, user):
+    def get_initial_verification(cls, user, earliest_allowed_date=None):
         """Get initial verification for a user with the 'photo_id_key'.
 
         Arguments:
             user(User): user object
+            earliest_allowed_date(datetime): override expiration date for initial verification
 
         Return:
-            SoftwareSecurePhotoVerification (object)
+            SoftwareSecurePhotoVerification (object) or None
         """
         init_verification = cls.objects.filter(
             user=user,
-            status__in=["submitted", "approved"]
+            status__in=["submitted", "approved"],
+            created_at__gte=(
+                earliest_allowed_date or cls._earliest_allowed_date()
+            )
         ).exclude(photo_id_key='')
 
         return init_verification.latest('created_at') if init_verification.exists() else None
@@ -611,9 +641,10 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
     @status_before_must_be("created")
     def upload_face_image(self, img_data):
         """
-        Upload an image of the user's face to S3. `img_data` should be a raw
+        Upload an image of the user's face. `img_data` should be a raw
         bytestream of a PNG image. This method will take the data, encrypt it
-        using our FACE_IMAGE_AES_KEY, encode it with base64 and save it to S3.
+        using our FACE_IMAGE_AES_KEY, encode it with base64 and save it to the
+        storage backend.
 
         Yes, encoding it to base64 adds compute and disk usage without much real
         benefit, but that's what the other end of this API is expecting to get.
@@ -628,17 +659,18 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
         aes_key_str = settings.VERIFY_STUDENT["SOFTWARE_SECURE"]["FACE_IMAGE_AES_KEY"]
         aes_key = aes_key_str.decode("hex")
 
-        s3_key = self._generate_s3_key("face")
-        s3_key.set_contents_from_string(encrypt_and_encode(img_data, aes_key))
+        path = self._get_path("face")
+        buff = ContentFile(encrypt_and_encode(img_data, aes_key))
+        self._storage.save(path, buff)
 
     @status_before_must_be("created")
     def upload_photo_id_image(self, img_data):
         """
-        Upload an the user's photo ID image to S3. `img_data` should be a raw
+        Upload an the user's photo ID image. `img_data` should be a raw
         bytestream of a PNG image. This method will take the data, encrypt it
-        using a randomly generated AES key, encode it with base64 and save it to
-        S3. The random key is also encrypted using Software Secure's public RSA
-        key and stored in our `photo_id_key` field.
+        using a randomly generated AES key, encode it with base64 and save it
+        to the storage backend. The random key is also encrypted using Software
+        Secure's public RSA key and stored in our `photo_id_key` field.
 
         Yes, encoding it to base64 adds compute and disk usage without much real
         benefit, but that's what the other end of this API is expecting to get.
@@ -657,9 +689,10 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
         rsa_key_str = settings.VERIFY_STUDENT["SOFTWARE_SECURE"]["RSA_PUBLIC_KEY"]
         rsa_encrypted_aes_key = rsa_encrypt(aes_key, rsa_key_str)
 
-        # Upload this to S3
-        s3_key = self._generate_s3_key("photo_id")
-        s3_key.set_contents_from_string(encrypt_and_encode(img_data, aes_key))
+        # Save this to the storage backend
+        path = self._get_path("photo_id")
+        buff = ContentFile(encrypt_and_encode(img_data, aes_key))
+        self._storage.save(path, buff)
 
         # Update our record fields
         self.photo_id_key = rsa_encrypted_aes_key.encode('base64')
@@ -688,8 +721,11 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
                 self.status = "must_retry"
                 self.error_msg = response.text
                 self.save()
-        except Exception as error:
-            log.exception(error)
+        except Exception:       # pylint: disable=broad-except
+            log.exception(
+                'Software Secure submission failed for user %s, setting status to must_retry',
+                self.user.username
+            )
             self.status = "must_retry"
             self.save()
 
@@ -747,31 +783,42 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
             string: The expiring URL for the image.
 
         """
-        s3_key = self._generate_s3_key(name, override_receipt_id=override_receipt_id)
-        return s3_key.generate_url(self.IMAGE_LINK_DURATION)
+        path = self._get_path(name, override_receipt_id=override_receipt_id)
+        return self._storage.url(path)
 
-    def _generate_s3_key(self, prefix, override_receipt_id=None):
+    @cached_property
+    def _storage(self):
         """
-        Generates a key for an s3 bucket location
-
-        Example: face/4dd1add9-6719-42f7-bea0-115c008c4fca
+        Return the configured django storage backend.
         """
-        conn = S3Connection(
-            settings.VERIFY_STUDENT["SOFTWARE_SECURE"]["AWS_ACCESS_KEY"],
-            settings.VERIFY_STUDENT["SOFTWARE_SECURE"]["AWS_SECRET_KEY"]
-        )
-        bucket = conn.get_bucket(settings.VERIFY_STUDENT["SOFTWARE_SECURE"]["S3_BUCKET"])
+        config = settings.VERIFY_STUDENT["SOFTWARE_SECURE"]
 
-        # Override the receipt ID if one is provided.
-        # This allow us to construct S3 keys to images submitted in previous attempts
-        # (used for reverification, where we send a new face photo with the same photo ID
-        # from a previous attempt).
+        # Default to the S3 backend for backward compatibility
+        storage_class = config.get("STORAGE_CLASS", "storages.backends.s3boto.S3BotoStorage")
+        storage_kwargs = config.get("STORAGE_KWARGS", {})
+
+        # Map old settings to the parameters expected by the storage backend
+        if "AWS_ACCESS_KEY" in config:
+            storage_kwargs["access_key"] = config["AWS_ACCESS_KEY"]
+        if "AWS_SECRET_KEY" in config:
+            storage_kwargs["secret_key"] = config["AWS_SECRET_KEY"]
+        if "S3_BUCKET" in config:
+            storage_kwargs["bucket"] = config["S3_BUCKET"]
+            storage_kwargs["querystring_expire"] = self.IMAGE_LINK_DURATION
+
+        return get_storage(storage_class, **storage_kwargs)
+
+    def _get_path(self, prefix, override_receipt_id=None):
+        """
+        Returns the path to a resource with this instance's `receipt_id`.
+
+        If `override_receipt_id` is given, the path to that resource will be
+        retrieved instead. This allows us to retrieve images submitted in
+        previous attempts (used for reverification, where we send a new face
+        photo with the same photo ID from a previous attempt).
+        """
         receipt_id = self.receipt_id if override_receipt_id is None else override_receipt_id
-
-        key = Key(bucket)
-        key.key = "{}/{}".format(prefix, receipt_id)
-
-        return key
+        return os.path.join(prefix, receipt_id)
 
     def _encrypted_user_photo_key_str(self):
         """
@@ -921,6 +968,18 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
             return 'Not ID Verified'
         else:
             return 'ID Verified'
+
+    @classmethod
+    def is_verification_expiring_soon(cls, expiration_datetime):
+        """
+        Returns True if verification is expiring within EXPIRING_SOON_WINDOW.
+        """
+        if expiration_datetime:
+            if (expiration_datetime - datetime.now(pytz.UTC)).days <= settings.VERIFY_STUDENT.get(
+                    "EXPIRING_SOON_WINDOW"):
+                return True
+
+        return False
 
 
 class VerificationDeadline(TimeStampedModel):

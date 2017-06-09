@@ -21,7 +21,7 @@ from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestViewAuth(ModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Check that view authentication works properly.
@@ -86,7 +86,7 @@ class TestViewAuth(ModuleStoreTestCase, LoginEnrollmentTestCase):
 
         # The student progress tab is not accessible to a student
         # before launch, so the instructor view-as-student feature
-        # should return a 404 as well.
+        # should return a 403.
         # TODO (vshnayder): If this is not the behavior we want, will need
         # to make access checking smarter and understand both the effective
         # user (the student), and the requesting user (the prof)
@@ -97,7 +97,7 @@ class TestViewAuth(ModuleStoreTestCase, LoginEnrollmentTestCase):
                 'student_id': self.enrolled_user.id,
             }
         )
-        self.assert_request_status_code(404, url)
+        self.assert_request_status_code(403, url)
 
         # The courseware url should redirect, not 200
         url = self._reverse_urls(['courseware'], course)[0]
@@ -379,16 +379,18 @@ class TestViewAuth(ModuleStoreTestCase, LoginEnrollmentTestCase):
         self.assertFalse(self.enroll(self.course))
         self.assertTrue(self.enroll(self.test_course))
 
+        # Then, try as an instructor
         self.logout()
         self.login(self.instructor_user)
         self.assertTrue(self.enroll(self.course))
 
-        # unenroll and try again
+        # Then, try as global staff
+        self.logout()
         self.login(self.global_staff_user)
         self.assertTrue(self.enroll(self.course))
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestBetatesterAccess(ModuleStoreTestCase, CourseAccessTestMixin):
     """
     Tests for the beta tester feature

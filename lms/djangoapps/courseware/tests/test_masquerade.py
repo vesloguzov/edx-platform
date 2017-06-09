@@ -8,7 +8,7 @@ from nose.plugins.attrib import attr
 from datetime import datetime
 
 from django.core.urlresolvers import reverse
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.utils.timezone import UTC
 
 from capa.tests.response_xml_factory import OptionResponseXMLFactory
@@ -20,40 +20,42 @@ from courseware.masquerade import (
     get_masquerading_group_info
 )
 from courseware.tests.factories import StaffFactory
-from courseware.tests.helpers import LoginEnrollmentTestCase, get_request_for_user
+from courseware.tests.helpers import LoginEnrollmentTestCase
 from courseware.tests.test_submitting_problems import ProblemSubmissionTestMixin
 from student.tests.factories import UserFactory
 from xblock.runtime import DictKeyValueStore
 from xmodule.modulestore.django import modulestore
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import ItemFactory, CourseFactory
 from xmodule.partitions.partitions import Group, UserPartition
+from openedx.core.djangoapps.self_paced.models import SelfPacedConfiguration
 
 
-class MasqueradeTestCase(ModuleStoreTestCase, LoginEnrollmentTestCase):
+class MasqueradeTestCase(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
     """
     Base class for masquerade tests that sets up a test course and enrolls a user in the course.
     """
-    def setUp(self):
-        super(MasqueradeTestCase, self).setUp()
-
-        # By default, tests run with DISABLE_START_DATES=True. To test that masquerading as a student is
-        # working properly, we must use start dates and set a start date in the past (otherwise the access
-        # checks exist prematurely).
-        self.course = CourseFactory.create(number='masquerade-test', metadata={'start': datetime.now(UTC())})
-        self.chapter = ItemFactory.create(
-            parent_location=self.course.location,
+    @classmethod
+    def setUpClass(cls):
+        super(MasqueradeTestCase, cls).setUpClass()
+        cls.course = CourseFactory.create(number='masquerade-test', metadata={'start': datetime.now(UTC())})
+        cls.info_page = ItemFactory.create(
+            category="course_info", parent_location=cls.course.location,
+            data="OOGIE BLOOGIE", display_name="updates"
+        )
+        cls.chapter = ItemFactory.create(
+            parent_location=cls.course.location,
             category="chapter",
             display_name="Test Section",
         )
-        self.sequential_display_name = "Test Masquerade Subsection"
-        self.sequential = ItemFactory.create(
-            parent_location=self.chapter.location,
+        cls.sequential_display_name = "Test Masquerade Subsection"
+        cls.sequential = ItemFactory.create(
+            parent_location=cls.chapter.location,
             category="sequential",
-            display_name=self.sequential_display_name,
+            display_name=cls.sequential_display_name,
         )
-        self.vertical = ItemFactory.create(
-            parent_location=self.sequential.location,
+        cls.vertical = ItemFactory.create(
+            parent_location=cls.sequential.location,
             category="vertical",
             display_name="Test Unit",
         )
@@ -64,13 +66,17 @@ class MasqueradeTestCase(ModuleStoreTestCase, LoginEnrollmentTestCase):
             options=['Correct', 'Incorrect'],
             correct_option='Correct'
         )
-        self.problem_display_name = "TestMasqueradeProblem"
-        self.problem = ItemFactory.create(
-            parent_location=self.vertical.location,
+        cls.problem_display_name = "TestMasqueradeProblem"
+        cls.problem = ItemFactory.create(
+            parent_location=cls.vertical.location,
             category='problem',
             data=problem_xml,
-            display_name=self.problem_display_name
+            display_name=cls.problem_display_name
         )
+
+    def setUp(self):
+        super(MasqueradeTestCase, self).setUp()
+
         self.test_user = self.create_user()
         self.login(self.test_user.email, 'test')
         self.enroll(self.course, True)
@@ -89,14 +95,25 @@ class MasqueradeTestCase(ModuleStoreTestCase, LoginEnrollmentTestCase):
         )
         return self.client.get(url)
 
-    def _create_mock_json_request(self, user, body, method='POST', session=None):
+    def get_course_info_page(self):
+        """
+        Returns the server response for course info page.
+        """
+        url = reverse(
+            'info',
+            kwargs={
+                'course_id': unicode(self.course.id),
+            }
+        )
+        return self.client.get(url)
+
+    def _create_mock_json_request(self, user, data, method='POST', session=None):
         """
         Returns a mock JSON request for the specified user
         """
-        request = get_request_for_user(user)
-        request.method = method
-        request.META = {'CONTENT_TYPE': ['application/json']}
-        request.body = body
+        factory = RequestFactory()
+        request = factory.generic(method, '/', content_type='application/json', data=json.dumps(data))
+        request.user = user
         request.session = session or {}
         return request
 
@@ -105,7 +122,7 @@ class MasqueradeTestCase(ModuleStoreTestCase, LoginEnrollmentTestCase):
         Verifies that the staff debug control visibility is as expected (for staff only).
         """
         content = self.get_courseware_page().content
-        self.assertTrue(self.sequential_display_name in content, "Subsection should be visible")
+        self.assertIn(self.sequential_display_name, content, "Subsection should be visible")
         self.assertEqual(staff_debug_expected, 'Staff Debug Info' in content)
 
     def get_problem(self):
@@ -128,11 +145,25 @@ class MasqueradeTestCase(ModuleStoreTestCase, LoginEnrollmentTestCase):
         Verifies that "Show Answer" is only present when expected (for staff only).
         """
         problem_html = json.loads(self.get_problem().content)['html']
-        self.assertTrue(self.problem_display_name in problem_html)
+        self.assertIn(self.problem_display_name, problem_html)
         self.assertEqual(show_answer_expected, "Show Answer" in problem_html)
 
+    def verify_real_user_profile_link(self):
+        """
+        Verifies that the 'Profile' link in the navigation dropdown is pointing
+        to the real user.
+        """
+        content = self.get_courseware_page().content
+        self.assertIn(
+            '<a href="/u/{}" role="menuitem" class="action dropdown-menuitem">Profile</a>'.format(
+                self.test_user.username
+            ),
+            content,
+            "Profile link should point to real user",
+        )
 
-@attr('shard_1')
+
+@attr(shard=1)
 class NormalStudentVisibilityTest(MasqueradeTestCase):
     """
     Verify the course displays as expected for a "normal" student (to ensure test setup is correct).
@@ -187,7 +218,7 @@ class StaffMasqueradeTestCase(MasqueradeTestCase):
         return response
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestStaffMasqueradeAsStudent(StaffMasqueradeTestCase):
     """
     Check for staff being able to masquerade as student.
@@ -225,7 +256,7 @@ class TestStaffMasqueradeAsStudent(StaffMasqueradeTestCase):
         self.verify_show_answer_present(True)
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestStaffMasqueradeAsSpecificStudent(StaffMasqueradeTestCase, ProblemSubmissionTestMixin):
     """
     Check for staff being able to masquerade as a specific student.
@@ -238,10 +269,12 @@ class TestStaffMasqueradeAsSpecificStudent(StaffMasqueradeTestCase, ProblemSubmi
 
     def login_staff(self):
         """ Login as a staff user """
+        self.logout()
         self.login(self.test_user.email, 'test')
 
     def login_student(self):
         """ Login as a student """
+        self.logout()
         self.login(self.student_user.email, 'test')
 
     def submit_answer(self, response1, response2):
@@ -259,7 +292,33 @@ class TestStaffMasqueradeAsSpecificStudent(StaffMasqueradeTestCase, ProblemSubmi
 
         The return value is a string like u'1/2'.
         """
-        return json.loads(self.look_at_question(self.problem_display_name).content)['progress_detail']
+        json_data = json.loads(self.look_at_question(self.problem_display_name).content)
+        progress = '%s/%s' % (str(json_data['current_score']), str(json_data['total_possible']))
+        return progress
+
+    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
+    def test_masquerade_as_specific_user_on_self_paced(self):
+        """
+        Test masquerading as a specific user for course info page when self paced configuration
+        "enable_course_home_improvements" flag is set
+
+        Login as a staff user and visit course info page.
+        set masquerade to view same page as a specific student and revisit the course info page.
+        """
+        # Log in as staff, and check we can see the info page.
+        self.login_staff()
+        response = self.get_course_info_page()
+        self.assertEqual(response.status_code, 200)
+        content = response.content
+        self.assertIn("OOGIE BLOOGIE", content)
+
+        # Masquerade as the student,enable the self paced configuration, and check we can see the info page.
+        SelfPacedConfiguration(enable_course_home_improvements=True).save()
+        self.update_masquerade(role='student', user_name=self.student_user.username)
+        response = self.get_course_info_page()
+        self.assertEqual(response.status_code, 200)
+        content = response.content
+        self.assertIn("OOGIE BLOOGIE", content)
 
     @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
     def test_masquerade_as_specific_student(self):
@@ -282,6 +341,9 @@ class TestStaffMasqueradeAsSpecificStudent(StaffMasqueradeTestCase, ProblemSubmi
         self.update_masquerade(role='student', user_name=self.student_user.username)
         self.assertEqual(self.get_progress_detail(), u'2/2')
 
+        # Verify that the user dropdown links have not changed
+        self.verify_real_user_profile_link()
+
         # Temporarily override the student state.
         self.submit_answer('Correct', 'Incorrect')
         self.assertEqual(self.get_progress_detail(), u'1/2')
@@ -298,8 +360,26 @@ class TestStaffMasqueradeAsSpecificStudent(StaffMasqueradeTestCase, ProblemSubmi
         self.login_student()
         self.assertEqual(self.get_progress_detail(), u'2/2')
 
+    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
+    def test_masquerade_as_specific_student_course_info(self):
+        """
+        Test masquerading as a specific user for course info page.
 
-@attr('shard_1')
+        We login with login_staff and check course info page content if it's working and then we
+        set masquerade to view same page as a specific student and test if it's working or not.
+        """
+        # Log in as staff, and check we can see the info page.
+        self.login_staff()
+        content = self.get_course_info_page().content
+        self.assertIn("OOGIE BLOOGIE", content)
+
+        # Masquerade as the student, and check we can see the info page.
+        self.update_masquerade(role='student', user_name=self.student_user.username)
+        content = self.get_course_info_page().content
+        self.assertIn("OOGIE BLOOGIE", content)
+
+
+@attr(shard=1)
 class TestGetMasqueradingGroupId(StaffMasqueradeTestCase):
     """
     Check for staff being able to masquerade as belonging to a group.
@@ -327,10 +407,11 @@ class TestGetMasqueradingGroupId(StaffMasqueradeTestCase):
         # Install a masquerading group
         request = self._create_mock_json_request(
             self.test_user,
-            body='{"role": "student", "user_partition_id": 0, "group_id": 1}'
+            data={"role": "student", "user_partition_id": 0, "group_id": 1}
         )
-        handle_ajax(request, unicode(self.course.id))
-        setup_masquerade(request, self.test_user, True)
+        response = handle_ajax(request, unicode(self.course.id))
+        self.assertEquals(response.status_code, 200)
+        setup_masquerade(request, self.course.id, True)
 
         # Verify that the masquerading group is returned
         group_id, user_partition_id = get_masquerading_group_info(self.test_user, self.course.id)

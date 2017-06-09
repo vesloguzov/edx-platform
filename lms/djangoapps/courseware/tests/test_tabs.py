@@ -2,47 +2,53 @@
 Test cases for tabs.
 """
 
-from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.http import Http404
 from mock import MagicMock, Mock, patch
 from nose.plugins.attrib import attr
-from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 from courseware.courses import get_course_by_id
 from courseware.tabs import (
     get_course_tab_list, CoursewareTab, CourseInfoTab, ProgressTab,
     ExternalDiscussionCourseTab, ExternalLinkCourseTab
 )
-from courseware.tests.helpers import get_request_for_user, LoginEnrollmentTestCase
+from courseware.tests.helpers import LoginEnrollmentTestCase
 from courseware.tests.factories import InstructorFactory, StaffFactory
-from courseware.views import get_static_tab_contents, static_tab
+from courseware.views.views import get_static_tab_contents, static_tab
+from openedx.core.djangolib.testing.utils import get_mock_request
 from student.models import CourseEnrollment
 from student.tests.factories import UserFactory
 from util.milestones_helpers import (
-    seed_milestone_relationship_types,
     get_milestone_relationship_types,
     add_milestone,
     add_course_milestone,
     add_course_content_milestone
 )
+from milestones.tests.utils import MilestonesTestCaseMixin
 from xmodule import tabs as xmodule_tabs
 from xmodule.modulestore.tests.django_utils import (
-    TEST_DATA_MIXED_TOY_MODULESTORE, TEST_DATA_MIXED_CLOSED_MODULESTORE
+    ModuleStoreTestCase,
+    SharedModuleStoreTestCase,
+    TEST_DATA_MIXED_MODULESTORE
 )
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
+from xmodule.modulestore.tests.utils import TEST_DATA_DIR
+from xmodule.modulestore.xml_importer import import_course_from_xml
 
 
-class TabTestCase(ModuleStoreTestCase):
+class TabTestCase(SharedModuleStoreTestCase):
     """Base class for Tab-related test cases."""
+    @classmethod
+    def setUpClass(cls):
+        super(TabTestCase, cls).setUpClass()
+
+        cls.course = CourseFactory.create(org='edX', course='toy', run='2012_Fall')
+        cls.fake_dict_tab = {'fake_key': 'fake_value'}
+        cls.books = None
+
     def setUp(self):
         super(TabTestCase, self).setUp()
-
-        self.course = CourseFactory.create(org='edX', course='toy', run='2012_Fall')
-        self.fake_dict_tab = {'fake_key': 'fake_value'}
         self.reverse = lambda name, args: "name/{0}/args/{1}".format(name, ",".join(str(a) for a in args))
-        self.books = None
 
     def create_mock_user(self, is_authenticated=True, is_staff=True, is_enrolled=True):
         """
@@ -218,22 +224,22 @@ class TextbooksTestCase(TabTestCase):
         self.assertEquals(num_textbooks_found, self.num_textbooks)
 
 
-@attr('shard_1')
-class StaticTabDateTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
+@attr(shard=1)
+class StaticTabDateTestCase(LoginEnrollmentTestCase, SharedModuleStoreTestCase):
     """Test cases for Static Tab Dates."""
 
-    MODULESTORE = TEST_DATA_MIXED_TOY_MODULESTORE
+    MODULESTORE = TEST_DATA_MIXED_MODULESTORE
 
-    def setUp(self):
-        super(StaticTabDateTestCase, self).setUp()
-        self.course = CourseFactory.create()
-        self.page = ItemFactory.create(
-            category="static_tab", parent_location=self.course.location,
+    @classmethod
+    def setUpClass(cls):
+        super(StaticTabDateTestCase, cls).setUpClass()
+        cls.course = CourseFactory.create()
+        cls.page = ItemFactory.create(
+            category="static_tab", parent_location=cls.course.location,
             data="OOGIE BLOOGIE", display_name="new_tab"
         )
-        self.course.tabs.append(xmodule_tabs.CourseTab.load('static_tab', name='New Tab', url_slug='new_tab'))
-        self.course.save()
-        self.toy_course_key = SlashSeparatedCourseKey('edX', 'toy', '2012_Fall')
+        cls.course.tabs.append(xmodule_tabs.CourseTab.load('static_tab', name='New Tab', url_slug='new_tab'))
+        cls.course.save()
 
     def test_logged_in(self):
         self.setup_user()
@@ -250,23 +256,23 @@ class StaticTabDateTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
 
     def test_invalid_course_key(self):
         self.setup_user()
-        request = get_request_for_user(self.user)
+        request = get_mock_request(self.user)
         with self.assertRaises(Http404):
             static_tab(request, course_id='edX/toy', tab_slug='new_tab')
 
     def test_get_static_tab_contents(self):
         self.setup_user()
-        course = get_course_by_id(self.toy_course_key)
-        request = get_request_for_user(self.user)
-        tab = xmodule_tabs.CourseTabList.get_tab_by_slug(course.tabs, 'resources')
+        course = get_course_by_id(self.course.id)
+        request = get_mock_request(self.user)
+        tab = xmodule_tabs.CourseTabList.get_tab_by_slug(course.tabs, 'new_tab')
 
         # Test render works okay
         tab_content = get_static_tab_contents(request, course, tab)
-        self.assertIn(self.toy_course_key.to_deprecated_string(), tab_content)
+        self.assertIn(self.course.id.to_deprecated_string(), tab_content)
         self.assertIn('static_tab', tab_content)
 
         # Test when render raises an exception
-        with patch('courseware.views.get_module') as mock_module_render:
+        with patch('courseware.views.views.get_module') as mock_module_render:
             mock_module_render.return_value = MagicMock(
                 render=Mock(side_effect=Exception('Render failed!'))
             )
@@ -274,23 +280,39 @@ class StaticTabDateTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
             self.assertIn("this module is temporarily unavailable", static_tab)
 
 
-@attr('shard_1')
+@attr(shard=1)
 class StaticTabDateTestCaseXML(LoginEnrollmentTestCase, ModuleStoreTestCase):
     """
     Tests for the static tab dates of an XML course
     """
 
-    MODULESTORE = TEST_DATA_MIXED_CLOSED_MODULESTORE
+    MODULESTORE = TEST_DATA_MIXED_MODULESTORE
 
-    # The following XML test course (which lives at common/test/data/2014)
-    # is closed; we're testing that tabs still appear when
-    # the course is already closed
-    xml_course_key = SlashSeparatedCourseKey('edX', 'detached_pages', '2014')
+    def setUp(self):
+        """
+        Set up the tests
+        """
+        super(StaticTabDateTestCaseXML, self).setUp()
 
-    # this text appears in the test course's tab
-    # common/test/data/2014/tabs/8e4cce2b4aaf4ba28b1220804619e41f.html
-    xml_data = "static 463139"
-    xml_url = "8e4cce2b4aaf4ba28b1220804619e41f"
+        # The following XML test course (which lives at common/test/data/2014)
+        # is closed; we're testing that tabs still appear when
+        # the course is already closed
+        self.xml_course_key = self.store.make_course_key('edX', 'detached_pages', '2014')
+        import_course_from_xml(
+            self.store,
+            'test_user',
+            TEST_DATA_DIR,
+            source_dirs=['2014'],
+            static_content_store=None,
+            target_id=self.xml_course_key,
+            raise_on_failure=True,
+            create_if_not_present=True,
+        )
+
+        # this text appears in the test course's tab
+        # common/test/data/2014/tabs/8e4cce2b4aaf4ba28b1220804619e41f.html
+        self.xml_data = "static 463139"
+        self.xml_url = "8e4cce2b4aaf4ba28b1220804619e41f"
 
     @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
     def test_logged_in_xml(self):
@@ -308,15 +330,15 @@ class StaticTabDateTestCaseXML(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.assertIn(self.xml_data, resp.content)
 
 
-@attr('shard_1')
-@patch.dict('django.conf.settings.FEATURES', {'ENTRANCE_EXAMS': True, 'MILESTONES_APP': True})
-class EntranceExamsTabsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
+@attr(shard=1)
+@patch.dict('django.conf.settings.FEATURES', {'ENTRANCE_EXAMS': True})
+class EntranceExamsTabsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase, MilestonesTestCaseMixin):
     """
     Validate tab behavior when dealing with Entrance Exams
     """
-    MODULESTORE = TEST_DATA_MIXED_CLOSED_MODULESTORE
+    MODULESTORE = TEST_DATA_MIXED_MODULESTORE
 
-    @patch.dict('django.conf.settings.FEATURES', {'ENTRANCE_EXAMS': True, 'MILESTONES_APP': True})
+    @patch.dict('django.conf.settings.FEATURES', {'ENTRANCE_EXAMS': True})
     def setUp(self):
         """
         Test case scaffolding
@@ -339,7 +361,6 @@ class EntranceExamsTabsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.setup_user()
         self.enroll(self.course)
         self.user.is_staff = True
-        seed_milestone_relationship_types()
         self.relationship_types = get_milestone_relationship_types()
 
     def test_get_course_tabs_list_entrance_exam_enabled(self):
@@ -359,7 +380,7 @@ class EntranceExamsTabsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
             'description': 'Testing Courseware Tabs'
         }
         self.user.is_staff = False
-        request = get_request_for_user(self.user)
+        request = get_mock_request(self.user)
         self.course.entrance_exam_enabled = True
         self.course.entrance_exam_id = unicode(entrance_exam.location)
         milestone = add_milestone(milestone)
@@ -399,7 +420,7 @@ class EntranceExamsTabsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         # log in again as student
         self.client.logout()
         self.login(self.email, self.password)
-        request = get_request_for_user(self.user)
+        request = get_mock_request(self.user)
         course_tab_list = get_course_tab_list(request, self.course)
         self.assertEqual(len(course_tab_list), 5)
 
@@ -412,22 +433,26 @@ class EntranceExamsTabsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         self.client.logout()
         staff_user = StaffFactory(course_key=self.course.id)
         self.client.login(username=staff_user.username, password='test')
-        request = get_request_for_user(staff_user)
+        request = get_mock_request(staff_user)
         course_tab_list = get_course_tab_list(request, self.course)
         self.assertEqual(len(course_tab_list), 5)
 
 
-@attr('shard_1')
-class TextBookCourseViewsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
+@attr(shard=1)
+class TextBookCourseViewsTestCase(LoginEnrollmentTestCase, SharedModuleStoreTestCase):
     """
     Validate tab behavior when dealing with textbooks.
     """
-    MODULESTORE = TEST_DATA_MIXED_TOY_MODULESTORE
+    MODULESTORE = TEST_DATA_MIXED_MODULESTORE
+
+    @classmethod
+    def setUpClass(cls):
+        super(TextBookCourseViewsTestCase, cls).setUpClass()
+        cls.course = CourseFactory.create()
 
     def setUp(self):
         super(TextBookCourseViewsTestCase, self).setUp()
 
-        self.course = CourseFactory.create()
         self.set_up_books(2)
         self.setup_user()
         self.enroll(self.course)
@@ -450,7 +475,7 @@ class TextBookCourseViewsTestCase(LoginEnrollmentTestCase, ModuleStoreTestCase):
         Test that all textbooks tab links generating correctly.
         """
         type_to_reverse_name = {'textbook': 'book', 'pdftextbook': 'pdf_book', 'htmltextbook': 'html_book'}
-        request = get_request_for_user(self.user)
+        request = get_mock_request(self.user)
         course_tab_list = get_course_tab_list(request, self.course)
         num_of_textbooks_found = 0
         for tab in course_tab_list:
@@ -484,9 +509,10 @@ class TabListTestCase(TabTestCase):
             [{'type': CoursewareTab.type}],
             # missing course_info
             [{'type': CoursewareTab.type}, {'type': 'discussion', 'name': 'fake_name'}],
+            [{'type': 'unknown_type'}],
             # incorrect order
-            [{'type': CourseInfoTab.type, 'name': 'fake_name'}, {'type': CoursewareTab.type}],
-            [{'type': 'unknown_type'}]
+            [{'type': 'discussion', 'name': 'fake_name'},
+             {'type': CourseInfoTab.type, 'name': 'fake_name'}, {'type': CoursewareTab.type}],
         ]
 
         # tab types that should appear only once
@@ -537,7 +563,7 @@ class TabListTestCase(TabTestCase):
         self.all_valid_tab_list = xmodule_tabs.CourseTabList().from_json(self.valid_tabs[1])
 
 
-@attr('shard_1')
+@attr(shard=1)
 class ValidateTabsTestCase(TabListTestCase):
     """Test cases for validating tabs."""
 
@@ -567,7 +593,7 @@ class ValidateTabsTestCase(TabListTestCase):
         )
 
 
-@attr('shard_1')
+@attr(shard=1)
 class CourseTabListTestCase(TabListTestCase):
     """Testing the generator method for iterating through displayable tabs"""
 
@@ -661,8 +687,37 @@ class CourseTabListTestCase(TabListTestCase):
             # get tab by id
             self.assertEquals(xmodule_tabs.CourseTabList.get_tab_by_id(self.course.tabs, tab.tab_id), tab)
 
+    def test_course_tabs_staff_only(self):
+        """
+        Tests the static tabs that available only for instructor
+        """
+        self.course.tabs.append(xmodule_tabs.CourseTab.load('static_tab', name='Static Tab Free',
+                                                            url_slug='extra_tab_1',
+                                                            course_staff_only=False))
+        self.course.tabs.append(xmodule_tabs.CourseTab.load('static_tab', name='Static Tab Instructors Only',
+                                                            url_slug='extra_tab_2',
+                                                            course_staff_only=True))
+        self.course.save()
 
-@attr('shard_1')
+        user = self.create_mock_user(is_authenticated=True, is_staff=False, is_enrolled=True)
+        request = get_mock_request(user)
+        course_tab_list = get_course_tab_list(request, self.course)
+        name_list = [x.name for x in course_tab_list]
+        self.assertIn('Static Tab Free', name_list)
+        self.assertNotIn('Static Tab Instructors Only', name_list)
+
+        # Login as member of staff
+        self.client.logout()
+        staff_user = StaffFactory(course_key=self.course.id)
+        self.client.login(username=staff_user.username, password='test')
+        request = get_mock_request(staff_user)
+        course_tab_list_staff = get_course_tab_list(request, self.course)
+        name_list_staff = [x.name for x in course_tab_list_staff]
+        self.assertIn('Static Tab Free', name_list_staff)
+        self.assertIn('Static Tab Instructors Only', name_list_staff)
+
+
+@attr(shard=1)
 class ProgressTestCase(TabTestCase):
     """Test cases for Progress Tab."""
 
@@ -692,7 +747,7 @@ class ProgressTestCase(TabTestCase):
         )
 
 
-@attr('shard_1')
+@attr(shard=1)
 class StaticTabTestCase(TabTestCase):
     """Test cases for Static Tab."""
 
@@ -711,7 +766,7 @@ class StaticTabTestCase(TabTestCase):
         self.check_get_and_set_method_for_key(tab, 'url_slug')
 
 
-@attr('shard_1')
+@attr(shard=1)
 class DiscussionLinkTestCase(TabTestCase):
     """Test cases for discussion link tab."""
 
@@ -729,7 +784,7 @@ class DiscussionLinkTestCase(TabTestCase):
         """Custom reverse function"""
         def reverse_discussion_link(viewname, args):
             """reverse lookup for discussion link"""
-            if viewname == "django_comment_client.forum.views.forum_form_discussion" and args == [unicode(course.id)]:
+            if viewname == "discussion.views.forum_form_discussion" and args == [unicode(course.id)]:
                 return "default_discussion_link"
         return reverse_discussion_link
 

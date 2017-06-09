@@ -3,7 +3,9 @@ Django admin page for bulk email models
 """
 from django.contrib import admin
 
-from bulk_email.models import CourseEmail, Optout, CourseEmailTemplate, CourseAuthorization
+from config_models.admin import ConfigurationModelAdmin
+
+from bulk_email.models import CourseEmail, Optout, CourseEmailTemplate, CourseAuthorization, BulkEmailFlag
 from bulk_email.forms import CourseEmailTemplateForm, CourseAuthorizationAdminForm
 
 
@@ -34,6 +36,7 @@ two curly braces on each side), to indicate where the email text is to be insert
 Other tags that may be used (surrounded by one curly brace on each side):
 {platform_name}        : the name of the platform
 {course_title}         : the name of the course
+{course_root}          : the URL path to the root of the course
 {course_url}           : the course's full URL
 {email}                : the user's email address
 {account_settings_url} : URL at which users can change account preferences
@@ -80,3 +83,4 @@ admin.site.register(CourseEmail, CourseEmailAdmin)
 admin.site.register(Optout, OptoutAdmin)
 admin.site.register(CourseEmailTemplate, CourseEmailTemplateAdmin)
 admin.site.register(CourseAuthorization, CourseAuthorizationAdmin)
+admin.site.register(BulkEmailFlag, ConfigurationModelAdmin)

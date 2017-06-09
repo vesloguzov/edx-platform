@@ -1,20 +1,55 @@
 """
-Studio Home page
+Studio Index, home and dashboard pages. These are the starting pages for users.
 """
-
 from bok_choy.page_object import PageObject
-from . import BASE_URL
+from selenium.webdriver import ActionChains
+
+from common.test.acceptance.pages.studio import BASE_URL
+from common.test.acceptance.pages.studio.login import LoginPage
+from common.test.acceptance.pages.studio.signup import SignupPage
+from common.test.acceptance.pages.studio.utils import HelpMixin
 
 
-class DashboardPage(PageObject):
+class HeaderMixin(object):
     """
-    Studio Home page
+    Mixin class used for the pressing buttons in the header.
     """
+    def click_sign_up(self):
+        """
+        Press the Sign Up button in the header.
+        """
+        next_page = SignupPage(self.browser)
+        self.q(css='.action-signup')[0].click()
+        return next_page.wait_for_page()
 
+    def click_sign_in(self):
+        """
+        Press the Sign In button in the header.
+        """
+        next_page = LoginPage(self.browser)
+        self.q(css='.action-signin')[0].click()
+        return next_page.wait_for_page()
+
+
+class IndexPage(PageObject, HeaderMixin, HelpMixin):
+    """
+    Home page for Studio when not logged in.
+    """
+    url = BASE_URL + "/"
+
+    def is_browser_on_page(self):
+        return self.q(css='.wrapper-text-welcome').visible
+
+
+class DashboardPage(PageObject, HelpMixin):
+    """
+    Studio Dashboard page with courses.
+    The user must be logged in to access this page.
+    """
     url = BASE_URL + "/course/"
 
     def is_browser_on_page(self):
-        return self.q(css='body.view-dashboard').present
+        return self.q(css='.content-primary').visible
 
     @property
     def course_runs(self):
@@ -28,18 +63,24 @@ class DashboardPage(PageObject):
     def has_processing_courses(self):
         return self.q(css='.courses-processing').present
 
-    def create_rerun(self, display_name):
+    def create_rerun(self, course_key):
         """
-        Clicks the create rerun link of the course specified by display_name.
+        Clicks the create rerun link of the course specified by course_key
+        'Re-run course' link doesn't show up until you mouse over that course in the course listing
         """
-        name = self.q(css='.course-title').filter(lambda el: el.text == display_name)[0]
-        name.find_elements_by_xpath('../..')[0].find_elements_by_class_name('rerun-button')[0].click()
+        actions = ActionChains(self.browser)
+        button_name = self.browser.find_element_by_css_selector('.rerun-button[href$="' + course_key + '"]')
+        actions.move_to_element(button_name)
+        actions.click(button_name)
+        actions.perform()
 
     def click_course_run(self, run):
         """
         Clicks on the course with run given by run.
         """
         self.q(css='.course-run .value').filter(lambda el: el.text == run)[0].click()
+        # Clicking on course with run will trigger an ajax event
+        self.wait_for_ajax()
 
     def has_new_library_button(self):
         """
@@ -72,7 +113,7 @@ class DashboardPage(PageObject):
 
     def is_new_library_form_valid(self):
         """
-        IS the new library form ready to submit?
+        Is the new library form ready to submit?
         """
         return (
             self.q(css='.wrapper-create-library .new-library-save:not(.is-disabled)').present and
@@ -218,6 +259,24 @@ class DashboardPage(PageObject):
                 return True
         return False
 
+    @property
+    def language_selector(self):
+        """
+        return language selector
+        """
+        self.wait_for_element_visibility(
+            '#settings-language-value',
+            'Language selector element is available'
+        )
+        return self.q(css='#settings-language-value')
+
+
+class HomePage(DashboardPage):
+    """
+    Home page for Studio when logged in.
+    """
+    url = BASE_URL + "/home/"
+
 
 class DashboardPageWithPrograms(DashboardPage):
     """
@@ -263,3 +322,11 @@ class DashboardPageWithPrograms(DashboardPage):
             element.find_element_by_css_selector('.course-org .value').text,  # org key
         )
         return self.q(css='div.programs-tab li.course-item').map(div2info).results
+
+    def click_new_program_button(self):
+        """
+        Click on the new program button.
+        """
+        self.q(css='.button.new-button.new-program-button').click()
+        self.wait_for_ajax()
+        self.wait_for_element_visibility(".account-username", "New program page is open")

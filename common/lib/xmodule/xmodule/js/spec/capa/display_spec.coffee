@@ -1,14 +1,16 @@
 describe 'Problem', ->
+  problem_content_default = readFixtures('problem_content.html')
+
   beforeEach ->
     # Stub MathJax
     window.MathJax =
       Hub: jasmine.createSpyObj('MathJax.Hub', ['getAllJax', 'Queue'])
       Callback: jasmine.createSpyObj('MathJax.Callback', ['After'])
     @stubbedJax = root: jasmine.createSpyObj('jax.root', ['toMathML'])
-    MathJax.Hub.getAllJax.andReturn [@stubbedJax]
+    MathJax.Hub.getAllJax.and.returnValue [@stubbedJax]
     window.update_schematics = ->
-    spyOn SR, 'readElts'
     spyOn SR, 'readText'
+    spyOn SR, 'readTexts'
 
     # Load this function from spec/helper.coffee
     # Note that if your test fails with a message like:
@@ -19,7 +21,7 @@ describe 'Problem', ->
     loadFixtures 'problem.html'
 
     spyOn Logger, 'log'
-    spyOn($.fn, 'load').andCallFake (url, callback) ->
+    spyOn($.fn, 'load').and.callFake (url, callback) ->
       $(@).html readFixtures('problem_content.html')
       callback()
 
@@ -44,7 +46,7 @@ describe 'Problem', ->
   describe 'bind', ->
     beforeEach ->
       spyOn window, 'update_schematics'
-      MathJax.Hub.getAllJax.andReturn [@stubbedJax]
+      MathJax.Hub.getAllJax.and.returnValue [@stubbedJax]
       @problem = new Problem($('.xblock-student_view'))
 
     it 'set mathjax typeset', ->
@@ -56,14 +58,14 @@ describe 'Problem', ->
     it 'bind answer refresh on button click', ->
       expect($('div.action button')).toHandleWith 'click', @problem.refreshAnswers
 
-    it 'bind the check button', ->
-      expect($('div.action button.check')).toHandleWith 'click', @problem.check_fd
+    it 'bind the submit button', ->
+      expect($('.action .submit')).toHandleWith 'click', @problem.submit_fd
 
     it 'bind the reset button', ->
       expect($('div.action button.reset')).toHandleWith 'click', @problem.reset
 
     it 'bind the show button', ->
-      expect($('div.action button.show')).toHandleWith 'click', @problem.show
+      expect($('.action .show')).toHandleWith 'click', @problem.show
 
     it 'bind the save button', ->
       expect($('div.action button.save')).toHandleWith 'click', @problem.save
@@ -74,34 +76,67 @@ describe 'Problem', ->
   describe 'bind_with_custom_input_id', ->
     beforeEach ->
       spyOn window, 'update_schematics'
-      MathJax.Hub.getAllJax.andReturn [@stubbedJax]
+      MathJax.Hub.getAllJax.and.returnValue [@stubbedJax]
       @problem = new Problem($('.xblock-student_view'))
       $(@).html readFixtures('problem_content_1240.html')
 
-    it 'bind the check button', ->
-      expect($('div.action button.check')).toHandleWith 'click', @problem.check_fd
+    it 'bind the submit button', ->
+      expect($('.action .submit')).toHandleWith 'click', @problem.submit_fd
 
     it 'bind the show button', ->
       expect($('div.action button.show')).toHandleWith 'click', @problem.show
 
+
   describe 'renderProgressState', ->
     beforeEach ->
       @problem = new Problem($('.xblock-student_view'))
-      #@renderProgressState = @problem.renderProgressState
+
+    testProgessData = (problem, score, total_possible, attempts, graded, expected_progress_after_render) ->
+      problem.el.data('problem-score', score);
+      problem.el.data('problem-total-possible', total_possible);
+      problem.el.data('attempts-used', attempts);
+      problem.el.data('graded', graded)
+      expect(problem.$('.problem-progress').html()).toEqual ""
+      problem.renderProgressState()
+      expect(problem.$('.problem-progress').html()).toEqual expected_progress_after_render
 
     describe 'with a status of "none"', ->
-      it 'reports the number of points possible', ->
-        @problem.el.data('progress_status', 'none')
-        @problem.el.data('progress_detail', '0/1')
-        @problem.renderProgressState()
-        expect(@problem.$('.problem-progress').html()).toEqual "(1 point possible)"
+      it 'reports the number of points possible and graded', ->
+        testProgessData(@problem, 0, 1, 0, "True", "1 point possible (graded)")
+
+      it 'displays the number of points possible when rendering happens with the content', ->
+        testProgessData(@problem, 0, 2, 0, "True", "2 points possible (graded)")
+
+      it 'reports the number of points possible and ungraded', ->
+        testProgessData(@problem, 0, 1, 0, "False", "1 point possible (ungraded)")
+
+      it 'displays ungraded if number of points possible is 0', ->
+        testProgessData(@problem, 0, 0, 0, "False", "0 points possible (ungraded)")
+
+      it 'displays ungraded if number of points possible is 0, even if graded value is True', ->
+        testProgessData(@problem, 0, 0, 0, "True", "0 points possible (ungraded)")
+
+      it 'reports the correct score with status none and >0 attempts', ->
+        testProgessData(@problem, 0, 1, 1, "True", "0/1 point (graded)")
+
+      it 'reports the correct score with >1 weight, status none, and >0 attempts', ->
+        testProgessData(@problem, 0, 2, 2, "True", "0/2 points (graded)")
 
     describe 'with any other valid status', ->
+
       it 'reports the current score', ->
-        @problem.el.data('progress_status', 'foo')
-        @problem.el.data('progress_detail', '1/1')
-        @problem.renderProgressState()
-        expect(@problem.$('.problem-progress').html()).toEqual "(1/1 point)"
+        testProgessData(@problem, 1, 1, 1, "True", "1/1 point (graded)")
+
+      it 'shows current score when rendering happens with the content', ->
+        testProgessData(@problem, 2, 2, 1, "True", "2/2 points (graded)")
+
+      it 'reports the current score even if problem is ungraded', ->
+        testProgessData(@problem, 1, 1, 1, "False", "1/1 point (ungraded)")
+
+    describe 'with valid status and string containing an integer like "0" for detail', ->
+      # These tests are to address a failure specific to Chrome 51 and 52 +
+      it 'shows 0 points possible for the detail', ->
+        testProgessData(@problem, 0, 0, 1, "False", "0 points possible (ungraded)")
 
   describe 'render', ->
     beforeEach ->
@@ -121,7 +156,7 @@ describe 'Problem', ->
 
     describe 'with no content given', ->
       beforeEach ->
-        spyOn($, 'postWithPrefix').andCallFake (url, callback) ->
+        spyOn($, 'postWithPrefix').and.callFake (url, callback) ->
           callback html: "Hello World"
         @problem.render()
 
@@ -131,32 +166,32 @@ describe 'Problem', ->
       it 're-bind the content', ->
         expect(@problem.bind).toHaveBeenCalled()
 
-  describe 'check_fd', ->
+  describe 'submit_fd', ->
     beforeEach ->
       # Insert an input of type file outside of the problem.
       $('.xblock-student_view').after('<input type="file" />')
       @problem = new Problem($('.xblock-student_view'))
-      spyOn(@problem, 'check')
+      spyOn(@problem, 'submit')
 
-    it 'check method is called if input of type file is not in problem', ->
-      @problem.check_fd()
-      expect(@problem.check).toHaveBeenCalled()
+    it 'submit method is called if input of type file is not in problem', ->
+      @problem.submit_fd()
+      expect(@problem.submit).toHaveBeenCalled()
 
-  describe 'check', ->
+  describe 'submit', ->
     beforeEach ->
       @problem = new Problem($('.xblock-student_view'))
       @problem.answers = 'foo=1&bar=2'
 
     it 'log the problem_check event', ->
-      spyOn($, 'postWithPrefix').andCallFake (url, answers, callback) ->
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
         promise =
           always: (callable) -> callable()
           done: (callable) -> callable()
-      @problem.check()
+      @problem.submit()
       expect(Logger.log).toHaveBeenCalledWith 'problem_check', 'foo=1&bar=2'
 
     it 'log the problem_graded event, after the problem is done grading.', ->
-      spyOn($, 'postWithPrefix').andCallFake (url, answers, callback) ->
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
         response =
           success: 'correct'
           contents: 'mock grader response'
@@ -164,60 +199,252 @@ describe 'Problem', ->
         promise =
           always: (callable) -> callable()
           done: (callable) -> callable()
-      @problem.check()
+      @problem.submit()
       expect(Logger.log).toHaveBeenCalledWith 'problem_graded', ['foo=1&bar=2', 'mock grader response'], @problem.id
 
-    it 'submit the answer for check', ->
-      spyOn($, 'postWithPrefix').andCallFake (url, answers, callback) ->
+    it 'submit the answer for submit', ->
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
         promise =
           always: (callable) -> callable()
           done: (callable) -> callable()
-      @problem.check()
+      @problem.submit()
       expect($.postWithPrefix).toHaveBeenCalledWith '/problem/Problem1/problem_check',
           'foo=1&bar=2', jasmine.any(Function)
 
     describe 'when the response is correct', ->
       it 'call render with returned content', ->
-        spyOn($, 'postWithPrefix').andCallFake (url, answers, callback) ->
-          callback(success: 'correct', contents: 'Correct!')
+        contents = '<div class="wrapper-problem-response" aria-label="Question 1"><p>Correct<span class="status">excellent</span></p></div>' +
+                   '<div class="wrapper-problem-response" aria-label="Question 2"><p>Yep<span class="status">correct</span></p></div>'
+        spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+          callback(success: 'correct', contents: contents)
           promise =
             always: (callable) -> callable()
             done: (callable) -> callable()
-        @problem.check()
-        expect(@problem.el.html()).toEqual 'Correct!'
-        expect(window.SR.readElts).toHaveBeenCalled()
+        @problem.submit()
+        expect(@problem.el).toHaveHtml contents
+        expect(window.SR.readTexts).toHaveBeenCalledWith ['Question 1: excellent', 'Question 2: correct']
 
     describe 'when the response is incorrect', ->
       it 'call render with returned content', ->
-        spyOn($, 'postWithPrefix').andCallFake (url, answers, callback) ->
-          callback(success: 'incorrect', contents: 'Incorrect!')
+        contents = '<p>Incorrect<span class="status">no, try again</span></p>'
+        spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+          callback(success: 'incorrect', contents: contents)
           promise =
             always: (callable) -> callable()
             done: (callable) -> callable()
-        @problem.check()
-        expect(@problem.el.html()).toEqual 'Incorrect!'
-        expect(window.SR.readElts).toHaveBeenCalled()
+        @problem.submit()
+        expect(@problem.el).toHaveHtml contents
+        expect(window.SR.readTexts).toHaveBeenCalledWith ['no, try again']
+
+    it 'tests if all the capa buttons are disabled while submitting', (done)->
+      deferred = $.Deferred()
+      self = this
+
+      runs = ->
+        spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+          promise = undefined
+          callback
+            success: 'incorrect'
+            contents: 'Incorrect'
+          promise =
+            always: (callable) ->
+              callable()
+            done: (callable) ->
+              callable()
+        spyOn @problem, 'enableAllButtons'
+        @problem.submit()
+        expect(@problem.enableAllButtons).toHaveBeenCalledWith false, true
+        if jQuery.active == 0
+          deferred.resolve()
+        deferred.promise()
+
+      runs.call(self).then(->
+        expect(self.problem.enableAllButtons).toHaveBeenCalledWith true, true
+        return
+      ).always done
+
+    it 'tests the expected change in text of submit button', (done) ->
+      deferred = $.Deferred()
+      self = this
+
+      runs = ->
+        spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+          promise = undefined
+          promise =
+            always: (callable) ->
+              callable()
+            done: (callable) ->
+              callable()
+        spyOn @problem.submitButtonLabel, 'text'
+        @problem.submit()
+        expect(@problem.submitButtonLabel.text).toHaveBeenCalledWith 'Submitting'
+        if jQuery.active == 0
+          deferred.resolve()
+        deferred.promise()
+
+      runs.call(self).then(->
+        expect(self.problem.submitButtonLabel.text).toHaveBeenCalledWith 'Submit'
+        return
+      ).always done
+
+  describe 'submit button on problems', ->
+    beforeEach ->
+      @problem = new Problem($('.xblock-student_view'))
+      @submitDisabled = (disabled) =>
+        if disabled
+          expect(@problem.submitButton).toHaveAttr('disabled')
+        else
+          expect(@problem.submitButton).not.toHaveAttr('disabled')
+
+    describe 'some basic tests for submit button', ->
+      it 'should become enabled after a value is entered into the text box', ->
+        $('#input_example_1').val('test').trigger('input')
+        @submitDisabled false
+        $('#input_example_1').val('').trigger('input')
+        @submitDisabled true
+
+    describe 'some advanced tests for submit button', ->
+      it 'should become enabled after a checkbox is checked', ->
+        html = '''
+        <div class="choicegroup">
+        <label for="input_1_1_1"><input type="checkbox" name="input_1_1" id="input_1_1_1" value="1"> One</label>
+        <label for="input_1_1_2"><input type="checkbox" name="input_1_1" id="input_1_1_2" value="2"> Two</label>
+        <label for="input_1_1_3"><input type="checkbox" name="input_1_1" id="input_1_1_3" value="3"> Three</label>
+        </div>
+        '''
+        $('#input_example_1').replaceWith(html)
+        @problem.submitAnswersAndSubmitButton true
+        @submitDisabled true
+        $('#input_1_1_1').click()
+        @submitDisabled false
+        $('#input_1_1_1').click()
+        @submitDisabled true
+
+      it 'should become enabled after a radiobutton is checked', ->
+        html = '''
+        <div class="choicegroup">
+        <label for="input_1_1_1"><input type="radio" name="input_1_1" id="input_1_1_1" value="1"> One</label>
+        <label for="input_1_1_2"><input type="radio" name="input_1_1" id="input_1_1_2" value="2"> Two</label>
+        <label for="input_1_1_3"><input type="radio" name="input_1_1" id="input_1_1_3" value="3"> Three</label>
+        </div>
+        '''
+        $('#input_example_1').replaceWith(html)
+        @problem.submitAnswersAndSubmitButton true
+        @submitDisabled true
+        $('#input_1_1_1').attr('checked', true).trigger('click')
+        @submitDisabled false
+        $('#input_1_1_1').attr('checked', false).trigger('click')
+        @submitDisabled true
+
+      it 'should become enabled after a value is selected in a selector', ->
+        html = '''
+        <div id="problem_sel">
+        <select>
+        <option value="val0">Select an option</option>
+        <option value="val1">1</option>
+        <option value="val2">2</option>
+        </select>
+        </div>
+        '''
+        $('#input_example_1').replaceWith(html)
+        @problem.submitAnswersAndSubmitButton true
+        @submitDisabled true
+        $("#problem_sel select").val("val2").trigger('change')
+        @submitDisabled false
+        $("#problem_sel select").val("val0").trigger('change')
+        @submitDisabled true
+
+      it 'should become enabled after a radiobutton is checked and a value is entered into the text box', ->
+        html = '''
+        <div class="choicegroup">
+        <label for="input_1_1_1"><input type="radio" name="input_1_1" id="input_1_1_1" value="1"> One</label>
+        <label for="input_1_1_2"><input type="radio" name="input_1_1" id="input_1_1_2" value="2"> Two</label>
+        <label for="input_1_1_3"><input type="radio" name="input_1_1" id="input_1_1_3" value="3"> Three</label>
+        </div>
+        '''
+        $(html).insertAfter('#input_example_1')
+        @problem.submitAnswersAndSubmitButton true
+        @submitDisabled true
+        $('#input_1_1_1').attr('checked', true).trigger('click')
+        @submitDisabled true
+        $('#input_example_1').val('111').trigger('input')
+        @submitDisabled false
+        $('#input_1_1_1').attr('checked', false).trigger('click')
+        @submitDisabled true
+
+      it 'should become enabled if there are only hidden input fields', ->
+        html = '''
+        <input type="text" name="test" id="test" aria-describedby="answer_test" value="" style="display:none;">
+        '''
+        $('#input_example_1').replaceWith(html)
+        @problem.submitAnswersAndSubmitButton true
+        @submitDisabled false
 
   describe 'reset', ->
     beforeEach ->
       @problem = new Problem($('.xblock-student_view'))
 
     it 'log the problem_reset event', ->
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+        promise =
+          always: (callable) -> callable()
       @problem.answers = 'foo=1&bar=2'
       @problem.reset()
       expect(Logger.log).toHaveBeenCalledWith 'problem_reset', 'foo=1&bar=2'
 
     it 'POST to the problem reset page', ->
-      spyOn $, 'postWithPrefix'
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+        promise =
+          always: (callable) -> callable()
       @problem.reset()
       expect($.postWithPrefix).toHaveBeenCalledWith '/problem/Problem1/problem_reset',
           { id: 'i4x://edX/101/problem/Problem1' }, jasmine.any(Function)
 
     it 'render the returned content', ->
-      spyOn($, 'postWithPrefix').andCallFake (url, answers, callback) ->
-        callback html: "Reset!"
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+        callback html: "Reset", success: true
+        promise =
+            always: (callable) -> callable()
       @problem.reset()
-      expect(@problem.el.html()).toEqual 'Reset!'
+      expect(@problem.el.html()).toEqual 'Reset'
+
+    it 'sends a message to the window SR element', ->
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+        callback html: "Reset", success: true
+        promise =
+          always: (callable) -> callable()
+       @problem.reset()
+       expect(window.SR.readText).toHaveBeenCalledWith 'This problem has been reset.'
+
+    it 'shows a notification on error', ->
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+        callback msg: "Error on reset.", success: false
+        promise =
+          always: (callable) -> callable()
+      @problem.reset()
+      expect($('.notification-gentle-alert .notification-message').text()).toEqual("Error on reset.")
+
+    it 'tests if all the buttons are disabled and the text of submit button remains same while resetting', (done) ->
+      deferred = $.Deferred()
+      self = this
+
+      runs = ->
+        spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+          promise = undefined
+          promise = always: (callable) ->
+            callable()
+        spyOn @problem, 'enableAllButtons'
+        @problem.reset()
+        expect(@problem.enableAllButtons).toHaveBeenCalledWith false, false
+        expect(@problem.submitButtonLabel).toHaveText 'Submit'
+        if jQuery.active == 0
+          deferred.resolve()
+        deferred.promise()
+
+      runs.call(self).then(->
+        expect(self.problem.enableAllButtons).toHaveBeenCalledWith true, false
+        expect(self.problem.submitButtonLabel).toHaveText 'Submit'
+      ).always done
 
   describe 'show', ->
     beforeEach ->
@@ -226,7 +453,7 @@ describe 'Problem', ->
 
     describe 'when the answer has not yet shown', ->
       beforeEach ->
-        @problem.el.removeClass 'showed'
+        expect(@problem.el.find('.show').attr('disabled')).not.toEqual('disabled')
 
       it 'log the problem_show event', ->
         @problem.show()
@@ -240,48 +467,38 @@ describe 'Problem', ->
             jasmine.any(Function)
 
       it 'show the answers', ->
-        spyOn($, 'postWithPrefix').andCallFake (url, callback) ->
+        spyOn($, 'postWithPrefix').and.callFake (url, callback) ->
           callback answers: '1_1': 'One', '1_2': 'Two'
         @problem.show()
         expect($('#answer_1_1')).toHaveHtml 'One'
         expect($('#answer_1_2')).toHaveHtml 'Two'
 
-      it 'toggle the show answer button', ->
-        spyOn($, 'postWithPrefix').andCallFake (url, callback) -> callback(answers: {})
+      it 'sends a message to the window SR element', ->
+        spyOn($, 'postWithPrefix').and.callFake (url, callback) -> callback(answers: {})
         @problem.show()
-        expect($('.show .show-label')).toHaveText 'Hide Answer'
-        expect(window.SR.readElts).toHaveBeenCalled()
+        expect(window.SR.readText).toHaveBeenCalledWith 'Answers to this problem are now shown. Navigate through the problem to review it with answers inline.'
 
-      it 'toggle the show answer button, answers are strings', ->
-        spyOn($, 'postWithPrefix').andCallFake (url, callback) -> callback(answers: '1_1': 'One', '1_2': 'Two')
+      it 'disables the show answer button', ->
+        spyOn($, 'postWithPrefix').and.callFake (url, callback) -> callback(answers: {})
         @problem.show()
-        expect($('.show .show-label')).toHaveText 'Hide Answer'
-        expect(window.SR.readElts).toHaveBeenCalledWith ['<p>Answer: One</p>', '<p>Answer: Two</p>']
+        expect(@problem.el.find('.show').attr('disabled')).toEqual('disabled')
 
-      it 'toggle the show answer button, answers are elements', ->
-        answer1 = '<div><span class="detailed-solution">one</span></div>'
-        answer2 = '<div><span class="detailed-solution">two</span></div>'
-        spyOn($, 'postWithPrefix').andCallFake (url, callback) -> callback(answers: '1_1': answer1, '1_2': answer2)
-        @problem.show()
-        expect($('.show .show-label')).toHaveText 'Hide Answer'
-        expect(window.SR.readElts).toHaveBeenCalledWith [jasmine.any(jQuery), jasmine.any(jQuery)]
+      it 'sends a SR message when answer is present', (done) ->
+        deferred = $.Deferred()
 
-      it 'add the showed class to element', ->
-        spyOn($, 'postWithPrefix').andCallFake (url, callback) -> callback(answers: {})
-        @problem.show()
-        expect(@problem.el).toHaveClass 'showed'
-
-      it 'reads the answers', ->
-        runs ->
-          spyOn($, 'postWithPrefix').andCallFake (url, callback) -> callback(answers: 'answers')
+        runs = ->
+          spyOn($, 'postWithPrefix').and.callFake (url, callback) ->
+            callback answers:
+              '1_1': 'answers'
           @problem.show()
+          if jQuery.active == 0
+            deferred.resolve()
+          deferred.promise()
 
-        waitsFor (->
-          return jQuery.active == 0
-        ), "jQuery requests finished", 1000
-
-        runs ->
-          expect(window.SR.readElts).toHaveBeenCalled()
+        runs.call(this).then(->
+          expect(window.SR.readText).toHaveBeenCalledWith 'Answers to this problem are now shown. Navigate through the problem to review it with answers inline.'
+          return
+        ).always done
 
       describe 'multiple choice question', ->
         beforeEach ->
@@ -293,7 +510,7 @@ describe 'Problem', ->
           '''
 
         it 'set the correct_answer attribute on the choice', ->
-          spyOn($, 'postWithPrefix').andCallFake (url, callback) ->
+          spyOn($, 'postWithPrefix').and.callFake (url, callback) ->
             callback answers: '1_1': [2, 3]
           @problem.show()
           expect($('label[for="input_1_1_1"]')).not.toHaveAttr 'correct_answer', 'true'
@@ -334,7 +551,7 @@ describe 'Problem', ->
           @problem.el.prepend(radio_text_xml)
 
         it 'sets the correct class on the section for the correct choice', ->
-          spyOn($, 'postWithPrefix').andCallFake (url, callback) ->
+          spyOn($, 'postWithPrefix').and.callFake (url, callback) ->
             callback answers: "1_2_1": ["1_2_1_choiceinput_0bc"], "1_2_1_choiceinput_0bc": "3"
           @problem.show()
 
@@ -345,7 +562,7 @@ describe 'Problem', ->
           expect($('#answer_1_2_1_choiceinput_2bc').text()).toEqual('')
 
         it 'Should not disable input fields', ->
-          spyOn($, 'postWithPrefix').andCallFake (url, callback) ->
+          spyOn($, 'postWithPrefix').and.callFake (url, callback) ->
             callback answers: "1_2_1": ["1_2_1_choiceinput_0bc"], "1_2_1_choiceinput_0bc": "3"
           @problem.show()
           expect($('input#1_2_1_choiceinput_0bc').attr('disabled')).not.toEqual('disabled')
@@ -375,7 +592,7 @@ describe 'Problem', ->
             expect(img).toImageDiffEqual(el.find('canvas')[0])
 
         stubRequest = (data) =>
-          spyOn($, 'postWithPrefix').andCallFake (url, callback) ->
+          spyOn($, 'postWithPrefix').and.callFake (url, callback) ->
             callback data
 
         getImage = (coords, c_width, c_height) =>
@@ -486,57 +703,48 @@ describe 'Problem', ->
           expect(el.find('canvas')).not.toExist()
           expect(console.log).toHaveBeenCalledWith('Answer is absent for image input with id=12345')
 
-    describe 'when the answers are already shown', ->
-      beforeEach ->
-        @problem.el.addClass 'showed'
-        @problem.el.prepend '''
-          <label for="input_1_1_1" correct_answer="true">
-            <input type="checkbox" name="input_1_1" id="input_1_1_1" value="1" />
-            One
-          </label>
-        '''
-        $('#answer_1_1').html('One')
-        $('#answer_1_2').html('Two')
-
-      it 'hide the answers', ->
-        @problem.show()
-        expect($('#answer_1_1')).toHaveHtml ''
-        expect($('#answer_1_2')).toHaveHtml ''
-        expect($('label[for="input_1_1_1"]')).not.toHaveAttr 'correct_answer'
-
-      it 'toggle the show answer button', ->
-        @problem.show()
-        expect($('.show .show-label')).toHaveText 'Show Answer'
-
-      it 'remove the showed class from element', ->
-        @problem.show()
-        expect(@problem.el).not.toHaveClass 'showed'
-
   describe 'save', ->
     beforeEach ->
       @problem = new Problem($('.xblock-student_view'))
       @problem.answers = 'foo=1&bar=2'
 
     it 'log the problem_save event', ->
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+        promise =
+          always: (callable) -> callable()
       @problem.save()
       expect(Logger.log).toHaveBeenCalledWith 'problem_save', 'foo=1&bar=2'
 
     it 'POST to save problem', ->
-      spyOn $, 'postWithPrefix'
+      spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+        promise =
+          always: (callable) -> callable()
       @problem.save()
       expect($.postWithPrefix).toHaveBeenCalledWith '/problem/Problem1/problem_save',
           'foo=1&bar=2', jasmine.any(Function)
 
-    it 'reads the save message', ->
-      runs ->
-        spyOn($, 'postWithPrefix').andCallFake (url, answers, callback) -> callback(success: 'OK')
+    it 'tests if all the buttons are disabled and the text of submit button does not change while saving.', (done) ->
+      deferred = $.Deferred()
+      self = this
+      curr_html = @problem.el.html()
+      runs = ->
+        spyOn($, 'postWithPrefix').and.callFake (url, answers, callback) ->
+          promise = undefined
+          callback(success: 'correct', html: curr_html)
+          promise = always: (callable) ->
+            callable()
+        spyOn @problem, 'enableAllButtons'
         @problem.save()
-      waitsFor (->
-        return jQuery.active == 0
-      ), "jQuery requests finished", 1000
+        expect(@problem.enableAllButtons).toHaveBeenCalledWith false, false
+        expect(@problem.submitButtonLabel).toHaveText 'Submit'
+        if jQuery.active == 0
+          deferred.resolve()
+        deferred.promise()
 
-      runs ->
-        expect(window.SR.readElts).toHaveBeenCalled()
+      runs.call(self).then(->
+        expect(self.problem.enableAllButtons).toHaveBeenCalledWith true, false
+        expect(self.problem.submitButtonLabel).toHaveText 'Submit'
+      ).always done
 
   describe 'refreshMath', ->
     beforeEach ->
@@ -551,7 +759,7 @@ describe 'Problem', ->
   describe 'updateMathML', ->
     beforeEach ->
       @problem = new Problem($('.xblock-student_view'))
-      @stubbedJax.root.toMathML.andReturn '<MathML>'
+      @stubbedJax.root.toMathML.and.returnValue '<MathML>'
 
     describe 'when there is no exception', ->
       beforeEach ->
@@ -562,7 +770,9 @@ describe 'Problem', ->
 
     describe 'when there is an exception', ->
       beforeEach ->
-        @stubbedJax.root.toMathML.andThrow {restart: true}
+        error = new Error()
+        error.restart = true
+        @stubbedJax.root.toMathML.and.throwError error
         @problem.updateMathML @stubbedJax, $('#input_example_1').get(0)
 
       it 'should queue up the exception', ->
@@ -597,34 +807,59 @@ describe 'Problem', ->
       @problem = new Problem($('.xblock-student_view'))
       @problem.render(jsinput_html)
 
-    it 'check_save_waitfor should return false', ->
+    it 'submit_save_waitfor should return false', ->
       $(@problem.inputs[0]).data('waitfor', ->)
-      expect(@problem.check_save_waitfor()).toEqual(false)
+      expect(@problem.submit_save_waitfor()).toEqual(false)
 
   describe 'Submitting an xqueue-graded problem', ->
     matlabinput_html = readFixtures('matlabinput_problem.html')
 
     beforeEach ->
-      spyOn($, 'postWithPrefix').andCallFake (url, callback) ->
+      spyOn($, 'postWithPrefix').and.callFake (url, callback) ->
         callback html: matlabinput_html
-      jasmine.Clock.useMock()
+      jasmine.clock().install()
       @problem = new Problem($('.xblock-student_view'))
-      spyOn(@problem, 'poll').andCallThrough()
+      spyOn(@problem, 'poll').and.callThrough()
       @problem.render(matlabinput_html)
+
+    afterEach ->
+      jasmine.clock().uninstall()
 
     it 'check that we stop polling after a fixed amount of time', ->
       expect(@problem.poll).not.toHaveBeenCalled()
-      jasmine.Clock.tick(1)
+      jasmine.clock().tick(1)
       time_steps = [1000, 2000, 4000, 8000, 16000, 32000]
       num_calls = 1
       for time_step in time_steps
         do (time_step) =>
-          jasmine.Clock.tick(time_step)
-          expect(@problem.poll.callCount).toEqual(num_calls)
+          jasmine.clock().tick(time_step)
+          expect(@problem.poll.calls.count()).toEqual(num_calls)
           num_calls += 1
 
       # jump the next step and verify that we are not still continuing to poll
-      jasmine.Clock.tick(64000)
-      expect(@problem.poll.callCount).toEqual(6)
+      jasmine.clock().tick(64000)
+      expect(@problem.poll.calls.count()).toEqual(6)
 
-      expect($('.capa_alert').text()).toEqual("The grading process is still running. Refresh the page to see updates.")
+      expect($('.notification-gentle-alert .notification-message').text()).toEqual("The grading process is still running. Refresh the page to see updates.")
+
+  describe 'codeinput problem', ->
+    codeinputProblemHtml = readFixtures('codeinput_problem.html')
+
+    beforeEach ->
+      spyOn($, 'postWithPrefix').and.callFake (url, callback) ->
+        callback html: codeinputProblemHtml
+      @problem = new Problem($('.xblock-student_view'))
+      @problem.render(codeinputProblemHtml)
+
+    it 'has rendered with correct a11y info', ->
+      CodeMirrorTextArea = $('textarea')[1]
+      CodeMirrorTextAreaId = 'cm-textarea-101'
+
+      # verify that question label has correct `for` attribute value
+      expect($('.problem-group-label').attr('for')).toEqual(CodeMirrorTextAreaId)
+
+      # verify that codemirror textarea has correct `id` attribute value
+      expect($(CodeMirrorTextArea).attr('id')).toEqual(CodeMirrorTextAreaId)
+
+      # verify that codemirror textarea has correct `aria-describedby` attribute value
+      expect($(CodeMirrorTextArea).attr('aria-describedby')).toEqual('cm-editor-exit-message-101 status_101')

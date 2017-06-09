@@ -13,31 +13,47 @@ from .models import (
     SAMLConfiguration,
     SAMLProviderData,
     LTIProviderConfig,
-    ProviderApiPermissions
+    ProviderApiPermissions,
+    _PSA_OAUTH2_BACKENDS,
+    _PSA_SAML_BACKENDS
 )
 from .tasks import fetch_saml_metadata
 from third_party_auth.provider import Registry
 
 
+class OAuth2ProviderConfigForm(forms.ModelForm):
+    """ Django Admin form class for OAuth2ProviderConfig """
+    backend_name = forms.ChoiceField(choices=((name, name) for name in _PSA_OAUTH2_BACKENDS))
+
+
 class OAuth2ProviderConfigAdmin(KeyedConfigurationModelAdmin):
     """ Django Admin class for OAuth2ProviderConfig """
+    form = OAuth2ProviderConfigForm
+
     def get_list_display(self, request):
         """ Don't show every single field in the admin change list """
         return (
-            'name', 'enabled', 'backend_name', 'secondary', 'skip_registration_form',
+            'name', 'enabled', 'site', 'backend_name', 'secondary', 'skip_registration_form',
             'skip_email_verification', 'change_date', 'changed_by', 'edit_link',
         )
 
 admin.site.register(OAuth2ProviderConfig, OAuth2ProviderConfigAdmin)
 
 
+class SAMLProviderConfigForm(forms.ModelForm):
+    """ Django Admin form class for SAMLProviderConfig """
+    backend_name = forms.ChoiceField(choices=((name, name) for name in _PSA_SAML_BACKENDS))
+
+
 class SAMLProviderConfigAdmin(KeyedConfigurationModelAdmin):
     """ Django Admin class for SAMLProviderConfig """
+    form = SAMLProviderConfigForm
+
     def get_list_display(self, request):
         """ Don't show every single field in the admin change list """
         return (
-            'name', 'enabled', 'backend_name', 'entity_id', 'metadata_source',
-            'has_data', 'icon_class', 'change_date', 'changed_by', 'edit_link'
+            'name', 'enabled', 'site', 'backend_name', 'entity_id', 'metadata_source',
+            'has_data', 'mode', 'change_date', 'changed_by', 'edit_link',
         )
 
     def has_data(self, inst):
@@ -48,6 +64,13 @@ class SAMLProviderConfigAdmin(KeyedConfigurationModelAdmin):
         return bool(data and data.is_valid())
     has_data.short_description = u'Metadata Ready'
     has_data.boolean = True
+
+    def mode(self, inst):
+        """ Indicate if debug_mode is enabled or not"""
+        if inst.debug_mode:
+            return '<span style="color: red;">Debug</span>'
+        return "Normal"
+    mode.allow_tags = True
 
     def save_model(self, request, obj, form, change):
         """
@@ -63,13 +86,13 @@ class SAMLProviderConfigAdmin(KeyedConfigurationModelAdmin):
 admin.site.register(SAMLProviderConfig, SAMLProviderConfigAdmin)
 
 
-class SAMLConfigurationAdmin(ConfigurationModelAdmin):
+class SAMLConfigurationAdmin(KeyedConfigurationModelAdmin):
     """ Django Admin class for SAMLConfiguration """
     def get_list_display(self, request):
         """ Shorten the public/private keys in the change view """
         return (
-            'change_date', 'changed_by', 'enabled', 'entity_id',
-            'org_info_str', 'key_summary',
+            'site', 'change_date', 'changed_by', 'enabled', 'entity_id',
+            'org_info_str', 'key_summary', 'edit_link',
         )
 
     def key_summary(self, inst):
@@ -104,6 +127,7 @@ class LTIProviderConfigAdmin(KeyedConfigurationModelAdmin):
 
     exclude = (
         'icon_class',
+        'icon_image',
         'secondary',
     )
 
@@ -112,6 +136,7 @@ class LTIProviderConfigAdmin(KeyedConfigurationModelAdmin):
         return (
             'name',
             'enabled',
+            'site',
             'lti_consumer_key',
             'lti_max_timestamp_age',
             'change_date',

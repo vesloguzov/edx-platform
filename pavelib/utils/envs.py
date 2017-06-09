@@ -22,12 +22,15 @@ class Env(object):
     REPORT_DIR = REPO_ROOT / 'reports'
     METRICS_DIR = REPORT_DIR / 'metrics'
 
+    # Generic log dir
+    GEN_LOG_DIR = REPO_ROOT / "test_root" / "log"
+
     # Python unittest dirs
     PYTHON_COVERAGERC = REPO_ROOT / ".coveragerc"
 
     # Bok_choy dirs
     BOK_CHOY_DIR = REPO_ROOT / "common" / "test" / "acceptance"
-    BOK_CHOY_LOG_DIR = REPO_ROOT / "test_root" / "log"
+    BOK_CHOY_LOG_DIR = GEN_LOG_DIR
     BOK_CHOY_REPORT_DIR = REPORT_DIR / "bok_choy"
     BOK_CHOY_A11Y_REPORT_DIR = REPORT_DIR / "a11y"
     BOK_CHOY_COVERAGERC = BOK_CHOY_DIR / ".coveragerc"
@@ -36,6 +39,9 @@ class Env(object):
         REPO_ROOT / "node_modules" / "edx-custom-a11y-rules" /
         "lib" / "custom_a11y_rules.js"
     )
+
+    PA11YCRAWLER_REPORT_DIR = REPORT_DIR / "pa11ycrawler"
+    PA11YCRAWLER_COVERAGERC = BOK_CHOY_DIR / ".pa11ycrawlercoveragerc"
 
     # If set, put reports for run in "unique" directories.
     # The main purpose of this is to ensure that the reports can be 'slurped'
@@ -100,10 +106,20 @@ class Env(object):
             'log': BOK_CHOY_LOG_DIR / "bok_choy_edxnotes.log",
         },
 
+        'ecommerce': {
+            'port': 8043,
+            'log': BOK_CHOY_LOG_DIR / "bok_choy_ecommerce.log",
+        },
+
         'programs': {
             'port': 8090,
             'log': BOK_CHOY_LOG_DIR / "bok_choy_programs.log",
-        }
+        },
+
+        'catalog': {
+            'port': 8091,
+            'log': BOK_CHOY_LOG_DIR / "bok_choy_catalog.log",
+        },
     }
 
     # Mongo databases that will be dropped before/after the tests run
@@ -116,21 +132,21 @@ class Env(object):
     # Files used to run each of the js test suites
     # TODO:  Store this as a dict. Order seems to matter for some
     # reason. See issue TE-415.
-    JS_TEST_ID_FILES = [
-        REPO_ROOT / 'lms/static/js_test.yml',
-        REPO_ROOT / 'lms/static/js_test_coffee.yml',
-        REPO_ROOT / 'cms/static/js_test.yml',
-        REPO_ROOT / 'cms/static/js_test_squire.yml',
-        REPO_ROOT / 'common/lib/xmodule/xmodule/js/js_test.yml',
-        REPO_ROOT / 'common/static/js_test.yml',
-        REPO_ROOT / 'common/static/js_test_requirejs.yml',
+    KARMA_CONFIG_FILES = [
+        REPO_ROOT / 'cms/static/karma_cms.conf.js',
+        REPO_ROOT / 'cms/static/karma_cms_squire.conf.js',
+        REPO_ROOT / 'lms/static/karma_lms.conf.js',
+        REPO_ROOT / 'lms/static/karma_lms_coffee.conf.js',
+        REPO_ROOT / 'common/lib/xmodule/xmodule/js/karma_xmodule.conf.js',
+        REPO_ROOT / 'common/static/karma_common.conf.js',
+        REPO_ROOT / 'common/static/karma_common_requirejs.conf.js',
     ]
 
     JS_TEST_ID_KEYS = [
-        'lms',
-        'lms-coffee',
         'cms',
         'cms-squire',
+        'lms',
+        'lms-coffee',
         'xmodule',
         'common',
         'common-requirejs'

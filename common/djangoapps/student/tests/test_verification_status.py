@@ -4,13 +4,16 @@ from datetime import datetime, timedelta
 import unittest
 import ddt
 from mock import patch
+from nose.plugins.attrib import attr
 from pytz import UTC
 from django.core.urlresolvers import reverse
 from django.conf import settings
+from django.test import override_settings
 
 from student.helpers import (
     VERIFY_STATUS_NEED_TO_VERIFY,
     VERIFY_STATUS_SUBMITTED,
+    VERIFY_STATUS_RESUBMITTED,
     VERIFY_STATUS_APPROVED,
     VERIFY_STATUS_MISSED_DEADLINE,
     VERIFY_STATUS_NEED_TO_REVERIFY
@@ -24,6 +27,7 @@ from lms.djangoapps.verify_student.models import VerificationDeadline, SoftwareS
 from util.testing import UrlResetMixin
 
 
+@attr(shard=3)
 @patch.dict(settings.FEATURES, {'AUTOMATIC_VERIFY_STUDENT_IDENTITY_FOR_TESTING': True})
 @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @ddt.ddt
@@ -33,9 +37,11 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
     PAST = datetime.now(UTC) - timedelta(days=5)
     FUTURE = datetime.now(UTC) + timedelta(days=5)
 
+    URLCONF_MODULES = ['verify_student.urls']
+
     def setUp(self):
         # Invoke UrlResetMixin
-        super(TestCourseVerificationStatus, self).setUp('verify_student.urls')
+        super(TestCourseVerificationStatus, self).setUp()
 
         self.user = UserFactory(password="edx")
         self.course = CourseFactory.create()
@@ -188,6 +194,7 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
         # messaging relating to verification
         self._assert_course_verification_status(None)
 
+    @override_settings(VERIFY_STUDENT={"DAYS_GOOD_FOR": 5, "EXPIRING_SOON_WINDOW": 10})
     def test_verification_will_expire_by_deadline(self):
         # Expiration date in the future
         self._setup_mode_and_enrollment(self.FUTURE, "verified")
@@ -198,15 +205,35 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
         attempt = SoftwareSecurePhotoVerification.objects.create(user=self.user)
         attempt.mark_ready()
         attempt.submit()
-
-        # This attempt will expire tomorrow, before the course deadline
-        attempt.created_at = attempt.created_at - timedelta(days=364)
+        attempt.approve()
         attempt.save()
 
-        # Expect that the "verify now" message is hidden
-        # (since the user isn't allowed to submit another attempt while
-        # a verification is active).
+        # Verify that learner can submit photos if verification is set to expire soon.
         self._assert_course_verification_status(VERIFY_STATUS_NEED_TO_REVERIFY)
+
+    @override_settings(VERIFY_STUDENT={"DAYS_GOOD_FOR": 5, "EXPIRING_SOON_WINDOW": 10})
+    def test_reverification_submitted_with_current_approved_verificaiton(self):
+        # Expiration date in the future
+        self._setup_mode_and_enrollment(self.FUTURE, "verified")
+
+        # Create a verification attempt that is approved but expiring soon
+        attempt = SoftwareSecurePhotoVerification.objects.create(user=self.user)
+        attempt.mark_ready()
+        attempt.submit()
+        attempt.approve()
+        attempt.save()
+
+        # Verify that learner can submit photos if verification is set to expire soon.
+        self._assert_course_verification_status(VERIFY_STATUS_NEED_TO_REVERIFY)
+
+        # Submit photos for reverification
+        attempt = SoftwareSecurePhotoVerification.objects.create(user=self.user)
+        attempt.mark_ready()
+        attempt.submit()
+
+        # Expect that learner has submitted photos for reverfication and his/her
+        # previous verification is set to expired soon.
+        self._assert_course_verification_status(VERIFY_STATUS_RESUBMITTED)
 
     def test_verification_occurred_after_deadline(self):
         # Expiration date in the past
@@ -245,7 +272,7 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
         # Adding another verification with different course.
         # Its created_at is greater than course deadline.
         course2 = CourseFactory.create()
-        CourseModeFactory(
+        CourseModeFactory.create(
             course_id=course2.id,
             mode_slug="verified",
             expiration_datetime=self.PAST
@@ -277,7 +304,7 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
             enrollment_mode (str): The mode of the enrollment.
 
         """
-        CourseModeFactory(
+        CourseModeFactory.create(
             course_id=self.course.id,
             mode_slug="verified",
             expiration_datetime=deadline
@@ -300,9 +327,10 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
             "You still need to verify for this course.",
             "Verification not yet complete"
         ],
-        VERIFY_STATUS_SUBMITTED: ["Thanks for your patience as we process your request."],
-        VERIFY_STATUS_APPROVED: ["You have already verified your ID!"],
-        VERIFY_STATUS_NEED_TO_REVERIFY: ["Your verification will expire soon!"]
+        VERIFY_STATUS_SUBMITTED: ["You have submitted your verification information."],
+        VERIFY_STATUS_RESUBMITTED: ["You have submitted your reverification information."],
+        VERIFY_STATUS_APPROVED: ["You have successfully verified your ID with edX"],
+        VERIFY_STATUS_NEED_TO_REVERIFY: ["Your current verification will expire soon."]
     }
 
     MODE_CLASSES = {
@@ -311,7 +339,8 @@ class TestCourseVerificationStatus(UrlResetMixin, ModuleStoreTestCase):
         VERIFY_STATUS_SUBMITTED: "verified",
         VERIFY_STATUS_APPROVED: "verified",
         VERIFY_STATUS_MISSED_DEADLINE: "audit",
-        VERIFY_STATUS_NEED_TO_REVERIFY: "audit"
+        VERIFY_STATUS_NEED_TO_REVERIFY: "audit",
+        VERIFY_STATUS_RESUBMITTED: "audit"
     }
 
     def _assert_course_verification_status(self, status):

@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
-from xmodule_django.models import CourseKeyField
+from openedx.core.djangoapps.xmodule_django.models import CourseKeyField
 
 Mode = namedtuple('Mode',
                   [
@@ -22,6 +22,7 @@ Mode = namedtuple('Mode',
                       'expiration_datetime',
                       'description',
                       'sku',
+                      'bulk_sku',
                   ])
 
 
@@ -30,6 +31,9 @@ class CourseMode(models.Model):
     We would like to offer a course in a variety of modes.
 
     """
+    class Meta(object):
+        app_label = "course_modes"
+
     # the course that this mode is attached to
     course_id = CourseKeyField(max_length=255, db_index=True, verbose_name=_("Course"))
 
@@ -93,6 +97,18 @@ class CourseMode(models.Model):
         )
     )
 
+    # Optional bulk order SKU for integration with the ecommerce service
+    bulk_sku = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default=None,  # Need this in order to set DEFAULT NULL on the database column
+        verbose_name="Bulk SKU",
+        help_text=_(
+            u"This is the bulk SKU (stock keeping unit) of this mode in the external ecommerce service."
+        )
+    )
+
     HONOR = 'honor'
     PROFESSIONAL = 'professional'
     VERIFIED = "verified"
@@ -100,7 +116,7 @@ class CourseMode(models.Model):
     NO_ID_PROFESSIONAL_MODE = "no-id-professional"
     CREDIT_MODE = "credit"
 
-    DEFAULT_MODE = Mode(AUDIT, _('Audit'), 0, '', 'usd', None, None, None)
+    DEFAULT_MODE = Mode(AUDIT, _('Audit'), 0, '', 'usd', None, None, None, None)
     DEFAULT_MODE_SLUG = AUDIT
 
     # Modes that allow a student to pursue a verified certificate
@@ -112,6 +128,9 @@ class CourseMode(models.Model):
     # Modes that allow a student to earn credit with a university partner
     CREDIT_MODES = [CREDIT_MODE]
 
+    # Modes that are eligible to purchase credit
+    CREDIT_ELIGIBLE_MODES = [VERIFIED, PROFESSIONAL, NO_ID_PROFESSIONAL_MODE]
+
     # Modes that are allowed to upsell
     UPSELL_TO_VERIFIED_MODES = [HONOR, AUDIT]
 
@@ -120,7 +139,7 @@ class CourseMode(models.Model):
     # "honor" to "audit", we still need to have the shoppingcart
     # use "honor"
     DEFAULT_SHOPPINGCART_MODE_SLUG = HONOR
-    DEFAULT_SHOPPINGCART_MODE = Mode(HONOR, _('Honor'), 0, '', 'usd', None, None, None)
+    DEFAULT_SHOPPINGCART_MODE = Mode(HONOR, _('Honor'), 0, '', 'usd', None, None, None, None)
 
     class Meta(object):
         unique_together = ('course_id', 'mode_slug', 'currency')
@@ -134,6 +153,8 @@ class CourseMode(models.Model):
             raise ValidationError(
                 _(u"Professional education modes are not allowed to have expiration_datetime set.")
             )
+        if self.is_verified_slug(self.mode_slug) and self.min_price <= 0:
+            raise ValidationError(_(u"Verified modes cannot be free."))
 
     def save(self, force_insert=False, force_update=False, using=None):
         # Ensure currency is always lowercase.
@@ -395,7 +416,7 @@ class CourseMode(models.Model):
 
     @classmethod
     def has_verified_mode(cls, course_mode_dict):
-        """Check whether the modes for a course allow a student to pursue a verfied certificate.
+        """Check whether the modes for a course allow a student to pursue a verified certificate.
 
         Args:
             course_mode_dict (dictionary mapping course mode slugs to Modes)
@@ -469,6 +490,18 @@ class CourseMode(models.Model):
 
         """
         return mode_slug in cls.VERIFIED_MODES
+
+    @classmethod
+    def is_credit_eligible_slug(cls, mode_slug):
+        """Check whether the given mode_slug is credit eligible or not.
+
+        Args:
+            mode_slug(str): Mode Slug
+
+        Returns:
+            bool: True iff the course mode slug is credit eligible else False.
+        """
+        return mode_slug in cls.CREDIT_ELIGIBLE_MODES
 
     @classmethod
     def is_credit_mode(cls, course_mode_tuple):
@@ -620,7 +653,8 @@ class CourseMode(models.Model):
             self.currency,
             self.expiration_datetime,
             self.description,
-            self.sku
+            self.sku,
+            self.bulk_sku
         )
 
     def __unicode__(self):
@@ -636,6 +670,9 @@ class CourseModesArchive(models.Model):
     field pair in CourseModes. Having a separate table allows us to have an audit trail of any changes
     such as course price changes
     """
+    class Meta(object):
+        app_label = "course_modes"
+
     # the course that this mode is attached to
     course_id = CourseKeyField(max_length=255, db_index=True)
 
@@ -665,6 +702,9 @@ class CourseModeExpirationConfig(ConfigurationModel):
     """
     Configuration for time period from end of course to auto-expire a course mode.
     """
+    class Meta(object):
+        app_label = "course_modes"
+
     verification_window = models.DurationField(
         default=timedelta(days=10),
         help_text=_(

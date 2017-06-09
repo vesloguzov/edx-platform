@@ -48,11 +48,11 @@ class AnnotatableFields(object):
 class AnnotatableModule(AnnotatableFields, XModule):
     js = {
         'coffee': [
-            resource_string(__name__, 'js/src/javascript_loader.coffee'),
             resource_string(__name__, 'js/src/html/display.coffee'),
             resource_string(__name__, 'js/src/annotatable/display.coffee'),
         ],
         'js': [
+            resource_string(__name__, 'js/src/javascript_loader.js'),
             resource_string(__name__, 'js/src/collapsible.js'),
         ]
     }
@@ -150,7 +150,7 @@ class AnnotatableModule(AnnotatableFields, XModule):
     def get_html(self):
         """ Renders parameters to template. """
         context = {
-            'display_name': self.display_name_with_default,
+            'display_name': self.display_name_with_default_escaped,
             'element_id': self.element_id,
             'instructions_html': self.instructions,
             'content_html': self._render_content()
@@ -162,3 +162,4 @@ class AnnotatableModule(AnnotatableFields, XModule):
 class AnnotatableDescriptor(AnnotatableFields, RawDescriptor):
     module_class = AnnotatableModule
     mako_template = "widgets/raw-edit.html"
+    resources_dir = None

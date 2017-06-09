@@ -3,15 +3,18 @@ Acceptance tests for course creation.
 """
 import uuid
 from unittest import skip
-from bok_choy.web_app_test import WebAppTest
+from nose.plugins.attrib import attr
 
-from ...pages.studio.auto_auth import AutoAuthPage
-from ...pages.studio.index import DashboardPage
-from ...pages.studio.overview import CourseOutlinePage
+from common.test.acceptance.tests.helpers import AcceptanceTest
+
+from common.test.acceptance.pages.studio.auto_auth import AutoAuthPage
+from common.test.acceptance.pages.studio.index import DashboardPage
+from common.test.acceptance.pages.studio.overview import CourseOutlinePage
 
 
+@attr(shard=8)
 @skip('Disabled for eduardo since it clashes with autogeneration of course/library keys')
-class CreateCourseTest(WebAppTest):
+class CreateCourseTest(AcceptanceTest):
     """
     Test that we can create a new course the studio home page.
     """

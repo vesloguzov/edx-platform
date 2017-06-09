@@ -9,12 +9,13 @@ from mock import patch, Mock
 from django.test.utils import override_settings
 from django.conf import settings
 from django.utils import translation
+from django.utils.crypto import get_random_string
 
 from nose.plugins.skip import SkipTest
 
 from xmodule.modulestore.tests.factories import CourseFactory
 from xmodule.contentstore.content import StaticContent
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.exceptions import NotFoundError
 from xmodule.contentstore.django import contentstore
 from xmodule.video_module import transcripts_utils
@@ -77,7 +78,7 @@ class TestGenerateSubs(unittest.TestCase):
 
 
 @override_settings(CONTENTSTORE=TEST_DATA_CONTENTSTORE)
-class TestSaveSubsToStore(ModuleStoreTestCase):
+class TestSaveSubsToStore(SharedModuleStoreTestCase):
     """Tests for `save_subs_to_store` function."""
 
     org = 'MITx'
@@ -92,13 +93,13 @@ class TestSaveSubsToStore(ModuleStoreTestCase):
         except NotFoundError:
             pass
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(TestSaveSubsToStore, cls).setUpClass()
+        cls.course = CourseFactory.create(
+            org=cls.org, number=cls.number, display_name=cls.display_name)
 
-        super(TestSaveSubsToStore, self).setUp()
-        self.course = CourseFactory.create(
-            org=self.org, number=self.number, display_name=self.display_name)
-
-        self.subs = {
+        cls.subs = {
             'start': [100, 200, 240, 390, 1000],
             'end': [200, 240, 380, 1000, 1500],
             'text': [
@@ -110,18 +111,20 @@ class TestSaveSubsToStore(ModuleStoreTestCase):
             ]
         }
 
-        self.subs_id = str(uuid4())
-        filename = 'subs_{0}.srt.sjson'.format(self.subs_id)
-        self.content_location = StaticContent.compute_location(self.course.id, filename)
-        self.addCleanup(self.clear_subs_content)
+        cls.subs_id = str(uuid4())
+        filename = 'subs_{0}.srt.sjson'.format(cls.subs_id)
+        cls.content_location = StaticContent.compute_location(cls.course.id, filename)
 
         # incorrect subs
-        self.unjsonable_subs = set([1])  # set can't be serialized
+        cls.unjsonable_subs = {1}  # set can't be serialized
 
-        self.unjsonable_subs_id = str(uuid4())
-        filename_unjsonable = 'subs_{0}.srt.sjson'.format(self.unjsonable_subs_id)
-        self.content_location_unjsonable = StaticContent.compute_location(self.course.id, filename_unjsonable)
+        cls.unjsonable_subs_id = str(uuid4())
+        filename_unjsonable = 'subs_{0}.srt.sjson'.format(cls.unjsonable_subs_id)
+        cls.content_location_unjsonable = StaticContent.compute_location(cls.course.id, filename_unjsonable)
 
+    def setUp(self):
+        super(TestSaveSubsToStore, self).setUp()
+        self.addCleanup(self.clear_subs_content)
         self.clear_subs_content()
 
     def test_save_subs_to_store(self):
@@ -154,7 +157,7 @@ class TestSaveSubsToStore(ModuleStoreTestCase):
 
 
 @override_settings(CONTENTSTORE=TEST_DATA_CONTENTSTORE)
-class TestDownloadYoutubeSubs(ModuleStoreTestCase):
+class TestDownloadYoutubeSubs(SharedModuleStoreTestCase):
     """Tests for `download_youtube_subs` function."""
 
     org = 'MITx'
@@ -182,10 +185,11 @@ class TestDownloadYoutubeSubs(ModuleStoreTestCase):
         for subs_id in youtube_subs.values():
             self.clear_sub_content(subs_id)
 
-    def setUp(self):
-        super(TestDownloadYoutubeSubs, self).setUp()
-        self.course = CourseFactory.create(
-            org=self.org, number=self.number, display_name=self.display_name)
+    @classmethod
+    def setUpClass(cls):
+        super(TestDownloadYoutubeSubs, cls).setUpClass()
+        cls.course = CourseFactory.create(
+            org=cls.org, number=cls.number, display_name=cls.display_name)
 
     def test_success_downloading_subs(self):
 
@@ -226,6 +230,17 @@ class TestDownloadYoutubeSubs(ModuleStoreTestCase):
         self.assertEqual(html5_ids[1], 'foo.1.bar')
         self.assertEqual(html5_ids[2], 'baz.1.4')
         self.assertEqual(html5_ids[3], 'foo')
+
+    def test_html5_id_length(self):
+        """
+        Test that html5_id is parsed with length less than 255, as html5 ids are
+        used as name for transcript objects and ultimately as filename while creating
+        file for transcript at the time of exporting a course.
+        Filename can't be longer than 255 characters.
+        150 chars is agreed length.
+        """
+        html5_ids = transcripts_utils.get_html5_ids([get_random_string(255)])
+        self.assertEqual(len(html5_ids[0]), 150)
 
     @patch('xmodule.video_module.transcripts_utils.requests.get')
     def test_fail_downloading_subs(self, mock_get):

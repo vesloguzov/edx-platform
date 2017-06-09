@@ -14,8 +14,9 @@ import logging
 log = logging.getLogger('VideoPage')
 
 VIDEO_BUTTONS = {
-    'transcript': '.lang',
+    'transcript': '.language-menu',
     'transcript_button': '.toggle-transcript',
+    'cc_button': '.toggle-captions',
     'volume': '.volume',
     'play': '.video_control.play',
     'pause': '.video_control.pause',
@@ -28,18 +29,20 @@ VIDEO_BUTTONS = {
 }
 
 CSS_CLASS_NAMES = {
-    'closed_captions': '.video.closed',
+    'captions_closed': '.video.closed',
     'captions_rendered': '.video.is-captions-rendered',
     'captions': '.subtitles',
-    'captions_text': '.subtitles > li',
-    'error_message': '.video .video-player h3',
+    'captions_text': '.subtitles li span',
+    'captions_text_getter': '.subtitles li span[role="link"][data-index="1"]',
+    'closed_captions': '.closed-captions',
+    'error_message': '.video .video-player .video-error',
     'video_container': '.video',
     'video_sources': '.video-player video source',
     'video_spinner': '.video-wrapper .spinner',
     'video_xmodule': '.xmodule_VideoModule',
     'video_init': '.is-initialized',
     'video_time': '.vidtime',
-    'video_display_name': '.vert h2',
+    'video_display_name': '.vert h3',
     'captions_lang_list': '.langs-list li',
     'video_speed': '.speeds .value',
     'poster': '.poster',
@@ -54,7 +57,11 @@ VIDEO_MENUS = {
     'language': '.lang .menu',
     'speed': '.speed .menu',
     'download_transcript': '.video-tracks .a11y-menu-list',
-    'transcript-format': '.video-tracks .a11y-menu-button'
+    'transcript-format': {
+        'srt': '.wrapper-download-transcripts .list-download-transcripts .btn-link[data-value="srt"]',
+        'txt': '.wrapper-download-transcripts .list-download-transcripts .btn-link[data-value="txt"]'
+    },
+    'transcript-skip': '.sr-is-focusable.transcript-start',
 }
 
 
@@ -293,6 +300,18 @@ class VideoPage(PageObject):
         """
         self._captions_visibility(False)
 
+    def show_closed_captions(self):
+        """
+        Make closed captions visible.
+        """
+        self._closed_captions_visibility(True)
+
+    def hide_closed_captions(self):
+        """
+        Make closed captions invisible.
+        """
+        self._closed_captions_visibility(False)
+
     def is_captions_visible(self):
         """
         Get current visibility sate of captions.
@@ -302,8 +321,20 @@ class VideoPage(PageObject):
 
         """
         self.wait_for_ajax()
-        caption_state_selector = self.get_element_selector(CSS_CLASS_NAMES['closed_captions'])
-        return not self.q(css=caption_state_selector).present
+        caption_state_selector = self.get_element_selector(CSS_CLASS_NAMES['captions'])
+        return self.q(css=caption_state_selector).visible
+
+    def is_closed_captions_visible(self):
+        """
+        Get current visibility sate of closed captions.
+
+        Returns:
+            bool: True means captions are visible, False means captions are not visible
+
+        """
+        self.wait_for_ajax()
+        closed_caption_state_selector = self.get_element_selector(CSS_CLASS_NAMES['closed_captions'])
+        return self.q(css=closed_caption_state_selector).visible
 
     @wait_for_js
     def _captions_visibility(self, captions_new_state):
@@ -327,7 +358,24 @@ class VideoPage(PageObject):
 
             # Verify that captions state is toggled/changed
             EmptyPromise(lambda: self.is_captions_visible() == captions_new_state,
-                         "Captions are {state}".format(state=state)).fulfill()
+                         "Transcripts are {state}".format(state=state)).fulfill()
+
+    @wait_for_js
+    def _closed_captions_visibility(self, closed_captions_new_state):
+        """
+        Set the video closed captioning visibility state.
+
+        Arguments:
+            closed_captions_new_state (bool): True means show closed captioning
+        """
+        states = {True: 'shown', False: 'hidden'}
+        state = states[closed_captions_new_state]
+
+        self.click_player_button('cc_button')
+
+        # Make sure that the captions are visible
+        EmptyPromise(lambda: self.is_closed_captions_visible() == closed_captions_new_state,
+                     "Closed captions are {state}".format(state=state)).fulfill()
 
     @property
     def captions_text(self):
@@ -344,6 +392,31 @@ class VideoPage(PageObject):
         subs = self.q(css=captions_selector).html
 
         return ' '.join(subs)
+
+    @property
+    def closed_captions_text(self):
+        """
+        Extract closed captioning text.
+
+        Returns:
+            str: closed captions Text.
+
+        """
+        self.wait_for_closed_captions()
+
+        closed_captions_selector = self.get_element_selector(CSS_CLASS_NAMES['closed_captions'])
+        subs = self.q(css=closed_captions_selector).html
+
+        return ' '.join(subs)
+
+    def click_first_line_in_transcript(self):
+        """
+        Clicks a line in the transcript updating the current caption.
+        """
+
+        self.wait_for_captions()
+        captions_selector = self.q(css=CSS_CLASS_NAMES['captions_text_getter'])
+        captions_selector.click()
 
     @property
     def speed(self):
@@ -374,6 +447,8 @@ class VideoPage(PageObject):
 
         speed_selector = self.get_element_selector('li[data-speed="{speed}"] .control'.format(speed=speed))
         self.q(css=speed_selector).first.click()
+        # Click triggers an ajax event
+        self.wait_for_ajax()
 
     def verify_speed_changed(self, expected_speed):
         """
@@ -494,6 +569,12 @@ class VideoPage(PageObject):
         response = requests.get(url, **kwargs)
         return response.status_code < 400, response.headers, response.content
 
+    def get_cookie(self, cookie_name):
+        """
+        Searches for and returns `cookie_name`
+        """
+        return self.browser.get_cookie(cookie_name)
+
     def downloaded_transcript_contains_text(self, transcript_format, text_to_search):
         """
         Download the transcript in format `transcript_format` and check that it contains the text `text_to_search`
@@ -506,7 +587,7 @@ class VideoPage(PageObject):
             bool: Transcript download result.
 
         """
-        transcript_selector = self.get_element_selector(VIDEO_MENUS['transcript-format'])
+        transcript_selector = self.get_element_selector(VIDEO_MENUS['transcript-format'][transcript_format])
 
         # check if we have a transcript with correct format
         if '.' + transcript_format not in self.q(css=transcript_selector).text[0]:
@@ -517,14 +598,13 @@ class VideoPage(PageObject):
             'txt': 'text/plain',
         }
 
-        transcript_url_selector = self.get_element_selector(VIDEO_BUTTONS['download_transcript'])
-        url = self.q(css=transcript_url_selector).attrs('href')[0]
+        link = self.q(css=transcript_selector)
+        url = link.attrs('href')[0]
+        link.click()
+
         result, headers, content = self._get_transcript(url)
 
         if result is False:
-            return False
-
-        if formats[transcript_format] not in headers.get('content-type', ''):
             return False
 
         if text_to_search not in content.decode('utf-8'):
@@ -549,15 +629,19 @@ class VideoPage(PageObject):
         """
         self.wait_for_ajax()
 
+        # TODO remove this sleep and wait for the right thing to finish rendering
+        time.sleep(1)
+
         # mouse over to transcript button
-        cc_button_selector = self.get_element_selector(VIDEO_BUTTONS["transcript"])
+        cc_button_selector = self.get_element_selector(VIDEO_BUTTONS["transcript_button"])
         element_to_hover_over = self.q(css=cc_button_selector).results[0]
         ActionChains(self.browser).move_to_element(element_to_hover_over).perform()
 
         language_selector = VIDEO_MENUS["language"] + ' li[data-lang-code="{code}"]'.format(code=code)
         language_selector = self.get_element_selector(language_selector)
-
         self.wait_for_element_visibility(language_selector, 'language menu is visible')
+        hover_target = self.q(css=language_selector).results[0]
+        ActionChains(self.browser).move_to_element(hover_target).perform()
         self.q(css=language_selector).first.click()
 
         # Sometimes language is not clicked correctly. So, if the current language code
@@ -596,45 +680,6 @@ class VideoPage(PageObject):
         """
         selector = self.get_element_selector(VIDEO_MENUS[menu_name])
         return self.q(css=selector).present
-
-    def select_transcript_format(self, transcript_format):
-        """
-        Select transcript with format `transcript_format`.
-
-        Arguments:
-            transcript_format (st): Transcript file format `srt` or `txt`.
-
-        Returns:
-            bool: Selection Result.
-
-        """
-        button_selector = self.get_element_selector(VIDEO_MENUS['transcript-format'])
-
-        button = self.q(css=button_selector).results[0]
-
-        hover = ActionChains(self.browser).move_to_element(button)
-        hover.perform()
-
-        if '...' not in self.q(css=button_selector).text[0]:
-            return False
-
-        menu_selector = self.get_element_selector(VIDEO_MENUS['download_transcript'])
-        menu_items = self.q(css=menu_selector + ' a').results
-        for item in menu_items:
-            if item.get_attribute('data-value') == transcript_format:
-                ActionChains(self.browser).move_to_element(item).click().perform()
-                self.wait_for_ajax()
-                break
-
-        self.browser.execute_script("window.scrollTo(0, 0);")
-
-        if self.q(css=menu_selector + ' .active a').attrs('data-value')[0] != transcript_format:
-            return False
-
-        if '.' + transcript_format not in self.q(css=button_selector).text[0]:
-            return False
-
-        return True
 
     @property
     def sources(self):
@@ -765,6 +810,7 @@ class VideoPage(PageObject):
             return self.state != 'buffering'
 
         self._wait_for(_is_buffering_completed, 'Buffering completed after Seek.')
+        self.wait_for_position(seek_value)
 
     def reload_page(self):
         """
@@ -830,12 +876,37 @@ class VideoPage(PageObject):
         classes = self.q(css=selector).attrs('class')[0].split()
         return 'active' in classes
 
+    @property
+    def is_transcript_skip_visible(self):
+        """
+        Checks if the skip-to containers in transcripts are present and visible.
+
+        Returns:
+            bool
+        """
+        selector = self.get_element_selector(VIDEO_MENUS['transcript-skip'])
+        return self.q(css=selector).visible
+
     def wait_for_captions(self):
         """
         Wait until captions rendered completely.
         """
         captions_rendered_selector = self.get_element_selector(CSS_CLASS_NAMES['captions_rendered'])
-        self.wait_for_element_presence(captions_rendered_selector, 'Captions Rendered')
+        self.wait_for_element_visibility(captions_rendered_selector, 'Captions Rendered')
+
+    def wait_for_closed_captions(self):
+        """
+        Wait until closed captions are rendered completely.
+        """
+        cc_rendered_selector = self.get_element_selector(CSS_CLASS_NAMES['closed_captions'])
+        self.wait_for_element_visibility(cc_rendered_selector, 'Closed captions rendered')
+
+    def wait_for_closed_captions_to_be_hidden(self):
+        """
+        Waits for the closed captions to be turned off completely.
+        """
+        cc_rendered_selector = self.get_element_selector(CSS_CLASS_NAMES['closed_captions'])
+        self.wait_for_element_invisibility(cc_rendered_selector, 'Closed captions hidden')
 
 
 def _parse_time_str(time_str):

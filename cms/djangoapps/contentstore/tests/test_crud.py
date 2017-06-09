@@ -1,6 +1,3 @@
-import re
-import unittest
-
 from xmodule import templates
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory

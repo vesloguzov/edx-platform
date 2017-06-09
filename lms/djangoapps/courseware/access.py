@@ -20,6 +20,7 @@ from django.utils.timezone import UTC
 
 from opaque_keys.edx.keys import CourseKey, UsageKey
 
+from util import milestones_helpers as milestones_helpers
 from xblock.core import XBlock
 
 from xmodule.course_module import (
@@ -28,17 +29,18 @@ from xmodule.course_module import (
     CATALOG_VISIBILITY_ABOUT,
 )
 from xmodule.error_module import ErrorDescriptor
-from xmodule.x_module import XModule, DEPRECATION_VSCOMPAT_EVENT
+from xmodule.x_module import XModule
 from xmodule.split_test_module import get_split_user_partitions
 from xmodule.partitions.partitions import NoSuchUserPartitionError, NoSuchUserPartitionGroupError
 
-from external_auth.models import ExternalAuthMap
+from openedx.core.djangoapps.external_auth.models import ExternalAuthMap
 from courseware.masquerade import get_masquerade_role, is_masquerading_as_student
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from student import auth
 from student.models import CourseEnrollmentAllowed
 from student.roles import (
     CourseBetaTesterRole,
+    CourseCcxCoachRole,
     CourseInstructorRole,
     CourseStaffRole,
     GlobalStaff,
@@ -53,8 +55,6 @@ from util.milestones_helpers import (
 )
 from ccx_keys.locator import CCXLocator
 
-import dogstats_wrapper as dog_stats_api
-
 from courseware.access_response import (
     MilestoneError,
     MobileAvailabilityError,
@@ -65,7 +65,39 @@ from courseware.access_utils import (
     in_preview_mode
 )
 
+from lms.djangoapps.ccx.custom_exception import CCXLocatorValidationException
+from lms.djangoapps.ccx.models import CustomCourseForEdX
+
 log = logging.getLogger(__name__)
+
+
+def has_ccx_coach_role(user, course_key):
+    """
+    Check if user is a coach on this ccx.
+
+    Arguments:
+        user (User): the user whose descriptor access we are checking.
+        course_key (CCXLocator): Key to CCX.
+
+    Returns:
+        bool: whether user is a coach on this ccx or not.
+    """
+    if hasattr(course_key, 'ccx'):
+        ccx_id = course_key.ccx
+        role = CourseCcxCoachRole(course_key)
+
+        if role.has_user(user):
+            list_ccx = CustomCourseForEdX.objects.filter(
+                course_id=course_key.to_course_locator(),
+                coach=user
+            )
+            if list_ccx.exists():
+                coach_ccx = list_ccx[0]
+                return str(coach_ccx.id) == ccx_id
+    else:
+        raise CCXLocatorValidationException("Invalid CCX key. To verify that "
+                                            "user is a coach on CCX, you must provide key to CCX")
+    return False
 
 
 def has_access(user, action, obj, course_key=None):
@@ -102,9 +134,6 @@ def has_access(user, action, obj, course_key=None):
     if not user:
         user = AnonymousUser()
 
-    if isinstance(course_key, CCXLocator):
-        course_key = course_key.to_course_locator()
-
     if in_preview_mode():
         if not bool(has_staff_access_to_preview_mode(user=user, obj=obj, course_key=course_key)):
             return ACCESS_DENIED
@@ -126,9 +155,6 @@ def has_access(user, action, obj, course_key=None):
     # NOTE: any descriptor access checkers need to go above this
     if isinstance(obj, XBlock):
         return _has_access_descriptor(user, action, obj, course_key)
-
-    if isinstance(obj, CCXLocator):
-        return _has_access_ccx_key(user, action, obj)
 
     if isinstance(obj, CourseKey):
         return _has_access_course_key(user, action, obj)
@@ -371,7 +397,7 @@ def _has_access_course(user, action, courselike):
         Can see if can enroll, but also if can load it: if user enrolled in a course and now
         it's past the enrollment period, they should still see it.
         """
-        return ACCESS_GRANTED if (can_enroll() or can_load()) else ACCESS_DENIED
+        return ACCESS_GRANTED if (can_load() or can_enroll()) else ACCESS_DENIED
 
     def can_see_in_catalog():
         """
@@ -524,19 +550,18 @@ def _has_access_descriptor(user, action, descriptor, course_key=None):
         students to see modules.  If not, views should check the course, so we
         don't have to hit the enrollments table on every module load.
         """
-        response = (
-            _visible_to_nonstaff_users(descriptor)
-            and _has_group_access(descriptor, user, course_key)
-            and
-            (
-                _has_detached_class_tag(descriptor)
-                or _can_access_descriptor_with_start_date(user, descriptor, course_key)
-            )
-        )
+        if _has_staff_access_to_descriptor(user, descriptor, course_key):
+            return ACCESS_GRANTED
 
+        # if the user has staff access, they can load the module so this code doesn't need to run
         return (
-            ACCESS_GRANTED if (response or _has_staff_access_to_descriptor(user, descriptor, course_key))
-            else response
+            _visible_to_nonstaff_users(descriptor) and
+            _can_access_descriptor_with_milestones(user, descriptor, course_key) and
+            _has_group_access(descriptor, user, course_key) and
+            (
+                _has_detached_class_tag(descriptor) or
+                _can_access_descriptor_with_start_date(user, descriptor, course_key)
+            )
         )
 
     checkers = {
@@ -591,16 +616,6 @@ def _has_access_course_key(user, action, course_key):
     }
 
     return _dispatch(checkers, action, user, course_key)
-
-
-def _has_access_ccx_key(user, action, ccx_key):
-    """Check if user has access to the course for this ccx_key
-
-    Delegates checking to _has_access_course_key
-    Valid actions: same as for that function
-    """
-    course_key = ccx_key.to_course_locator()
-    return _has_access_course_key(user, action, course_key)
 
 
 def _has_access_string(user, action, perm):
@@ -771,6 +786,22 @@ def _visible_to_nonstaff_users(descriptor):
         descriptor: object to check
     """
     return VisibilityError() if descriptor.visible_to_staff_only else ACCESS_GRANTED
+
+
+def _can_access_descriptor_with_milestones(user, descriptor, course_key):
+    """
+    Returns if the object is blocked by an unfulfilled milestone.
+
+    Args:
+        user: the user trying to access this content
+        descriptor: the object being accessed
+        course_key: key for the course for this descriptor
+    """
+    if milestones_helpers.get_course_content_milestones(course_key, unicode(descriptor.location), 'requires', user.id):
+        debug("Deny: user has not completed all milestones for content")
+        return ACCESS_DENIED
+    else:
+        return ACCESS_GRANTED
 
 
 def _has_detached_class_tag(descriptor):

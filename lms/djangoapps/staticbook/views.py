@@ -99,7 +99,7 @@ def pdf_index(request, course_id, book_index, chapter=None, page=None):
     if 'chapters' in textbook:
         for entry in textbook['chapters']:
             entry['url'] = remap_static_url(entry['url'], course)
-        if chapter is not None:
+        if chapter is not None and int(chapter) <= (len(textbook['chapters'])):
             current_chapter = textbook['chapters'][int(chapter) - 1]
         else:
             current_chapter = textbook['chapters'][0]
@@ -108,7 +108,7 @@ def pdf_index(request, course_id, book_index, chapter=None, page=None):
 
     viewer_params += '#zoom=page-fit&disableRange=true'
     if page is not None:
-        viewer_params += '&amp;page={}'.format(page)
+        viewer_params += '&page={}'.format(page)
 
     if request.GET.get('viewer', '') == 'true':
         template = 'pdf_viewer.html'

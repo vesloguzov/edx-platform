@@ -18,13 +18,13 @@ data: |
           Отметьте страну на карте ниже.
         </p>
         <imageresponse>
-          <imageinput src="https://studio.edx.org/c4x/edX/DemoX/asset/Africa.png"
-           width="600" height="638" rectangle="(338,98)-(412,168)" alt="Карта Африки"/>
+            <p>В какой стране расположены Великие Пирамиды, а также города Каир и Мемфис? Отметьте страну на карте ниже.</p>
+            <imageinput src="https://studio.edx.org/c4x/edX/DemoX/asset/Africa.png" width="600" height="638" rectangle="(338,98)-(412,168)" alt="Карта Африки"/>
+            <solution>
+                <div class="detailed-solution">
+                    <p>Пояснение</p>
+                    <p>В Египте расположены не только Пирамиды, Каир и Мемфис, но также Сфинкс и древняя библиотека в Александрии.</p>
+                </div>
+            </solution>
         </imageresponse>
-        <solution>
-          <div class="detailed-solution">
-            <p>Пояснение</p>
-            <p>В Египте расположены не только Пирамиды, Каир и Мемфис, но также Сфинкс и древняя библиотека в Александрии.</p>
-          </div>
-        </solution>
       </problem>

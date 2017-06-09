@@ -3,13 +3,13 @@ Content Library Transformer.
 """
 import json
 from courseware.models import StudentModule
-from openedx.core.lib.block_cache.transformer import BlockStructureTransformer
+from openedx.core.lib.block_structure.transformer import BlockStructureTransformer, FilteringTransformerMixin
 from xmodule.library_content_module import LibraryContentModule
 from xmodule.modulestore.django import modulestore
 from eventtracking import tracker
 
 
-class ContentLibraryTransformer(BlockStructureTransformer):
+class ContentLibraryTransformer(FilteringTransformerMixin, BlockStructureTransformer):
     """
     A transformer that manipulates the block structure by removing all
     blocks within a library_content module to which a user should not
@@ -59,17 +59,12 @@ class ContentLibraryTransformer(BlockStructureTransformer):
                 summary = summarize_block(child_key)
                 block_structure.set_transformer_block_field(child_key, cls, 'block_analytics_summary', summary)
 
-    def transform(self, usage_info, block_structure):
-        """
-        Mutates block_structure based on the given usage_info.
-        """
-
+    def transform_block_filters(self, usage_info, block_structure):
         all_library_children = set()
         all_selected_children = set()
-        for block_key in block_structure.topological_traversal(
-                filter_func=lambda block_key: block_key.block_type == 'library_content',
-                yield_descendants_of_unyielded=True,
-        ):
+        for block_key in block_structure:
+            if block_key.block_type != 'library_content':
+                continue
             library_children = block_structure.get_children(block_key)
             if library_children:
                 all_library_children.update(library_children)
@@ -81,17 +76,33 @@ class ContentLibraryTransformer(BlockStructureTransformer):
                 module = self._get_student_module(usage_info.user, usage_info.course_key, block_key)
                 if module:
                     state_dict = json.loads(module.state)
+                else:
+                    state_dict = {}
+
+                for selected_block in state_dict.get('selected', []):
                     # Add all selected entries for this user for this
                     # library module to the selected list.
-                    for state in state_dict['selected']:
-                        usage_key = usage_info.course_key.make_usage_key(state[0], state[1])
-                        if usage_key in library_children:
-                            selected.append((state[0], state[1]))
+                    block_type, block_id = selected_block
+                    usage_key = usage_info.course_key.make_usage_key(block_type, block_id)
+                    if usage_key in library_children:
+                        selected.append(selected_block)
 
-                # update selected
+                # Update selected
                 previous_count = len(selected)
                 block_keys = LibraryContentModule.make_selection(selected, library_children, max_count, mode)
                 selected = block_keys['selected']
+
+                # Save back any changes
+                if any(block_keys[changed] for changed in ('invalid', 'overlimit', 'added')):
+                    state_dict['selected'] = list(selected)
+                    StudentModule.objects.update_or_create(  # pylint: disable=no-member
+                        student=usage_info.user,
+                        course_id=usage_info.course_key,
+                        module_state_key=block_key,
+                        defaults={
+                            'state': json.dumps(state_dict),
+                        },
+                    )
 
                 # publish events for analytics
                 self._publish_events(block_structure, block_key, previous_count, max_count, block_keys)
@@ -110,11 +121,7 @@ class ContentLibraryTransformer(BlockStructureTransformer):
                 return False
             return True
 
-        # Check and remove all non-selected children from course
-        # structure.
-        block_structure.remove_block_if(
-            check_child_removal
-        )
+        return [block_structure.create_removal_filter(check_child_removal)]
 
     @classmethod
     def _get_student_module(cls, user, course_key, block_key):
@@ -134,7 +141,6 @@ class ContentLibraryTransformer(BlockStructureTransformer):
                 student=user,
                 course_id=course_key,
                 module_state_key=block_key,
-                state__contains='"selected": [['
             )
         except StudentModule.DoesNotExist:
             return None

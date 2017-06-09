@@ -6,18 +6,19 @@ import os
 import requests
 from bok_choy.promise import EmptyPromise, Promise
 from bok_choy.javascript import wait_for_js, js_defined
-from ....tests.helpers import YouTubeStubConfig
-from ...lms.video.video import VideoPage
-from ...common.utils import wait_for_notification
+from common.test.acceptance.tests.helpers import YouTubeStubConfig
+from common.test.acceptance.pages.lms.video.video import VideoPage
+from common.test.acceptance.pages.common.utils import wait_for_notification
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 
 
 CLASS_SELECTORS = {
-    'video_container': 'div.video',
+    'video_container': '.video',
     'video_init': '.is-initialized',
     'video_xmodule': '.xmodule_VideoModule',
     'video_spinner': '.video-wrapper .spinner',
-    'video_controls': 'section.video-controls',
+    'video_controls': '.video-controls',
     'attach_asset': '.upload-dialog > input[type="file"]',
     'upload_dialog': '.wrapper-modal-window-assetupload',
     'xblock': '.add-xblock-component',
@@ -31,7 +32,7 @@ CLASS_SELECTORS = {
 
 BUTTON_SELECTORS = {
     'create_video': 'button[data-category="video"]',
-    'handout_download': '.video-handout.video-download-button a',
+    'handout_download': '.wrapper-handouts .btn-link',
     'handout_download_editor': '.wrapper-comp-setting.file-uploader .download-action',
     'upload_asset': '.upload-action',
     'asset_submit': '.action-upload',
@@ -53,7 +54,7 @@ DISPLAY_NAME = "Component Display Name"
 DEFAULT_SETTINGS = [
     # basic
     [DISPLAY_NAME, 'Video', False],
-    ['Default Video URL', 'http://youtu.be/3_yD_cEKoCk, , ', False],
+    ['Default Video URL', 'https://www.youtube.com/watch?v=3_yD_cEKoCk, , ', False],
 
     # advanced
     [DISPLAY_NAME, 'Video', False],
@@ -123,6 +124,12 @@ class VideoComponentPage(VideoPage):
                            'Video Buffering Completed')
             self._wait_for(self.is_controls_visible, 'Player Controls are Visible')
 
+    def wait_for_message(self, message_type, expected_message):
+        """
+        Wait until the message of the requested type is as expected.
+        """
+        self._wait_for(lambda: self.message(message_type) == expected_message, "Waiting for message update.")
+
     @wait_for_js
     def is_controls_visible(self):
         """
@@ -134,6 +141,13 @@ class VideoComponentPage(VideoPage):
 
         """
         return self.q(css=CLASS_SELECTORS['video_controls']).visible
+
+    def click_button_subtitles(self):
+        """
+        Click .setting-replace button after first hovering to it.
+        """
+        element = self.q(css='.setting-replace')[0]
+        ActionChains(self.browser).move_to_element(element).click(element).perform()
 
     def click_button(self, button_name, index=0, require_notification=False):
         """
@@ -183,12 +197,11 @@ class VideoComponentPage(VideoPage):
         asset_file_path = self.file_path(asset_filename)
         self.click_button('upload_asset', index)
         self.q(css=CLASS_SELECTORS['attach_asset']).results[0].send_keys(asset_file_path)
-        self.click_button('asset_submit')
         # Only srt format transcript files can be uploaded, If an error
         # occurs due to incorrect transcript file we will return from here
         if asset_type == 'transcript' and self.q(css='#upload_error').present:
             return
-
+        self.click_button('asset_submit')
         # confirm upload completion
         self._wait_for(lambda: not self.q(css=CLASS_SELECTORS['upload_dialog']).present, 'Upload Completed')
 
@@ -264,7 +277,7 @@ class VideoComponentPage(VideoPage):
             line_number (int): caption line number
 
         """
-        caption_line_selector = ".subtitles > li[data-index='{index}']".format(index=line_number - 1)
+        caption_line_selector = ".subtitles li span[data-index='{index}']".format(index=line_number - 1)
         self.q(css=caption_line_selector).results[0].send_keys(Keys.ENTER)
 
     def is_caption_line_focused(self, line_number):
@@ -275,10 +288,9 @@ class VideoComponentPage(VideoPage):
             line_number (int): caption line number
 
         """
-        caption_line_selector = ".subtitles > li[data-index='{index}']".format(index=line_number - 1)
-        attributes = self.q(css=caption_line_selector).attrs('class')
-
-        return 'focused' in attributes
+        caption_line_selector = ".subtitles li span[data-index='{index}']".format(index=line_number - 1)
+        caption_container = self.q(css=caption_line_selector).results[0].find_element_by_xpath('..')
+        return 'focused' in caption_container.get_attribute('class').split()
 
     @property
     def is_slider_range_visible(self):
@@ -504,7 +516,7 @@ class VideoComponentPage(VideoPage):
         As all the captions lines are exactly same so only getting partial lines will work.
         """
         self.wait_for_captions()
-        selector = '.subtitles > li:nth-child({})'
+        selector = '.subtitles li:nth-child({})'
         return ' '.join([self.q(css=selector.format(i)).text[0] for i in range(1, 6)])
 
     def set_url_field(self, url, field_number):
@@ -632,6 +644,8 @@ class VideoComponentPage(VideoPage):
         # Show the Browse Button
         self.browser.execute_script("$('form.file-chooser').show()")
         asset_file_path = self.file_path(transcript_filename)
-        self.q(css=CLASS_SELECTORS['attach_transcript']).results[0].send_keys(asset_file_path)
+        attach_css = CLASS_SELECTORS['attach_transcript']
+        self.wait_for_element_visibility(attach_css, "The file chooser's input field is visible.")
+        self.q(css=attach_css).results[0].send_keys(asset_file_path)
         # confirm upload completion
-        self._wait_for(lambda: not self.q(css=CLASS_SELECTORS['attach_transcript']).visible, 'Upload Completed')
+        self._wait_for(lambda: not self.q(css=attach_css).visible, 'Upload Completed')

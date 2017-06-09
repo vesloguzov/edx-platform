@@ -1,7 +1,7 @@
 import logging
 
 from eventtracking import tracker
-from .utils import merge_dict, strip_blank, strip_none, extract, perform_request
+from .utils import merge_dict, strip_blank, strip_none, extract, perform_request, CommentClientPaginatedResult
 from .utils import CommentClientRequestError
 import models
 import settings
@@ -20,7 +20,7 @@ class Thread(models.Model):
         'highlighted_body', 'endorsed', 'read', 'group_id', 'group_name', 'pinned',
         'abuse_flaggers', 'resp_skip', 'resp_limit', 'resp_total', 'thread_type',
         'endorsed_responses', 'non_endorsed_responses', 'non_endorsed_resp_total',
-        'context',
+        'context', 'last_activity_at',
     ]
 
     # updateable_fields are sent in PUT requests
@@ -45,10 +45,13 @@ class Thread(models.Model):
     @classmethod
     def search(cls, query_params):
 
+        # NOTE: Params 'recursive' and 'with_responses' are currently not used by
+        # either the 'search' or 'get_all' actions below.  Both already use
+        # with_responses=False internally in the comment service, so no additional
+        # optimization is required.
         default_params = {'page': 1,
                           'per_page': 20,
-                          'course_id': query_params['course_id'],
-                          'recursive': False}
+                          'course_id': query_params['course_id']}
         params = merge_dict(default_params, strip_blank(strip_none(query_params)))
 
         if query_params.get('text'):
@@ -94,7 +97,14 @@ class Thread(models.Model):
                     total_results=total_results
                 )
             )
-        return response.get('collection', []), response.get('page', 1), response.get('num_pages', 1), response.get('corrected_text')
+
+        return CommentClientPaginatedResult(
+            collection=response.get('collection', []),
+            page=response.get('page', 1),
+            num_pages=response.get('num_pages', 1),
+            thread_count=response.get('thread_count', 0),
+            corrected_text=response.get('corrected_text', None)
+        )
 
     @classmethod
     def url_for_threads(cls, params={}):
@@ -124,6 +134,7 @@ class Thread(models.Model):
         url = self.url(action='get', params=self.attributes)
         request_params = {
             'recursive': kwargs.get('recursive'),
+            'with_responses': kwargs.get('with_responses', False),
             'user_id': kwargs.get('user_id'),
             'mark_as_read': kwargs.get('mark_as_read', True),
             'resp_skip': kwargs.get('response_skip'),

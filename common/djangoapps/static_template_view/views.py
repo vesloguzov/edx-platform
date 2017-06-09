@@ -5,6 +5,8 @@ List of valid templates is explicitly managed for (short-term)
 security reasons.
 """
 
+import mimetypes
+
 from edxmako.shortcuts import render_to_response, render_to_string
 from mako.exceptions import TopLevelLookupException
 from django.shortcuts import redirect
@@ -41,7 +43,14 @@ def render(request, template):
 
     url(r'^jobs$', 'static_template_view.views.render', {'template': 'jobs.html'}, name="jobs")
     """
-    return render_to_response('static_templates/' + template, {})
+
+    # Guess content type from file extension
+    content_type, __ = mimetypes.guess_type(template)
+
+    try:
+        return render_to_response('static_templates/' + template, {}, content_type=content_type)
+    except TopLevelLookupException:
+        raise Http404
 
 
 @ensure_csrf_cookie
@@ -64,8 +73,8 @@ def render_press_release(request, slug):
 
 
 def render_404(request):
-    return HttpResponseNotFound(render_to_string('static_templates/404.html', {}))
+    return HttpResponseNotFound(render_to_string('static_templates/404.html', {}, request=request))
 
 
 def render_500(request):
-    return HttpResponseServerError(render_to_string('static_templates/server-error.html', {}))
+    return HttpResponseServerError(render_to_string('static_templates/server-error.html', {}, request=request))

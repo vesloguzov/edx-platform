@@ -16,32 +16,15 @@ data: |
           Вы должны задать допустимые переменные, а также область допустимых значений для
           каждой переменной.
         </p>
-        <p>Для создания задач этого типа используйте MathJax.</p>
+        <p>Для отображения задач этого типа используется MathJax.</p>
         <p>После добавления задачи не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
 
-        <p>Следующие задачи можно использовать в качестве примеров.</p>
 
-        <p>Напишите произведение  \( R_1\) и \( R_2\), деленное на \( R_3\) .</p>
-          <formularesponse type="ci" samples="R_1,R_2,R_3@1,2,3:3,4,5#10" answer="$VoVi">
-            <responseparam type="tolerance" default="0.00001"/>
-            <formulaequationinput size="40" label="Введите выражение"/>
+          <formularesponse type="ci" samples="R_1,R_2,R_3@1,2,3:3,4,5#10" answer="R_1*R_2/R_3">
+            <p>Следующую задачу можно использовать в качестве примера OLX-разметки заданий на ввод математических выражений.</p>
+              <label>Впишите сюда текст вопроса или задачи; текст заполнять обязательно. Например: Напишите произведение  \( R_1\) и \( R_2\), деленное на \( R_3\).</label>
+              <description>Вы можете добавить необязательную подсказку, относящуюся к заданию. Например: для тестирования данного примера введите верный ответ — R_1*R_2/R_3</description>
+              <responseparam type="tolerance" default="0.00001"/>
+              <formulaequationinput size="40"/>
           </formularesponse>
-
-      <script type="loncapa/python">
-      VoVi = "(R_1*R_2)/R_3"
-      </script>
-
-        <p>
-          \( x\) — переменная, а \( n\) — произвольная константа. Напишите производную \( x^n\).
-        </p>
-
-      <script type="loncapa/python">
-      derivative = "n*x^(n-1)"
-      </script>
-
-        <formularesponse type="ci" samples="x,n@1,2:3,4#10" answer="$derivative">
-          <responseparam type="tolerance" default="0.00001"/>
-          <formulaequationinput size="40"  label="Введите выражение"/>
-        </formularesponse>
-
       </problem>

@@ -1,10 +1,11 @@
 ---
 metadata:
-    display_name: Drag and Drop
+    display_name: Drag and Drop (Deprecated Version)
     markdown: !!null
     showanswer: never
 data: |
     <problem>
+      <p>In drag and drop problems, students respond to a question by dragging text or objects to a specific location on an image.</p>
       <p>
       В задачах Drag and Drop студентам предлагается ответить на вопрос, перетащив текст или объекты на соответствующие места.
       </p>
@@ -44,13 +45,13 @@ data: |
     else:
         correct = ['incorrect']
         </answer>
-    </customresponse>
+        </customresponse>
+
         <customresponse>
           <p>Пометьте атомы водорода, соединенные с атомом углерода, расположенным слева.</p>
             <drag_and_drop_input img="https://studio.edx.org/c4x/edX/DemoX/asset/ethglycol.jpg" target_outline="true" one_per_target="true" no_labels="true" label_bg_color="rgb(222, 139, 238)">
                 <draggable id="1" label="Водород" />
                 <draggable id="2" label="Водород" />
-
                 <target id="t1_o" x="10" y="67" w="100" h="100"/>
                 <target id="t2" x="133" y="3" w="70" h="70"/>
                 <target id="t3" x="2" y="384" w="70" h="70"/>
