@@ -11,9 +11,9 @@
             <span class="fa fa-exclamation-triangle message-error" aria-hidden="true"></span>
             <span class="copy"><%- gettext("An error occurred. Try loading the page again.") %></span>
         </div>
-        <% if (showFullProfile) { %>
-        <section class="profile-owned-courses-wrapper courses-container">
-        </section>
-        <% } %>
     </div>
+    <% if (showFullProfile) { %>
+    <section class="profile-owned-courses-wrapper courses-container">
+    </section>
+    <% } %>
 </div>

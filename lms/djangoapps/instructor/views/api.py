@@ -1701,7 +1701,7 @@ def generate_registration_codes(request, course_id):
     site_name = configuration_helpers.get_value('SITE_NAME', 'localhost')
     mktg_site_name = configuration_helpers.get_value(
         'MKTG_SITE_NAME',
-        microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+        configuration_helpers.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
     )
     quantity = course_code_number
     discount = (float(quantity * course_price) - float(sale_price))

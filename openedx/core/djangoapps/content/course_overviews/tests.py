@@ -648,7 +648,8 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
         Test that we return CDN prefixed URLs if it is enabled.
         """
         with self.store.default_store(modulestore_type):
-            course = CourseFactory.create(default_store=modulestore_type)
+            course = CourseFactory.create(default_store=modulestore_type,
+                                          course_image='images_course_image.jpg')
             overview = CourseOverview.get_from_id(course.id)
 
             # First the behavior when there's no CDN enabled...
@@ -659,6 +660,7 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
                 expected_path_start = "/asset-v1:"
 
             for url in overview.image_urls.values():
+                print 'URL:', url
                 self.assertTrue(url.startswith(expected_path_start))
 
             # Now enable the CDN...

@@ -161,7 +161,7 @@ urlpatterns += (url(
 
 # TODO(eduardo): remove
 # Semi-static views only used by edX, not by themes
-if not settings.FEATURES["USE_CUSTOM_THEME"]:
+if not settings.FEATURES.get("USE_CUSTOM_THEME", False):
     urlpatterns += (
         url(r'^blog$', 'static_template_view.views.render',
             {'template': 'blog.html'}, name="blog"),

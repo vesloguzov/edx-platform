@@ -101,7 +101,8 @@ class AccessTokenExchangeViewTest(AccessTokenExchangeTestMixin):
 
 
 # This is necessary because cms does not implement third party auth
-@unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+# @unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @httpretty.activate
 class DOPAccessTokenExchangeViewTestFacebook(
         DOPAdapterMixin,
@@ -115,7 +116,8 @@ class DOPAccessTokenExchangeViewTestFacebook(
     pass
 
 
-@unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+# @unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @httpretty.activate
 class DOTAccessTokenExchangeViewTestFacebook(
         DOTAdapterMixin,
@@ -130,7 +132,8 @@ class DOTAccessTokenExchangeViewTestFacebook(
 
 
 # This is necessary because cms does not implement third party auth
-@unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+# @unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @httpretty.activate
 class DOPAccessTokenExchangeViewTestGoogle(
         DOPAdapterMixin,
@@ -146,7 +149,8 @@ class DOPAccessTokenExchangeViewTestGoogle(
 
 
 # This is necessary because cms does not implement third party auth
-@unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+# @unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @httpretty.activate
 class DOTAccessTokenExchangeViewTestGoogle(
         DOTAdapterMixin,

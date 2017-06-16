@@ -1,6 +1,6 @@
 <div class="action-item action-visible">
   <label><span class="sr">Show this page</span></label>
-  <!-- course is visible by default -->
-  <input type="checkbox" class="toggle-checkbox" data-tooltip="Show/hide course" data-visibility-setting-url="/visibility_setting_url/" disabled />
+  <!-- course not is visible by default -->
+  <input type="checkbox" class="toggle-checkbox" data-tooltip="Show/hide course" data-visibility-setting-url="/visibility_setting_url/" checked disabled />
   <div class="action-button"><i class="icon fa fa-eye"></i><i class="icon fa fa-eye-slash"></i></div>
 </div>

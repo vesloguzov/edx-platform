@@ -4,8 +4,9 @@
         'gettext', 'jquery', 'underscore', 'backbone', 'edx-ui-toolkit/js/utils/html-utils',
         'common/js/components/views/tabbed_view',
         'js/student_profile/views/section_two_tab',
-        'text!templates/student_profile/learner_profile.underscore'],
-        function(gettext, $, _, Backbone, HtmlUtils, TabbedView, SectionTwoTab, learnerProfileTemplate) {
+        'text!templates/student_profile/learner_profile.underscore',
+        'text!templates/student_profile/courses.underscore'],
+        function(gettext, $, _, Backbone, HtmlUtils, TabbedView, SectionTwoTab, learnerProfileTemplate, ownedCoursesTemplate) {
             var LearnerProfileView = Backbone.View.extend({
 
                 initialize: function(options) {
@@ -54,6 +55,7 @@
                         showFullProfile: self.showFullProfile()
                     }));
                     this.renderFields();
+                    this.renderOwnedCourses();
 
                     if (this.showFullProfile() && (this.options.accountSettingsModel.get('accomplishments_shared'))) {
                         tabs = [
@@ -127,9 +129,7 @@
                     var owned_courses_data = this.options.owned_courses_data;
 
                     if (this.showFullProfile() && owned_courses_data.owned_courses.length) {
-                        this.$('.profile-owned-courses-wrapper').append(
-                            _.template(
-                                ownedCoursesTemplate,
+                        HtmlUtils.setHtml(this.$('.profile-owned-courses-wrapper'), HtmlUtils.template(ownedCoursesTemplate)(
                                 $.extend({
                                     username: this.options.accountSettingsModel.get('username'),
                                 }, owned_courses_data)

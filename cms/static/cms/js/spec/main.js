@@ -31,6 +31,7 @@
             'jquery': 'xmodule_js/common_static/common/js/vendor/jquery',
             'jquery-migrate': 'xmodule_js/common_static/common/js/vendor/jquery-migrate',
             'jquery.ui': 'xmodule_js/common_static/js/vendor/jquery-ui.min',
+            'jquery.ui.datepickerDefaults': 'xmodule_js/common_static/js/utils/jquery.ui.datepickerDefaults',
             'jquery.form': 'xmodule_js/common_static/js/vendor/jquery.form',
             'jquery.markitup': 'xmodule_js/common_static/js/vendor/markitup/jquery.markitup',
             'jquery.leanModal': 'xmodule_js/common_static/js/vendor/jquery.leanModal',

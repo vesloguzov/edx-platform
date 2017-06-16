@@ -49,7 +49,8 @@ class AccessTokenExchangeFormTest(AccessTokenExchangeTestMixin):
 
 
 # This is necessary because cms does not implement third party auth
-@unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+# @unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @httpretty.activate
 class DOPAccessTokenExchangeFormTestFacebook(
         DOPAdapterMixin,
@@ -65,7 +66,8 @@ class DOPAccessTokenExchangeFormTestFacebook(
 
 
 # This is necessary because cms does not implement third party auth
-@unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+# @unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @httpretty.activate
 class DOTAccessTokenExchangeFormTestFacebook(
         DOTAdapterMixin,
@@ -81,7 +83,8 @@ class DOTAccessTokenExchangeFormTestFacebook(
 
 
 # This is necessary because cms does not implement third party auth
-@unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+# @unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @httpretty.activate
 class DOPAccessTokenExchangeFormTestGoogle(
         DOPAdapterMixin,
@@ -97,7 +100,8 @@ class DOPAccessTokenExchangeFormTestGoogle(
 
 
 # This is necessary because cms does not implement third party auth
-@unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+# @unittest.skipUnless(settings.FEATURES.get("ENABLE_THIRD_PARTY_AUTH"), "third party auth not enabled")
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @httpretty.activate
 class DOTAccessTokenExchangeFormTestGoogle(
         DOTAdapterMixin,

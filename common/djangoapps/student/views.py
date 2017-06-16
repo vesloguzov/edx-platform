@@ -175,7 +175,7 @@ def index(request, extra_context=None, user=AnonymousUser()):
         extra_context = {}
 
     programs_list = []
-    courses = get_courses(user)
+    courses = get_index_page_courses(user)
 
     if configuration_helpers.get_value(
             "ENABLE_COURSE_SORTING_BY_START_DATE",
@@ -221,8 +221,8 @@ def index(request, extra_context=None, user=AnonymousUser()):
     return render_to_response('index.html', context)
 
 
-def get_index_page_courses(user, domain):
-    courses = get_courses(user, domain=domain)
+def get_index_page_courses(user):
+    courses = get_courses(user)
     # See if we have filtered course listings for index page
     index_page_course_listing = configuration_helpers.get_value(
         "INDEX_PAGE_COURSE_LISTING",

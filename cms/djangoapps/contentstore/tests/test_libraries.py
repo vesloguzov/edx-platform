@@ -476,10 +476,10 @@ class AutoLibraryKeyTestCase(ModuleStoreTestCase):
     Tests for course id generation on creation/rerunning of the course
     """
     def setUp(self):
-        user_password = super(AutoLibraryKeyTestCase, self).setUp()
+        super(AutoLibraryKeyTestCase, self).setUp()
 
         self.client = AjaxEnabledTestClient()
-        self.client.login(username=self.user.username, password=user_password)
+        self.client.login(username=self.user.username, password=self.user_password)
 
         self.full_library_data = {
             'org': 'UnivercityX',

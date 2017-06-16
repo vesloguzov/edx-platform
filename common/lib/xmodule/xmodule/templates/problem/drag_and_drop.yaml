@@ -5,10 +5,7 @@ metadata:
     showanswer: never
 data: |
     <problem>
-      <p>In drag and drop problems, students respond to a question by dragging text or objects to a specific location on an image.</p>
-      <p>
-      В задачах Drag and Drop студентам предлагается ответить на вопрос, перетащив текст или объекты на соответствующие места.
-      </p>
+      <p>В задачах Drag and Drop студентам предлагается ответить на вопрос, перетащив текст или объекты на соответствующие места.</p>
 
       <p>После добавления задачи не забудьте зайти в <strong>«Настройки»</strong>, чтобы изменить отображаемое название компонента и другие опции.</p>
       <p>Следующие задачи можно использовать в качестве примеров.</p>

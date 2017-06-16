@@ -34,7 +34,7 @@
             'jquery': 'common/js/vendor/jquery',
             'jquery-migrate': 'common/js/vendor/jquery-migrate',
             'jquery.ui': 'js/vendor/jquery-ui.min',
-            'jquery.ui.datepickerDefaults": "js/utils/jquery.ui.datepickerDefaults',
+            'jquery.ui.datepickerDefaults': 'js/utils/jquery.ui.datepickerDefaults',
             'jquery.form': 'js/vendor/jquery.form',
             'jquery.markitup': 'js/vendor/markitup/jquery.markitup',
             'jquery.leanModal': 'js/vendor/jquery.leanModal',

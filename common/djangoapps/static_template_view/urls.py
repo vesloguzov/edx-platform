@@ -8,8 +8,8 @@ from django.conf.urls import patterns, url
 urlpatterns = patterns('',)
 
 _use_theme_templates = (
-    settings.SERVICE_VARIANT == 'lms' and settings.FEATURES["USE_CUSTOM_THEME"]
-    or settings.SERVICE_VARIANT == 'cms' and settings.FEATURES["USE_CUSTOM_STUDIO_THEME"]
+    settings.SERVICE_VARIANT == 'lms' and settings.FEATURES.get("USE_CUSTOM_THEME", False)
+    or settings.SERVICE_VARIANT == 'cms' and settings.FEATURES.get("USE_CUSTOM_STUDIO_THEME", False)
 )
 # Only enable URLs for those marketing links actually enabled in the
 # settings. Disable URLs by marking them as None.

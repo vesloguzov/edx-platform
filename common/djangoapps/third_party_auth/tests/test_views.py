@@ -135,7 +135,8 @@ class SAMLMetadataTest(SAMLTestCase):
         self.assertEqual(support_email_node.text, support_email)
 
 
-@unittest.skipUnless(AUTH_FEATURE_ENABLED, 'third_party_auth not enabled')
+# @unittest.skipUnless(AUTH_FEATURE_ENABLED, 'third_party_auth not enabled')
+@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Tests only valid in lms')
 class SAMLAuthTest(SAMLTestCase):
     """
     Test the SAML auth views

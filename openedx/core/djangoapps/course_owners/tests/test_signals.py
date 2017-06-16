@@ -22,11 +22,12 @@ class CreateOwnershipTest(ModuleStoreTestCase):
     """
     Test creation of CourseOwnership items on course creation and reruns
     """
+    CREATE_USER = True
 
     def setUp(self):
-        password = super(CreateOwnershipTest, self).setUp(create_user=True)
+        super(CreateOwnershipTest, self).setUp()
         self.client = Client()
-        self.client.login(username=self.user.username, password=password)
+        self.client.login(username=self.user.username, password=self.user_password)
 
     def tearDown(self):
         self.client.logout()
