@@ -338,14 +338,6 @@ AUTHENTICATION_BACKENDS = (
     'third_party_auth.saml.SAMLAuthBackend',
 ) + AUTHENTICATION_BACKENDS
 
-THIRD_PARTY_AUTH_CUSTOM_AUTH_FORMS = {
-    'custom1': {
-        'secret_key': 'opensesame',
-        'url': '/misc/my-custom-registration-form',
-        'error_url': '/misc/my-custom-sso-error-page'
-    },
-}
-
 ######### custom courses #########
 INSTALLED_APPS += ('openedx.core.djangoapps.ccxcon',)
 FEATURES['CUSTOM_COURSES_EDX'] = True
