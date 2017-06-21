@@ -123,11 +123,6 @@ JS_INFO_DICT = {
     'packages': ('openassessment', 'edx_sga'),
 }
 
-# TODO(eduardo): remove
-# Marketing links used mostly by themes
-if settings.SERVICE_VARIANT_FOR_MKTG_LINKS == 'cms':
-    urlpatterns += (url(r'^', include('static_template_view.urls')),)
-
 if settings.FEATURES.get('ENABLE_CONTENT_LIBRARIES'):
     urlpatterns += (
         url(r'^library/{}?$'.format(LIBRARY_KEY_PATTERN),

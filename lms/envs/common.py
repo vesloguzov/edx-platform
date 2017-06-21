@@ -50,8 +50,6 @@ PLATFORM_NAME = "Your Platform Name Here"
 CC_MERCHANT_NAME = PLATFORM_NAME
 # Shows up in the platform footer, eg "(c) COPYRIGHT_YEAR"
 COPYRIGHT_YEAR = "2017"
-# TODO(eduardo): remove
-SERVICE_VARIANT = "lms"
 
 PLATFORM_FACEBOOK_ACCOUNT = "http://www.facebook.com/YourPlatformFacebookAccount"
 PLATFORM_TWITTER_ACCOUNT = "@YourPlatformTwitterAccount"
@@ -2218,8 +2216,6 @@ MKTG_URL_LINK_MAP = {
     # Verified Certificates
     'WHAT_IS_VERIFIED_CERT': 'verified-certificate',
 }
-# TODO(eduardo): remove
-SERVICE_VARIANT_FOR_MKTG_LINKS = 'lms'
 # site name used in emails
 MKTG_SITE_NAME = SITE_NAME
 

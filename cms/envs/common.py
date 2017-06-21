@@ -99,8 +99,6 @@ from xmodule.modulestore.edit_info import EditInfoMixin
 from xmodule.mixin import LicenseMixin
 
 ############################ FEATURE CONFIGURATION #############################
-SERVICE_VARIANT = "cms"
-
 # Dummy secret key for dev/test
 SECRET_KEY = 'dev key'
 
@@ -824,7 +822,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'djcelery',
     'method_override',
-    'static_template_view',
 
     # Common views
     'openedx.core.djangoapps.common_views',
@@ -987,8 +984,9 @@ EDXMKTG_USER_INFO_COOKIE_NAME = 'edx-user-info'
 EDXMKTG_USER_INFO_COOKIE_VERSION = 1
 
 MKTG_URLS = {}
-MKTG_URL_LINK_MAP = {}
-SERVICE_VARIANT_FOR_MKTG_LINKS = 'lms'
+MKTG_URL_LINK_MAP = {
+
+}
 MKTG_SITE_NAME = SITE_NAME
 
 COURSES_WITH_UNSAFE_CODE = []

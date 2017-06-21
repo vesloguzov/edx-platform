@@ -1,9 +1,7 @@
-"""
-View for semi-static templatized content.
-
-List of valid templates is explicitly managed for (short-term)
-security reasons.
-"""
+# View for semi-static templatized content.
+#
+# List of valid templates is explicitly managed for (short-term)
+# security reasons.
 
 import mimetypes
 

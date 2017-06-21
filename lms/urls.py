@@ -159,37 +159,6 @@ urlpatterns += (url(
     RedirectView.as_view(url=settings.STATIC_URL + favicon_path, permanent=True)
 ),)
 
-# TODO(eduardo): remove
-# Semi-static views only used by edX, not by themes
-if not settings.FEATURES.get("USE_CUSTOM_THEME", False):
-    urlpatterns += (
-        url(r'^blog$', 'static_template_view.views.render',
-            {'template': 'blog.html'}, name="blog"),
-        url(r'^contact$', 'static_template_view.views.render',
-            {'template': 'contact.html'}, name="contact"),
-        url(r'^donate$', 'static_template_view.views.render',
-            {'template': 'donate.html'}, name="donate"),
-        url(r'^faq$', 'static_template_view.views.render',
-            {'template': 'faq.html'}, name="faq"),
-        url(r'^help$', 'static_template_view.views.render',
-            {'template': 'help.html'}, name="help_edx"),
-        url(r'^jobs$', 'static_template_view.views.render',
-            {'template': 'jobs.html'}, name="jobs"),
-        url(r'^news$', 'static_template_view.views.render',
-            {'template': 'news.html'}, name="news"),
-        url(r'^press$', 'static_template_view.views.render',
-            {'template': 'press.html'}, name="press"),
-        url(r'^media-kit$', 'static_template_view.views.render',
-            {'template': 'media-kit.html'}, name="media-kit"),
-
-        # TODO: (bridger) The copyright has been removed until it is updated for edX
-        # url(r'^copyright$', 'static_template_view.views.render',
-        #     {'template': 'copyright.html'}, name="copyright"),
-
-        # Press releases
-        url(r'^press/([_a-zA-Z0-9-]+)$', 'static_template_view.views.render_press_release', name='press_release'),
-    )
-
 # Multicourse wiki (Note: wiki urls must be above the courseware ones because of
 # the custom tab catch-all)
 if settings.WIKI_ENABLED:
