@@ -4,9 +4,10 @@
         'gettext', 'jquery', 'underscore', 'backbone', 'edx-ui-toolkit/js/utils/html-utils',
         'common/js/components/views/tabbed_view',
         'js/student_profile/views/section_two_tab',
+        'edx-ui-toolkit/js/utils/date-utils',
         'text!templates/student_profile/learner_profile.underscore',
         'text!templates/student_profile/courses.underscore'],
-        function(gettext, $, _, Backbone, HtmlUtils, TabbedView, SectionTwoTab, learnerProfileTemplate, ownedCoursesTemplate) {
+        function(gettext, $, _, Backbone, HtmlUtils, TabbedView, SectionTwoTab, DateUtils, learnerProfileTemplate, ownedCoursesTemplate) {
             var LearnerProfileView = Backbone.View.extend({
 
                 initialize: function(options) {
@@ -127,6 +128,23 @@
                 },
                 renderOwnedCourses: function() {
                     var owned_courses_data = this.options.owned_courses_data;
+                    var context = {
+                        language: this.options.userPreferences.userLanguage,
+                        timezone: this.options.userPreferences.userTimezone,
+                        format: DateUtils.dateFormatEnum.shortDate
+                    };
+                    // update each course with start date rendered in user-defined locale
+                    _.each(owned_courses_data.owned_courses, function(course){
+                        if (course.advertised_start) {
+                            course.start_datetime_text = course.advertised_start;
+                        } else if (course.start) {
+                            course.start_datetime_text = DateUtils.localize(
+                                $.extend({
+                                    datetime: new Date(course.start)
+                                }, context)
+                            );
+                        }
+                    });
 
                     if (this.showFullProfile() && owned_courses_data.owned_courses.length) {
                         HtmlUtils.setHtml(this.$('.profile-owned-courses-wrapper'), HtmlUtils.template(ownedCoursesTemplate)(

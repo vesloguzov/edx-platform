@@ -20,7 +20,7 @@
     ], function(gettext, $, _, Backbone, Logger, PagingCollection, AccountSettingsModel, AccountPreferencesModel,
                  FieldsView, LearnerProfileFieldsView, LearnerProfileView, BadgeModel, BadgeListContainer,
                  AccountSettingsFieldViews, MessageBannerView) {
-        return function(options) {
+        return function(options, userPreferences) {
             var learnerProfileElement = $('.wrapper-profile');
 
             var accountSettingsModel = new AccountSettingsModel(
@@ -151,6 +151,7 @@
                 el: learnerProfileElement,
                 ownProfile: options.own_profile,
                 has_preferences_access: options.has_preferences_access,
+                userPreferences: userPreferences,
                 owned_courses_data: options.owned_courses_data,
                 accountSettingsModel: accountSettingsModel,
                 preferencesModel: accountPreferencesModel,

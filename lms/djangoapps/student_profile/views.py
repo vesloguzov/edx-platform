@@ -123,7 +123,8 @@ def _get_owned_courses(request, owner, preferences):
         'display_name': course.display_name,
         'number': course.display_number_with_default,
         'org': course.display_org_with_default,
-        'start_datetime_text': course.start_datetime_text(),
+        'start': course.start,
+        'advertised_start': course.advertised_start,
         'course_image': course.course_image_url,
         'about_url': reverse('about_course', args=[course.id.to_deprecated_string()])
     } for course in courses]
