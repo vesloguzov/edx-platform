@@ -28,24 +28,6 @@ data: |
           <p>
               Вы можете использовать следующую задачу как пример.
           </p>
-        <customresponse cfn="test_add_to_ten">
-      <script type="loncapa/python">
-
-      def test_add_to_ten(expect, ans):
-          return test_add(10, ans)
-
-      </script>
-            <label>Enter two integers that sum to 10.</label>
-            <textline size="40" correct_answer="3" label="Enter first number" /><br/>
-            <textline size="40" correct_answer="7" label="Enter second number" />
-            <solution>
-                <div class="detailed-solution">
-                    <p>Explanation</p>
-                    <p>Any set of integers on the line \(y = 10 - x\) satisfy these constraints.</p>
-                </div>
-            </solution>
-        </customresponse>
-
         <customresponse cfn="test_add" expect="20">
       <script type="loncapa/python">
 
