@@ -1,5 +1,5 @@
 # Eduardo-specific requirements
--e git+https://github.com/lektorium-llc/eduardo-service-plans.git@0.1.0#egg=eduardo-service-plans
+-e git+https://github.com/lektorium-llc/eduardo-service-plans.git@0.1.1#egg=eduardo-service-plans
 
 ##### Advanced block types #####
 # advanced block types from edx-private requirements

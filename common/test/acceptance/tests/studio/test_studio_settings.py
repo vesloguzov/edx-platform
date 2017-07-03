@@ -618,10 +618,10 @@ class CourseSettingsTest(StudioCourseTest):
     ENROLLMENT_START_TIME_CSS = "#course-enrollment-start-time"
     ENROLLMENT_END_TIME_CSS = "#course-enrollment-end-time"
 
-    course_start_date = '12/20/2013'
-    course_end_date = '12/26/2013'
-    enrollment_start_date = '12/01/2013'
-    enrollment_end_date = '12/10/2013'
+    course_start_date = '2013-12-20'
+    course_end_date = '2013-12-26'
+    enrollment_start_date = '2013-12-01'
+    enrollment_end_date = '2013-12-10'
 
     dummy_time = "15:30"
 

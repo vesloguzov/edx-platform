@@ -102,9 +102,9 @@ class UsersCanAddUpdatesTest(StudioCourseTest):
         """
         self._create_and_verify_update('Hello')
         self.course_updates_page.click_edit_update_button()
-        self.course_updates_page.set_date('06/01/2013')
+        self.course_updates_page.set_date('2013-06-01')
         self.course_updates_page.click_new_update_save_button()
-        self.assertTrue(self.course_updates_page.is_first_update_date('June 1, 2013'))
+        self.assertTrue(self.course_updates_page.is_first_update_date('2013-06-01'))
 
     def test_outside_tag_preserved(self):
         """

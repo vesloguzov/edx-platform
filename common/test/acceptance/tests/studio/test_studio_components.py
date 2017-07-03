@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Acceptance tests for adding components in Studio.
 """
@@ -38,13 +39,20 @@ class AdvancedProblemComponentTest(ContainerBase):
         )
 
     @ddt.data(
-        'Blank Advanced Problem',
-        'Circuit Schematic Builder',
-        'Custom Python-Evaluated Input',
-        'Drag and Drop',
-        'Image Mapped Input',
-        'Math Expression Input',
-        'Problem with Adaptive Hint',
+        # 'Blank Advanced Problem',
+        # 'Circuit Schematic Builder',
+        # 'Custom Python-Evaluated Input',
+        # 'Drag and Drop',
+        # 'Image Mapped Input',
+        # 'Math Expression Input',
+        # 'Problem with Adaptive Hint',
+        u'Blank Advanced Problem',
+        u'Конструктор электросхем',
+        u'Задача, проверяемая на Python',
+        u'Drag and Drop',
+        u'Ввод пометки на изображении',
+        u'Ввод математического выражения',
+        u'Задача с динамической подсказкой'
     )
     def test_add_advanced_problem(self, component):
         """
@@ -119,7 +127,8 @@ class ComponentTest(ContainerBase):
             | Raw HTML                |
         """
         # Components to be added
-        components = ['Text', 'Announcement', 'Zooming Image Tool', 'Raw HTML']
+        # components = ['Text', 'Announcement', 'Zooming Image Tool', 'Raw HTML']
+        components = ['Text', u'Объявление', u'Maсштабируемое изображение', u'HTML-код']
         self.go_to_unit_page()
         container_page = ContainerPage(self.browser, None)
         # Add components
@@ -141,7 +150,8 @@ class ComponentTest(ContainerBase):
             | E-text Written in LaTeX |
         """
         # Latex component
-        component = 'E-text Written in LaTeX'
+        # component = 'E-text Written in LaTeX'
+        component = u'Текст с использованием LaTeX'
         # Visit advanced settings page and enable latex compiler.
         self.advanced_settings.visit()
         self.advanced_settings.set('Enable LaTeX Compiler', 'True')
@@ -175,8 +185,10 @@ class ComponentTest(ContainerBase):
             | Text Input           |
         """
         # Components to be added.
-        components = ['Blank Common Problem', 'Checkboxes', 'Dropdown',
-                      'Multiple Choice', 'Numerical Input', 'Text Input']
+        # components = ['Blank Common Problem', 'Checkboxes', 'Dropdown',
+        #               'Multiple Choice', 'Numerical Input', 'Text Input']
+        components = [u'Пустая задача', u'Флажки', u'Выпадающий список',
+                      u'Выбор варианта', u'Числовой ввод', u'Текстовый ввод']
 
         self.go_to_unit_page()
         container_page = ContainerPage(self.browser, None)
