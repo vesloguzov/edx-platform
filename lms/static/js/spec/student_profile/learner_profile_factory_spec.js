@@ -56,6 +56,10 @@ define(['backbone', 'jquery', 'underscore', 'edx-ui-toolkit/js/utils/spec-helper
                     'find_courses_url': '/courses/',
                     'account_settings_data': Helpers.createAccountSettingsData(options),
                     'preferences_data': Helpers.createUserPreferencesData()
+                },
+                {
+                    'userLanguage': '',
+                    'userTimezone': ''
                 });
             };
 

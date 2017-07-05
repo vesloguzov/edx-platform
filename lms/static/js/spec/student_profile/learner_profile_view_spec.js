@@ -143,7 +143,11 @@ define(['backbone',
                         profileImageFieldView: profileImageFieldView,
                         sectionOneFieldViews: sectionOneFieldViews,
                         sectionTwoFieldViews: sectionTwoFieldViews,
-                        badgeListContainer: badgeListContainer
+                        badgeListContainer: badgeListContainer,
+                        userPreferences: {
+                            'userLanguage': '',
+                            'userTimezone': ''
+                        }
                     });
             };
 
