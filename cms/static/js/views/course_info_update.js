@@ -1,4 +1,4 @@
-define(['codemirror',  //TODO(eduardo): check if 'module' arg is required
+define(['codemirror',
         'js/utils/modal',
         'js/utils/date_utils',
         'edx-ui-toolkit/js/utils/html-utils',
@@ -217,7 +217,7 @@ define(['codemirror',  //TODO(eduardo): check if 'module' arg is required
                     $(this.dateEntry(event)).val($.datepicker.formatDate($.datepicker._defaults['dateFormat'], new Date(targetModel.get('date'))));
                 }
                 else {
-                    $(this.dateEntry(event)).val('MM/DD/YY');  // TODO(eduardo): check & fix
+                    $(this.dateEntry(event)).val('MM/DD/YY');
                 }
                 this.$codeMirror = CourseInfoHelper.editWithCodeMirror(
                 targetModel, 'content', self.options.base_asset_url, $textArea.get(0));

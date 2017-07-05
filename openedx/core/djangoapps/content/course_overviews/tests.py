@@ -660,7 +660,6 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
                 expected_path_start = "/asset-v1:"
 
             for url in overview.image_urls.values():
-                print 'URL:', url
                 self.assertTrue(url.startswith(expected_path_start))
 
             # Now enable the CDN...

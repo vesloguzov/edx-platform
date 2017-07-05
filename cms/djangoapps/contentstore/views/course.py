@@ -125,8 +125,6 @@ __all__ = ['course_info_handler', 'course_handler', 'course_listing',
 START_COURSE_NUMBER = 100000
 START_COURSE_RUN = 1
 
-log = logging.getLogger(__name__)
-
 
 class AccessListFallback(Exception):
     """

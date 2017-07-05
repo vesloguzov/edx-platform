@@ -1,30 +1,12 @@
 """
-Views related to course owners
+Helpers related to course owners
 """
 from django.contrib.auth.models import User
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import ensure_csrf_cookie
 from django.conf import settings
 
 from microsite_configuration import microsite
 
-from util.cache import cache_if_anonymous
-from edxmako.shortcuts import render_to_response
-
 from .models import CourseOwnership
-
-
-@ensure_csrf_cookie
-@cache_if_anonymous()
-@require_http_methods(['GET'])
-def owners_list(request):  # pylint: disable=unused-argument
-    """
-    List all users owning the course(s)
-    """
-    # TODO: add information about owners having accessible courses
-    owner_ids = CourseOwnership.objects.values_list('user', flat=True)
-    owners = User.objects.filter(id__in=owner_ids).order_by('username')
-    return render_to_response('owners.html', {'owners': owners})
 
 
 def get_accessible_owner_courses(request, owner):

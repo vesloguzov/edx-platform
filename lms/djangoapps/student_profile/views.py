@@ -15,7 +15,7 @@ from openedx.core.djangoapps.user_api.accounts.api import get_account_settings
 from openedx.core.djangoapps.user_api.errors import UserNotFound, UserNotAuthorized
 from openedx.core.djangoapps.user_api.accounts import ACCOUNT_VISIBILITY_PREF_KEY, ALL_USERS_VISIBILITY
 from openedx.core.djangoapps.user_api.preferences.api import get_user_preferences
-from openedx.core.djangoapps.course_owners.views import get_accessible_owner_courses
+from openedx.core.djangoapps.course_owners.helpers import get_accessible_owner_courses
 from student.models import User
 from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 
