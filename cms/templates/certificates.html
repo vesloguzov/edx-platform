@@ -115,8 +115,8 @@ CMS.User.isGlobalStaff = '${is_global_staff}'=='True' ? true : false;
               <li class="nav-item"><a href="${course_team_url}">${_("Course Team")}</a></li>
               % if show_advanced_settings_link:
               <li class="nav-item"><a href="${advanced_settings_url}">${_("Advanced Settings")}</a></li>
-              % endif
               <li class="nav-item"><a href="${utils.reverse_course_url('group_configurations_list_handler', context_course.id)}">${_("Group Configurations")}</a></li>
+              % endif
             </ul>
           </nav>
         % endif
