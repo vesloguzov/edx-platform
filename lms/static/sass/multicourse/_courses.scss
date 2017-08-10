@@ -23,7 +23,7 @@ $facet-background-color: #007db8;
 
 // +Layout - Courses Container
 // ====================
-.find-courses, .university-profile {
+.find-courses, .university-profile, .profile {
 
   .discovery-button:not(:disabled) {
     @extend %t-action2;

@@ -1,4 +1,4 @@
-<section class="courses">
+<section class="courses no-course-discovery">
   <h2>
     <%- interpolate(
               gettext("%s's MOOCs"),

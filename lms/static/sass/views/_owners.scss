@@ -1,18 +1,3 @@
-.owners {
-    padding: $baseline;
-    max-width: grid-width(12);
-    margin: 0 auto;
-
-    .owners-listing {
-        @include padding-left(0);
-        list-style-type: none;
-        @include columns(5 15em);
-
-        li>a {
-            margin: 5px 0;
-        }
-    }
-}
 .profile-owned-courses-wrapper.courses-container {
     padding: 5px 10px 10px;;
 
@@ -28,12 +13,5 @@
   p {
     line-height: 1.5em;
     margin-bottom: ($baseline/2);
-  }
-
-  .courses .courses-listing .courses-listing-item {
-    @include media($bp-large) {
-      @include span-columns(4); // 4 of 12
-      @include omega(3n);
-    }
   }
 }
