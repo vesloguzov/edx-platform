@@ -1,6 +1,8 @@
 """
 Common utility functions related to courses.
 """
+import urlparse
+
 from django.conf import settings
 
 from xmodule.assetstore.assetmgr import AssetManager
@@ -24,7 +26,10 @@ def course_image_url(course, image_key='course_image'):
             url += '/images/' + image_key + '.jpg'
     elif not getattr(course, image_key):
         # if image_key is empty, use the default image url from settings
-        url = settings.STATIC_URL + settings.DEFAULT_COURSE_ABOUT_IMAGE_URL
+        url = settings.DEFAULT_COURSE_ABOUT_IMAGE_URL
+        # use static prefix only if url is relative
+        if not urlparse.urlparse(url).netloc:
+            url = settings.STATIC_URL + url
     else:
         loc = StaticContent.compute_location(course.id, getattr(course, image_key))
         url = StaticContent.serialize_asset_key_with_slash(loc)

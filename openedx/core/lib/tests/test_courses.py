@@ -66,6 +66,19 @@ class CourseImageTestCase(ModuleStoreTestCase):
             course_image_url(course),
         )
 
+    @override_settings(DEFAULT_COURSE_ABOUT_IMAGE_URL='https://example.com/test.png')
+    @ddt.data(ModuleStoreEnum.Type.split, ModuleStoreEnum.Type.mongo)
+    def test_default_image_absolute_url(self, default_store):
+        """
+        Verify that if a course has empty `course_image`, `course_image_url` returns
+        absolute `DEFAULT_COURSE_ABOUT_IMAGE_URL` defined in the settings.
+        """
+        course = CourseFactory.create(course_image='', default_store=default_store)
+        self.assertEquals(
+            'https://example.com/test.png',
+            course_image_url(course),
+        )
+
     def test_get_banner_image_url(self):
         """Test banner image URL formatting."""
         banner_image = u'banner_image.jpg'
