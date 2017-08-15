@@ -77,17 +77,14 @@ define(['codemirror',
             },
 
             setAndValidate: function(attr, value, event) {
+                var targetModel = this.collection.get(this.$currentPost.attr('name'));
                 if (attr === 'date') {
                 // If the value to be set was typed, validate that entry rather than the current datepicker value
                     if (this.dateEntry(event).length > 0) {
-                        value = DateUtils.parseDateFromString(this.dateEntry(event).val());
-                        if (value && isNaN(value.getTime())) {
-                            value = '';
-                        }
+                        value = this.dateEntry(event).val();
                     }
-                    value = $.datepicker.formatDate($.datepicker._defaults['dateFormat'], value);
+                    value = targetModel.dateFromInputDate(value);
                 }
-                var targetModel = this.collection.get(this.$currentPost.attr('name'));
                 var prevValue = targetModel.get(attr);
                 if (prevValue !== value) {
                     targetModel.set(attr, value);
@@ -163,8 +160,8 @@ define(['codemirror',
                 event.preventDefault();
                 var targetModel = this.eventModel(event);
                 targetModel.set({
-                // translate short-form date (for input) into long form date (for display)
-                    date: $.datepicker.formatDate($.datepicker._defaults['dateFormat'], new Date(this.dateEntry(event).val())),
+                // translate short-form date (for input) into internal form date
+                    date: targetModel.dateFromInputDate(this.dateEntry(event).val()),
                     content: this.$codeMirror.getValue(),
                     push_notification_selected: this.push_notification_selected(event)
                 });
@@ -212,12 +209,13 @@ define(['codemirror',
                 $(this.editor(event)).show();
                 var $textArea = this.$currentPost.find('.new-update-content').first();
                 var targetModel = this.eventModel(event);
-            // translate long-form date (for viewing) into short-form date (for input)
+            // translate model internal date (iso-8601) into short-form date (for input)
                 if (targetModel.get('date') && targetModel.isValid()) {
-                    $(this.dateEntry(event)).val($.datepicker.formatDate($.datepicker._defaults['dateFormat'], new Date(targetModel.get('date'))));
+                    $(this.dateEntry(event)).val(targetModel.getInputDate());
                 }
                 else {
-                    $(this.dateEntry(event)).val('MM/DD/YY');
+                    // Translators: translate placeholder using django date input format for your country
+                    $(this.dateEntry(event)).val(gettext('YYYY-MM-DD'));
                 }
                 this.$codeMirror = CourseInfoHelper.editWithCodeMirror(
                 targetModel, 'content', self.options.base_asset_url, $textArea.get(0));
@@ -290,8 +288,8 @@ define(['codemirror',
                 } else {
                 // close the modal and insert the appropriate data
                     this.$currentPost.removeClass('editing');
-                    this.$currentPost.find('.date-display').text(targetModel.get('date'));
-                    this.$currentPost.find('.date').val(targetModel.get('date'));
+                    this.$currentPost.find('.date-display').text(targetModel.getLongDate());
+                    this.$currentPost.find('.date').val(targetModel.getInputDate());
 
                     content = HtmlUtils.HTML(CourseInfoHelper.changeContentToPreview(
                         targetModel, 'content', this.options.base_asset_url

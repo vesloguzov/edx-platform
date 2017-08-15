@@ -100,7 +100,7 @@ define ["js/views/course_info_handout", "js/views/course_info_update", "js/model
                     expect(@courseInfoEdit.$el.find('.save-button').hasClass("is-disabled")).toEqual(false)
                     @courseInfoEdit.$el.find('input.date').val(value).trigger("change")
                     expect(@courseInfoEdit.$el.find('.save-button').hasClass("is-disabled")).toEqual(true)
-                    @courseInfoEdit.$el.find('input.date').val("01/01/16").trigger("change")
+                    @courseInfoEdit.$el.find('input.date').val("2016-01-01").trigger("change")
                     expect(@courseInfoEdit.$el.find('.save-button').hasClass("is-disabled")).toEqual(false)
 
                 cancelEditingUpdate = (update, modalCover, useCancelButton) ->
