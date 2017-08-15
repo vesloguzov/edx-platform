@@ -48,7 +48,6 @@ class PasswordResetFormNoActive(PasswordResetForm):
 
     def save(
             self,
-            domain_override=None,
             subject_template_name='registration/password_reset_subject.txt',
             email_template_name='registration/password_reset_email.html',
             use_https=False,
@@ -67,13 +66,10 @@ class PasswordResetFormNoActive(PasswordResetForm):
             'MKTG_SITE_NAME',
             configuration_helpers.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
         )
-        if not domain_override:
-            site_name = configuration_helpers.get_value(
-                'SITE_NAME',
-                settings.SITE_NAME
-            )
-        else:
-            site_name = domain_override
+        site_name = configuration_helpers.get_value(
+            'SITE_NAME',
+            settings.SITE_NAME
+        )
 
         for user in self.users_cache:
             context = {
