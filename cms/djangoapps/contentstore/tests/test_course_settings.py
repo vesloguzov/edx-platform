@@ -1116,14 +1116,14 @@ class CourseEnrollmentEndFieldTest(CourseTestCase):
     NOT_EDITABLE_DATE_WRAPPER = "<div class=\"field date is-not-editable\" id=\"field-enrollment-end-date\">"
     NOT_EDITABLE_TIME_WRAPPER = "<div class=\"field time is-not-editable\" id=\"field-enrollment-end-time\">"
     NOT_EDITABLE_DATE_FIELD = "<input type=\"text\" class=\"end-date date end\" \
-id=\"course-enrollment-end-date\" placeholder=\"MM/DD/YYYY\" autocomplete=\"off\" readonly aria-readonly=\"true\" />"
+id=\"course-enrollment-end-date\" placeholder=\"YYYY-MM-DD\" autocomplete=\"off\" readonly aria-readonly=\"true\" />"
     NOT_EDITABLE_TIME_FIELD = "<input type=\"text\" class=\"time end\" id=\"course-enrollment-end-time\" \
 value=\"\" placeholder=\"HH:MM\" autocomplete=\"off\" readonly aria-readonly=\"true\" />"
 
     EDITABLE_DATE_WRAPPER = "<div class=\"field date \" id=\"field-enrollment-end-date\">"
     EDITABLE_TIME_WRAPPER = "<div class=\"field time \" id=\"field-enrollment-end-time\">"
     EDITABLE_DATE_FIELD = "<input type=\"text\" class=\"end-date date end\" \
-id=\"course-enrollment-end-date\" placeholder=\"MM/DD/YYYY\" autocomplete=\"off\"  />"
+id=\"course-enrollment-end-date\" placeholder=\"YYYY-MM-DD\" autocomplete=\"off\"  />"
     EDITABLE_TIME_FIELD = "<input type=\"text\" class=\"time end\" \
 id=\"course-enrollment-end-time\" value=\"\" placeholder=\"HH:MM\" autocomplete=\"off\"  />"
 
