@@ -34,7 +34,7 @@
             (gettext('incorrect')) + '\n( ) ' + (gettext('incorrect')) + '\n(x) ' + (gettext('correct')) + '\n';
 
         MarkdownEditingDescriptor.checkboxChoiceTemplate = '[x] ' + // eslint-disable-line no-use-before-define
-            (gettext('correct')) + '\n[ ] incorrect\n[x] correct\n';
+            (gettext('correct')) + '\n[ ] ' + (gettext('incorrect')) + '\n[x] ' + (gettext('correct')) + '\n';
 
         MarkdownEditingDescriptor.stringInputTemplate = '= ' + // eslint-disable-line no-use-before-define
             (gettext('answer')) + '\n';
