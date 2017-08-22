@@ -30,6 +30,7 @@ class CourseDetailsTestCase(ModuleStoreTestCase):
         self.assertEqual(details.org, self.course.location.org, "Org not copied into")
         self.assertEqual(details.course_id, self.course.location.course, "Course_id not copied into")
         self.assertEqual(details.run, self.course.location.name, "Course name not copied into")
+        self.assertEqual(details.display_name, self.course.display_name, "Course display name not copied into")
         self.assertEqual(details.course_image_name, self.course.course_image)
         self.assertIsNotNone(details.start_date.tzinfo)
         self.assertIsNone(details.end_date, "end date somehow initialized " + str(details.end_date))
@@ -54,6 +55,11 @@ class CourseDetailsTestCase(ModuleStoreTestCase):
             self.assertEqual(
                 CourseDetails.update_from_json(self.course.id, jsondetails.__dict__, self.user).syllabus,
                 jsondetails.syllabus, "After set syllabus"
+            )
+            jsondetails.display_name = "Course Display Name"
+            self.assertEqual(
+                CourseDetails.update_from_json(self.course.id, jsondetails.__dict__, self.user).display_name,
+                jsondetails.display_name, "After set display_name"
             )
             jsondetails.short_description = "Short Description"
             self.assertEqual(

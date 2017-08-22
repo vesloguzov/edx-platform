@@ -3,6 +3,13 @@
   <header>
     <h2 class="title-2">Course Schedule</h2>
   </header>
+  <ol class="list-input">
+    <li class="field text" id="field-course-display-name">
+      <label for="course-display-name">Course Display Name</label>
+      <input type="text" id="course-display-name">
+      <span class="tip tip-stacked">The public display name for your course.</span>
+    </li>
+  </ol>
 
   <ol class="list-input">
     <li class="field-group field-group-course-start" id="course-start">

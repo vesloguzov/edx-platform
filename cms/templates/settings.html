@@ -80,6 +80,12 @@ CMS.URL.UPLOAD_ASSET = '${upload_asset_url | n, js_escaped_string}'
               <input title="${_('This field is disabled: this information cannot be changed.')}" type="text"
                 class="long" id="course-name" readonly />
             </li>
+
+            <li class="field text" id="field-course-display-name">
+              <label for="course-display-name">${_("Course Display Name")}</label>
+              <input type="text" id="course-display-name">
+              <span class="tip tip-stacked">${_("The public display name for your course.")}</span>
+            </li>
           </ol>
 
           % if about_page_editable:

@@ -24,6 +24,7 @@ define([
                 org: '',
                 course_id: '',
                 run: '',
+                display_name: 'course display name',
                 syllabus: null,
                 title: '',
                 subtitle: '',
@@ -127,6 +128,11 @@ define([
             expect(entrance_exam_min_score.val('invalidVal').trigger('input')).toHaveClass('error');
         });
 
+        it('should disallow save with an an empty course display name', function() {
+            var display_name_field = this.view.$('#course-display-name');
+            expect(display_name_field.val(' ').trigger('input')).toHaveClass('error');
+        });
+
         it('should provide a default value for the minimum score percentage', function() {
             var entrance_exam_min_score = this.view.$(SELECTORS.entrance_exam_min_score);
 
@@ -202,6 +208,22 @@ define([
             expect(this.model.get('language')).toEqual('');
             this.view.saveView();
             AjaxHelpers.expectJsonRequest(requests, 'POST', urlRoot, modelData);
+        });
+
+        it('should save display name', function() {
+            var requests = AjaxHelpers.requests(this),
+                expectedJson = $.extend(true, {}, modelData, {
+                    display_name: 'new course display name'
+                });
+
+            // Input some value.
+            this.view.$('#course-display-name').val('new course display name');
+            this.view.$('#course-display-name').trigger('change');
+            this.view.saveView();
+            AjaxHelpers.expectJsonRequest(
+                requests, 'POST', urlRoot, expectedJson
+            );
+            AjaxHelpers.respondWithJson(requests, expectedJson);
         });
 
         it('should save title', function() {

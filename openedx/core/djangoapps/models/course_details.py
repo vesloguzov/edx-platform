@@ -41,6 +41,7 @@ class CourseDetails(object):
         self.org = org
         self.course_id = course_id
         self.run = run
+        self.display_name = ""
         self.language = None
         self.start_date = None  # 'start'
         self.end_date = None  # 'end'
@@ -103,6 +104,7 @@ class CourseDetails(object):
         """
         course_key = course_descriptor.id
         course_details = cls(course_key.org, course_key.course, course_key.run)
+        course_details.display_name = course_descriptor.display_name
         course_details.start_date = course_descriptor.start
         course_details.end_date = course_descriptor.end
         course_details.enrollment_start = course_descriptor.enrollment_start
@@ -195,6 +197,10 @@ class CourseDetails(object):
         # model is nasty, convert the JSON Date to a Python date, which
         # is what the setter expects as input.
         date = Date()
+
+        if 'display_name' in jsondict:
+            descriptor.display_name = jsondict['display_name']
+            dirty = True
 
         if 'start_date' in jsondict:
             converted = date.from_json(jsondict['start_date'])

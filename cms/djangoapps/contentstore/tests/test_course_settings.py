@@ -127,6 +127,7 @@ class CourseDetailsViewTest(CourseTestCase, MilestonesTestCaseMixin):
         self.alter_field(url, details, 'enrollment_start', datetime.datetime(2012, 10, 12, 1, 30, tzinfo=utc))
 
         self.alter_field(url, details, 'enrollment_end', datetime.datetime(2012, 11, 15, 1, 30, tzinfo=utc))
+        self.alter_field(url, details, 'display_name', "Course Display Name")
         self.alter_field(url, details, 'short_description', "Short Description")
         self.alter_field(url, details, 'overview', "Overview")
         self.alter_field(url, details, 'intro_video', "intro_video")
@@ -143,6 +144,7 @@ class CourseDetailsViewTest(CourseTestCase, MilestonesTestCaseMixin):
         self.compare_date_fields(details, encoded, context, 'end_date')
         self.compare_date_fields(details, encoded, context, 'enrollment_start')
         self.compare_date_fields(details, encoded, context, 'enrollment_end')
+        self.assertEqual(details['display_name'], encoded['display_name'], context + " display_name not ==")
         self.assertEqual(
             details['short_description'], encoded['short_description'], context + " short_description not =="
         )
@@ -248,6 +250,7 @@ class CourseDetailsViewTest(CourseTestCase, MilestonesTestCaseMixin):
         }):
             response = self.client.get_html(settings_details_url)
             self.assertNotContains(response, "Course Summary Page")
+            self.assertContains(response, "Course Display Name")
             self.assertNotContains(response, "Send a note to students via email")
             self.assertContains(response, "course summary page will not be viewable")
 
@@ -380,6 +383,7 @@ class CourseDetailsViewTest(CourseTestCase, MilestonesTestCaseMixin):
                                                                'ENABLE_EXTENDED_COURSE_DETAILS': True}):
             response = self.client.get_html(settings_details_url)
             self.assertContains(response, "Course Summary Page")
+            self.assertContains(response, "Course Display Name")
             self.assertContains(response, "Send a note to students via email")
             self.assertNotContains(response, "course summary page will not be viewable")
 

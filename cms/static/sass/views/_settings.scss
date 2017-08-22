@@ -319,11 +319,12 @@
 
       .list-input {
         @include clearfix();
-        padding: 0 ($baseline/2);
+        //  Disable upstream styles for proper display of "course display name" field
+        // padding: 0 ($baseline/2);
 
-        .field {
-          margin-bottom: 0;
-        }
+        // .field {
+        //   margin-bottom: 0;
+        // }
       }
 
       .is-not-editable {

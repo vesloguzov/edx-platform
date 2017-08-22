@@ -5,6 +5,7 @@ define(['backbone', 'underscore', 'gettext', 'js/models/validation_helpers', 'js
                 org: '',
                 course_id: '',
                 run: '',
+                display_name: '',
                 language: '',
                 start_date: null,	// maps to 'start'
                 end_date: null,		// maps to 'end'
@@ -40,6 +41,9 @@ define(['backbone', 'underscore', 'gettext', 'js/models/validation_helpers', 'js
                 newattrs = DateUtils.convertDateStringsToObjects(
             newattrs, ['start_date', 'end_date', 'enrollment_start', 'enrollment_end']
         );
+                if (! newattrs.display_name || !newattrs.display_name.trim()) {
+                    errors.display_name = gettext('The course must have a display name.');
+                }
 
                 if (newattrs.start_date === null) {
                     errors.start_date = gettext('The course must have an assigned start date.');

@@ -85,6 +85,7 @@ define(['js/views/validation', 'codemirror', 'underscore', 'jquery', 'jquery.ui'
                    this.$el.find('#' + this.fieldToSelectorMap['overview']).val(this.model.get('overview'));
                    this.codeMirrorize(null, $('#course-overview')[0]);
 
+                   this.$el.find('#' + this.fieldToSelectorMap.display_name).val(this.model.get('display_name'));
                    if (this.model.get('title') !== '') {
                        this.$el.find('#' + this.fieldToSelectorMap.title).val(this.model.get('title'));
                    } else {
@@ -154,6 +155,7 @@ define(['js/views/validation', 'codemirror', 'underscore', 'jquery', 'jquery.ui'
                    return this;
                },
                fieldToSelectorMap: {
+                   'display_name': 'course-display-name',
                    'language': 'course-language',
                    'start_date': 'course-start',
                    'end_date': 'course-end',
@@ -299,6 +301,7 @@ define(['js/views/validation', 'codemirror', 'underscore', 'jquery', 'jquery.ui'
                        break;
                    case 'course-language':
                    case 'course-effort':
+                   case 'course-display-name':
                    case 'course-title':
                    case 'course-subtitle':
                    case 'course-duration':

@@ -79,7 +79,7 @@ from openedx.core.djangolib.markup import HTML, Text
                   ## Translators: This is an example name for a new course, seen when
                   ## filling out the form to create a new course.
                   <input class="new-course-name" id="new-course-name" type="text" name="new-course-name" required placeholder="${_('e.g. Introduction to Computer Science')}" aria-describedby="tip-new-course-name tip-error-new-course-name" />
-                  <span class="tip" id="tip-new-course-name">${_("The public display name for your course. This cannot be changed, but you can set a different display name in Advanced Settings later.")}</span>
+                  <span class="tip" id="tip-new-course-name">${_("The public display name for your course.")}</span>
                   <span class="tip tip-error is-hiding" id="tip-error-new-course-name"></span>
                 </li>
                 %if allow_auto_key_override or not autogenerate_key_fields:
