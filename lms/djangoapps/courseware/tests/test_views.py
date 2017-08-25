@@ -672,9 +672,8 @@ class ViewsTestCase(ModuleStoreTestCase):
 
         url = reverse('submission_history', kwargs={
             'course_id': unicode(self.course_key),
-            'student_username': 'dummy',
             'location': unicode(self.problem.location),
-        })
+        }) + '?student_identifier=dummy'
         response = self.client.get(url)
         # Tests that we do not get an "Invalid x" response when passing correct arguments to view
         self.assertNotIn('Invalid', response.content)
@@ -688,18 +687,16 @@ class ViewsTestCase(ModuleStoreTestCase):
         # try it with an existing user and a malicious location
         url = reverse('submission_history', kwargs={
             'course_id': unicode(self.course_key),
-            'student_username': 'dummy',
             'location': '<script>alert("hello");</script>'
-        })
+        }) + '?student_identifier=dummy'
         response = self.client.get(url)
         self.assertNotIn('<script>', response.content)
 
         # try it with a malicious user and a non-existent location
         url = reverse('submission_history', kwargs={
             'course_id': unicode(self.course_key),
-            'student_username': '<script>alert("hello");</script>',
             'location': 'dummy'
-        })
+        }) + '?' + urlencode({'student_identifier': '<script>alert("hello");</script>'})
         response = self.client.get(url)
         self.assertNotIn('<script>', response.content)
 
@@ -730,9 +727,8 @@ class ViewsTestCase(ModuleStoreTestCase):
 
         url = reverse('submission_history', kwargs={
             'course_id': unicode(self.course_key),
-            'student_username': admin.username,
             'location': unicode(usage_key),
-        })
+        }) + '?' + urlencode({'student_identifier': admin.username})
         response = self.client.get(url)
         response_content = HTMLParser().unescape(response.content.decode('utf-8'))
 
@@ -771,9 +767,8 @@ class ViewsTestCase(ModuleStoreTestCase):
             )
             url = reverse('submission_history', kwargs={
                 'course_id': unicode(course_key),
-                'student_username': admin.username,
                 'location': unicode(usage_key),
-            })
+            }) + '?' + urlencode({'student_identifier': admin.username})
             response = client.get(url)
             response_content = HTMLParser().unescape(response.content)
             expected_time = datetime.now() + timedelta(hours=hour_diff)

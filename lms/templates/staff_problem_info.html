@@ -63,7 +63,7 @@ ${block_content}
     <div class="staff_actions">
       <h3>${_('Actions')}</h3>
       <div>
-        <label for="sd_fu_${location.name | h}">${_('Username')}:</label>
+        <label for="sd_fu_${location.name | h}">${_('Username or Email')}:</label>
         <input type="text" tabindex="0" id="sd_fu_${location.name | h}" placeholder="${user.username}"/>
       </div>
       <div data-location="${location | h}" data-location-name="${location.name | h}">
@@ -116,7 +116,7 @@ ${block_content}
       <h2>${_("Submission History Viewer")}</h2>
     </header>
     <form id="${element_id}_history_form">
-      <label for="${element_id}_history_student_username">${_("User:")}</label>
+      <label for="${element_id}_history_student_username">${_("Username or Email")}:</label>
       <input tabindex="0" id="${element_id}_history_student_username" type="text" placeholder=""/>
       <input type="hidden" id="${element_id}_history_location" value="${location | h}"/>
       <div class="submit">

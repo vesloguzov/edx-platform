@@ -37,6 +37,7 @@ from lms.djangoapps.instructor.views.api import require_global_staff
 from lms.djangoapps.ccx.utils import prep_course_for_grading
 from lms.djangoapps.grades.new.course_grade import CourseGradeFactory
 from lms.djangoapps.instructor.enrollment import uses_shib
+from lms.djangoapps.instructor.views.tools import get_student_from_identifier
 from lms.djangoapps.verify_student.models import SoftwareSecurePhotoVerification
 from lms.djangoapps.ccx.custom_exception import CCXLocatorValidationException
 
@@ -932,7 +933,7 @@ def _credit_course_requirements(course_key, student):
 
 @login_required
 @ensure_valid_course_key
-def submission_history(request, course_id, student_username, location):
+def submission_history(request, course_id, location):
     """Render an HTML fragment (meant for inclusion elsewhere) that renders a
     history of all state changes made by this user for this problem location.
     Right now this only works for problems because that's all
@@ -949,25 +950,32 @@ def submission_history(request, course_id, student_username, location):
     course = get_course_overview_with_access(request.user, 'load', course_key)
     staff_access = bool(has_access(request.user, 'staff', course))
 
-    # Permission Denied if they don't have staff access and are trying to see
-    # somebody else's submission history.
-    if (student_username != request.user.username) and (not staff_access):
-        raise PermissionDenied
+    student_identifier = request.GET.get('student_identifier')
+    if not student_identifier:
+        return HttpResponse(escape(_('No user identifier submitted')))
 
     user_state_client = DjangoXBlockUserStateClient()
     try:
-        history_entries = list(user_state_client.get_history(student_username, usage_key))
+        student = get_student_from_identifier(student_identifier)
+        history_entries = list(user_state_client.get_history(student.username, usage_key))
+    except User.DoesNotExist:
+        return HttpResponse('User {username} does not exist'.format(username=student_identifier))
     except DjangoXBlockUserStateClient.DoesNotExist:
         return HttpResponse(escape(_(u'User {username} has never accessed problem {location}').format(
-            username=student_username,
+            username=student_identifier,
             location=location
         )))
+
+    # Permission Denied if they don't have staff access and are trying to see
+    # somebody else's submission history.
+    if student is not request.user and (not staff_access):
+        raise PermissionDenied
 
     # This is ugly, but until we have a proper submissions API that we can use to provide
     # the scores instead, it will have to do.
     csm = StudentModule.objects.filter(
         module_state_key=usage_key,
-        student__username=student_username,
+        student__username=student.username,
         course_id=course_key)
 
     scores = BaseStudentModuleHistory.get_history(csm)
@@ -979,7 +987,7 @@ def submission_history(request, course_id, student_username, location):
             "%d scores were found, and %d history entries were found. "
             "Matching scores to history entries by date for display.",
             course_id,
-            student_username,
+            student.username,
             location,
             len(scores),
             len(history_entries),
@@ -996,7 +1004,7 @@ def submission_history(request, course_id, student_username, location):
     context = {
         'history_entries': history_entries,
         'scores': scores,
-        'username': student_username,
+        'username': student.username,
         'location': location,
         'course_id': course_key.to_deprecated_string()
     }
