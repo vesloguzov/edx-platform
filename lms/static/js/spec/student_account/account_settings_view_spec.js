@@ -57,7 +57,8 @@ define(['backbone',
                     model: model,
                     tabSections: {
                         aboutTabSections: aboutSectionsData
-                    }
+                    },
+                    showOrderHistory: true
                 });
 
                 return accountSettingsView;

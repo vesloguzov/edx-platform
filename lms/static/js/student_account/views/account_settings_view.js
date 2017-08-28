@@ -53,6 +53,9 @@
             render: function() {
                 var tabName,
                     view = this;
+                if (! this.options.showOrderHistory) {
+                    this.accountSettingsTabs = this.accountSettingsTabs.slice(0, 2);
+                }
                 HtmlUtils.setHtml(this.$el, HtmlUtils.template(accountSettingsTemplate)({
                     accountSettingsTabs: this.accountSettingsTabs
                 }));

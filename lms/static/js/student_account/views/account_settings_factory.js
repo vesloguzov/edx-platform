@@ -16,7 +16,8 @@
             userAccountsApiUrl,
             userPreferencesApiUrl,
             accountUserId,
-            platformName
+            platformName,
+            showOrderHistory
         ) {
             var accountSettingsElement, userAccountModel, userPreferencesModel, aboutSectionsData,
                 accountsSectionData, ordersSectionData, accountSettingsView, showAccountSettingsPage,
@@ -250,7 +251,8 @@
                     accountsTabSections: accountsSectionData,
                     ordersTabSections: ordersSectionData
                 },
-                userPreferencesModel: userPreferencesModel
+                userPreferencesModel: userPreferencesModel,
+                showOrderHistory: showOrderHistory
             });
 
             accountSettingsView.render();
