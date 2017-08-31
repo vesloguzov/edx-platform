@@ -1,3 +1,4 @@
+<%namespace name='static' file='../../static_content.html'/>
 <%!
 from django.utils.translation import ugettext as _
 from django.template.defaultfilters import escapejs
@@ -8,6 +9,7 @@ from django.template.defaultfilters import escapejs
 <script>
   ${d3_stacked_bar_graph.body()}
 </script>
+<script type="text/javascript" src="${static.url('js/vendor/d3.min.js')}"></script>
 
 %if not any (section_data.values()):
   <p>${_("There is no data available to display at this time.")}</p>
@@ -217,7 +219,7 @@ from django.template.defaultfilters import escapejs
         form.submit();
       }
 
-      $('.instructor-nav a').click(function () {
+      $('.instructor-nav button').click(function () {
         if ($(this).data('section') === "metrics" && firstLoad) {
           loadGraphs();
           firstLoad = false;
