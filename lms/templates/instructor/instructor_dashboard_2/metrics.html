@@ -266,9 +266,13 @@ from django.template.defaultfilters import escapejs
 
     var module_id = $(this).closest('.metrics-overlay').data("module-id");
     var tooltip = $(this).closest('.metrics-container').children('.metrics-tooltip').text();
-    var attributes = '?module_id=' + module_id + '&csv=true' + '&tooltip=' + tooltip;
+    var attributes = $.param({
+        module_id: module_id,
+        csv: true,
+        tooltip: tooltip
+    });
     var url = $(this).data("endpoint");
-    url += attributes;
+    url += '?' + attributes;
 
     return location.href = url;
 
