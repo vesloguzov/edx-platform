@@ -227,8 +227,8 @@ class Users(SysadminDashboardView):
         msg += _('User {user} created successfully!').format(user=user)
         return msg
 
-    def delete_user(self, uname):
-        """Deletes a user from django auth"""
+    def block_user(self, uname):
+        """Blocks a user from django auth setting is_active flag to false"""
 
         if not uname:
             return _('Must provide username')
@@ -247,8 +247,13 @@ class Users(SysadminDashboardView):
                     error=str(err)
                 )
                 return msg
-        user.delete()
-        return _('Deleted user {username}').format(username=uname)
+
+        if user.is_active:
+            user.is_active = False
+            user.save()
+            return _('Successfully blocked user "{username}"').format(username=uname)
+        else:
+            return _('User "{username}" is already blocked').format(username=uname)
 
     def make_common_context(self):
         """Returns the datatable used for this view"""
@@ -314,10 +319,10 @@ class Users(SysadminDashboardView):
             self.msg = u'<h4>{0}</h4><p>{1}</p><hr />{2}'.format(
                 _('Create User Results'),
                 self.create_user(uname, name, password), self.msg)
-        elif action == 'del_user':
+        elif action == 'block_user':
             uname = request.POST.get('student_uname', '').strip()
             self.msg = u'<h4>{0}</h4><p>{1}</p><hr />{2}'.format(
-                _('Delete User Results'), self.delete_user(uname), self.msg)
+                _('Block User Results'), self.block_user(uname), self.msg)
 
         context = {
             'datatable': self.datatable,
