@@ -4,15 +4,19 @@ Namespace that defines fields common to all blocks used in the LMS
 
 #from django.utils.translation import ugettext_noop as _
 from lazy import lazy
-
-from xblock.fields import Boolean, Scope, String, XBlockMixin, Dict
+from xblock.core import XBlock
+from xblock.fields import Boolean, Dict, Scope, String, XBlockMixin
 from xblock.validation import ValidationMessage
+
 from xmodule.modulestore.inheritance import UserPartitionList
 from xmodule.partitions.partitions import NoSuchUserPartitionError, NoSuchUserPartitionGroupError
 
 # Please do not remove, this is a workaround for Django 1.8.
 # more information can be found here: https://openedx.atlassian.net/browse/PLAT-902
 _ = lambda text: text
+
+INVALID_USER_PARTITION_VALIDATION = _(u"This component's access settings refer to deleted or invalid group configurations.")
+INVALID_USER_PARTITION_GROUP_VALIDATION = _(u"This component's access settings refer to deleted or invalid groups.")
 
 
 class GroupAccessDict(Dict):
@@ -26,6 +30,7 @@ class GroupAccessDict(Dict):
             return {unicode(k): access_dict[k] for k in access_dict}
 
 
+@XBlock.needs('partitions')
 class LmsBlockMixin(XBlockMixin):
     """
     Mixin that defines fields common to all blocks used in the LMS
@@ -42,7 +47,9 @@ class LmsBlockMixin(XBlockMixin):
         scope=Scope.settings,
     )
     chrome = String(
-        display_name=_("Courseware Chrome"),
+        display_name=_("Course Chrome"),
+        # Translators: DO NOT translate the words in quotes here, they are
+        # specific words for the acceptable values.
         help=_("Enter the chrome, or navigation tools, to use for the XBlock in the LMS. Valid values are: \n"
                "\"chromeless\" -- to not use tabs or the accordion; \n"
                "\"tabs\" -- to use tabs only; \n"
@@ -53,7 +60,7 @@ class LmsBlockMixin(XBlockMixin):
     )
     default_tab = String(
         display_name=_("Default Tab"),
-        help=_("Enter the tab that is selected in the XBlock. If not set, the Courseware tab is selected."),
+        help=_("Enter the tab that is selected in the XBlock. If not set, the Course tab is selected."),
         scope=Scope.settings,
         default=None,
     )
@@ -62,11 +69,6 @@ class LmsBlockMixin(XBlockMixin):
         help=_("Enter the source file name for LaTeX."),
         scope=Scope.settings,
         deprecated=True
-    )
-    ispublic = Boolean(
-        display_name=_("Course Is Public"),
-        help=_("Enter true or false. If true, the course is open to the public. If false, the course is open only to admins."),
-        scope=Scope.settings
     )
     visible_to_staff_only = Boolean(
         help=_("If true, can be seen only by course staff, regardless of start date."),
@@ -131,10 +133,10 @@ class LmsBlockMixin(XBlockMixin):
 
     def _get_user_partition(self, user_partition_id):
         """
-        Returns the user partition with the specified id.  Raises
-        `NoSuchUserPartitionError` if the lookup fails.
+        Returns the user partition with the specified id. Note that this method can return
+        an inactive user partition. Raises `NoSuchUserPartitionError` if the lookup fails.
         """
-        for user_partition in self.user_partitions:
+        for user_partition in self.runtime.service(self, 'partitions').course_partitions:
             if user_partition.id == user_partition_id:
                 return user_partition
 
@@ -144,7 +146,7 @@ class LmsBlockMixin(XBlockMixin):
         """
         Validates the state of this xblock instance.
         """
-        _ = self.runtime.service(self, "i18n").ugettext  # pylint: disable=redefined-outer-name
+        _ = self.runtime.service(self, "i18n").ugettext
         validation = super(LmsBlockMixin, self).validate()
         has_invalid_user_partitions = False
         has_invalid_groups = False
@@ -166,14 +168,14 @@ class LmsBlockMixin(XBlockMixin):
             validation.add(
                 ValidationMessage(
                     ValidationMessage.ERROR,
-                    _(u"This component refers to deleted or invalid content group configurations.")
+                    INVALID_USER_PARTITION_VALIDATION
                 )
             )
         if has_invalid_groups:
             validation.add(
                 ValidationMessage(
                     ValidationMessage.ERROR,
-                    _(u"This component refers to deleted or invalid content groups.")
+                    INVALID_USER_PARTITION_GROUP_VALIDATION
                 )
             )
         return validation

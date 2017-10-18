@@ -1,24 +1,31 @@
+# -*- coding: utf-8 -*-
 """Tests for account creation"""
-from datetime import datetime
 import json
 import unittest
+from datetime import datetime
+from importlib import import_module
 
 import ddt
+import mock
+import pytz
 from django.conf import settings
-from django.contrib.auth.models import User, AnonymousUser
+from django.contrib.auth.models import AnonymousUser, User
 from django.core.urlresolvers import reverse
 from django.test import TestCase, TransactionTestCase
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
-from django.utils.importlib import import_module
-import mock
+from mock import patch
 
-from openedx.core.djangoapps.user_api.preferences.api import get_user_preference
-from lang_pref import LANGUAGE_KEY
-from notification_prefs import NOTIFICATION_PREF_KEY
-from edxmako.tests import mako_middleware_process_request
-from external_auth.models import ExternalAuthMap
 import student
+from django_comment_common.models import ForumsConfig
+from notification_prefs import NOTIFICATION_PREF_KEY
+from openedx.core.djangoapps.external_auth.models import ExternalAuthMap
+from openedx.core.djangoapps.lang_pref import LANGUAGE_KEY
+from openedx.core.djangoapps.site_configuration.tests.mixins import SiteMixin
+from openedx.core.djangoapps.user_api.preferences.api import get_user_preference
+from student.forms import USERNAME_INVALID_CHARS_ASCII, USERNAME_INVALID_CHARS_UNICODE
+from student.models import UserAttribute
+from student.views import REGISTRATION_AFFILIATE_ID, REGISTRATION_UTM_CREATED_AT, REGISTRATION_UTM_PARAMETERS
 
 TEST_CS_URL = 'https://comments.service.test:123/'
 
@@ -39,50 +46,46 @@ TEST_CS_URL = 'https://comments.service.test:123/'
         ]
     }
 )
-class TestCreateAccount(TestCase):
+class TestCreateAccount(SiteMixin, TestCase):
     """Tests for account creation"""
 
     def setUp(self):
         super(TestCreateAccount, self).setUp()
+        self.username = "test_user"
         self.url = reverse("create_account")
         self.request_factory = RequestFactory()
         self.params = {
+            "username": self.username,
             "email": "test@example.org",
-            "nickname": "test",
             "password": "testpass",
             "name": "Test User",
             "honor_code": "true",
             "terms_of_service": "true",
         }
 
-    def test_create_account(self):
-        response = self.client.post(self.url, self.params)
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(User.objects.filter(email=self.params['email']).exists())
-
     @ddt.data("en", "eo")
     def test_default_lang_pref_saved(self, lang):
         with mock.patch("django.conf.settings.LANGUAGE_CODE", lang):
             response = self.client.post(self.url, self.params)
             self.assertEqual(response.status_code, 200)
-            user = User.objects.get(email=self.params['email'])
+            user = User.objects.get(username=self.username)
             self.assertEqual(get_user_preference(user, LANGUAGE_KEY), lang)
 
     @ddt.data("en", "eo")
     def test_header_lang_pref_saved(self, lang):
         response = self.client.post(self.url, self.params, HTTP_ACCEPT_LANGUAGE=lang)
-        user = User.objects.get(email=self.params['email'])
+        user = User.objects.get(username=self.username)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(get_user_preference(user, LANGUAGE_KEY), lang)
 
-    def create_account_and_fetch_profile(self):
+    def create_account_and_fetch_profile(self, host='microsite.example.com'):
         """
         Create an account with self.params, assert that the response indicates
         success, and return the UserProfile object for the newly created user
         """
-        response = self.client.post(self.url, self.params, HTTP_HOST="microsite.example.com")
+        response = self.client.post(self.url, self.params, HTTP_HOST=host)
         self.assertEqual(response.status_code, 200)
-        user = User.objects.get(email=self.params['email'])
+        user = User.objects.get(username=self.username)
         return user.profile
 
     def test_marketing_cookie(self):
@@ -122,6 +125,7 @@ class TestCreateAccount(TestCase):
     @mock.patch('student.views.analytics.identify')
     def test_segment_tracking(self, mock_segment_identify, _):
         year = datetime.now().year
+        year_of_birth = year - 14
         self.params.update({
             "level_of_education": "a",
             "gender": "o",
@@ -129,16 +133,17 @@ class TestCreateAccount(TestCase):
             "city": "Exampleton",
             "country": "US",
             "goals": "To test this feature",
-            "year_of_birth": str(year),
+            "year_of_birth": str(year_of_birth),
             "extra1": "extra_value1",
             "extra2": "extra_value2",
         })
 
         expected_payload = {
             'email': self.params['email'],
-            'username': 'edx_user_1',
+            'username': self.params['username'],
             'name': self.params['name'],
-            'age': 0,
+            'age': 13,
+            'yearOfBirth': year_of_birth,
             'education': 'Associate degree',
             'address': self.params['mailing_address'],
             'gender': 'Other/Prefer Not to Say',
@@ -222,6 +227,7 @@ class TestCreateAccount(TestCase):
         """
 
         request = self.request_factory.post(self.url, self.params)
+        request.site = self.site
         # now indicate we are doing ext_auth by setting 'ExternalAuthMap' in the session.
         request.session = import_module(settings.SESSION_ENGINE).SessionStore()  # empty session
         extauth = ExternalAuthMap(external_id='withmap@stanford.edu',
@@ -231,9 +237,9 @@ class TestCreateAccount(TestCase):
         request.session['ExternalAuthMap'] = extauth
         request.user = AnonymousUser()
 
-        mako_middleware_process_request(request)
-        with mock.patch('django.contrib.auth.models.User.email_user') as mock_send_mail:
-            student.views.create_account(request)
+        with mock.patch('edxmako.request_context.get_current_request', return_value=request):
+            with mock.patch('django.core.mail.send_mail') as mock_send_mail:
+                student.views.create_account(request)
 
         # check that send_mail is called
         if bypass_activation_email:
@@ -252,7 +258,7 @@ class TestCreateAccount(TestCase):
 
     @unittest.skipUnless(settings.FEATURES.get('AUTH_USE_SHIB'), "AUTH_USE_SHIB not set")
     @mock.patch.dict(settings.FEATURES, {'BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH': False, 'AUTOMATIC_AUTH_FOR_TESTING': False})
-    def test_extauth_bypass_sending_activation_email_without_bypass(self):
+    def test_extauth_bypass_sending_activation_email_without_bypass_1(self):
         """
         Tests user creation without sending activation email when
         settings.FEATURES['BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH']=False and doing external auth
@@ -261,7 +267,7 @@ class TestCreateAccount(TestCase):
 
     @unittest.skipUnless(settings.FEATURES.get('AUTH_USE_SHIB'), "AUTH_USE_SHIB not set")
     @mock.patch.dict(settings.FEATURES, {'BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH': False, 'AUTOMATIC_AUTH_FOR_TESTING': False, 'SKIP_EMAIL_VALIDATION': True})
-    def test_extauth_bypass_sending_activation_email_without_bypass(self):
+    def test_extauth_bypass_sending_activation_email_without_bypass_2(self):
         """
         Tests user creation without sending activation email when
         settings.FEATURES['BYPASS_ACTIVATION_EMAIL_FOR_EXTAUTH']=False and doing external auth
@@ -273,12 +279,147 @@ class TestCreateAccount(TestCase):
         with mock.patch.dict("student.models.settings.FEATURES", {"ENABLE_DISCUSSION_EMAIL_DIGEST": digest_enabled}):
             response = self.client.post(self.url, self.params)
             self.assertEqual(response.status_code, 200)
-            user = User.objects.get(email=self.params['email'])
+            user = User.objects.get(username=self.username)
             preference = get_user_preference(user, NOTIFICATION_PREF_KEY)
             if digest_enabled:
                 self.assertIsNotNone(preference)
             else:
                 self.assertIsNone(preference)
+
+    @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+    def test_affiliate_referral_attribution(self):
+        """
+        Verify that a referral attribution is recorded if an affiliate
+        cookie is present upon a new user's registration.
+        """
+        affiliate_id = 'test-partner'
+        self.client.cookies[settings.AFFILIATE_COOKIE_NAME] = affiliate_id
+        user = self.create_account_and_fetch_profile().user
+        self.assertEqual(UserAttribute.get_user_attribute(user, REGISTRATION_AFFILIATE_ID), affiliate_id)
+
+    @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+    def test_utm_referral_attribution(self):
+        """
+        Verify that a referral attribution is recorded if an affiliate
+        cookie is present upon a new user's registration.
+        """
+        utm_cookie_name = 'edx.test.utm'
+        with mock.patch('student.models.RegistrationCookieConfiguration.current') as config:
+            instance = config.return_value
+            instance.utm_cookie_name = utm_cookie_name
+
+            timestamp = 1475521816879
+            utm_cookie = {
+                'utm_source': 'test-source',
+                'utm_medium': 'test-medium',
+                'utm_campaign': 'test-campaign',
+                'utm_term': 'test-term',
+                'utm_content': 'test-content',
+                'created_at': timestamp
+            }
+
+            created_at = datetime.fromtimestamp(timestamp / float(1000), tz=pytz.UTC)
+
+            self.client.cookies[utm_cookie_name] = json.dumps(utm_cookie)
+            user = self.create_account_and_fetch_profile().user
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_source')),
+                utm_cookie.get('utm_source')
+            )
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_medium')),
+                utm_cookie.get('utm_medium')
+            )
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_campaign')),
+                utm_cookie.get('utm_campaign')
+            )
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_term')),
+                utm_cookie.get('utm_term')
+            )
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_content')),
+                utm_cookie.get('utm_content')
+            )
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_CREATED_AT),
+                str(created_at)
+            )
+
+    @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+    def test_no_referral(self):
+        """Verify that no referral is recorded when a cookie is not present."""
+        utm_cookie_name = 'edx.test.utm'
+        with mock.patch('student.models.RegistrationCookieConfiguration.current') as config:
+            instance = config.return_value
+            instance.utm_cookie_name = utm_cookie_name
+
+            self.assertIsNone(self.client.cookies.get(settings.AFFILIATE_COOKIE_NAME))  # pylint: disable=no-member
+            self.assertIsNone(self.client.cookies.get(utm_cookie_name))  # pylint: disable=no-member
+            user = self.create_account_and_fetch_profile().user
+            self.assertIsNone(UserAttribute.get_user_attribute(user, REGISTRATION_AFFILIATE_ID))
+            self.assertIsNone(UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_source')))
+            self.assertIsNone(UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_medium')))
+            self.assertIsNone(UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_campaign')))
+            self.assertIsNone(UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_term')))
+            self.assertIsNone(UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_content')))
+            self.assertIsNone(UserAttribute.get_user_attribute(user, REGISTRATION_UTM_CREATED_AT))
+
+    @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+    def test_incomplete_utm_referral(self):
+        """Verify that no referral is recorded when a cookie is not present."""
+        utm_cookie_name = 'edx.test.utm'
+        with mock.patch('student.models.RegistrationCookieConfiguration.current') as config:
+            instance = config.return_value
+            instance.utm_cookie_name = utm_cookie_name
+
+            utm_cookie = {
+                'utm_source': 'test-source',
+                'utm_medium': 'test-medium',
+                # No campaign
+                'utm_term': 'test-term',
+                'utm_content': 'test-content',
+                # No created at
+            }
+
+            self.client.cookies[utm_cookie_name] = json.dumps(utm_cookie)
+            user = self.create_account_and_fetch_profile().user
+
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_source')),
+                utm_cookie.get('utm_source')
+            )
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_medium')),
+                utm_cookie.get('utm_medium')
+            )
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_term')),
+                utm_cookie.get('utm_term')
+            )
+            self.assertEqual(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_content')),
+                utm_cookie.get('utm_content')
+            )
+            self.assertIsNone(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_PARAMETERS.get('utm_campaign'))
+            )
+            self.assertIsNone(
+                UserAttribute.get_user_attribute(user, REGISTRATION_UTM_CREATED_AT)
+            )
+
+    @patch("openedx.core.djangoapps.site_configuration.helpers.get_value", mock.Mock(return_value=False))
+    def test_create_account_not_allowed(self):
+        """
+        Test case to check user creation is forbidden when ALLOW_PUBLIC_ACCOUNT_CREATION feature flag is turned off
+        """
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_created_on_site_user_attribute_set(self):
+        profile = self.create_account_and_fetch_profile(host=self.site.domain)
+        self.assertEqual(UserAttribute.get_user_attribute(profile.user, 'created_on_site'), self.site.domain)
 
 
 @ddt.ddt
@@ -290,7 +431,7 @@ class TestCreateAccountValidation(TestCase):
         super(TestCreateAccountValidation, self).setUp()
         self.url = reverse("create_account")
         self.minimal_params = {
-            "nickname": "test_nickname",
+            "username": "test_username",
             "email": "test_email@example.com",
             "password": "test_password",
             "name": "Test Name",
@@ -323,26 +464,32 @@ class TestCreateAccountValidation(TestCase):
     def test_minimal_success(self):
         self.assert_success(self.minimal_params)
 
-    def test_nickname(self):
+    def test_username(self):
         params = dict(self.minimal_params)
 
-        def assert_nickname_error(expected_error):
+        def assert_username_error(expected_error):
             """
             Assert that requesting account creation results in the expected
             error
             """
-            self.assert_error(params, "nickname", expected_error)
+            self.assert_error(params, "username", expected_error)
 
         # Missing
-        del params["nickname"]
-        assert_nickname_error("Nickname must be minimum of two characters long")
+        del params["username"]
+        assert_username_error("Username must be minimum of two characters long")
 
         # Empty, too short
-        for nickname in ["", "a"]:
-            params["nickname"] = nickname
-            assert_nickname_error("Nickname must be minimum of two characters long")
+        for username in ["", "a"]:
+            params["username"] = username
+            assert_username_error("Username must be minimum of two characters long")
 
-        # Nickname may be longer then 30 characters and have spaces
+        # Too long
+        params["username"] = "this_username_has_31_characters"
+        assert_username_error("Username cannot be more than 30 characters long")
+
+        # Invalid
+        params["username"] = "invalid username"
+        assert_username_error(str(USERNAME_INVALID_CHARS_ASCII))
 
     def test_email(self):
         params = dict(self.minimal_params)
@@ -364,12 +511,53 @@ class TestCreateAccountValidation(TestCase):
             assert_email_error("A properly formatted e-mail is required")
 
         # Too long
-        params["email"] = "this_email_address_has_76_characters_in_it_so_it_is_unacceptable@example.com"
-        assert_email_error("Email cannot be more than 75 characters long")
+        params["email"] = '{email}@example.com'.format(
+            email='this_email_address_has_254_characters_in_it_so_it_is_unacceptable' * 4
+        )
+
+        # Assert that we get error when email has more than 254 characters.
+        self.assertGreater(len(params['email']), 254)
+        assert_email_error("Email cannot be more than 254 characters long")
+
+        # Valid Email
+        params["email"] = "student@edx.com"
+        # Assert success on valid email
+        self.assertLess(len(params["email"]), 254)
+        self.assert_success(params)
 
         # Invalid
         params["email"] = "not_an_email_address"
         assert_email_error("A properly formatted e-mail is required")
+
+    @override_settings(
+        REGISTRATION_EMAIL_PATTERNS_ALLOWED=[
+            r'.*@edx.org',  # Naive regex omitting '^', '$' and '\.' should still work.
+            r'^.*@(.*\.)?example\.com$',
+            r'^(^\w+\.\w+)@school.tld$',
+        ]
+    )
+    @ddt.data(
+        ('bob@we-are.bad', False),
+        ('bob@edx.org.we-are.bad', False),
+        ('staff@edx.org', True),
+        ('student@example.com', True),
+        ('student@sub.example.com', True),
+        ('mr.teacher@school.tld', True),
+        ('student1234@school.tld', False),
+    )
+    @ddt.unpack
+    def test_email_pattern_requirements(self, email, expect_success):
+        """
+        Test the REGISTRATION_EMAIL_PATTERNS_ALLOWED setting, a feature which
+        can be used to only allow people register if their email matches a
+        against a whitelist of regexs.
+        """
+        params = dict(self.minimal_params)
+        params["email"] = email
+        if expect_success:
+            self.assert_success(params)
+        else:
+            self.assert_error(params, "email", "Unauthorized email address.")
 
     def test_password(self):
         params = dict(self.minimal_params)
@@ -393,8 +581,8 @@ class TestCreateAccountValidation(TestCase):
         # Password policy is tested elsewhere
 
         # Matching username
-        params["nickname"] = params["password"] = "test_nickname_and_password"
-        assert_password_error("Nickname and password fields cannot match")
+        params["username"] = params["password"] = "test_username_and_password"
+        assert_password_error("Username and password fields cannot match")
 
     def test_name(self):
         params = dict(self.minimal_params)
@@ -442,7 +630,8 @@ class TestCreateAccountValidation(TestCase):
         with override_settings(REGISTRATION_EXTRA_FIELDS={"honor_code": "optional"}):
             # Missing
             del params["honor_code"]
-            # Need to change email because user was created above
+            # Need to change username/email because user was created above
+            params["username"] = "another_test_username"
             params["email"] = "another_test_email@example.com"
             self.assert_success(params)
 
@@ -511,36 +700,102 @@ class TestCreateCommentsServiceUser(TransactionTestCase):
 
     def setUp(self):
         super(TestCreateCommentsServiceUser, self).setUp()
+        self.username = "test_user"
         self.url = reverse("create_account")
         self.params = {
+            "username": self.username,
             "email": "test@example.org",
-            "nickname": "test",
             "password": "testpass",
             "name": "Test User",
             "honor_code": "true",
             "terms_of_service": "true",
         }
 
+        config = ForumsConfig.current()
+        config.enabled = True
+        config.save()
+
     def test_cs_user_created(self, request):
         "If user account creation succeeds, we should create a comments service user"
         response = self.client.post(self.url, self.params)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(request.called)
-
-        user = User.objects.get(email=self.params['email'])
         args, kwargs = request.call_args
         self.assertEqual(args[0], 'put')
         self.assertTrue(args[1].startswith(TEST_CS_URL))
-        self.assertEqual(kwargs['data']['username'], user.username)
+        self.assertEqual(kwargs['data']['username'], self.params['username'])
 
     @mock.patch("student.models.Registration.register", side_effect=Exception)
     def test_cs_user_not_created(self, register, request):
         "If user account creation fails, we should not create a comments service user"
         try:
-            response = self.client.post(self.url, self.params)
+            self.client.post(self.url, self.params)
         except:
             pass
         with self.assertRaises(User.DoesNotExist):
-            User.objects.get(email=self.params['email'])
+            User.objects.get(username=self.username)
         self.assertTrue(register.called)
         self.assertFalse(request.called)
+
+
+class TestUnicodeUsername(TestCase):
+    """
+    Test for Unicode usernames which is an optional feature.
+    """
+
+    def setUp(self):
+        super(TestUnicodeUsername, self).setUp()
+        self.url = reverse('create_account')
+
+        # The word below reads "Omar II", in Arabic. It also contains a space and
+        # an Eastern Arabic Number another option is to use the Esperanto fake
+        # language but this was used instead to test non-western letters.
+        self.username = u'عمر ٢'
+
+        self.url_params = {
+            'username': self.username,
+            'email': 'unicode_user@example.com',
+            "password": "testpass",
+            'name': 'unicode_user',
+            'terms_of_service': 'true',
+            'honor_code': 'true',
+        }
+
+    @patch.dict(settings.FEATURES, {'ENABLE_UNICODE_USERNAME': False})
+    def test_with_feature_disabled(self):
+        """
+        Ensures backward-compatible defaults.
+        """
+        response = self.client.post(self.url, self.url_params)
+
+        self.assertEquals(response.status_code, 400)
+        obj = json.loads(response.content)
+        self.assertEquals(USERNAME_INVALID_CHARS_ASCII, obj['value'])
+
+        with self.assertRaises(User.DoesNotExist):
+            User.objects.get(email=self.url_params['email'])
+
+    @patch.dict(settings.FEATURES, {'ENABLE_UNICODE_USERNAME': True})
+    def test_with_feature_enabled(self):
+        response = self.client.post(self.url, self.url_params)
+        self.assertEquals(response.status_code, 200)
+
+        self.assertTrue(User.objects.get(email=self.url_params['email']))
+
+    @patch.dict(settings.FEATURES, {'ENABLE_UNICODE_USERNAME': True})
+    def test_special_chars_with_feature_enabled(self):
+        """
+        Ensures that special chars are still prevented.
+        """
+
+        invalid_params = self.url_params.copy()
+        invalid_params['username'] = '**john**'
+
+        response = self.client.post(self.url, invalid_params)
+        self.assertEquals(response.status_code, 400)
+
+        obj = json.loads(response.content)
+        self.assertEquals(USERNAME_INVALID_CHARS_UNICODE, obj['value'])
+
+        with self.assertRaises(User.DoesNotExist):
+            User.objects.get(email=self.url_params['email'])

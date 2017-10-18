@@ -1,11 +1,22 @@
 """Defines ``Group`` and ``UserPartition`` models for partitioning"""
 
 from collections import namedtuple
+
 from stevedore.extension import ExtensionManager
 
 # We use ``id`` in this file as the IDs of our Groups and UserPartitions,
 # which Pylint disapproves of.
-# pylint: disable=invalid-name, redefined-builtin
+# pylint: disable=redefined-builtin
+
+
+# UserPartition IDs must be unique. The Cohort and Random UserPartitions (when they are
+# created via Studio) choose an unused ID in the range of 100 (historical) to MAX_INT. Therefore the
+# dynamic UserPartitionIDs must be under 100, and they have to be hard-coded to ensure
+# they are always the same whenever the dynamic partition is added (since the UserPartition
+# ID is stored in the xblock group_access dict).
+ENROLLMENT_TRACK_PARTITION_ID = 50
+
+MINIMUM_STATIC_PARTITION_ID = 100
 
 
 class UserPartitionError(Exception):
@@ -39,7 +50,6 @@ class Group(namedtuple("Group", "id name")):
     VERSION = 1
 
     def __new__(cls, id, name):
-        # pylint: disable=super-on-old-class
         return super(Group, cls).__new__(cls, int(id), name)
 
     def to_json(self):
@@ -70,11 +80,11 @@ class Group(namedtuple("Group", "id name")):
 
         for key in ("id", "name", "version"):
             if key not in value:
-                raise TypeError(u"Group dict {0} missing value key '{1}'".format(
+                raise TypeError("Group dict {0} missing value key '{1}'".format(
                     value, key))
 
         if value["version"] != Group.VERSION:
-            raise TypeError(u"Group dict {0} has unexpected version".format(
+            raise TypeError("Group dict {0} has unexpected version".format(
                 value))
 
         return Group(value["id"], value["name"])
@@ -109,7 +119,6 @@ class UserPartition(namedtuple("UserPartition", "id name description groups sche
     VERSION_1_SCHEME = "random"
 
     def __new__(cls, id, name, description, groups, scheme=None, parameters=None, active=True, scheme_id=VERSION_1_SCHEME):  # pylint: disable=line-too-long
-        # pylint: disable=super-on-old-class
         if not scheme:
             scheme = UserPartition.get_scheme(scheme_id)
         if parameters is None:
@@ -129,7 +138,7 @@ class UserPartition(namedtuple("UserPartition", "id name description groups sche
         try:
             scheme = UserPartition.scheme_extensions[name].plugin
         except KeyError:
-            raise UserPartitionError(u"Unrecognized scheme {0}".format(name))
+            raise UserPartitionError("Unrecognized scheme '{0}'".format(name))
         scheme.name = name
         return scheme
 
@@ -166,7 +175,7 @@ class UserPartition(namedtuple("UserPartition", "id name description groups sche
 
         for key in ("id", "name", "description", "version", "groups"):
             if key not in value:
-                raise TypeError(u"UserPartition dict {0} missing value key '{1}'".format(value, key))
+                raise TypeError("UserPartition dict {0} missing value key '{1}'".format(value, key))
 
         if value["version"] == 1:
             # If no scheme was provided, set it to the default ('random')
@@ -177,28 +186,38 @@ class UserPartition(namedtuple("UserPartition", "id name description groups sche
         # version, we should try to read it rather than raising an exception.
         elif value["version"] >= 2:
             if "scheme" not in value:
-                raise TypeError(u"UserPartition dict {0} missing value key 'scheme'".format(value))
+                raise TypeError("UserPartition dict {0} missing value key 'scheme'".format(value))
 
             scheme_id = value["scheme"]
         else:
-            raise TypeError(u"UserPartition dict {0} has unexpected version".format(value))
+            raise TypeError("UserPartition dict {0} has unexpected version".format(value))
 
         parameters = value.get("parameters", {})
         active = value.get("active", True)
         groups = [Group.from_json(g) for g in value["groups"]]
         scheme = UserPartition.get_scheme(scheme_id)
         if not scheme:
-            raise TypeError(u"UserPartition dict {0} has unrecognized scheme {1}".format(value, scheme_id))
+            raise TypeError("UserPartition dict {0} has unrecognized scheme {1}".format(value, scheme_id))
 
-        return UserPartition(
-            value["id"],
-            value["name"],
-            value["description"],
-            groups,
-            scheme,
-            parameters,
-            active,
-        )
+        if hasattr(scheme, "create_user_partition"):
+            return scheme.create_user_partition(
+                value["id"],
+                value["name"],
+                value["description"],
+                groups,
+                parameters,
+                active,
+            )
+        else:
+            return UserPartition(
+                value["id"],
+                value["name"],
+                value["description"],
+                groups,
+                scheme,
+                parameters,
+                active,
+            )
 
     def get_group(self, group_id):
         """
@@ -211,11 +230,12 @@ class UserPartition(namedtuple("UserPartition", "id name description groups sche
             NoSuchUserPartitionGroupError: The specified group could not be found.
 
         """
-        # pylint: disable=no-member
         for group in self.groups:
             if group.id == group_id:
                 return group
 
         raise NoSuchUserPartitionGroupError(
-            u"could not find a Group with ID [{}] in UserPartition [{}]".format(group_id, self.id)
+            "Could not find a Group with ID [{group_id}] in UserPartition [{partition_id}].".format(
+                group_id=group_id, partition_id=self.id
+            )
         )

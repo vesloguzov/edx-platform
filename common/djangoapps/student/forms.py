@@ -1,25 +1,38 @@
 """
 Utility functions for validating forms
 """
+import re
+from importlib import import_module
+
 from django import forms
-from django.forms import widgets
-from django.core.exceptions import ValidationError
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.hashers import UNUSABLE_PASSWORD_PREFIX
+from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
-
+from django.core.exceptions import ValidationError
+from django.forms import widgets
+from django.template import loader
 from django.utils.http import int_to_base36
 from django.utils.translation import ugettext_lazy as _
-from django.template import loader
+from django.core.validators import RegexValidator, slug_re
 
-from django.conf import settings
-from microsite_configuration import microsite
-from util.password_policy_validators import (
-    validate_password_length,
-    validate_password_complexity,
-    validate_password_dictionary,
-)
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
+from openedx.core.djangoapps.user_api import accounts as accounts_settings
+from student.models import CourseEnrollmentAllowed
+from util.password_policy_validators import validate_password_strength
+
+
+USERNAME_TOO_SHORT_MSG = _("Username must be minimum of two characters long")
+USERNAME_TOO_LONG_MSG = _("Username cannot be more than %(limit_value)s characters long")
+
+# Translators: This message is shown when the Unicode usernames are NOT allowed
+USERNAME_INVALID_CHARS_ASCII = _("Usernames can only contain Roman letters, western numerals (0-9), "
+                                 "underscores (_), and hyphens (-).")
+
+# Translators: This message is shown only when the Unicode usernames are allowed
+USERNAME_INVALID_CHARS_UNICODE = _("Usernames can only contain letters, numerals, underscore (_), numbers "
+                                   "and @/./+/-/_ characters.")
 
 
 class PasswordResetFormNoActive(PasswordResetForm):
@@ -48,12 +61,11 @@ class PasswordResetFormNoActive(PasswordResetForm):
 
     def save(
             self,
-            domain_override=None,
             subject_template_name='registration/password_reset_subject.txt',
             email_template_name='registration/password_reset_email.html',
             use_https=False,
             token_generator=default_token_generator,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=configuration_helpers.get_value('email_from_address', settings.DEFAULT_FROM_EMAIL),
             request=None
     ):
         """
@@ -63,17 +75,14 @@ class PasswordResetFormNoActive(PasswordResetForm):
         # This import is here because we are copying and modifying the .save from Django 1.4.5's
         # django.contrib.auth.forms.PasswordResetForm directly, which has this import in this place.
         from django.core.mail import send_mail
-        mktg_site_name = microsite.get_value(
+        mktg_site_name = configuration_helpers.get_value(
             'MKTG_SITE_NAME',
-            microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+            configuration_helpers.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
         )
-        if not domain_override:
-            site_name = microsite.get_value(
-                'SITE_NAME',
-                settings.SITE_NAME
-            )
-        else:
-            site_name = domain_override
+        site_name = configuration_helpers.get_value(
+            'SITE_NAME',
+            settings.SITE_NAME
+        )
 
         for user in self.users_cache:
             context = {
@@ -84,7 +93,7 @@ class PasswordResetFormNoActive(PasswordResetForm):
                 'user': user,
                 'token': token_generator.make_token(user),
                 'protocol': 'https' if use_https else 'http',
-                'platform_name': microsite.get_value('platform_name', settings.PLATFORM_NAME)
+                'platform_name': configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME)
             }
             subject = loader.render_to_string(subject_template_name, context)
             # Email subject *must not* contain newlines
@@ -109,10 +118,61 @@ class TrueField(forms.BooleanField):
     widget = TrueCheckbox
 
 
-_NICKNAME_TOO_SHORT_MSG = _("Nickname must be minimum of two characters long")
-_EMAIL_INVALID_MSG = _("A properly formatted e-mail is required")
-_PASSWORD_INVALID_MSG = _("A valid password is required")
-_NAME_TOO_SHORT_MSG = _("Your legal name must be a minimum of two characters long")
+def validate_username(username):
+    """
+    Verifies a username is valid, raises a ValidationError otherwise.
+    Args:
+        username (unicode): The username to validate.
+
+    This function is configurable with `ENABLE_UNICODE_USERNAME` feature.
+    """
+
+    username_re = slug_re
+    flags = None
+    message = USERNAME_INVALID_CHARS_ASCII
+
+    if settings.FEATURES.get("ENABLE_UNICODE_USERNAME"):
+        username_re = r"^{regex}$".format(regex=settings.USERNAME_REGEX_PARTIAL)
+        flags = re.UNICODE
+        message = USERNAME_INVALID_CHARS_UNICODE
+
+    validator = RegexValidator(
+        regex=username_re,
+        flags=flags,
+        message=message,
+        code='invalid',
+    )
+
+    validator(username)
+
+
+class UsernameField(forms.CharField):
+    """
+    A CharField that validates usernames based on the `ENABLE_UNICODE_USERNAME` feature.
+    """
+
+    default_validators = [validate_username]
+
+    def __init__(self, *args, **kwargs):
+        super(UsernameField, self).__init__(
+            min_length=accounts_settings.USERNAME_MIN_LENGTH,
+            max_length=accounts_settings.USERNAME_MAX_LENGTH,
+            error_messages={
+                "required": USERNAME_TOO_SHORT_MSG,
+                "min_length": USERNAME_TOO_SHORT_MSG,
+                "max_length": USERNAME_TOO_LONG_MSG,
+            }
+        )
+
+    def clean(self, value):
+        """
+        Strips the spaces from the username.
+
+        Similar to what `django.forms.SlugField` does.
+        """
+
+        value = self.to_python(value).strip()
+        return super(UsernameField, self).clean(value)
 
 
 class AccountCreationForm(forms.Form):
@@ -120,18 +180,18 @@ class AccountCreationForm(forms.Form):
     A form to for account creation data. It is currently only used for
     validation, not rendering.
     """
+
+    _EMAIL_INVALID_MSG = _("A properly formatted e-mail is required")
+    _PASSWORD_INVALID_MSG = _("A valid password is required")
+    _NAME_TOO_SHORT_MSG = _("Your legal name must be a minimum of two characters long")
+
     # TODO: Resolve repetition
-    nickname = forms.CharField(
-        min_length=2,
-        error_messages={
-            "required": _NICKNAME_TOO_SHORT_MSG,
-            "invalid": _("Usernames must contain only letters, numbers, underscores (_), and hyphens (-)."),
-            "min_length": _NICKNAME_TOO_SHORT_MSG,
-            "max_length": _("Username cannot be more than %(limit_value)s characters long"),
-        }
-    )
+
+    username = UsernameField()
+
     email = forms.EmailField(
-        max_length=75,  # Limit per RFCs is 254, but User's email field in django 1.4 only takes 75
+        max_length=accounts_settings.EMAIL_MAX_LENGTH,
+        min_length=accounts_settings.EMAIL_MIN_LENGTH,
         error_messages={
             "required": _EMAIL_INVALID_MSG,
             "invalid": _EMAIL_INVALID_MSG,
@@ -139,14 +199,14 @@ class AccountCreationForm(forms.Form):
         }
     )
     password = forms.CharField(
-        min_length=2,
+        min_length=accounts_settings.PASSWORD_MIN_LENGTH,
         error_messages={
             "required": _PASSWORD_INVALID_MSG,
             "min_length": _PASSWORD_INVALID_MSG,
         }
     )
     name = forms.CharField(
-        min_length=2,
+        min_length=accounts_settings.NAME_MIN_LENGTH,
         error_messages={
             "required": _NAME_TOO_SHORT_MSG,
             "min_length": _NAME_TOO_SHORT_MSG,
@@ -158,7 +218,7 @@ class AccountCreationForm(forms.Form):
             data=None,
             extra_fields=None,
             extended_profile_fields=None,
-            enforce_nickname_neq_password=False,
+            enforce_username_neq_password=False,
             enforce_password_policy=False,
             tos_required=True
     ):
@@ -166,7 +226,7 @@ class AccountCreationForm(forms.Form):
 
         extra_fields = extra_fields or {}
         self.extended_profile_fields = extended_profile_fields or {}
-        self.enforce_nickname_neq_password = enforce_nickname_neq_password
+        self.enforce_username_neq_password = enforce_username_neq_password
         self.enforce_password_policy = enforce_password_policy
         if tos_required:
             self.fields["terms_of_service"] = TrueField(
@@ -216,19 +276,39 @@ class AccountCreationForm(forms.Form):
         """Enforce password policies (if applicable)"""
         password = self.cleaned_data["password"]
         if (
-                self.enforce_nickname_neq_password and
-                "nickname" in self.cleaned_data and
-                self.cleaned_data["nickname"] == password
+                self.enforce_username_neq_password and
+                "username" in self.cleaned_data and
+                self.cleaned_data["username"] == password
         ):
-            raise ValidationError(_("Nickname and password fields cannot match"))
+            raise ValidationError(_("Username and password fields cannot match"))
         if self.enforce_password_policy:
             try:
-                validate_password_length(password)
-                validate_password_complexity(password)
-                validate_password_dictionary(password)
+                validate_password_strength(password)
             except ValidationError, err:
                 raise ValidationError(_("Password: ") + "; ".join(err.messages))
         return password
+
+    def clean_email(self):
+        """ Enforce email restrictions (if applicable) """
+        email = self.cleaned_data["email"]
+        if settings.REGISTRATION_EMAIL_PATTERNS_ALLOWED is not None:
+            # This Open edX instance has restrictions on what email addresses are allowed.
+            allowed_patterns = settings.REGISTRATION_EMAIL_PATTERNS_ALLOWED
+            # We append a '$' to the regexs to prevent the common mistake of using a
+            # pattern like '.*@edx\\.org' which would match 'bob@edx.org.badguy.com'
+            if not any(re.match(pattern + "$", email) for pattern in allowed_patterns):
+                # This email is not on the whitelist of allowed emails. Check if
+                # they may have been manually invited by an instructor and if not,
+                # reject the registration.
+                if not CourseEnrollmentAllowed.objects.filter(email=email).exists():
+                    raise ValidationError(_("Unauthorized email address."))
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationError(
+                _(
+                    "It looks like {email} belongs to an existing account. Try again with a different email address."
+                ).format(email=email)
+            )
+        return email
 
     def clean_year_of_birth(self):
         """
@@ -251,3 +331,18 @@ class AccountCreationForm(forms.Form):
             for key, value in self.cleaned_data.items()
             if key in self.extended_profile_fields and value is not None
         }
+
+
+def get_registration_extension_form(*args, **kwargs):
+    """
+    Convenience function for getting the custom form set in settings.REGISTRATION_EXTENSION_FORM.
+
+    An example form app for this can be found at http://github.com/open-craft/custom-form-app
+    """
+    if not settings.FEATURES.get("ENABLE_COMBINED_LOGIN_REGISTRATION"):
+        return None
+    if not getattr(settings, 'REGISTRATION_EXTENSION_FORM', None):
+        return None
+    module, klass = settings.REGISTRATION_EXTENSION_FORM.rsplit('.', 1)
+    module = import_module(module)
+    return getattr(module, klass)(*args, **kwargs)

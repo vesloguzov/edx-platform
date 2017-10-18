@@ -1,22 +1,21 @@
 """
 This file contains view functions for wrapping the django-wiki.
 """
+import cgi
 import logging
 import re
-import cgi
 
 from django.conf import settings
-from django.contrib.sites.models import Site
-from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import redirect
 from django.utils.translation import ugettext as _
-
-from wiki.core.exceptions import NoRootURL
-from wiki.models import URLPath, Article
-
-from courseware.courses import get_course_by_id
-from course_wiki.utils import course_wiki_slug
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
+from wiki.core.exceptions import NoRootURL
+from wiki.models import Article, URLPath
+
+from course_wiki.utils import course_wiki_slug
+from courseware.courses import get_course_by_id
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
+from openedx.features.enterprise_support.api import data_sharing_consent_required
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +29,8 @@ def root_create(request):  # pylint: disable=unused-argument
     return redirect('wiki:get', path=root.path)
 
 
-def course_wiki_redirect(request, course_id):  # pylint: disable=unused-argument
+@data_sharing_consent_required
+def course_wiki_redirect(request, course_id, wiki_path=""):  # pylint: disable=unused-argument
     """
     This redirects to whatever page on the wiki that the course designates
     as it's home page. A course's wiki must be an article on the root (for
@@ -50,20 +50,8 @@ def course_wiki_redirect(request, course_id):  # pylint: disable=unused-argument
     if not valid_slug:
         return redirect("wiki:get", path="")
 
-    # The wiki needs a Site object created. We make sure it exists here
     try:
-        Site.objects.get_current()
-    except Site.DoesNotExist:
-        new_site = Site()
-        new_site.domain = settings.SITE_NAME
-        new_site.name = "edX"
-        new_site.save()
-        site_id = str(new_site.id)  # pylint: disable=no-member
-        if site_id != str(settings.SITE_ID):
-            raise ImproperlyConfigured("No site object was created and the SITE_ID doesn't match the newly created one. {} != {}".format(site_id, settings.SITE_ID))
-
-    try:
-        urlpath = URLPath.get_by_path(course_slug, select_related=True)
+        urlpath = URLPath.get_by_path(wiki_path or course_slug, select_related=True)
 
         results = list(Article.objects.filter(id=urlpath.article.id))
         if results:
@@ -89,7 +77,7 @@ def course_wiki_redirect(request, course_id):  # pylint: disable=unused-argument
             # Translators: this string includes wiki markup.  Leave the ** and the _ alone.
             _("This is the wiki for **{organization}**'s _{course_name}_.").format(
                 organization=course.display_org_with_default,
-                course_name=course.display_name_with_default,
+                course_name=course.display_name_with_default_escaped,
             )
         )
         urlpath = URLPath.create_article(
@@ -125,7 +113,9 @@ def get_or_create_root():
         pass
 
     starting_content = "\n".join((
-        _("Welcome to the {platform_name} Wiki").format(platform_name=settings.PLATFORM_NAME),
+        _("Welcome to the {platform_name} Wiki").format(
+            platform_name=configuration_helpers.get_value('PLATFORM_NAME', settings.PLATFORM_NAME),
+        ),
         "===",
         _("Visit a course wiki to add an article."),
     ))

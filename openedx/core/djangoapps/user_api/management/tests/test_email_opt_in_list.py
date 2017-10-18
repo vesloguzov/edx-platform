@@ -5,10 +5,10 @@ import tempfile
 import shutil
 import csv
 from collections import defaultdict
-from unittest import skipUnless
+from nose.plugins.attrib import attr
 
 import ddt
-from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.management.base import CommandError
 
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
@@ -19,10 +19,12 @@ from student.models import CourseEnrollment
 from openedx.core.djangoapps.user_api.preferences.api import update_email_opt_in
 from openedx.core.djangoapps.user_api.models import UserOrgTag
 from openedx.core.djangoapps.user_api.management.commands import email_opt_in_list
+from openedx.core.djangolib.testing.utils import skip_unless_lms
 
 
+@attr(shard=2)
 @ddt.ddt
-@skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+@skip_unless_lms
 class EmailOptInListTest(ModuleStoreTestCase):
     """Tests for the email opt-in list management command. """
 
@@ -34,6 +36,8 @@ class EmailOptInListTest(ModuleStoreTestCase):
 
     OUTPUT_FILE_NAME = "test_org_email_opt_in.csv"
     OUTPUT_FIELD_NAMES = [
+        "user_id",
+        "username",
         "email",
         "full_name",
         "course_id",
@@ -255,6 +259,24 @@ class EmailOptInListTest(ModuleStoreTestCase):
         with self.assertRaisesRegexp(CommandError, "^File already exists"):
             email_opt_in_list.Command().handle(temp_file.name, self.TEST_ORG)
 
+    def test_no_user_profile(self):
+        """
+        Tests that command does not break if a user has no profile.
+        """
+        self._create_courses_and_enrollments((self.TEST_ORG, True))
+        self._set_opt_in_pref(self.user, self.TEST_ORG, True)
+
+        # Remove the user profile, and re-fetch user
+        self.assertTrue(hasattr(self.user, 'profile'))
+        self.user.profile.delete()
+        user = User.objects.get(id=self.user.id)
+
+        # Test that user do not have profile
+        self.assertFalse(hasattr(user, 'profile'))
+
+        output = self._run_command(self.TEST_ORG)
+        self._assert_output(output, (user, self.courses[0].id, True))
+
     def _create_courses_and_enrollments(self, *args):
         """Create courses and enrollments.
 
@@ -380,6 +402,8 @@ class EmailOptInListTest(ModuleStoreTestCase):
 
         # Check the header row
         self.assertEqual({
+            "user_id": "user_id",
+            "username": "username",
             "email": "email",
             "full_name": "full_name",
             "course_id": "course_id",
@@ -390,8 +414,14 @@ class EmailOptInListTest(ModuleStoreTestCase):
         # Check data rows
         for user, course_id, opt_in_pref in args:
             self.assertIn({
+                "user_id": str(user.id),
+                "username": user.username.encode('utf-8'),
                 "email": user.email.encode('utf-8'),
-                "full_name": user.profile.name.encode('utf-8'),
+                "full_name": (
+                    user.profile.name.encode('utf-8')
+                    if hasattr(user, 'profile')
+                    else ''
+                ),
                 "course_id": unicode(course_id).encode('utf-8'),
                 "is_opted_in_for_email": unicode(opt_in_pref),
                 "preference_set_datetime": (

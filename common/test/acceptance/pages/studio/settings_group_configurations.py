@@ -1,9 +1,8 @@
 """
 Course Group Configurations page.
 """
-from bok_choy.promise import EmptyPromise
-from ..common.utils import confirm_prompt
-from .course_page import CoursePage
+from common.test.acceptance.pages.common.utils import confirm_prompt
+from common.test.acceptance.pages.studio.course_page import CoursePage
 
 
 class GroupConfigurationsPage(CoursePage):
@@ -19,17 +18,10 @@ class GroupConfigurationsPage(CoursePage):
         """
         Verify that the browser is on the page and it is not still loading.
         """
-        EmptyPromise(
-            lambda: self.q(css='body.view-group-configurations').present,
-            'On the group configuration page'
-        ).fulfill()
-
-        EmptyPromise(
-            lambda: not self.q(css='span.spin').visible,
-            'Group Configurations are finished loading'
-        ).fulfill()
-
-        return True
+        return all([
+            self.q(css='body.view-group-configurations').present,
+            self.q(css='div.ui-loading.is-hidden').present
+        ])
 
     @property
     def experiment_group_configurations(self):
@@ -98,6 +90,17 @@ class GroupConfigurationsPage(CoursePage):
         Returns whether or not anything related to content experiments is present.
         """
         return self.q(css=self.experiment_groups_css).present or self.q(css=".experiment-groups-doc").present
+
+    @property
+    def enrollment_track_section_present(self):
+        return self.q(css='.wrapper-groups.content-groups.enrollment_track').present
+
+    @property
+    def enrollment_track_edit_present(self):
+        return self.q(css='.wrapper-groups.content-groups.enrollment_track .action.action-edit').present
+
+    def get_enrollment_groups(self):
+        return self.q(css='.wrapper-groups.content-groups.enrollment_track .collection-details .title').text
 
 
 class GroupConfiguration(object):

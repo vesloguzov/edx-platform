@@ -9,11 +9,13 @@ Configuration values:
 If no grade response is configured, a default response will be returned.
 """
 
-from .http import StubHttpRequestHandler, StubHttpService, require_params
-import json
 import copy
-from requests import post
+import json
 from threading import Timer
+
+from requests import post
+
+from .http import StubHttpRequestHandler, StubHttpService, require_params
 
 
 class StubXQueueHandler(StubHttpRequestHandler):
@@ -39,7 +41,8 @@ class StubXQueueHandler(StubHttpRequestHandler):
         if self._is_grade_request():
 
             # If configured, send the grader payload to other services.
-            self._register_submission(self.post_dict['xqueue_body'])
+            # TODO TNL-3906
+            # self._register_submission(self.post_dict['xqueue_body'])
 
             try:
                 xqueue_header = json.loads(self.post_dict['xqueue_header'])

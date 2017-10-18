@@ -1,6 +1,6 @@
-(function (define) {
+(function(define) {
     'use strict';
-    define(['backbone'], function (Backbone) {
+    define(['backbone'], function(Backbone) {
         return Backbone.Model.extend({
             defaults: {
                 username: null,
@@ -12,7 +12,7 @@
                 grade: null,
                 created: null,
                 modified: null,
-                regeneratable: false
+                generation_enabled: false
             }
         });
     });

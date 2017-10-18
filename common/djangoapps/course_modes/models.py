@@ -1,16 +1,20 @@
 """
 Add and create new modes for running courses on this particular LMS
 """
-import pytz
-from datetime import datetime
+from collections import defaultdict, namedtuple
+from datetime import datetime, timedelta
 
+import pytz
+from config_models.models import ConfigurationModel
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from collections import namedtuple, defaultdict
-from django.utils.translation import ugettext_lazy as _
 from django.db.models import Q
+from django.dispatch import receiver
+from django.utils.translation import ugettext_lazy as _
 
-from xmodule_django.models import CourseKeyField
+from openedx.core.djangoapps.xmodule_django.models import CourseKeyField
+from request_cache.middleware import RequestCache, ns_request_cached
 
 Mode = namedtuple('Mode',
                   [
@@ -22,6 +26,7 @@ Mode = namedtuple('Mode',
                       'expiration_datetime',
                       'description',
                       'sku',
+                      'bulk_sku',
                   ])
 
 
@@ -30,6 +35,9 @@ class CourseMode(models.Model):
     We would like to offer a course in a variety of modes.
 
     """
+    class Meta(object):
+        app_label = "course_modes"
+
     # the course that this mode is attached to
     course_id = CourseKeyField(max_length=255, db_index=True, verbose_name=_("Course"))
 
@@ -54,14 +62,20 @@ class CourseMode(models.Model):
     # For example, if there is a verified mode that expires on 1/1/2015,
     # then users will be able to upgrade into the verified mode before that date.
     # Once the date passes, users will no longer be able to enroll as verified.
-    expiration_datetime = models.DateTimeField(
+    _expiration_datetime = models.DateTimeField(
         default=None, null=True, blank=True,
         verbose_name=_(u"Upgrade Deadline"),
         help_text=_(
             u"OPTIONAL: After this date/time, users will no longer be able to enroll in this mode. "
             u"Leave this blank if users can enroll in this mode until enrollment closes for the course."
         ),
+        db_column='expiration_datetime',
     )
+
+    # The system prefers to set this automatically based on default settings. But
+    # if the field is set manually we want a way to indicate that so we don't
+    # overwrite the manual setting of the field.
+    expiration_datetime_is_explicit = models.BooleanField(default=False)
 
     # DEPRECATED: the `expiration_date` field has been replaced by `expiration_datetime`
     expiration_date = models.DateField(default=None, null=True, blank=True)
@@ -73,7 +87,7 @@ class CourseMode(models.Model):
 
     # optional description override
     # WARNING: will not be localized
-    description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
+    description = models.TextField(null=True, blank=True, verbose_name=_("Description"))
 
     # Optional SKU for integration with the ecommerce service
     sku = models.CharField(
@@ -87,6 +101,18 @@ class CourseMode(models.Model):
         )
     )
 
+    # Optional bulk order SKU for integration with the ecommerce service
+    bulk_sku = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default=None,  # Need this in order to set DEFAULT NULL on the database column
+        verbose_name="Bulk SKU",
+        help_text=_(
+            u"This is the bulk SKU (stock keeping unit) of this mode in the external ecommerce service."
+        )
+    )
+
     HONOR = 'honor'
     PROFESSIONAL = 'professional'
     VERIFIED = "verified"
@@ -94,10 +120,21 @@ class CourseMode(models.Model):
     NO_ID_PROFESSIONAL_MODE = "no-id-professional"
     CREDIT_MODE = "credit"
 
-    # DEFAULT_MODE = Mode(AUDIT, _('Audit'), 0, '', 'usd', None, None, None)
-    # DEFAULT_MODE_SLUG = AUDIT
-    DEFAULT_MODE = Mode(HONOR, _('Honor'), 0, '', 'usd', None, None, None)
-    DEFAULT_MODE_SLUG = HONOR
+    DEFAULT_MODE = Mode(
+        settings.COURSE_MODE_DEFAULTS['slug'],
+        settings.COURSE_MODE_DEFAULTS['name'],
+        settings.COURSE_MODE_DEFAULTS['min_price'],
+        settings.COURSE_MODE_DEFAULTS['suggested_prices'],
+        settings.COURSE_MODE_DEFAULTS['currency'],
+        settings.COURSE_MODE_DEFAULTS['expiration_datetime'],
+        settings.COURSE_MODE_DEFAULTS['description'],
+        settings.COURSE_MODE_DEFAULTS['sku'],
+        settings.COURSE_MODE_DEFAULTS['bulk_sku'],
+    )
+    DEFAULT_MODE_SLUG = settings.COURSE_MODE_DEFAULTS['slug']
+
+    # Modes utilized for audit/free enrollments
+    AUDIT_MODES = [AUDIT, HONOR]
 
     # Modes that allow a student to pursue a verified certificate
     VERIFIED_MODES = [VERIFIED, PROFESSIONAL]
@@ -108,8 +145,20 @@ class CourseMode(models.Model):
     # Modes that allow a student to earn credit with a university partner
     CREDIT_MODES = [CREDIT_MODE]
 
+    # Modes that are eligible to purchase credit
+    CREDIT_ELIGIBLE_MODES = [VERIFIED, PROFESSIONAL, NO_ID_PROFESSIONAL_MODE]
+
     # Modes that are allowed to upsell
     UPSELL_TO_VERIFIED_MODES = [HONOR, AUDIT]
+
+    # Courses purchased through the shoppingcart
+    # should be "honor". Since we've changed the DEFAULT_MODE_SLUG from
+    # "honor" to "audit", we still need to have the shoppingcart
+    # use "honor"
+    DEFAULT_SHOPPINGCART_MODE_SLUG = HONOR
+    DEFAULT_SHOPPINGCART_MODE = Mode(HONOR, _('Honor'), 0, '', 'usd', None, None, None, None)
+
+    CACHE_NAMESPACE = u"course_modes.CourseMode.cache."
 
     class Meta(object):
         unique_together = ('course_id', 'mode_slug', 'currency')
@@ -125,6 +174,8 @@ class CourseMode(models.Model):
             raise ValidationError(
                 _(u"Professional education modes are not allowed to have expiration_datetime set.")
             )
+        if self.is_verified_slug(self.mode_slug) and self.min_price <= 0:
+            raise ValidationError(_(u"Verified modes cannot be free."))
 
     def save(self, force_insert=False, force_update=False, using=None):
         # Ensure currency is always lowercase.
@@ -141,6 +192,19 @@ class CourseMode(models.Model):
         with a property named slug instead of mode_slug.
         """
         return self.mode_slug
+
+    @property
+    def expiration_datetime(self):
+        """ Return _expiration_datetime. """
+        return self._expiration_datetime
+
+    @expiration_datetime.setter
+    def expiration_datetime(self, new_datetime):
+        """ Saves datetime to _expiration_datetime and sets the explicit flag. """
+        # Only set explicit flag if we are setting an actual date.
+        if new_datetime is not None:
+            self.expiration_datetime_is_explicit = True
+        self._expiration_datetime = new_datetime
 
     @classmethod
     def all_modes_for_courses(cls, course_id_list):
@@ -215,13 +279,14 @@ class CourseMode(models.Model):
             Q(course_id=course_id) &
             Q(min_price__gt=0) &
             (
-                Q(expiration_datetime__isnull=True) |
-                Q(expiration_datetime__gte=now)
+                Q(_expiration_datetime__isnull=True) |
+                Q(_expiration_datetime__gte=now)
             )
         )
         return [mode.to_tuple() for mode in found_course_modes]
 
     @classmethod
+    @ns_request_cached(CACHE_NAMESPACE)
     def modes_for_course(cls, course_id, include_expired=False, only_selectable=True):
         """
         Returns a list of the non-expired modes for a given course id
@@ -251,7 +316,7 @@ class CourseMode(models.Model):
         # Filter out expired course modes if include_expired is not set
         if not include_expired:
             found_course_modes = found_course_modes.filter(
-                Q(expiration_datetime__isnull=True) | Q(expiration_datetime__gte=now)
+                Q(_expiration_datetime__isnull=True) | Q(_expiration_datetime__gte=now)
             )
 
         # Credit course modes are currently not shown on the track selection page;
@@ -297,7 +362,7 @@ class CourseMode(models.Model):
         return {mode.slug: mode for mode in modes}
 
     @classmethod
-    def mode_for_course(cls, course_id, mode_slug, modes=None):
+    def mode_for_course(cls, course_id, mode_slug, modes=None, include_expired=False):
         """Returns the mode for the course corresponding to mode_slug.
 
         Returns only non-expired modes.
@@ -313,12 +378,15 @@ class CourseMode(models.Model):
                 of course modes.  This can be used to avoid an additional
                 database query if you have already loaded the modes list.
 
+            include_expired (bool): If True, expired course modes will be included
+                in the returned values. If False, these modes will be omitted.
+
         Returns:
             Mode
 
         """
         if modes is None:
-            modes = cls.modes_for_course(course_id)
+            modes = cls.modes_for_course(course_id, include_expired=include_expired)
 
         matched = [m for m in modes if m.slug == mode_slug]
         if matched:
@@ -373,7 +441,7 @@ class CourseMode(models.Model):
 
     @classmethod
     def has_verified_mode(cls, course_mode_dict):
-        """Check whether the modes for a course allow a student to pursue a verfied certificate.
+        """Check whether the modes for a course allow a student to pursue a verified certificate.
 
         Args:
             course_mode_dict (dictionary mapping course mode slugs to Modes)
@@ -447,6 +515,18 @@ class CourseMode(models.Model):
 
         """
         return mode_slug in cls.VERIFIED_MODES
+
+    @classmethod
+    def is_credit_eligible_slug(cls, mode_slug):
+        """Check whether the given mode_slug is credit eligible or not.
+
+        Args:
+            mode_slug(str): Mode Slug
+
+        Returns:
+            bool: True iff the course mode slug is credit eligible else False.
+        """
+        return mode_slug in cls.CREDIT_ELIGIBLE_MODES
 
     @classmethod
     def is_credit_mode(cls, course_mode_tuple):
@@ -561,7 +641,7 @@ class CourseMode(models.Model):
         return False
 
     @classmethod
-    def min_course_price_for_currency(cls, course_id, currency):  # pylint: disable=invalid-name
+    def min_course_price_for_currency(cls, course_id, currency):
         """
         Returns the minimum price of the course in the appropriate currency over all the course's
         non-expired modes.
@@ -598,13 +678,21 @@ class CourseMode(models.Model):
             self.currency,
             self.expiration_datetime,
             self.description,
-            self.sku
+            self.sku,
+            self.bulk_sku
         )
 
     def __unicode__(self):
         return u"{} : {}, min={}".format(
             self.course_id, self.mode_slug, self.min_price
         )
+
+
+@receiver(models.signals.post_save, sender=CourseMode)
+@receiver(models.signals.post_delete, sender=CourseMode)
+def invalidate_course_mode_cache(sender, **kwargs):   # pylint: disable=unused-argument
+    """Invalidate the cache of course modes. """
+    RequestCache.clear_request_cache(name=CourseMode.CACHE_NAMESPACE)
 
 
 class CourseModesArchive(models.Model):
@@ -614,8 +702,11 @@ class CourseModesArchive(models.Model):
     field pair in CourseModes. Having a separate table allows us to have an audit trail of any changes
     such as course price changes
     """
+    class Meta(object):
+        app_label = "course_modes"
+
     # the course that this mode is attached to
-    course_id = CourseKeyField(max_length=255, verbose_name=_('Course'), db_index=True)
+    course_id = CourseKeyField(max_length=255, db_index=True, verbose_name=_('Course'))
 
     # the reference to this mode that can be used by Enrollments to generate
     # similar behavior for the same slug across courses
@@ -637,3 +728,22 @@ class CourseModesArchive(models.Model):
     expiration_date = models.DateField(default=None, null=True, blank=True)
 
     expiration_datetime = models.DateTimeField(default=None, null=True, blank=True, verbose_name=_(u"Upgrade Deadline"))
+
+
+class CourseModeExpirationConfig(ConfigurationModel):
+    """
+    Configuration for time period from end of course to auto-expire a course mode.
+    """
+    class Meta(object):
+        app_label = "course_modes"
+
+    verification_window = models.DurationField(
+        default=timedelta(days=10),
+        help_text=_(
+            "The time period before a course ends in which a course mode will expire"
+        )
+    )
+
+    def __unicode__(self):
+        """ Returns the unicode date of the verification window. """
+        return unicode(self.verification_window)

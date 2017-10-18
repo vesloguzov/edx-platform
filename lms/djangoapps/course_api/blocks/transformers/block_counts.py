@@ -1,14 +1,15 @@
 """
 Block Counts Transformer
 """
-from openedx.core.lib.block_cache.transformer import BlockStructureTransformer
+from openedx.core.djangoapps.content.block_structure.transformer import BlockStructureTransformer
 
 
 class BlockCountsTransformer(BlockStructureTransformer):
     """
     Keep a count of descendant blocks of the requested types
     """
-    VERSION = 1
+    WRITE_VERSION = 1
+    READ_VERSION = 1
     BLOCK_COUNTS = 'block_counts'
 
     def __init__(self, block_types_to_count):
@@ -27,7 +28,7 @@ class BlockCountsTransformer(BlockStructureTransformer):
         # collect basic xblock fields
         block_structure.request_xblock_fields('category')
 
-    def transform(self, usage_info, block_structure):  # pylint: disable=unused-argument
+    def transform(self, usage_info, block_structure):
         """
         Mutates block_structure based on the given usage_info.
         """

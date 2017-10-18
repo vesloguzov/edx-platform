@@ -3,17 +3,16 @@
 Unit tests for preference APIs.
 """
 
-import unittest
 import ddt
 import json
 from mock import patch
 
 from django.core.urlresolvers import reverse
-from django.conf import settings
 from django.test.testcases import TransactionTestCase
 from rest_framework.test import APIClient
-from student.tests.factories import UserFactory
+from student.tests.factories import UserFactory, TEST_PASSWORD
 
+from openedx.core.djangolib.testing.utils import skip_unless_lms
 from ...accounts.tests.test_views import UserAPITestCase
 from ..api import set_user_preference
 from .test_api import get_expected_validation_developer_message, get_expected_key_error_user_message
@@ -22,7 +21,7 @@ TOO_LONG_PREFERENCE_KEY = u"x" * 256
 
 
 @ddt.ddt
-@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+@skip_unless_lms
 class TestPreferencesAPI(UserAPITestCase):
     """
     Unit tests /api/user/v1/accounts/{username}/
@@ -43,7 +42,7 @@ class TestPreferencesAPI(UserAPITestCase):
         """
         Test that DELETE, POST, and PUT are not supported.
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         self.assertEqual(405, self.client.put(self.url).status_code)
         self.assertEqual(405, self.client.post(self.url).status_code)
         self.assertEqual(405, self.client.delete(self.url).status_code)
@@ -52,7 +51,7 @@ class TestPreferencesAPI(UserAPITestCase):
         """
         Test that a client (logged in) cannot get the preferences information for a different client.
         """
-        self.different_client.login(username=self.different_user.username, password=self.test_password)
+        self.different_client.login(username=self.different_user.username, password=TEST_PASSWORD)
         self.send_get(self.different_client, expected_status=404)
 
     @ddt.data(
@@ -73,7 +72,7 @@ class TestPreferencesAPI(UserAPITestCase):
         Test that a client (logged in) can get her own preferences information (verifying the default
         state before any preferences are stored).
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         response = self.send_get(self.client)
         self.assertEqual({}, response.data)
 
@@ -90,11 +89,13 @@ class TestPreferencesAPI(UserAPITestCase):
         # Create some test preferences values.
         set_user_preference(self.user, "dict_pref", {"int_key": 10})
         set_user_preference(self.user, "string_pref", "value")
+        set_user_preference(self.user, "time_zone", "Asia/Tokyo")
 
         # Log in the client and do the GET.
         client = self.login_client(api_client, user)
         response = self.send_get(client)
-        self.assertEqual({"dict_pref": "{'int_key': 10}", "string_pref": "value"}, response.data)
+        self.assertEqual({"dict_pref": "{'int_key': 10}", "string_pref": "value", "time_zone": "Asia/Tokyo"},
+                         response.data)
 
     @ddt.data(
         ("client", "user"),
@@ -116,7 +117,7 @@ class TestPreferencesAPI(UserAPITestCase):
         """
         Test the behavior of patch when an incorrect content_type is specified.
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         self.send_patch(self.client, {}, content_type="application/json", expected_status=415)
         self.send_patch(self.client, {}, content_type="application/xml", expected_status=415)
 
@@ -136,7 +137,7 @@ class TestPreferencesAPI(UserAPITestCase):
         """
         Internal helper to generalize the creation of a set of preferences
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         if not is_active:
             self.user.is_active = False
             self.user.save()
@@ -178,15 +179,17 @@ class TestPreferencesAPI(UserAPITestCase):
         set_user_preference(self.user, "dict_pref", {"int_key": 10})
         set_user_preference(self.user, "string_pref", "value")
         set_user_preference(self.user, "extra_pref", "extra_value")
+        set_user_preference(self.user, "time_zone", "Asia/Macau")
 
         # Send the patch request
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         self.send_patch(
             self.client,
             {
                 "string_pref": "updated_value",
                 "new_pref": "new_value",
                 "extra_pref": None,
+                "time_zone": "Europe/London",
             },
             expected_status=204
         )
@@ -197,6 +200,7 @@ class TestPreferencesAPI(UserAPITestCase):
             "dict_pref": "{'int_key': 10}",
             "string_pref": "updated_value",
             "new_pref": "new_value",
+            "time_zone": "Europe/London",
         }
         self.assertEqual(expected_preferences, response.data)
 
@@ -208,9 +212,10 @@ class TestPreferencesAPI(UserAPITestCase):
         set_user_preference(self.user, "dict_pref", {"int_key": 10})
         set_user_preference(self.user, "string_pref", "value")
         set_user_preference(self.user, "extra_pref", "extra_value")
+        set_user_preference(self.user, "time_zone", "Pacific/Midway")
 
         # Send the patch request
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         response = self.send_patch(
             self.client,
             {
@@ -218,6 +223,7 @@ class TestPreferencesAPI(UserAPITestCase):
                 TOO_LONG_PREFERENCE_KEY: "new_value",
                 "new_pref": "new_value",
                 u"empty_pref_ȻħȺɍłɇs": "",
+                "time_zone": "Asia/Africa",
             },
             expected_status=400
         )
@@ -238,6 +244,11 @@ class TestPreferencesAPI(UserAPITestCase):
                     "developer_message": u"Preference 'empty_pref_ȻħȺɍłɇs' cannot be set to an empty value.",
                     "user_message": u"Preference 'empty_pref_ȻħȺɍłɇs' cannot be set to an empty value.",
                 },
+                "time_zone": {
+                    "developer_message": u"Value 'Asia/Africa' not valid for preference 'time_zone': Not in "
+                                         u"timezone set.",
+                    "user_message": u"Value 'Asia/Africa' is not a valid time zone selection."
+                },
             }
         )
 
@@ -247,6 +258,7 @@ class TestPreferencesAPI(UserAPITestCase):
             u"dict_pref": u"{'int_key': 10}",
             u"string_pref": u"value",
             u"extra_pref": u"extra_value",
+            u"time_zone": u"Pacific/Midway",
         }
         self.assertEqual(expected_preferences, response.data)
 
@@ -254,7 +266,7 @@ class TestPreferencesAPI(UserAPITestCase):
         """
         Test that a client (logged in) receives appropriate errors for a bad request.
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
 
         # Verify a non-dict request
         response = self.send_patch(self.client, "non_dict_request", expected_status=400)
@@ -303,7 +315,7 @@ class TestPreferencesAPI(UserAPITestCase):
         )
 
 
-@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+@skip_unless_lms
 class TestPreferencesAPITransactions(TransactionTestCase):
     """
     Tests the transactional behavior of the preferences API
@@ -313,7 +325,7 @@ class TestPreferencesAPITransactions(TransactionTestCase):
     def setUp(self):
         super(TestPreferencesAPITransactions, self).setUp()
         self.client = APIClient()
-        self.user = UserFactory.create(password=self.test_password)
+        self.user = UserFactory.create(password=TEST_PASSWORD)
         self.url = reverse("preferences_api", kwargs={'username': self.user.username})
 
     @patch('openedx.core.djangoapps.user_api.models.UserPreference.delete')
@@ -330,7 +342,7 @@ class TestPreferencesAPITransactions(TransactionTestCase):
         # after one of the updates has happened, in which case the whole operation
         # should be rolled back.
         delete_user_preference.side_effect = [Exception, None]
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         json_data = {
             "a": "2",
             "b": None,
@@ -350,7 +362,7 @@ class TestPreferencesAPITransactions(TransactionTestCase):
 
 
 @ddt.ddt
-@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+@skip_unless_lms
 class TestPreferencesDetailAPI(UserAPITestCase):
     """
     Unit tests /api/user/v1/accounts/{username}/{preference_key}
@@ -384,7 +396,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         """
         Test that POST and PATCH are not supported.
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         self.assertEqual(405, self.client.post(self.url).status_code)
         self.assertEqual(405, self.client.patch(self.url).status_code)
 
@@ -392,7 +404,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         """
         Test that a client (logged in) cannot manipulate a preference for a different client.
         """
-        self.different_client.login(username=self.different_user.username, password=self.test_password)
+        self.different_client.login(username=self.different_user.username, password=TEST_PASSWORD)
         self.send_get(self.different_client, expected_status=404)
         self.send_put(self.different_client, "new_value", expected_status=404)
         self.send_delete(self.different_client, expected_status=404)
@@ -417,7 +429,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         Test that a 404 is returned if the user does not have a preference with the given preference_key.
         """
         self._set_url("does_not_exist")
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         response = self.send_get(self.client, expected_status=404)
         self.assertIsNone(response.data)
 
@@ -457,7 +469,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         """
         Generalization of the actual test workflow
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         if not is_active:
             self.user.is_active = False
             self.user.save()
@@ -478,7 +490,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         Test that a client (logged in) cannot create an empty preference.
         """
         self._set_url("new_key")
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         response = self.send_put(self.client, preference_value, expected_status=400)
         self.assertEqual(
             response.data,
@@ -493,7 +505,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         """
         Test that a client cannot create preferences with bad keys
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
 
         too_long_preference_key = "x" * 256
         new_value = "new value"
@@ -532,7 +544,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         """
         Test that a client (logged in) can update a preference.
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         self.send_put(self.client, preference_value)
         response = self.send_get(self.client)
         self.assertEqual(unicode(preference_value), response.data)
@@ -560,7 +572,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         """
         Test that a client (logged in) cannot update a preference to null.
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
         response = self.send_put(self.client, preference_value, expected_status=400)
         self.assertEqual(
             response.data,
@@ -576,7 +588,7 @@ class TestPreferencesDetailAPI(UserAPITestCase):
         """
         Test that a client (logged in) can delete her own preference.
         """
-        self.client.login(username=self.user.username, password=self.test_password)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
 
         # Verify that a preference can be deleted
         self.send_delete(self.client)

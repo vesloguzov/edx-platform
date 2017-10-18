@@ -2,11 +2,7 @@
 from django.utils.translation import ugettext_lazy as _
 
 from course_modes.models import CourseMode
-from student.helpers import (
-    VERIFY_STATUS_NEED_TO_VERIFY,
-    VERIFY_STATUS_SUBMITTED,
-    VERIFY_STATUS_APPROVED
-)
+from student.helpers import VERIFY_STATUS_APPROVED, VERIFY_STATUS_NEED_TO_VERIFY, VERIFY_STATUS_SUBMITTED
 
 DISPLAY_VERIFIED = "verified"
 DISPLAY_HONOR = "honor"
@@ -74,8 +70,10 @@ def _enrollment_mode_display(enrollment_mode, verification_status, course_id):
     if enrollment_mode == CourseMode.VERIFIED:
         if verification_status in [VERIFY_STATUS_NEED_TO_VERIFY, VERIFY_STATUS_SUBMITTED, VERIFY_STATUS_APPROVED]:
             display_mode = DISPLAY_VERIFIED
-        else:
+        elif DISPLAY_HONOR in course_mode_slugs:
             display_mode = DISPLAY_HONOR
+        else:
+            display_mode = DISPLAY_AUDIT
     elif enrollment_mode in [CourseMode.PROFESSIONAL, CourseMode.NO_ID_PROFESSIONAL_MODE]:
         display_mode = DISPLAY_PROFESSIONAL
     else:

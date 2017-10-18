@@ -3,24 +3,22 @@ This test file will run through some XBlock test scenarios regarding the
 recommender system
 """
 
-from copy import deepcopy
-import json
 import itertools
+import json
 import StringIO
 import unittest
+from copy import deepcopy
 
-from ddt import ddt, data
-from nose.plugins.attrib import attr
-
+from ddt import data, ddt
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from nose.plugins.attrib import attr
 
-from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
-
-from lms.djangoapps.courseware.tests.helpers import LoginEnrollmentTestCase
 from lms.djangoapps.courseware.tests.factories import GlobalStaffFactory
-from lms.djangoapps.lms_xblock.runtime import quote_slashes
+from lms.djangoapps.courseware.tests.helpers import LoginEnrollmentTestCase
+from openedx.core.lib.url_utils import quote_slashes
+from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
+from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 
 
 class TestRecommender(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
@@ -120,6 +118,7 @@ class TestRecommender(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
             username = "u{}".format(idx)
             self.create_account(username, student['email'], student['password'])
             self.activate_user(student['email'])
+            self.logout()
 
         self.staff_user = GlobalStaffFactory()
 
@@ -196,7 +195,7 @@ class TestRecommender(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
         self.assert_request_status_code(200, self.course_url)
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestRecommenderCreateFromEmpty(TestRecommender):
     """
     Check whether we can add resources to an empty database correctly
@@ -223,7 +222,7 @@ class TestRecommenderCreateFromEmpty(TestRecommender):
                 self.assert_request_status_code(200, self.course_url)
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestRecommenderResourceBase(TestRecommender):
     """Base helper class for tests with resources."""
     def setUp(self):
@@ -256,7 +255,7 @@ class TestRecommenderResourceBase(TestRecommender):
         return resource
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestRecommenderWithResources(TestRecommenderResourceBase):
     """
     Check whether we can add/edit/flag/export resources correctly
@@ -421,7 +420,7 @@ class TestRecommenderWithResources(TestRecommenderResourceBase):
         self.assert_request_status_code(200, self.course_url)
 
 
-@attr('shard_1')
+@attr(shard=1)
 @ddt
 class TestRecommenderVoteWithResources(TestRecommenderResourceBase):
     """
@@ -535,7 +534,7 @@ class TestRecommenderVoteWithResources(TestRecommenderResourceBase):
         self.check_event_response_by_key('handle_vote', resource, 'newVotes', test_case['new_votes'])
 
 
-@attr('shard_1')
+@attr(shard=1)
 @ddt
 class TestRecommenderStaffFeedbackWithResources(TestRecommenderResourceBase):
     """
@@ -630,7 +629,7 @@ class TestRecommenderStaffFeedbackWithResources(TestRecommenderResourceBase):
         self.check_event_response_by_http_status(test_case['handler'], resource, test_case['status'])
 
 
-@attr('shard_1')
+@attr(shard=1)
 @ddt
 class TestRecommenderFileUploading(TestRecommender):
     """
@@ -664,7 +663,6 @@ class TestRecommenderFileUploading(TestRecommender):
         url = self.get_handler_url(event_name)
         resp = self.client.post(url, {'file': f_handler})
         self.assertEqual(resp.status_code, test_case['status'])
-        self.assert_request_status_code(200, self.course_url)
 
     @data(
         {

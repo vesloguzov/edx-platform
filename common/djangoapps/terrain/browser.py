@@ -5,16 +5,17 @@ Browser set up for acceptance tests.
 # pylint: disable=no-member
 # pylint: disable=unused-argument
 
-from lettuce import before, after, world
-from splinter.browser import Browser
-from logging import getLogger
-from django.core.management import call_command
-from django.conf import settings
-from selenium.common.exceptions import WebDriverException
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-import requests
 from base64 import encodestring
 from json import dumps
+from logging import getLogger
+
+import requests
+from django.conf import settings
+from django.core.management import call_command
+from lettuce import after, before, world
+from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from splinter.browser import Browser
 
 import xmodule.modulestore.django
 from xmodule.contentstore.django import _CONTENTSTORE
@@ -81,8 +82,6 @@ def initial_setup(server):
             desired_capabilities['loggingPrefs'] = {
                 'browser': 'ALL',
             }
-        elif browser_driver == 'firefox':
-            desired_capabilities = DesiredCapabilities.FIREFOX
         else:
             desired_capabilities = {}
 
@@ -98,7 +97,13 @@ def initial_setup(server):
             # the browser session is invalid, this will
             # raise a WebDriverException
             try:
-                world.browser = Browser(browser_driver, desired_capabilities=desired_capabilities)
+                if browser_driver == 'firefox':
+                    # Lettuce initializes differently for firefox, and sending
+                    # desired_capabilities will not work. So initialize without
+                    # sending desired_capabilities.
+                    world.browser = Browser(browser_driver)
+                else:
+                    world.browser = Browser(browser_driver, desired_capabilities=desired_capabilities)
                 world.browser.driver.set_script_timeout(GLOBAL_SCRIPT_TIMEOUT)
                 world.visit('/')
 
@@ -275,10 +280,9 @@ def after_each_step(step):
 
 
 @after.harvest
-def teardown_browser(total):
+def saucelabs_status(total):
     """
-    Quit the browser after executing the tests.
+    Collect data for saucelabs.
     """
     if world.LETTUCE_SELENIUM_CLIENT == 'saucelabs':
         set_saucelabs_job_status(world.jobid, total.scenarios_ran == total.scenarios_passed)
-    world.browser.quit()

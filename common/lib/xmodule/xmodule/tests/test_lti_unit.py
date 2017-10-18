@@ -72,6 +72,7 @@ class LTIModuleTest(LogicTest):
 
         self.xmodule.due = None
         self.xmodule.graceperiod = None
+        self.xmodule.descriptor = self.system.construct_xblock_from_class(self.descriptor_class, self.xmodule.scope_ids)
 
     def get_request_body(self, params=None):
         """Fetches the body of a request specified by params"""
@@ -459,7 +460,7 @@ class LTIModuleTest(LogicTest):
         LTI 1.1 will be used. Otherwise fake namespace will be added to XML.
         """
         mock_request = Mock()
-        mock_request.headers = {  # pylint: disable=no-space-before-operator
+        mock_request.headers = {
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/x-www-form-urlencoded',
             'Authorization': u'OAuth oauth_nonce="135685044251684026041377608307", \

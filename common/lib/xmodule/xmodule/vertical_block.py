@@ -3,9 +3,11 @@ VerticalBlock - an XBlock which renders its children in a column.
 """
 import logging
 from copy import copy
+
 from lxml import etree
 from xblock.core import XBlock
 from xblock.fragment import Fragment
+
 from xmodule.mako_module import MakoTemplateBlockBase
 from xmodule.progress import Progress
 from xmodule.seq_module import SequenceFields
@@ -20,10 +22,14 @@ log = logging.getLogger(__name__)
 CLASS_PRIORITY = ['video', 'problem']
 
 
+@XBlock.needs('user', 'bookmarks')
 class VerticalBlock(SequenceFields, XModuleFields, StudioEditableBlock, XmlParserMixin, MakoTemplateBlockBase, XBlock):
     """
     Layout XBlock for rendering subblocks vertically.
     """
+
+    resources_dir = 'assets/vertical'
+
     mako_template = 'widgets/sequence-edit.html'
     js_module_name = "VerticalBlock"
 
@@ -38,8 +44,21 @@ class VerticalBlock(SequenceFields, XModuleFields, StudioEditableBlock, XmlParse
         fragment = Fragment()
         contents = []
 
-        child_context = {} if not context else copy(context)
+        if context:
+            child_context = copy(context)
+        else:
+            child_context = {}
+
+        if 'bookmarked' not in child_context:
+            bookmarks_service = self.runtime.service(self, 'bookmarks')
+            child_context['bookmarked'] = bookmarks_service.is_bookmarked(usage_key=self.location),  # pylint: disable=no-member
+        if 'username' not in child_context:
+            user_service = self.runtime.service(self, 'user')
+            child_context['username'] = user_service.get_current_user().opt_attrs['edx-platform.username']
+
         child_context['child_of_vertical'] = True
+
+        is_child_of_vertical = context.get('child_of_vertical', False)
 
         # pylint: disable=no-member
         for child in self.get_display_items():
@@ -54,7 +73,15 @@ class VerticalBlock(SequenceFields, XModuleFields, StudioEditableBlock, XmlParse
         fragment.add_content(self.system.render_template('vert_module.html', {
             'items': contents,
             'xblock_context': context,
+            'unit_title': self.display_name_with_default if not is_child_of_vertical else None,
+            'show_bookmark_button': child_context.get('show_bookmark_button', not is_child_of_vertical),
+            'bookmarked': child_context['bookmarked'],
+            'bookmark_id': u"{},{}".format(child_context['username'], unicode(self.location))
         }))
+
+        fragment.add_javascript_url(self.runtime.local_resource_url(self, 'public/js/vertical_student_view.js'))
+        fragment.initialize_js('VerticalStudentView')
+
         return fragment
 
     def author_view(self, context):
@@ -98,7 +125,7 @@ class VerticalBlock(SequenceFields, XModuleFields, StudioEditableBlock, XmlParse
         children = []
         for child in xml_object:
             try:
-                child_block = system.process_xml(etree.tostring(child, encoding='unicode'))  # pylint: disable=no-member
+                child_block = system.process_xml(etree.tostring(child, encoding='unicode'))
                 children.append(child_block.scope_ids.usage_id)
             except Exception as exc:  # pylint: disable=broad-except
                 log.exception("Unable to load child when parsing Vertical. Continuing...")
@@ -108,7 +135,7 @@ class VerticalBlock(SequenceFields, XModuleFields, StudioEditableBlock, XmlParse
         return {}, children
 
     def definition_to_xml(self, resource_fs):
-        xml_object = etree.Element('vertical')  # pylint: disable=no-member
+        xml_object = etree.Element('vertical')
         for child in self.get_children():
             self.runtime.add_block_as_child_node(child, xml_object)
         return xml_object

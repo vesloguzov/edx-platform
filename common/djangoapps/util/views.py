@@ -2,28 +2,38 @@ import json
 import logging
 import sys
 from functools import wraps
+from smtplib import SMTPException
 
+import zendesk
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.core.cache import caches
+from django.core.mail import send_mail
 from django.core.validators import ValidationError, validate_email
+from django.http import Http404, HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed, HttpResponseServerError
 from django.views.decorators.csrf import requires_csrf_token
 from django.views.defaults import server_error
-from django.http import (Http404, HttpResponse, HttpResponseNotAllowed,
-                         HttpResponseServerError)
 from django.utils.translation import ugettext_lazy as _
-
-import dogstats_wrapper as dog_stats_api
-from edxmako.shortcuts import render_to_response
-import zendesk
-from microsite_configuration import microsite
+from opaque_keys import InvalidKeyError
+from opaque_keys.edx.keys import CourseKey, UsageKey
 
 import calc
+import dogstats_wrapper as dog_stats_api
 import track.views
 import helpdeskeddy
 
-from opaque_keys import InvalidKeyError
-from opaque_keys.edx.keys import CourseKey
+from edxmako.shortcuts import render_to_response, render_to_string
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
+from openedx.features.enterprise_support import api as enterprise_api
+from student.models import CourseEnrollment
+from student.roles import GlobalStaff
 
 log = logging.getLogger(__name__)
+
+DATADOG_FEEDBACK_METRIC = "lms_feedback_submissions"
+SUPPORT_BACKEND_ZENDESK = "zendesk_ticket"
+SUPPORT_BACKEND_HELPDESKEDDY = "helpdeskeddy_ticket"
+SUPPORT_BACKEND_EMAIL = "email"
 
 
 def ensure_valid_course_key(view_func):
@@ -44,6 +54,41 @@ def ensure_valid_course_key(view_func):
         return response
 
     return inner
+
+
+def ensure_valid_usage_key(view_func):
+    """
+    This decorator should only be used with views which have argument usage_key_string.
+    If usage_key_string is not valid raise 404.
+    """
+    @wraps(view_func)
+    def inner(request, *args, **kwargs):  # pylint: disable=missing-docstring
+        usage_key = kwargs.get('usage_key_string')
+        if usage_key is not None:
+            try:
+                UsageKey.from_string(usage_key)
+            except InvalidKeyError:
+                raise Http404
+
+        response = view_func(request, *args, **kwargs)
+        return response
+
+    return inner
+
+
+def require_global_staff(func):
+    """View decorator that requires that the user have global staff permissions. """
+    @wraps(func)
+    def wrapped(request, *args, **kwargs):  # pylint: disable=missing-docstring
+        if GlobalStaff().has_user(request.user):
+            return func(request, *args, **kwargs)
+        else:
+            return HttpResponseForbidden(
+                u"Must be {platform_name} staff to perform this action.".format(
+                    platform_name=settings.PLATFORM_NAME
+                )
+            )
+    return login_required(wrapped)
 
 
 @requires_csrf_token
@@ -148,16 +193,19 @@ def _get_feedback_form_errors(request):
     return errors
 
 
-def _get_feedback_backend():
-    if settings.FEEDBACK_BACKEND.lower() == 'zendesk':
-        return ZendeskFeedbackBackend()
-    elif settings.FEEDBACK_BACKEND.lower() == 'helpdeskeddy':
-        return HelpDeskEddyFeedbackBackend()
+def _get_support_backend():
+    support_backend = configuration_helpers.get_value('CONTACT_FORM_SUBMISSION_BACKEND', SUPPORT_BACKEND_ZENDESK)
+    if support_backend == SUPPORT_BACKEND_EMAIL:
+        return EmailSupportBackend()
+    elif support_backend == SUPPORT_BACKEND_ZENDESK:
+        return ZendeskSupportBackend()
+    elif support_backend == SUPPORT_BACKEND_HELPDESKEDDY:
+        return HelpDeskEddySupportBackend()
     else:
         raise Exception('Feedback backend not configured')
 
 
-class FeedbackBackend(object):
+class SupportBackend(object):
     required_settings = ()
 
     def __init__(self):
@@ -165,25 +213,62 @@ class FeedbackBackend(object):
             raise Exception('%s enabled but not configured.' % self.name)
 
     @staticmethod
-    def record_feedback(realname, email, subject, details, tags, additional_info):
+    def record_feedback(context, **kwargs):
         raise NotImplementedError
 
 
-class ZendeskFeedbackBackend(FeedbackBackend):
+class EmailSupportBackend(SupportBackend):
+    @staticmethod
+    def record_feedback(context, **kwargs):
+        try:
+            send_mail(
+                subject=render_to_string('emails/contact_us_feedback_email_subject.txt', context),
+                message=render_to_string('emails/contact_us_feedback_email_body.txt', context),
+                from_email=context["support_email"],
+                recipient_list=[context["support_email"]],
+                fail_silently=False
+            )
+            success = True
+        except SMTPException:
+            log.exception('Error sending feedback to contact_us email address.')
+            success = False
+        return success
+
+class ZendeskSupportBackend(SupportBackend):
     name = 'Zendesk'
     required_settings = ('ZENDESK_URL', 'ZENDESK_USER', 'ZENDESK_API_KEY')
 
     @staticmethod
-    def record_feedback(*args, **kwargs):
-        return _record_feedback_in_zendesk(*args, **kwargs)
+    def record_feedback(context, **kwargs):
+        custom_fields = None
+        if settings.ZENDESK_CUSTOM_FIELDS:
+            custom_field_context = _get_zendesk_custom_field_context(
+                    kwargs.get('request'), learner_data=kwargs.get('enterprise_learner_data')
+                )
+            custom_fields = _format_zendesk_custom_fields(custom_field_context)
+
+        return _record_feedback_in_zendesk(
+            context["realname"],
+            context["email"],
+            context["subject"],
+            context["details"],
+            context["tags"],
+            context["additional_info"],
+            support_email=context["support_email"],
+            custom_fields=custom_fields
+        )
 
 
-class HelpDeskEddyFeedbackBackend(helpdeskeddy.HelpDeskEddyMixin, FeedbackBackend):
+class HelpDeskEddySupportBackend(helpdeskeddy.HelpDeskEddyMixin, SupportBackend):
     name = 'HelpDeskEddy'
     required_settings = ('HELPDESKEDDY_URL', 'HELPDESKEDDY_API_KEY')
 
 
 class _ZendeskApi(object):
+
+    CACHE_PREFIX = 'ZENDESK_API_CACHE'
+    CACHE_TIMEOUT = 60 * 60
+
     def __init__(self):
         """
         Instantiate the Zendesk API.
@@ -219,8 +304,80 @@ class _ZendeskApi(object):
         """
         self._zendesk_instance.update_ticket(ticket_id=ticket_id, data=update)
 
+    def get_group(self, name):
+        """
+        Find the Zendesk group named `name`. Groups are cached for
+        CACHE_TIMEOUT seconds.
 
-def _record_feedback_in_zendesk(realname, email, subject, details, tags, additional_info):
+        If a matching group exists, it is returned as a dictionary
+        with the format specifed by the zendesk package.
+
+        Otherwise, returns None.
+        """
+        cache = caches['default']
+        cache_key = '{prefix}_group_{name}'.format(prefix=self.CACHE_PREFIX, name=name)
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+        groups = self._zendesk_instance.list_groups()['groups']
+        for group in groups:
+            if group['name'] == name:
+                cache.set(cache_key, group, self.CACHE_TIMEOUT)
+                return group
+        return None
+
+
+def _get_zendesk_custom_field_context(request, **kwargs):
+    """
+    Construct a dictionary of data that can be stored in Zendesk custom fields.
+    """
+    context = {}
+
+    course_id = request.POST.get("course_id")
+    if not course_id:
+        return context
+
+    context["course_id"] = course_id
+    if not request.user.is_authenticated():
+        return context
+
+    enrollment = CourseEnrollment.get_enrollment(request.user, CourseKey.from_string(course_id))
+    if enrollment and enrollment.is_active:
+        context["enrollment_mode"] = enrollment.mode
+
+    enterprise_learner_data = kwargs.get('learner_data', None)
+    if enterprise_learner_data:
+        enterprise_customer_name = enterprise_learner_data[0]['enterprise_customer']['name']
+        context["enterprise_customer_name"] = enterprise_customer_name
+
+    return context
+
+
+def _format_zendesk_custom_fields(context):
+    """
+    Format the data in `context` for compatibility with the Zendesk API.
+    Ignore any keys that have not been configured in `ZENDESK_CUSTOM_FIELDS`.
+    """
+    custom_fields = []
+    for key, val, in settings.ZENDESK_CUSTOM_FIELDS.items():
+        if key in context:
+            custom_fields.append({"id": val, "value": context[key]})
+
+    return custom_fields
+
+
+def _record_feedback_in_zendesk(
+        realname,
+        email,
+        subject,
+        details,
+        tags,
+        additional_info,
+        group_name=None,
+        require_update=False,
+        support_email=None,
+        custom_fields=None
+):
     """
     Create a new user-requested Zendesk ticket.
 
@@ -228,22 +385,30 @@ def _record_feedback_in_zendesk(realname, email, subject, details, tags, additio
     additional information from the browser and server, such as HTTP headers
     and user state. Returns a boolean value indicating whether ticket creation
     was successful, regardless of whether the private comment update succeeded.
+
+    If `group_name` is provided, attaches the ticket to the matching Zendesk group.
+
+    If `require_update` is provided, returns False when the update does not
+    succeed. This allows using the private comment to add necessary information
+    which the user will not see in followup emails from support.
+
+    If `custom_fields` is provided, submits data to those fields in Zendesk.
     """
     zendesk_api = _ZendeskApi()
 
     additional_info_string = (
-        "Additional information:\n\n" +
-        "\n".join("%s: %s" % (key, value) for (key, value) in additional_info.items() if value is not None)
+        u"Additional information:\n\n" +
+        u"\n".join(u"%s: %s" % (key, value) for (key, value) in additional_info.items() if value is not None)
     )
 
     # Tag all issues with LMS to distinguish channel in Zendesk; requested by student support team
     zendesk_tags = list(tags.values()) + ["LMS"]
 
-    # Per edX support, we would like to be able to route white label feedback items
-    # via tagging
-    white_label_org = microsite.get_value('course_org_filter')
-    if white_label_org:
-        zendesk_tags = zendesk_tags + ["whitelabel_{org}".format(org=white_label_org)]
+    # Per edX support, we would like to be able to route feedback items by site via tagging
+    current_site_orgs = configuration_helpers.get_current_site_orgs()
+    if current_site_orgs:
+        for org in current_site_orgs:
+            zendesk_tags.append("whitelabel_{org}".format(org=org))
 
     new_ticket = {
         "ticket": {
@@ -253,8 +418,27 @@ def _record_feedback_in_zendesk(realname, email, subject, details, tags, additio
             "tags": zendesk_tags
         }
     }
+
+    if custom_fields:
+        new_ticket["ticket"]["custom_fields"] = custom_fields
+
+    group = None
+    if group_name is not None:
+        group = zendesk_api.get_group(group_name)
+        if group is not None:
+            new_ticket['ticket']['group_id'] = group['id']
+    if support_email is not None:
+        # If we do not include the `recipient` key here, Zendesk will default to using its default reply
+        # email address when support agents respond to tickets. By setting the `recipient` key here,
+        # we can ensure that WL site users are responded to via the correct Zendesk support email address.
+        new_ticket['ticket']['recipient'] = support_email
     try:
         ticket_id = zendesk_api.create_ticket(new_ticket)
+        if group_name is not None and group is None:
+            # Support uses Zendesk groups to track tickets. In case we
+            # haven't been able to correctly group this ticket, log its ID
+            # so it can be found later.
+            log.warning('Unable to find group named %s for Zendesk ticket with ID %s.', group_name, ticket_id)
     except zendesk.ZendeskError:
         log.exception("Error creating Zendesk ticket")
         return False
@@ -265,14 +449,13 @@ def _record_feedback_in_zendesk(realname, email, subject, details, tags, additio
     try:
         zendesk_api.update_ticket(ticket_id, ticket_update)
     except zendesk.ZendeskError:
-        log.exception("Error updating Zendesk ticket")
-        # The update is not strictly necessary, so do not indicate failure to the user
-        pass
-
+        log.exception("Error updating Zendesk ticket with ID %s.", ticket_id)
+        # The update is not strictly necessary, so do not indicate
+        # failure to the user unless it has been requested with
+        # `require_update`.
+        if require_update:
+            return False
     return True
-
-
-DATADOG_FEEDBACK_METRIC = "lms_feedback_submissions"
 
 
 def _record_feedback_in_datadog(tags):
@@ -280,9 +463,42 @@ def _record_feedback_in_datadog(tags):
     dog_stats_api.increment(DATADOG_FEEDBACK_METRIC, tags=datadog_tags)
 
 
+def get_feedback_form_context(request):
+    """
+    Extract the submitted form fields to be used as a context for
+    feedback submission.
+    """
+    context = {}
+
+    context["subject"] = request.POST["subject"]
+    context["details"] = request.POST["details"]
+    context["tags"] = dict(
+        [(tag, request.POST[tag]) for tag in ["issue_type", "course_id"] if request.POST.get(tag)]
+    )
+
+    context["additional_info"] = {}
+
+    if request.user.is_authenticated():
+        context["realname"] = request.user.profile.name
+        context["email"] = request.user.email
+        context["additional_info"]["username"] = request.user.username
+    else:
+        context["realname"] = request.POST["name"]
+        context["email"] = request.POST["email"]
+
+    for header, pretty in [("HTTP_REFERER", "Page"), ("HTTP_USER_AGENT", "Browser"), ("REMOTE_ADDR", "Client IP"),
+                           ("SERVER_NAME", "Host")]:
+        context["additional_info"][pretty] = request.META.get(header)
+
+    context["support_email"] = configuration_helpers.get_value('email_from_address', settings.DEFAULT_FROM_EMAIL)
+
+    return context
+
+
 def submit_feedback(request):
     """
-    Create a new user-requested ticket, currently implemented with Zendesk.
+    Create a Zendesk ticket or if not available, send an email with the
+    feedback form fields.
 
     If feedback submission is not enabled, any request will raise `Http404`.
     If any configuration parameter (`ZENDESK_URL`, `ZENDESK_USER`, or
@@ -300,45 +516,29 @@ def submit_feedback(request):
         raise Http404()
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
-    feedback_backend = _get_feedback_backend()
-
-    additional_info = {}
 
     errors = _get_feedback_form_errors(request)
     if errors:
         return HttpResponse(json.dumps(errors), status=400)
 
-    subject = request.POST["subject"]
-    details = request.POST["details"]
-    tags = dict(
-        [(tag, request.POST[tag]) for tag in ["issue_type", "course_id"] if tag in request.POST]
-    )
+    success = False
+    context = get_feedback_form_context(request)
 
-    if request.user.is_authenticated():
-        realname = request.user.profile.name
-        email = request.user.email
-        additional_info["username"] = request.user.username
-        additional_info["nickname"] = request.user.profile.nickname
-    else:
-        realname = request.POST["name"]
-        email = request.POST["email"]
+    #Update the tag info with 'enterprise_learner' if the user belongs to an enterprise customer.
+    enterprise_learner_data = enterprise_api.get_enterprise_learner_data(site=request.site, user=request.user)
+    if enterprise_learner_data:
+        context["tags"]["learner_type"] = "enterprise_learner"
 
-    for header, pretty in [
-        ("HTTP_REFERER", "Page"),
-        ("HTTP_USER_AGENT", "Browser"),
-        ("REMOTE_ADDR", "Client IP"),
-        ("SERVER_NAME", "Host")
-    ]:
-        additional_info[pretty] = request.META.get(header)
-
-    success = feedback_backend.record_feedback(realname, email, subject, details, tags, additional_info)
-    _record_feedback_in_datadog(tags)
+    support_backend = _get_support_backend()
+    success = support_backend.record_feedback(context, request=request, enterprise_learner_data=enterprise_learner_data)
+    _record_feedback_in_datadog(context["tags"])
 
     return HttpResponse(status=(200 if success else 500))
 
 
 def info(request):
     ''' Info page (link from main header) '''
+    # pylint: disable=unused-argument
     return render_to_response("info.html", {})
 
 
@@ -368,3 +568,22 @@ def accepts(request, media_type):
     """Return whether this request has an Accept header that matches type"""
     accept = parse_accept_header(request.META.get("HTTP_ACCEPT", ""))
     return media_type in [t for (t, p, q) in accept]
+
+
+def add_p3p_header(view_func):
+    """
+    This decorator should only be used with views which may be displayed through the iframe.
+    It adds additional headers to response and therefore gives IE browsers an ability to save cookies inside the iframe
+    Details:
+    http://blogs.msdn.com/b/ieinternals/archive/2013/09/17/simple-introduction-to-p3p-cookie-blocking-frame.aspx
+    http://stackoverflow.com/questions/8048306/what-is-the-most-broad-p3p-header-that-will-work-with-ie
+    """
+    @wraps(view_func)
+    def inner(request, *args, **kwargs):
+        """
+        Helper function
+        """
+        response = view_func(request, *args, **kwargs)
+        response['P3P'] = settings.P3P_HEADER
+        return response
+    return inner

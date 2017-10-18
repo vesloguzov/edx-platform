@@ -5,20 +5,20 @@ Code related to the handling of Proctored Exams in Studio
 import logging
 
 from django.conf import settings
-
-from xmodule.modulestore.django import modulestore
+from edx_proctoring.api import (
+    create_exam,
+    create_exam_review_policy,
+    get_all_exams_for_course,
+    get_exam_by_content_id,
+    remove_review_policy,
+    update_exam,
+    update_review_policy
+)
+from edx_proctoring.exceptions import ProctoredExamNotFoundException, ProctoredExamReviewPolicyNotFoundException
 
 from contentstore.views.helpers import is_item_in_course_tree
-
-from edx_proctoring.api import (
-    get_exam_by_content_id,
-    update_exam,
-    create_exam,
-    get_all_exams_for_course,
-)
-from edx_proctoring.exceptions import (
-    ProctoredExamNotFoundException
-)
+from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.exceptions import ItemNotFoundError
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +36,9 @@ def register_special_exams(course_key):
         return
 
     course = modulestore().get_course(course_key)
+    if course is None:
+        raise ItemNotFoundError("Course {} does not exist", unicode(course_key))
+
     if not course.enable_proctored_exams and not course.enable_timed_exams:
         # likewise if course does not have these features turned on
         # then quickly exit
@@ -72,17 +75,19 @@ def register_special_exams(course_key):
         try:
             exam = get_exam_by_content_id(unicode(course_key), unicode(timed_exam.location))
             # update case, make sure everything is synced
-            update_exam(
+            exam_id = update_exam(
                 exam_id=exam['id'],
                 exam_name=timed_exam.display_name,
                 time_limit_mins=timed_exam.default_time_limit_minutes,
                 due_date=timed_exam.due,
                 is_proctored=timed_exam.is_proctored_exam,
                 is_practice_exam=timed_exam.is_practice_exam,
-                is_active=True
+                is_active=True,
+                hide_after_due=timed_exam.hide_after_due,
             )
             msg = 'Updated timed exam {exam_id}'.format(exam_id=exam['id'])
             log.info(msg)
+
         except ProctoredExamNotFoundException:
             exam_id = create_exam(
                 course_id=unicode(course_key),
@@ -92,10 +97,35 @@ def register_special_exams(course_key):
                 due_date=timed_exam.due,
                 is_proctored=timed_exam.is_proctored_exam,
                 is_practice_exam=timed_exam.is_practice_exam,
-                is_active=True
+                is_active=True,
+                hide_after_due=timed_exam.hide_after_due,
             )
             msg = 'Created new timed exam {exam_id}'.format(exam_id=exam_id)
             log.info(msg)
+
+        # only create/update exam policy for the proctored exams
+        if timed_exam.is_proctored_exam and not timed_exam.is_practice_exam:
+            try:
+                update_review_policy(
+                    exam_id=exam_id,
+                    set_by_user_id=timed_exam.edited_by,
+                    review_policy=timed_exam.exam_review_rules
+                )
+            except ProctoredExamReviewPolicyNotFoundException:
+                if timed_exam.exam_review_rules:  # won't save an empty rule.
+                    create_exam_review_policy(
+                        exam_id=exam_id,
+                        set_by_user_id=timed_exam.edited_by,
+                        review_policy=timed_exam.exam_review_rules
+                    )
+                    msg = 'Created new exam review policy with exam_id {exam_id}'.format(exam_id=exam_id)
+                    log.info(msg)
+        else:
+            try:
+                # remove any associated review policy
+                remove_review_policy(exam_id=exam_id)
+            except ProctoredExamReviewPolicyNotFoundException:
+                pass
 
     # then see which exams we have in edx-proctoring that are not in
     # our current list. That means the the user has disabled it

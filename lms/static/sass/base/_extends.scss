@@ -79,8 +79,8 @@
   color: rgb(255, 255, 255);
 }
 
-.global {
-  h2 {
+.header-global {
+  .course-header {
     display: none;
   }
 }
@@ -98,6 +98,24 @@
 
   &:focus {
     // outline: thin dotted !important;
+  }
+}
+
+// light button reset
+%ui-clear-button  {
+  background: none;
+  border-radius: ($baseline/4);
+  box-shadow: none;
+  text-shadow: none;
+
+  &:hover {
+    background-image: none;
+    box-shadow: none;
+  }
+
+  &:focus,
+  &:active {
+    box-shadow: none;
   }
 }
 

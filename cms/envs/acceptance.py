@@ -80,6 +80,14 @@ DATABASES = {
             'timeout': 30,
         },
         'ATOMIC_REQUESTS': True,
+    },
+    'student_module_history': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': TEST_ROOT / "db" / "test_student_module_history.db",
+        'TEST_NAME': TEST_ROOT / "db" / "test_student_module_history.db",
+        'OPTIONS': {
+            'timeout': 30,
+        },
     }
 }
 
@@ -124,6 +132,7 @@ except ImportError:
 YOUTUBE['API'] = "http://127.0.0.1:{0}/get_youtube_api/".format(YOUTUBE_PORT)
 YOUTUBE['METADATA_URL'] = "http://127.0.0.1:{0}/test_youtube/".format(YOUTUBE_PORT)
 YOUTUBE['TEXT_API']['url'] = "127.0.0.1:{0}/test_transcripts_youtube/".format(YOUTUBE_PORT)
+YOUTUBE['TEST_TIMEOUT'] = 1500
 
 # Generate a random UUID so that different runs of acceptance tests don't break each other
 import uuid

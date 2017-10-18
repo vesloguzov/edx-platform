@@ -1,13 +1,14 @@
+import json
+
 import django.http
 from django.test import TestCase
 from nose.plugins.attrib import attr
-import json
 
-import lms.lib.comment_client
 import django_comment_client.middleware as middleware
+import lms.lib.comment_client
 
 
-@attr('shard_1')
+@attr(shard=1)
 class AjaxExceptionTestCase(TestCase):
     def setUp(self):
         super(AjaxExceptionTestCase, self).setUp()

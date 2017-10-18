@@ -6,24 +6,23 @@ import logging
 
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.http import HttpResponse, Http404, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-import dogstats_wrapper as dog_stats_api
-
-from capa.xqueue_interface import XQUEUE_METRIC_NAME
-from xmodule.modulestore.django import modulestore
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
-from util.json_request import JsonResponse, JsonResponseBadRequest
-from util.bad_request_rate_limiter import BadRequestRateLimiter
+
+import dogstats_wrapper as dog_stats_api
+from capa.xqueue_interface import XQUEUE_METRIC_NAME
 from certificates.api import generate_user_certificates
 from certificates.models import (
-    certificate_status_for_student,
     CertificateStatuses,
-    GeneratedCertificate,
     ExampleCertificate,
+    GeneratedCertificate,
+    certificate_status_for_student
 )
-
+from util.bad_request_rate_limiter import BadRequestRateLimiter
+from util.json_request import JsonResponse, JsonResponseBadRequest
+from xmodule.modulestore.django import modulestore
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +109,7 @@ def update_certificate(request):
 
                 cert.error_reason = xqueue_body['error_reason']
         else:
-            if cert.status in [status.generating, status.regenerating]:
+            if cert.status == status.generating:
                 cert.download_uuid = xqueue_body['download_uuid']
                 cert.verify_uuid = xqueue_body['verify_uuid']
                 cert.download_url = xqueue_body['url']

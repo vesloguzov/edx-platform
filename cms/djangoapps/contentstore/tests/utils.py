@@ -3,23 +3,23 @@ Utilities for contentstore tests
 '''
 import json
 import textwrap
-from mock import Mock
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test.client import Client
-from opaque_keys.edx.locations import SlashSeparatedCourseKey, AssetLocation
+from mock import Mock
+from opaque_keys.edx.locations import AssetLocation, SlashSeparatedCourseKey
 
-from contentstore.utils import reverse_url  # pylint: disable=import-error
-from student.models import Registration  # pylint: disable=import-error
-from xmodule.modulestore.split_mongo.split import SplitMongoModuleStore
+from contentstore.utils import reverse_url
+from student.models import Registration
 from xmodule.contentstore.django import contentstore
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.inheritance import own_metadata
+from xmodule.modulestore.split_mongo.split import SplitMongoModuleStore
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
-from xmodule.modulestore.xml_importer import import_course_from_xml
 from xmodule.modulestore.tests.utils import ProceduralCourseTestMixin
+from xmodule.modulestore.xml_importer import import_course_from_xml
 
 TEST_DATA_DIR = settings.COMMON_TEST_DATA_ROOT
 
@@ -82,7 +82,8 @@ class CourseTestCase(ProceduralCourseTestMixin, ModuleStoreTestCase):
         will be cleared out before each test case execution and deleted
         afterwards.
         """
-        self.user_password = super(CourseTestCase, self).setUp()
+
+        super(CourseTestCase, self).setUp()
         # create profile for user in ModuleStoreTestCase since it cannot create profile itself
         UserProfile.objects.create(user=self.user)
 
@@ -126,7 +127,7 @@ class CourseTestCase(ProceduralCourseTestMixin, ModuleStoreTestCase):
     SEQUENTIAL = 'vertical_sequential'
     DRAFT_HTML = 'draft_html'
     DRAFT_VIDEO = 'draft_video'
-    LOCKED_ASSET_KEY = AssetLocation.from_deprecated_string('/c4x/edX/toy/asset/sample_static.txt')
+    LOCKED_ASSET_KEY = AssetLocation.from_deprecated_string('/c4x/edX/toy/asset/sample_static.html')
 
     def import_and_populate_course(self):
         """

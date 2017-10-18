@@ -1,25 +1,25 @@
+"""Tests the course modules and their functions"""
+import ddt
 import unittest
 from datetime import datetime, timedelta
 
-from fs.memoryfs import MemoryFS
-
-from mock import Mock, patch
 import itertools
-
+from fs.memoryfs import MemoryFS
+from mock import Mock, patch
+from pytz import utc
 from xblock.runtime import KvsFieldData, DictKeyValueStore
 
 import xmodule.course_module
 from xmodule.modulestore.xml import ImportSystem, XMLModuleStore
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
-from django.utils.timezone import UTC
 
 
 ORG = 'test_org'
 COURSE = 'test_course'
 
-NOW = datetime.strptime('2013-01-01T01:00:00', '%Y-%m-%dT%H:%M:00').replace(tzinfo=UTC())
+NOW = datetime.strptime('2013-01-01T01:00:00', '%Y-%m-%dT%H:%M:00').replace(tzinfo=utc)
 
-_TODAY = datetime.now(UTC())
+_TODAY = datetime.now(utc)
 _LAST_WEEK = _TODAY - timedelta(days=7)
 _NEXT_WEEK = _TODAY + timedelta(days=7)
 
@@ -28,7 +28,7 @@ class CourseFieldsTestCase(unittest.TestCase):
     def test_default_start_date(self):
         self.assertEqual(
             xmodule.course_module.CourseFields.start.default,
-            datetime(2030, 1, 1, tzinfo=UTC())
+            datetime(2030, 1, 1, tzinfo=utc)
         )
 
 
@@ -142,6 +142,7 @@ class HasEndedMayCertifyTestCase(unittest.TestCase):
         self.assertFalse(self.future_noshow_certs.may_certify())
 
 
+@ddt.ddt
 class IsNewCourseTestCase(unittest.TestCase):
     """Make sure the property is_new works on courses"""
 
@@ -150,14 +151,14 @@ class IsNewCourseTestCase(unittest.TestCase):
 
         # Needed for test_is_newish
         datetime_patcher = patch.object(
-            xmodule.course_module, 'datetime',
+            xmodule.course_metadata_utils, 'datetime',
             Mock(wraps=datetime)
         )
         mocked_datetime = datetime_patcher.start()
         mocked_datetime.now.return_value = NOW
         self.addCleanup(datetime_patcher.stop)
 
-    @patch('xmodule.course_module.datetime.now')
+    @patch('xmodule.course_metadata_utils.datetime.now')
     def test_sorting_score(self, gmtime_mock):
         gmtime_mock.return_value = NOW
 
@@ -208,22 +209,6 @@ class IsNewCourseTestCase(unittest.TestCase):
         (xmodule.course_module.CourseFields.start.default, 'January 2014', 'January 2014', False, 'January 2014'),
     ]
 
-    @patch('xmodule.course_module.datetime.now')
-    def test_start_date_text(self, gmtime_mock):
-        gmtime_mock.return_value = NOW
-        for s in self.start_advertised_settings:
-            d = get_dummy_course(start=s[0], advertised_start=s[1])
-            print "Checking start=%s advertised=%s" % (s[0], s[1])
-            self.assertEqual(d.start_datetime_text(), s[2])
-
-    @patch('xmodule.course_module.datetime.now')
-    def test_start_date_time_text(self, gmtime_mock):
-        gmtime_mock.return_value = NOW
-        for setting in self.start_advertised_settings:
-            course = get_dummy_course(start=setting[0], advertised_start=setting[1])
-            print "Checking start=%s advertised=%s" % (setting[0], setting[1])
-            self.assertEqual(course.start_datetime_text("DATE_TIME"), setting[4])
-
     def test_start_date_is_default(self):
         for s in self.start_advertised_settings:
             d = get_dummy_course(start=s[0], advertised_start=s[1])
@@ -260,22 +245,6 @@ class IsNewCourseTestCase(unittest.TestCase):
 
         descriptor = get_dummy_course(start='2012-12-31T12:00')
         assert descriptor.is_newish is True
-
-    def test_end_date_text(self):
-        # No end date set, returns empty string.
-        d = get_dummy_course('2012-12-02T12:00')
-        self.assertEqual('', d.end_datetime_text())
-
-        d = get_dummy_course('2012-12-02T12:00', end='2014-9-04T12:00')
-        self.assertEqual('Sep 04, 2014', d.end_datetime_text())
-
-    def test_end_date_time_text(self):
-        # No end date set, returns empty string.
-        course = get_dummy_course('2012-12-02T12:00')
-        self.assertEqual('', course.end_datetime_text("DATE_TIME"))
-
-        course = get_dummy_course('2012-12-02T12:00', end='2014-9-04T12:00')
-        self.assertEqual('Sep 04, 2014 at 12:00 UTC', course.end_datetime_text("DATE_TIME"))
 
 
 class DiscussionTopicsTestCase(unittest.TestCase):
@@ -365,6 +334,16 @@ class SelfPacedTestCase(unittest.TestCase):
         self.assertFalse(self.course.self_paced)
 
 
+class BypassHomeTestCase(unittest.TestCase):
+    """Tests for setting which allows course home to be bypassed."""
+    def setUp(self):
+        super(BypassHomeTestCase, self).setUp()
+        self.course = get_dummy_course('2012-12-02T12:00')
+
+    def test_default(self):
+        self.assertFalse(self.course.bypass_home)
+
+
 class CourseDescriptorTestCase(unittest.TestCase):
     """
     Tests for a select few functions from CourseDescriptor.
@@ -380,7 +359,7 @@ class CourseDescriptorTestCase(unittest.TestCase):
         Initialize dummy testing course.
         """
         super(CourseDescriptorTestCase, self).setUp()
-        self.course = get_dummy_course(start=_TODAY)
+        self.course = get_dummy_course(start=_TODAY, end=_NEXT_WEEK)
 
     def test_clean_id(self):
         """
@@ -409,3 +388,11 @@ class CourseDescriptorTestCase(unittest.TestCase):
         Test CourseDescriptor.number.
         """
         self.assertEqual(self.course.number, COURSE)
+
+    def test_set_default_certificate_available_date(self):
+        """
+        The certificate_available_date field should default to two days
+        after the course end date.
+        """
+        expected_certificate_available_date = self.course.end + timedelta(days=2)
+        self.assertEqual(expected_certificate_available_date, self.course.certificate_available_date)

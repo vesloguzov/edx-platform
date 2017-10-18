@@ -2,18 +2,11 @@
 Discussion API forms
 """
 from django.core.exceptions import ValidationError
-from django.forms import (
-    BooleanField,
-    CharField,
-    ChoiceField,
-    Form,
-    IntegerField,
-    NullBooleanField,
-)
-
+from django.forms import BooleanField, CharField, ChoiceField, Form, IntegerField
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.locator import CourseLocator
-from openedx.core.djangoapps.util.forms import MultiValueField
+
+from openedx.core.djangoapps.util.forms import ExtendedNullBooleanField, MultiValueField
 
 
 class _PaginationForm(Form):
@@ -39,7 +32,7 @@ class ThreadListGetForm(_PaginationForm):
     course_id = CharField()
     topic_id = MultiValueField(required=False)
     text_search = CharField(required=False)
-    following = NullBooleanField(required=False)
+    following = ExtendedNullBooleanField(required=False)
     view = ChoiceField(
         choices=[(choice, choice) for choice in ["unread", "unanswered"]],
         required=False,
@@ -49,9 +42,10 @@ class ThreadListGetForm(_PaginationForm):
         required=False
     )
     order_direction = ChoiceField(
-        choices=[(choice, choice) for choice in ["asc", "desc"]],
+        choices=[(choice, choice) for choice in ["desc"]],
         required=False
     )
+    requested_fields = MultiValueField(required=False)
 
     def clean_order_by(self):
         """Return a default choice"""
@@ -99,6 +93,7 @@ class ThreadActionsForm(Form):
     following = BooleanField(required=False)
     voted = BooleanField(required=False)
     abuse_flagged = BooleanField(required=False)
+    read = BooleanField(required=False)
 
 
 class CommentListGetForm(_PaginationForm):
@@ -106,10 +101,8 @@ class CommentListGetForm(_PaginationForm):
     A form to validate query parameters in the comment list retrieval endpoint
     """
     thread_id = CharField()
-    # TODO: should we use something better here? This only accepts "True",
-    # "False", "1", and "0"
-    endorsed = NullBooleanField(required=False)
-    mark_as_read = BooleanField(required=False)
+    endorsed = ExtendedNullBooleanField(required=False)
+    requested_fields = MultiValueField(required=False)
 
 
 class CommentActionsForm(Form):
@@ -119,3 +112,10 @@ class CommentActionsForm(Form):
     """
     voted = BooleanField(required=False)
     abuse_flagged = BooleanField(required=False)
+
+
+class CommentGetForm(_PaginationForm):
+    """
+    A form to validate query parameters in the comment retrieval endpoint
+    """
+    requested_fields = MultiValueField(required=False)

@@ -2,25 +2,32 @@
 """
 Tests for UserPartitionTransformer.
 """
-import ddt
+import string
+from collections import namedtuple
 
+import ddt
+from nose.plugins.attrib import attr
+
+from openedx.core.djangoapps.course_groups.cohorts import add_user_to_cohort
 from openedx.core.djangoapps.course_groups.partition_scheme import CohortPartitionScheme
 from openedx.core.djangoapps.course_groups.tests.helpers import CohortFactory, config_course_cohorts
-from openedx.core.djangoapps.course_groups.cohorts import add_user_to_cohort
 from openedx.core.djangoapps.course_groups.views import link_cohort_to_partition_group
 from student.tests.factories import CourseEnrollmentFactory
+from xmodule.modulestore.tests.factories import CourseFactory
 from xmodule.partitions.partitions import Group, UserPartition
 
 from ...api import get_course_blocks
 from ..user_partitions import UserPartitionTransformer, _MergedGroupAccess
-from .test_helpers import CourseStructureTestCase
+from .helpers import CourseStructureTestCase, update_block
 
 
 class UserPartitionTestMixin(object):
     """
     Helper Mixin for testing user partitions.
     """
-    def setup_groups_partitions(self, num_user_partitions=1, num_groups=4):
+    TRANSFORMER_CLASS_TO_TEST = UserPartitionTransformer
+
+    def setup_groups_partitions(self, num_user_partitions=1, num_groups=4, active=True):
         """
         Sets up groups and user partitions for testing.
         """
@@ -37,42 +44,47 @@ class UserPartitionTestMixin(object):
                 name='Partition ' + unicode(user_partition_num),
                 description='This is partition ' + unicode(user_partition_num),
                 groups=self.groups,
-                scheme=CohortPartitionScheme
+                scheme=CohortPartitionScheme,
+                active=active,
             )
             user_partition.scheme.name = "cohort"
             self.user_partitions.append(user_partition)
 
-    def setup_chorts(self, course):
+    def setup_cohorts(self, course):
         """
         Sets up a cohort for each previously created user partition.
         """
+        config_course_cohorts(course, is_cohorted=True)
+        self.partition_cohorts = []
         for user_partition in self.user_partitions:
-            config_course_cohorts(course, is_cohorted=True)
-            self.cohorts = []
+            partition_cohorts = []
             for group in self.groups:
                 cohort = CohortFactory(course_id=course.id)
-                self.cohorts.append(cohort)
+                partition_cohorts.append(cohort)
                 link_cohort_to_partition_group(
                     cohort,
                     user_partition.id,
                     group.id,
                 )
+            self.partition_cohorts.append(partition_cohorts)
 
 
+@attr(shard=3)
 @ddt.ddt
 class UserPartitionTransformerTestCase(UserPartitionTestMixin, CourseStructureTestCase):
     """
     UserPartitionTransformer Test
     """
-    def setUp(self):
+    def setup_partitions_and_course(self, active=True):
         """
         Setup course structure and create user for user partition
         transformer test.
+        Args:
+            active: boolean representing if the user partitions are
+            active or not
         """
-        super(UserPartitionTransformerTestCase, self).setUp()
-
         # Set up user partitions and groups.
-        self.setup_groups_partitions()
+        self.setup_groups_partitions(active=active)
         self.user_partition = self.user_partitions[0]
 
         # Build course.
@@ -81,12 +93,12 @@ class UserPartitionTransformerTestCase(UserPartitionTestMixin, CourseStructureTe
         self.course = self.blocks['course']
 
         # Enroll user in course.
-        CourseEnrollmentFactory.create(user=self.user, course_id=self.course.id, is_active=True)
+        CourseEnrollmentFactory.create(
+            user=self.user, course_id=self.course.id, is_active=True
+        )
 
         # Set up cohorts.
-        self.setup_chorts(self.course)
-
-        self.transformer = UserPartitionTransformer()
+        self.setup_cohorts(self.course)
 
     def get_course_hierarchy(self):
         """
@@ -193,26 +205,246 @@ class UserPartitionTransformerTestCase(UserPartitionTestMixin, CourseStructureTe
     )
     @ddt.unpack
     def test_transform(self, group_id, expected_blocks):
+        self.setup_partitions_and_course()
         if group_id:
-            add_user_to_cohort(self.cohorts[group_id - 1], self.user.username)
+            cohort = self.partition_cohorts[self.user_partition.id - 1][group_id - 1]
+            add_user_to_cohort(cohort, self.user.username)
 
         trans_block_structure = get_course_blocks(
             self.user,
             self.course.location,
-            transformers={self.transformer}
+            self.transformers,
         )
         self.assertSetEqual(
             set(trans_block_structure.get_block_keys()),
             self.get_block_key_set(self.blocks, *expected_blocks)
         )
 
+    def test_transform_on_inactive_partition(self):
+        """
+        Tests UserPartitionTransformer for inactive UserPartition.
+        """
+        self.setup_partitions_and_course(active=False)
 
+        # we expect to find all blocks because the UserPartitions are all
+        # inactive
+        expected_blocks = ('course',) + tuple(string.ascii_uppercase[:15])
+
+        trans_block_structure = get_course_blocks(
+            self.user,
+            self.course.location,
+            self.transformers,
+        )
+
+        self.assertSetEqual(
+            set(trans_block_structure.get_block_keys()),
+            self.get_block_key_set(self.blocks, *expected_blocks)
+        )
+
+
+@attr(shard=3)
 @ddt.ddt
-class MergedGroupAccessTestCase(UserPartitionTestMixin, CourseStructureTestCase):
+class MergedGroupAccessTestData(UserPartitionTestMixin, CourseStructureTestCase):
     """
     _MergedGroupAccess Test
     """
-    # TODO Test Merged Group Access (MA-1624)
+    def setUp(self):
+        """
+        Setup course structure and create user for user partition
+        transformer test.
+        """
+        super(MergedGroupAccessTestData, self).setUp()
+
+        # Set up multiple user partitions and groups.
+        self.setup_groups_partitions(num_user_partitions=3)
+
+        self.course = CourseFactory.create(user_partitions=self.user_partitions)
+        CourseEnrollmentFactory.create(user=self.user, course_id=self.course.id, is_active=True)
+
+        # Set up cohorts.
+        self.setup_cohorts(self.course)
+
+    def get_course_hierarchy(self):
+        """
+        Returns a course hierarchy to test with.
+        """
+        # The block tree is as follows, with the numbers in the brackets
+        # specifying the group_id for each of the 3 partitions.
+        #               A
+        #        /      |    \
+        #       /       |     \
+        #     B         C      D
+        # [1][3][]  [2][2][]  [3][1][]
+        #      \    /
+        #       \  /
+        #         E
+        #
+        return [
+            {
+                'org': 'MergedGroupAccess',
+                'course': 'MGA101F',
+                'run': 'test_run',
+                'user_partitions': self.user_partitions,
+                '#type': 'course',
+                '#ref': 'A',
+            },
+            {
+                '#type': 'vertical',
+                '#ref': 'B',
+                '#parents': ['A'],
+                'metadata': {'group_access': {1: [1], 2:[3], 3:[]}},
+            },
+            {
+                '#type': 'vertical',
+                '#ref': 'C',
+                '#parents': ['A'],
+                'metadata': {'group_access': {1: [2], 2:[2], 3:[]}},
+            },
+            {
+                '#type': 'vertical',
+                '#ref': 'D',
+                '#parents': ['A'],
+                'metadata': {'group_access': {1: [3], 2:[1], 3:[]}},
+            },
+            {
+                '#type': 'vertical',
+                '#ref': 'E',
+                '#parents': ['B', 'C'],
+            },
+        ]
+
+    AccessTestData = namedtuple(
+        'AccessTestData',
+        ['partition_groups', 'xblock_access', 'merged_parents_list', 'expected_access'],
+    )
+    AccessTestData.__new__.__defaults__ = ({}, None, [], False)
+
+    @ddt.data(
+        # universal access throughout
+        AccessTestData(expected_access=True),
+        AccessTestData(xblock_access={1: None}, expected_access=True),
+        AccessTestData(xblock_access={1: []}, expected_access=True),
+
+        # partition 1 requiring membership in group 1
+        AccessTestData(xblock_access={1: [1]}),
+        AccessTestData(partition_groups={2: 1, 3: 1}, xblock_access={1: [1]}),
+        AccessTestData(partition_groups={1: 1, 2: 1, 3: 1}, xblock_access={1: [1]}, expected_access=True),
+        AccessTestData(partition_groups={1: 1, 2: 1}, xblock_access={1: [1], 2: [], 3: []}, expected_access=True),
+
+        # partitions 1 and 2 requiring membership in group 1
+        AccessTestData(xblock_access={1: [1], 2: [1]}),
+        AccessTestData(partition_groups={2: 1, 3: 1}, xblock_access={1: [1], 2: [1]}),
+        AccessTestData(partition_groups={1: 1, 2: 1}, xblock_access={1: [1], 2: [1]}, expected_access=True),
+
+        # partitions 1 and 2 requiring membership in different groups
+        AccessTestData(xblock_access={1: [1], 2: [2]}),
+        AccessTestData(partition_groups={2: 1, 3: 1}, xblock_access={1: [1], 2: [2]}),
+        AccessTestData(partition_groups={1: 1, 2: 1, 3: 1}, xblock_access={1: [1], 2: [2]}),
+
+        AccessTestData(partition_groups={1: 1, 2: 2}, xblock_access={1: [1], 2: [2]}, expected_access=True),
+
+        # partitions 1 and 2 requiring membership in list of groups
+        AccessTestData(partition_groups={1: 3, 2: 3}, xblock_access={1: [1, 2], 2: [1, 2]}),
+
+        AccessTestData(partition_groups={1: 1, 2: 1}, xblock_access={1: [1, 2], 2: [1, 2]}, expected_access=True),
+        AccessTestData(partition_groups={1: 1, 2: 2}, xblock_access={1: [1, 2], 2: [1, 2]}, expected_access=True),
+        AccessTestData(partition_groups={1: 2, 2: 1}, xblock_access={1: [1, 2], 2: [1, 2]}, expected_access=True),
+        AccessTestData(partition_groups={1: 2, 2: 2}, xblock_access={1: [1, 2], 2: [1, 2]}, expected_access=True),
+
+        # parent inheritance
+        #   1 parent allows
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {1}}], expected_access=True),
+
+        #   2 parents allow
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {1}}, {1: {1}}], expected_access=True),
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {2}}, {1: {1}}], expected_access=True),
+        AccessTestData(
+            partition_groups={1: 1, 2: 2},
+            merged_parents_list=[{1: {2}, 2: {2}}, {1: {1}, 2: {1}}],
+            expected_access=True,
+        ),
+
+        #   1 parent denies
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {}}]),
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {3}}]),
+
+        #   1 parent denies, 1 parent allows all
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {}}, {}], expected_access=True),
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {}}, {1: {}}, {}], expected_access=True),
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {}}, {}, {1: {}}], expected_access=True),
+
+        #   1 parent denies, 1 parent allows
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {3}}, {1: {1}}], expected_access=True),
+
+        #   2 parents deny
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {}}, {1: {}}]),
+        AccessTestData(partition_groups={1: 1, 2: 2}, merged_parents_list=[{1: {3}}, {1: {3}, 2: {2}}]),
+
+        # intersect with parent
+        #   child denies, 1 parent allows
+        AccessTestData(partition_groups={1: 1, 2: 2}, xblock_access={1: [3]}, merged_parents_list=[{1: {1}}]),
+        AccessTestData(partition_groups={1: 1, 2: 2}, xblock_access={1: [2]}, merged_parents_list=[{1: {1}}]),
+
+        #  child denies, 2 parents allow
+        AccessTestData(partition_groups={1: 1, 2: 2}, xblock_access={1: [3]}, merged_parents_list=[{1: {1}}, {2: {2}}]),
+        AccessTestData(partition_groups={1: 1, 2: 2}, xblock_access={2: [3]}, merged_parents_list=[{1: {1}}, {2: {2}}]),
+
+        #   child allows, 1 parent denies
+        AccessTestData(partition_groups={1: 1, 2: 2}, xblock_access={2: [2]}, merged_parents_list=[{1: {}}]),
+        AccessTestData(partition_groups={1: 1, 2: 2}, xblock_access={1: [1]}, merged_parents_list=[{1: {2}}]),
+        AccessTestData(partition_groups={1: 1, 2: 2}, xblock_access={2: [2]}, merged_parents_list=[{1: {2}}]),
+
+        #   child allows, 1 parent allows
+        AccessTestData(
+            partition_groups={1: 1, 2: 2},
+            xblock_access={1: [1]},
+            merged_parents_list=[{}],
+            expected_access=True,
+        ),
+        AccessTestData(
+            partition_groups={1: 1, 2: 2}, xblock_access={2: [2]}, merged_parents_list=[{1: {1}}], expected_access=True
+        ),
+        AccessTestData(
+            partition_groups={1: 1, 2: 2},
+            xblock_access={1: [1, 3], 2: [2, 3]},
+            merged_parents_list=[{1: {1, 2, 3}}, {2: {1, 2, 3}}],
+            expected_access=True,
+        ),
+
+        #   child allows, 1 parent allows, 1 parent denies
+        AccessTestData(
+            partition_groups={1: 1, 2: 2},
+            xblock_access={1: [1]},
+            merged_parents_list=[{1: {3}}, {1: {1}}],
+            expected_access=True,
+        ),
+    )
+    @ddt.unpack
+    def test_merged_group_access(self, user_partition_groups, xblock_access, merged_parents_list, expected_access):
+        # use the course as the block to test
+        block = self.course
+
+        # update block access
+        if xblock_access is not None:
+            block.group_access = xblock_access
+            update_block(self.course)
+
+        # convert merged_parents_list to _MergedGroupAccess objects
+        for ind, merged_parent in enumerate(merged_parents_list):
+            converted_object = _MergedGroupAccess([], block, [])
+            converted_object._access = merged_parent
+            merged_parents_list[ind] = converted_object
+
+        merged_group_access = _MergedGroupAccess(self.user_partitions, block, merged_parents_list)
+
+        # convert group_id to groups in user_partition_groups parameter
+        for partition_id, group_id in user_partition_groups.iteritems():
+            user_partition_groups[partition_id] = self.groups[group_id - 1]
+
+        self.assertEquals(
+            merged_group_access.check_group_access(user_partition_groups),
+            expected_access,
+        )
 
     @ddt.data(
         ([None], None),

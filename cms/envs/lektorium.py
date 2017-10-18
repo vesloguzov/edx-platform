@@ -16,7 +16,3 @@ CAS_INSTANT_LOGIN_EXEMPT = (
 )
 
 COURSE_UPDATE_DATE_FORMAT = 'dd mm yy'
-
-# TODO: lektorium: remove
-# TMP fix for incorrect dependency, efficient on rerun
-DEFAULT_COURSE_ABOUT_IMAGE_URL = 'images/pencils.jpg'

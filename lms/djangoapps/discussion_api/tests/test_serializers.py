@@ -7,33 +7,32 @@ from urlparse import urlparse
 import ddt
 import httpretty
 import mock
-
 from django.test.client import RequestFactory
+from nose.plugins.attrib import attr
 
 from discussion_api.serializers import CommentSerializer, ThreadSerializer, get_context
-from discussion_api.tests.utils import (
-    CommentsServiceMockMixin,
-    make_minimal_cs_thread,
-    make_minimal_cs_comment,
-)
+from discussion_api.tests.utils import CommentsServiceMockMixin, make_minimal_cs_comment, make_minimal_cs_thread
+from django_comment_client.tests.utils import ForumsEnableMixin
 from django_comment_common.models import (
     FORUM_ROLE_ADMINISTRATOR,
     FORUM_ROLE_COMMUNITY_TA,
     FORUM_ROLE_MODERATOR,
     FORUM_ROLE_STUDENT,
-    Role,
+    Role
 )
 from lms.lib.comment_client.comment import Comment
 from lms.lib.comment_client.thread import Thread
+from openedx.core.djangoapps.course_groups.tests.helpers import CohortFactory
 from student.tests.factories import UserFactory
 from util.testing import UrlResetMixin
+from xmodule.modulestore import ModuleStoreEnum
+from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
-from openedx.core.djangoapps.course_groups.tests.helpers import CohortFactory
 
 
 @ddt.ddt
-class SerializerTestMixin(CommentsServiceMockMixin, UrlResetMixin):
+class SerializerTestMixin(ForumsEnableMixin, CommentsServiceMockMixin, UrlResetMixin):
     @classmethod
     @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_DISCUSSION_SERVICE": True})
     def setUpClass(cls):
@@ -132,6 +131,7 @@ class SerializerTestMixin(CommentsServiceMockMixin, UrlResetMixin):
         self.assertEqual(serialized["voted"], True)
 
 
+@attr(shard=3)
 @ddt.ddt
 class ThreadSerializerSerializationTest(SerializerTestMixin, SharedModuleStoreTestCase):
     """Tests for ThreadSerializer serialization."""
@@ -158,60 +158,27 @@ class ThreadSerializerSerializationTest(SerializerTestMixin, SharedModuleStoreTe
         return ThreadSerializer(thread, context=get_context(self.course, self.request)).data
 
     def test_basic(self):
-        thread = {
-            "type": "thread",
+        thread = make_minimal_cs_thread({
             "id": "test_thread",
             "course_id": unicode(self.course.id),
             "commentable_id": "test_topic",
-            "group_id": None,
             "user_id": str(self.author.id),
             "username": self.author.username,
-            "anonymous": False,
-            "anonymous_to_peers": False,
-            "created_at": "2015-04-28T00:00:00Z",
-            "updated_at": "2015-04-28T11:11:11Z",
-            "thread_type": "discussion",
             "title": "Test Title",
             "body": "Test body",
             "pinned": True,
-            "closed": False,
-            "abuse_flaggers": [],
             "votes": {"up_count": 4},
             "comments_count": 5,
             "unread_comments_count": 3,
-            "read": False,
-            "endorsed": False,
-            "response_count": None,
-        }
-        expected = {
-            "id": "test_thread",
-            "course_id": unicode(self.course.id),
-            "topic_id": "test_topic",
-            "group_id": None,
-            "group_name": None,
+        })
+        expected = self.expected_thread_data({
             "author": self.author.username,
-            "author_label": None,
-            "created_at": "2015-04-28T00:00:00Z",
-            "updated_at": "2015-04-28T11:11:11Z",
-            "type": "discussion",
-            "title": "Test Title",
-            "raw_body": "Test body",
-            "rendered_body": "<p>Test body</p>",
-            "pinned": True,
-            "closed": False,
-            "following": False,
-            "abuse_flagged": False,
-            "voted": False,
             "vote_count": 4,
-            "comment_count": 5,
+            "comment_count": 6,
             "unread_comment_count": 3,
-            "comment_list_url": "http://testserver/api/discussion/v1/comments/?thread_id=test_thread",
-            "endorsed_comment_list_url": None,
-            "non_endorsed_comment_list_url": None,
-            "editable_fields": ["abuse_flagged", "following", "voted"],
-            "read": False,
-            "has_endorsed": False,
-        }
+            "pinned": True,
+            "editable_fields": ["abuse_flagged", "following", "read", "voted"],
+        })
         self.assertEqual(self.serialize(thread), expected)
 
         thread["thread_type"] = "question"
@@ -235,10 +202,12 @@ class ThreadSerializerSerializationTest(SerializerTestMixin, SharedModuleStoreTe
         thread_data = self.make_cs_content({})
         del thread_data["pinned"]
         self.register_get_thread_response(thread_data)
-        serialized = self.serialize(Thread(id=thread_data["id"]))
+        serialized = self.serialize(thread_data)
         self.assertEqual(serialized["pinned"], False)
 
     def test_group(self):
+        self.course.cohort_config = {"cohorted": True}
+        modulestore().update_item(self.course, ModuleStoreEnum.UserID.test)
         cohort = CohortFactory.create(course_id=self.course.id)
         serialized = self.serialize(self.make_cs_content({"group_id": cohort.id}))
         self.assertEqual(serialized["group_id"], cohort.id)
@@ -253,14 +222,14 @@ class ThreadSerializerSerializationTest(SerializerTestMixin, SharedModuleStoreTe
     def test_response_count(self):
         thread_data = self.make_cs_content({"resp_total": 2})
         self.register_get_thread_response(thread_data)
-        serialized = self.serialize(Thread(id=thread_data["id"]))
+        serialized = self.serialize(thread_data)
         self.assertEqual(serialized["response_count"], 2)
 
     def test_response_count_missing(self):
         thread_data = self.make_cs_content({})
         del thread_data["resp_total"]
         self.register_get_thread_response(thread_data)
-        serialized = self.serialize(Thread(id=thread_data["id"]))
+        serialized = self.serialize(thread_data)
         self.assertNotIn("response_count", serialized)
 
 
@@ -312,6 +281,7 @@ class CommentSerializerTest(SerializerTestMixin, SharedModuleStoreTestCase):
             "abuse_flaggers": [],
             "votes": {"up_count": 4},
             "children": [],
+            "child_count": 0,
         }
         expected = {
             "id": "test_comment",
@@ -332,6 +302,7 @@ class CommentSerializerTest(SerializerTestMixin, SharedModuleStoreTestCase):
             "vote_count": 4,
             "children": [],
             "editable_fields": ["abuse_flagged", "voted"],
+            "child_count": 0,
         }
         self.assertEqual(self.serialize(comment), expected)
 
@@ -422,7 +393,12 @@ class CommentSerializerTest(SerializerTestMixin, SharedModuleStoreTestCase):
 
 
 @ddt.ddt
-class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixin, SharedModuleStoreTestCase):
+class ThreadSerializerDeserializationTest(
+        ForumsEnableMixin,
+        CommentsServiceMockMixin,
+        UrlResetMixin,
+        SharedModuleStoreTestCase
+):
     """Tests for ThreadSerializer deserialization."""
     @classmethod
     @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_DISCUSSION_SERVICE": True})
@@ -455,6 +431,7 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
             "title": "Original Title",
             "body": "Original body",
             "user_id": str(self.user.id),
+            "username": self.user.username,
             "read": "False",
             "endorsed": "False"
         }))
@@ -476,7 +453,7 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
         return serializer.data
 
     def test_create_minimal(self):
-        self.register_post_thread_response({"id": "test_id"})
+        self.register_post_thread_response({"id": "test_id", "username": self.user.username})
         saved = self.save_and_reserialize(self.minimal_data)
         self.assertEqual(
             urlparse(httpretty.last_request().path).path,
@@ -496,7 +473,7 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
         self.assertEqual(saved["id"], "test_id")
 
     def test_create_all_fields(self):
-        self.register_post_thread_response({"id": "test_id"})
+        self.register_post_thread_response({"id": "test_id", "username": self.user.username})
         data = self.minimal_data.copy()
         data["group_id"] = 42
         self.save_and_reserialize(data)
@@ -536,7 +513,7 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
         )
 
     def test_create_type(self):
-        self.register_post_thread_response({"id": "test_id"})
+        self.register_post_thread_response({"id": "test_id", "username": self.user.username})
         data = self.minimal_data.copy()
         data["type"] = "question"
         self.save_and_reserialize(data)
@@ -561,16 +538,19 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
                 "closed": ["False"],
                 "pinned": ["False"],
                 "user_id": [str(self.user.id)],
+                "read": ["False"],
             }
         )
 
-    def test_update_all(self):
+    @ddt.data(True, False)
+    def test_update_all(self, read):
         self.register_put_thread_response(self.existing_thread.attributes)
         data = {
             "topic_id": "edited_topic",
             "type": "question",
             "title": "Edited Title",
             "raw_body": "Edited body",
+            "read": read,
         }
         saved = self.save_and_reserialize(data, self.existing_thread)
         self.assertEqual(
@@ -586,6 +566,7 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
                 "closed": ["False"],
                 "pinned": ["False"],
                 "user_id": [str(self.user.id)],
+                "read": [str(read)],
             }
         )
         for key in data:
@@ -620,7 +601,7 @@ class ThreadSerializerDeserializationTest(CommentsServiceMockMixin, UrlResetMixi
 
 
 @ddt.ddt
-class CommentSerializerDeserializationTest(CommentsServiceMockMixin, SharedModuleStoreTestCase):
+class CommentSerializerDeserializationTest(ForumsEnableMixin, CommentsServiceMockMixin, SharedModuleStoreTestCase):
     """Tests for ThreadSerializer deserialization."""
     @classmethod
     def setUpClass(cls):
@@ -645,6 +626,7 @@ class CommentSerializerDeserializationTest(CommentsServiceMockMixin, SharedModul
             "thread_id": "existing_thread",
             "body": "Original body",
             "user_id": str(self.user.id),
+            "username": self.user.username,
             "course_id": unicode(self.course.id),
         }))
 
@@ -675,7 +657,7 @@ class CommentSerializerDeserializationTest(CommentsServiceMockMixin, SharedModul
             data["parent_id"] = parent_id
             self.register_get_comment_response({"thread_id": "test_thread", "id": parent_id})
         self.register_post_comment_response(
-            {"id": "test_comment"},
+            {"id": "test_comment", "username": self.user.username},
             thread_id="test_thread",
             parent_id=parent_id
         )
@@ -702,7 +684,7 @@ class CommentSerializerDeserializationTest(CommentsServiceMockMixin, SharedModul
         data["endorsed"] = True
         self.register_get_comment_response({"thread_id": "test_thread", "id": "test_parent"})
         self.register_post_comment_response(
-            {"id": "test_comment"},
+            {"id": "test_comment", "username": self.user.username},
             thread_id="test_thread",
             parent_id="test_parent"
         )
@@ -797,7 +779,7 @@ class CommentSerializerDeserializationTest(CommentsServiceMockMixin, SharedModul
     def test_create_endorsed(self):
         # TODO: The comments service doesn't populate the endorsement field on
         # comment creation, so this is sadly realistic
-        self.register_post_comment_response({}, thread_id="test_thread")
+        self.register_post_comment_response({"username": self.user.username}, thread_id="test_thread")
         data = self.minimal_data.copy()
         data["endorsed"] = True
         saved = self.save_and_reserialize(data)

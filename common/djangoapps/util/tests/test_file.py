@@ -2,26 +2,27 @@
 """
 Tests for file.py
 """
-import ddt
+import os
+from datetime import datetime
 from io import StringIO
 
-from django.test import TestCase
-from datetime import datetime
-from django.utils.timezone import UTC
-from mock import patch, Mock
-from django.http import HttpRequest
+import ddt
+from django.core import exceptions
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.http import HttpRequest
+from django.test import TestCase
+from django.utils.timezone import UTC
+from mock import Mock, patch
+from opaque_keys.edx.locations import CourseLocator, SlashSeparatedCourseKey
+
 import util.file
 from util.file import (
+    FileValidationException,
+    UniversalNewlineIterator,
     course_and_time_based_filename_generator,
     course_filename_prefix_generator,
-    store_uploaded_file,
-    FileValidationException,
-    UniversalNewlineIterator
+    store_uploaded_file
 )
-from opaque_keys.edx.locations import CourseLocator, SlashSeparatedCourseKey
-from django.core import exceptions
-import os
 
 
 @ddt.ddt
@@ -158,7 +159,7 @@ class StoreUploadedFileTestCase(TestCase):
 
         def success_validator(storage, filename):
             """ Validation test function that is a no-op """
-            self.assertTrue("success_file" in os.path.basename(filename))
+            self.assertIn("success_file", os.path.basename(filename))
             store_file_data(storage, filename)
 
         with self.assertRaises(FileValidationException) as error:
@@ -216,7 +217,7 @@ class StoreUploadedFileTestCase(TestCase):
             self.request, "nonunique_file", [".txt"], requested_file_name, self.default_max_size
         )
         self.assertNotEqual(first_stored_file_name, second_stored_file_name)
-        self.assertTrue(requested_file_name in second_stored_file_name)
+        self.assertIn(requested_file_name, second_stored_file_name)
         self._verify_successful_upload(file_storage, second_stored_file_name, file_content)
 
     def _verify_successful_upload(self, storage, file_name, expected_content):

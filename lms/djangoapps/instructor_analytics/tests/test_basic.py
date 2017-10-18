@@ -4,33 +4,51 @@ Tests for instructor.basic
 
 import datetime
 import json
+
 import pytz
-from mock import MagicMock, Mock, patch
 from django.core.urlresolvers import reverse
 from django.db.models import Q
+from edx_proctoring.api import create_exam
+from edx_proctoring.models import ProctoredExamStudentAttempt
+from mock import MagicMock, Mock, patch
+from nose.plugins.attrib import attr
+from opaque_keys.edx.locator import UsageKey
 
 from course_modes.models import CourseMode
 from courseware.tests.factories import InstructorFactory
 from instructor_analytics.basic import (
-    StudentModule, sale_record_features, sale_order_record_features, enrolled_students_features,
-    course_registration_features, coupon_codes_features, get_proctored_exam_results, list_may_enroll,
-    list_problem_responses, AVAILABLE_FEATURES, STUDENT_FEATURES, PROFILE_FEATURES
+    AVAILABLE_FEATURES,
+    PROFILE_FEATURES,
+    STUDENT_FEATURES,
+    StudentModule,
+    coupon_codes_features,
+    course_registration_features,
+    enrolled_students_features,
+    get_proctored_exam_results,
+    list_may_enroll,
+    list_problem_responses,
+    sale_order_record_features,
+    sale_record_features
 )
-from opaque_keys.edx.locator import UsageKey
 from openedx.core.djangoapps.course_groups.tests.helpers import CohortFactory
+from shoppingcart.models import (
+    Coupon,
+    CouponRedemption,
+    CourseRegCodeItem,
+    CourseRegistrationCode,
+    CourseRegistrationCodeInvoiceItem,
+    Invoice,
+    Order,
+    RegistrationCodeRedemption
+)
 from student.models import CourseEnrollment, CourseEnrollmentAllowed
 from student.roles import CourseSalesAdminRole
-from student.tests.factories import UserFactory, CourseModeFactory
-from shoppingcart.models import (
-    CourseRegistrationCode, RegistrationCodeRedemption, Order,
-    Invoice, Coupon, CourseRegCodeItem, CouponRedemption, CourseRegistrationCodeInvoiceItem
-)
+from student.tests.factories import CourseModeFactory, UserFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
-from edx_proctoring.api import create_exam
-from edx_proctoring.models import ProctoredExamStudentAttempt
 
 
+@attr(shard=3)
 class TestAnalyticsBasic(ModuleStoreTestCase):
     """ Test basic analytics functions. """
 
@@ -90,8 +108,8 @@ class TestAnalyticsBasic(ModuleStoreTestCase):
                 # Check if list_problem_responses returned expected results:
                 self.assertEqual(len(problem_responses), len(mock_results))
                 for mock_result in mock_results:
-                    self.assertTrue(
-                        {'username': mock_result.student.username, 'state': mock_result.state} in
+                    self.assertIn(
+                        {'username': mock_result.student.username, 'state': mock_result.state},
                         problem_responses
                     )
 
@@ -104,17 +122,35 @@ class TestAnalyticsBasic(ModuleStoreTestCase):
             self.assertIn(userreport['username'], [user.username for user in self.users])
 
     def test_enrolled_students_features_keys(self):
-        query_features = ('username', 'name', 'email')
+        query_features = ('username', 'name', 'email', 'city', 'country',)
+        for user in self.users:
+            user.profile.city = "Mos Eisley {}".format(user.id)
+            user.profile.country = "Tatooine {}".format(user.id)
+            user.profile.save()
         for feature in query_features:
             self.assertIn(feature, AVAILABLE_FEATURES)
         with self.assertNumQueries(1):
             userreports = enrolled_students_features(self.course_key, query_features)
         self.assertEqual(len(userreports), len(self.users))
-        for userreport in userreports:
+
+        userreports = sorted(userreports, key=lambda u: u["username"])
+        users = sorted(self.users, key=lambda u: u.username)
+        for userreport, user in zip(userreports, users):
             self.assertEqual(set(userreport.keys()), set(query_features))
-            self.assertIn(userreport['username'], [user.username for user in self.users])
-            self.assertIn(userreport['email'], [user.email for user in self.users])
-            self.assertIn(userreport['name'], [user.profile.name for user in self.users])
+            self.assertEqual(userreport['username'], user.username)
+            self.assertEqual(userreport['email'], user.email)
+            self.assertEqual(userreport['name'], user.profile.name)
+            self.assertEqual(userreport['city'], user.profile.city)
+            self.assertEqual(userreport['country'], user.profile.country)
+
+    def test_enrolled_student_with_no_country_city(self):
+        userreports = enrolled_students_features(self.course_key, ('username', 'city', 'country',))
+        for userreport in userreports:
+            # This behaviour is somewhat inconsistent: None string fields
+            # objects are converted to "None", but non-JSON serializable fields
+            # are converted to an empty string.
+            self.assertEqual(userreport['city'], "None")
+            self.assertEqual(userreport['country'], "")
 
     def test_enrolled_students_meta_features_keys(self):
         """
@@ -129,12 +165,40 @@ class TestAnalyticsBasic(ModuleStoreTestCase):
             self.assertIn(userreport['meta.position'], ["edX expert {}".format(user.id) for user in self.users])
             self.assertIn(userreport['meta.company'], ["Open edX Inc {}".format(user.id) for user in self.users])
 
+    def test_enrolled_students_enrollment_verification(self):
+        """
+        Assert that we can get enrollment mode and verification status
+        """
+        query_features = ('enrollment_mode', 'verification_status')
+        userreports = enrolled_students_features(self.course_key, query_features)
+        self.assertEqual(len(userreports), len(self.users))
+        # by default all users should have "audit" as their enrollment mode
+        # and "N/A" as their verification status
+        for userreport in userreports:
+            self.assertEqual(set(userreport.keys()), set(query_features))
+            self.assertIn(userreport['enrollment_mode'], ["audit"])
+            self.assertIn(userreport['verification_status'], ["N/A"])
+        # make sure that the user report respects whatever value
+        # is returned by verification and enrollment code
+        with patch("student.models.CourseEnrollment.enrollment_mode_for_user") as enrollment_patch:
+            with patch(
+                "lms.djangoapps.verify_student.models.SoftwareSecurePhotoVerification.verification_status_for_user"
+            ) as verify_patch:
+                enrollment_patch.return_value = ["verified"]
+                verify_patch.return_value = "dummy verification status"
+                userreports = enrolled_students_features(self.course_key, query_features)
+                self.assertEqual(len(userreports), len(self.users))
+                for userreport in userreports:
+                    self.assertEqual(set(userreport.keys()), set(query_features))
+                    self.assertIn(userreport['enrollment_mode'], ["verified"])
+                    self.assertIn(userreport['verification_status'], ["dummy verification status"])
+
     def test_enrolled_students_features_keys_cohorted(self):
         course = CourseFactory.create(org="test", course="course1", display_name="run1")
         course.cohort_config = {'cohorted': True, 'auto_cohort': True, 'auto_cohort_groups': ['cohort']}
         self.store.update_item(course, self.instructor.id)
-        cohort = CohortFactory.create(name='cohort', course_id=course.id)
         cohorted_students = [UserFactory.create() for _ in xrange(10)]
+        cohort = CohortFactory.create(name='cohort', course_id=course.id, users=cohorted_students)
         cohorted_usernames = [student.username for student in cohorted_students]
         non_cohorted_student = UserFactory.create()
         for student in cohorted_students:
@@ -225,7 +289,7 @@ class TestCourseSaleRecordsAnalyticsBasic(ModuleStoreTestCase):
 
         query_features = [
             'company_name', 'company_contact_name', 'company_contact_email', 'total_codes', 'total_used_codes',
-            'total_amount', 'created_at', 'customer_reference_number', 'recipient_name', 'recipient_email',
+            'total_amount', 'created', 'customer_reference_number', 'recipient_name', 'recipient_email',
             'created_by', 'internal_reference', 'invoice_number', 'codes', 'course_id'
         ]
 
@@ -263,6 +327,43 @@ class TestCourseSaleRecordsAnalyticsBasic(ModuleStoreTestCase):
             self.assertEqual(sale_record['created_by'], self.instructor)
             self.assertEqual(sale_record['total_used_codes'], 0)
             self.assertEqual(sale_record['total_codes'], 5)
+
+    def test_course_sale_no_codes(self):
+
+        query_features = [
+            'company_name', 'company_contact_name', 'company_contact_email', 'total_codes', 'total_used_codes',
+            'total_amount', 'created', 'customer_reference_number', 'recipient_name', 'recipient_email',
+            'created_by', 'internal_reference', 'invoice_number', 'codes', 'course_id'
+        ]
+
+        #create invoice
+        sale_invoice = Invoice.objects.create(
+            total_amount=0.00, company_name='Test1', company_contact_name='TestName',
+            company_contact_email='test@company.com', recipient_name='Testw_1', recipient_email='test2@test.com',
+            customer_reference_number='2Fwe23S', internal_reference="ABC", course_id=self.course.id
+        )
+        CourseRegistrationCodeInvoiceItem.objects.create(
+            invoice=sale_invoice,
+            qty=0,
+            unit_price=0.00,
+            course_id=self.course.id
+        )
+
+        course_sale_records_list = sale_record_features(self.course.id, query_features)
+
+        for sale_record in course_sale_records_list:
+            self.assertEqual(sale_record['total_amount'], sale_invoice.total_amount)
+            self.assertEqual(sale_record['recipient_email'], sale_invoice.recipient_email)
+            self.assertEqual(sale_record['recipient_name'], sale_invoice.recipient_name)
+            self.assertEqual(sale_record['company_name'], sale_invoice.company_name)
+            self.assertEqual(sale_record['company_contact_name'], sale_invoice.company_contact_name)
+            self.assertEqual(sale_record['company_contact_email'], sale_invoice.company_contact_email)
+            self.assertEqual(sale_record['internal_reference'], sale_invoice.internal_reference)
+            self.assertEqual(sale_record['customer_reference_number'], sale_invoice.customer_reference_number)
+            self.assertEqual(sale_record['invoice_number'], sale_invoice.id)
+            self.assertEqual(sale_record['created_by'], None)
+            self.assertEqual(sale_record['total_used_codes'], 0)
+            self.assertEqual(sale_record['total_codes'], 0)
 
     def test_sale_order_features_with_discount(self):
         """
@@ -473,7 +574,7 @@ class TestCourseRegistrationCodeAnalyticsBasic(ModuleStoreTestCase):
             self.assertIn(
                 course_registration['company_name'],
                 [
-                    getattr(registration_code.invoice_item.invoice, 'company_name')
+                    registration_code.invoice_item.invoice.company_name
                     for registration_code in registration_codes
                 ]
             )

@@ -7,21 +7,19 @@ Contains:
     for testing Xmodules with mongo store.
 """
 
-from django.test.utils import override_settings
 from django.core.urlresolvers import reverse
 from django.test.client import Client
 
 from edxmako.shortcuts import render_to_string
+from lms.djangoapps.lms_xblock.field_data import LmsFieldData
+from openedx.core.lib.url_utils import quote_slashes
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
-from xmodule.modulestore.tests.django_utils import TEST_DATA_MONGO_MODULESTORE
 from xblock.field_data import DictFieldData
+from xmodule.modulestore.tests.django_utils import TEST_DATA_MONGO_MODULESTORE
 from xmodule.tests import get_test_system, get_test_descriptor_system
-from opaque_keys.edx.locations import Location
 from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
-from lms.djangoapps.lms_xblock.field_data import LmsFieldData
-from lms.djangoapps.lms_xblock.runtime import quote_slashes
 
 
 class BaseTestXmodule(ModuleStoreTestCase):
@@ -81,9 +79,6 @@ class BaseTestXmodule(ModuleStoreTestCase):
         self.item_descriptor._field_data = LmsFieldData(self.item_descriptor._field_data, student_data)
 
         self.item_descriptor.xmodule_runtime = self.new_module_runtime()
-
-        #self.item_module = self.item_descriptor.xmodule_runtime.xmodule_instance
-        #self.item_module is None at this time
 
         self.item_url = unicode(self.item_descriptor.location)
 

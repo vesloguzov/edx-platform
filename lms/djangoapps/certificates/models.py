@@ -47,27 +47,27 @@ Eligibility:
 """
 import json
 import logging
-import uuid
 import os
+import uuid
 
+from config_models.models import ConfigurationModel
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import Count
-from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 from django_extensions.db.fields import CreationDateTimeField
-from django_extensions.db.fields.json import JSONField
 from model_utils import Choices
 from model_utils.models import TimeStampedModel
-from xmodule.modulestore.django import modulestore
-from config_models.models import ConfigurationModel
-from xmodule_django.models import CourseKeyField, NoneToEmptyManager
+
+from badges.events.course_complete import course_badge_check
+from badges.events.course_meta import completion_check, course_group_check
+from lms.djangoapps.instructor_task.models import InstructorTask
+from openedx.core.djangoapps.signals.signals import COURSE_CERT_AWARDED
+from openedx.core.djangoapps.xmodule_django.models import CourseKeyField, NoneToEmptyManager
 from util.milestones_helpers import fulfill_course_milestone, is_prerequisite_courses_enabled
-from course_modes.models import CourseMode
-from instructor_task.models import InstructorTask
 
 LOGGER = logging.getLogger(__name__)
 
@@ -82,18 +82,32 @@ class CertificateStatuses(object):
     error = 'error'
     generating = 'generating'
     notpassing = 'notpassing'
-    regenerating = 'regenerating'
     restricted = 'restricted'
     unavailable = 'unavailable'
     auditing = 'auditing'
     audit_passing = 'audit_passing'
     audit_notpassing = 'audit_notpassing'
+    unverified = 'unverified'
+    invalidated = 'invalidated'
+    requesting = 'requesting'
 
     readable_statuses = {
         downloadable: "already received",
         notpassing: "didn't receive",
-        error: "error states"
+        error: "error states",
+        audit_passing: "audit passing states",
+        audit_notpassing: "audit not passing states",
     }
+
+    PASSED_STATUSES = (downloadable, generating)
+
+    @classmethod
+    def is_passing_status(cls, status):
+        """
+        Given the status of a certificate, return a boolean indicating whether
+        the student passed the course.
+        """
+        return status in cls.PASSED_STATUSES
 
 
 class CertificateSocialNetworks(object):
@@ -198,6 +212,9 @@ class GeneratedCertificate(models.Model):
     """
     Base model for generated certificates
     """
+    # Import here instead of top of file since this module gets imported before
+    # the course_modes app is loaded, resulting in a Django deprecation warning.
+    from course_modes.models import CourseMode
 
     # Only returns eligible certificates. This should be used in
     # preference to the default `objects` manager in most cases.
@@ -254,6 +271,23 @@ class GeneratedCertificate(models.Model):
         return None
 
     @classmethod
+    def course_ids_with_certs_for_user(cls, user):
+        """
+        Return a set of CourseKeys for which the user has certificates.
+
+        Sometimes we just want to check if a user has already been issued a
+        certificate for a given course (e.g. to test refund elibigility).
+        Instead of checking if `certificate_for_student` returns `None` on each
+        course_id individually, we instead just return a set of all CourseKeys
+        for which this student has certificates all at once.
+        """
+        return {
+            cert.course_id
+            for cert
+            in cls.objects.filter(user=user).only('course_id')  # pylint: disable=no-member
+        }
+
+    @classmethod
     def get_unique_statuses(cls, course_key=None, flat=False):
         """
         1 - Return unique statuses as a list of dictionaries containing the following key value pairs
@@ -277,6 +311,12 @@ class GeneratedCertificate(models.Model):
             return query.values_list('status', flat=True).distinct()
         else:
             return query.values('status').annotate(count=Count('status'))
+
+    def __repr__(self):
+        return "<GeneratedCertificate: {course_id}, user={user}>".format(
+            course_id=self.course_id,
+            user=self.user
+        )
 
     def invalidate(self):
         """
@@ -303,6 +343,21 @@ class GeneratedCertificate(models.Model):
         """
         return self.status == CertificateStatuses.downloadable
 
+    def save(self, *args, **kwargs):
+        """
+        After the base save() method finishes, fire the COURSE_CERT_AWARDED
+        signal iff we are saving a record of a learner passing the course.
+        """
+        super(GeneratedCertificate, self).save(*args, **kwargs)
+        if CertificateStatuses.is_passing_status(self.status):
+            COURSE_CERT_AWARDED.send_robust(
+                sender=self.__class__,
+                user=self.user,
+                course_key=self.course_id,
+                mode=self.mode,
+                status=self.status,
+            )
+
 
 class CertificateGenerationHistory(TimeStampedModel):
     """
@@ -312,7 +367,7 @@ class CertificateGenerationHistory(TimeStampedModel):
     course_id = CourseKeyField(max_length=255, verbose_name=_('course'))
     generated_by = models.ForeignKey(User, verbose_name=_('generated by'))
     instructor_task = models.ForeignKey(InstructorTask, verbose_name=_('instructor task'))
-    is_regeneration = models.BooleanField(default=False, verbose_name=_('regeneration'))
+    is_regeneration = models.BooleanField(default=False)
 
     def get_task_name(self):
         """
@@ -332,24 +387,31 @@ class CertificateGenerationHistory(TimeStampedModel):
             students.
         """
         task_input = self.instructor_task.task_input
-        try:
-            task_input_json = json.loads(task_input)
-        except ValueError:
+        if not task_input.strip():
             # if task input is empty, it means certificates were generated for all learners
             # Translators: This string represents task was executed for all learners.
             return _("All learners")
 
+        task_input_json = json.loads(task_input)
+
         # get statuses_to_regenerate from task_input convert statuses to human readable strings and return
         statuses = task_input_json.get('statuses_to_regenerate', None)
         if statuses:
-            return ", ".join(
-                [CertificateStatuses.readable_statuses.get(status, "") for status in statuses]
-            )
+            readable_statuses = [
+                CertificateStatuses.readable_statuses.get(status) for status in statuses
+                if CertificateStatuses.readable_statuses.get(status) is not None
+            ]
+            return ", ".join(readable_statuses)
 
-        # If students is present in task_input then, certificate generation task was run to
-        # generate certificates for white listed students otherwise it is for all students.
-        # Translators: This string represents task was executed for students having exceptions.
-        return _("For exceptions") if 'students' in task_input_json else _("All learners")
+        # If "student_set" is present in task_input, then this task only
+        # generates certificates for white listed students. Note that
+        # this key used to be "students", so we include that in this conditional
+        # for backwards compatibility.
+        if 'student_set' in task_input_json or 'students' in task_input_json:
+            # Translators: This string represents task was executed for students having exceptions.
+            return _("For exceptions")
+        else:
+            return _("All learners")
 
     class Meta(object):
         app_label = "certificates"
@@ -361,19 +423,100 @@ class CertificateGenerationHistory(TimeStampedModel):
                ("regenerated" if self.is_regeneration else "generated", self.generated_by, self.created, self.course_id)
 
 
-@receiver(post_save, sender=GeneratedCertificate)
-def handle_post_cert_generated(sender, instance, **kwargs):  # pylint: disable=no-self-argument, unused-argument
+class CertificateInvalidation(TimeStampedModel):
     """
-    Handles post_save signal of GeneratedCertificate, and mark user collected
-    course milestone entry if user has passed the course.
-    User is assumed to have passed the course if certificate status is either 'generating' or 'downloadable'.
+    Model for storing Certificate Invalidation.
     """
-    allowed_cert_states = [CertificateStatuses.generating, CertificateStatuses.downloadable]
-    if is_prerequisite_courses_enabled() and instance.status in allowed_cert_states:
-        fulfill_course_milestone(instance.course_id, instance.user)
+    generated_certificate = models.ForeignKey(GeneratedCertificate)
+    invalidated_by = models.ForeignKey(User)
+    notes = models.TextField(default=None, null=True)
+    active = models.BooleanField(default=True)
+
+    class Meta(object):
+        app_label = "certificates"
+
+    def __unicode__(self):
+        return u"Certificate %s, invalidated by %s on %s." % \
+               (self.generated_certificate, self.invalidated_by, self.created)
+
+    def deactivate(self):
+        """
+        Deactivate certificate invalidation by setting active to False.
+        """
+        self.active = False
+        self.save()
+
+    @classmethod
+    def get_certificate_invalidations(cls, course_key, student=None):
+        """
+        Return certificate invalidations filtered based on the provided course and student (if provided),
+
+        Returned value is JSON serializable list of dicts, dict element would have the following key-value pairs.
+         1. id: certificate invalidation id (primary key)
+         2. user: username of the student to whom certificate belongs
+         3. invalidated_by: user id of the instructor/support user who invalidated the certificate
+         4. created: string containing date of invalidation in the following format "December 29, 2015"
+         5. notes: string containing notes regarding certificate invalidation.
+        """
+        certificate_invalidations = cls.objects.filter(
+            generated_certificate__course_id=course_key,
+            active=True,
+        )
+        if student:
+            certificate_invalidations = certificate_invalidations.filter(generated_certificate__user=student)
+        data = []
+        for certificate_invalidation in certificate_invalidations:
+            data.append({
+                'id': certificate_invalidation.id,
+                'user': certificate_invalidation.generated_certificate.user.username,
+                'invalidated_by': certificate_invalidation.invalidated_by.username,
+                'created': certificate_invalidation.created.strftime("%B %d, %Y"),
+                'notes': certificate_invalidation.notes,
+            })
+        return data
+
+    @classmethod
+    def has_certificate_invalidation(cls, student, course_key):
+        """Check that whether the student in the course has been invalidated
+        for receiving certificates.
+
+        Arguments:
+            student (user): logged-in user
+            course_key (CourseKey): The course associated with the certificate.
+
+        Returns:
+             Boolean denoting whether the student in the course is invalidated
+             to receive certificates
+        """
+        return cls.objects.filter(
+            generated_certificate__course_id=course_key,
+            active=True,
+            generated_certificate__user=student
+        ).exists()
+
+
+@receiver(COURSE_CERT_AWARDED, sender=GeneratedCertificate)
+def handle_course_cert_awarded(sender, user, course_key, **kwargs):  # pylint: disable=unused-argument
+    """
+    Mark a milestone entry if user has passed the course.
+    """
+    if is_prerequisite_courses_enabled():
+        fulfill_course_milestone(course_key, user)
 
 
 def certificate_status_for_student(student, course_id):
+    """
+    This returns a dictionary with a key for status, and other information.
+    See certificate_status for more information.
+    """
+    try:
+        generated_certificate = GeneratedCertificate.objects.get(user=student, course_id=course_id)
+    except GeneratedCertificate.DoesNotExist:
+        generated_certificate = None
+    return certificate_status(generated_certificate)
+
+
+def certificate_status(generated_certificate):
     '''
     This returns a dictionary with a key for status, and other information.
     The status is one of the following:
@@ -394,6 +537,9 @@ def certificate_status_for_student(student, course_id):
                    should not be issued a certificate. This will
                    be set if allow_certificate is set to False in
                    the userprofile table
+    unverified   - The student is in verified enrollment track and
+                   the student did not have their identity verified,
+                   even though they should be eligible for the cert otherwise.
 
     If the status is "downloadable", the dictionary also contains
     "download_url".
@@ -401,10 +547,11 @@ def certificate_status_for_student(student, course_id):
     If the student has been graded, the dictionary also contains their
     grade for the course with the key "grade".
     '''
+    # Import here instead of top of file since this module gets imported before
+    # the course_modes app is loaded, resulting in a Django deprecation warning.
+    from course_modes.models import CourseMode
 
-    try:
-        generated_certificate = GeneratedCertificate.objects.get(  # pylint: disable=no-member
-            user=student, course_id=course_id)
+    if generated_certificate:
         cert_status = {
             'status': generated_certificate.status,
             'mode': generated_certificate.mode,
@@ -414,7 +561,7 @@ def certificate_status_for_student(student, course_id):
             cert_status['grade'] = generated_certificate.grade
 
         if generated_certificate.mode == 'audit':
-            course_mode_slugs = [mode.slug for mode in CourseMode.modes_for_course(course_id)]
+            course_mode_slugs = [mode.slug for mode in CourseMode.modes_for_course(generated_certificate.course_id)]
             # Short term fix to make sure old audit users with certs still see their certs
             # only do this if there if no honor mode
             if 'honor' not in course_mode_slugs:
@@ -425,31 +572,24 @@ def certificate_status_for_student(student, course_id):
             cert_status['download_url'] = generated_certificate.download_url
 
         return cert_status
-
-    except GeneratedCertificate.DoesNotExist:
-        pass
-    return {'status': CertificateStatuses.unavailable, 'mode': GeneratedCertificate.MODES.honor, 'uuid': None}
+    else:
+        return {'status': CertificateStatuses.unavailable, 'mode': GeneratedCertificate.MODES.honor, 'uuid': None}
 
 
-def certificate_info_for_user(user, course_id, grade, user_is_whitelisted=None):
+def certificate_info_for_user(user, grade, user_is_whitelisted, user_certificate):
     """
     Returns the certificate info for a user for grade report.
     """
-    if user_is_whitelisted is None:
-        user_is_whitelisted = CertificateWhitelist.objects.filter(
-            user=user, course_id=course_id, whitelist=True
-        ).exists()
-
     certificate_is_delivered = 'N'
     certificate_type = 'N/A'
     eligible_for_certificate = 'Y' if (user_is_whitelisted or grade is not None) and user.profile.allow_certificate \
         else 'N'
 
-    certificate_status = certificate_status_for_student(user, course_id)
-    certificate_generated = certificate_status['status'] == CertificateStatuses.downloadable
+    status = certificate_status(user_certificate)
+    certificate_generated = status['status'] == CertificateStatuses.downloadable
     if certificate_generated:
         certificate_is_delivered = 'Y'
-        certificate_type = certificate_status['mode']
+        certificate_type = status['mode']
 
     return [eligible_for_certificate, certificate_is_delivered, certificate_type]
 
@@ -485,6 +625,9 @@ class ExampleCertificateSet(TimeStampedModel):
             ExampleCertificateSet
 
         """
+        # Import here instead of top of file since this module gets imported before
+        # the course_modes app is loaded, resulting in a Django deprecation warning.
+        from course_modes.models import CourseMode
         cert_set = cls.objects.create(course_key=course_key)
 
         ExampleCertificate.objects.bulk_create([
@@ -845,101 +988,6 @@ class CertificateHtmlViewConfiguration(ConfigurationModel):
         return mode_config.get('template_version', '')
 
 
-class BadgeAssertion(models.Model):
-    """
-    Tracks badges on our side of the badge baking transaction
-    """
-    user = models.ForeignKey(User, verbose_name=_('user'))
-    course_id = CourseKeyField(max_length=255, verbose_name=_('course'), blank=True, default=None)
-    # Mode a badge was awarded for.
-    mode = models.CharField(max_length=100, verbose_name=_('mode'))
-    data = JSONField(verbose_name=_('data'))
-
-    @property
-    def image_url(self):
-        """
-        Get the image for this assertion.
-        """
-
-        return self.data['image']
-
-    @property
-    def assertion_url(self):
-        """
-        Get the public URL for the assertion.
-        """
-        return self.data['json']['id']
-
-    class Meta(object):
-        unique_together = (('course_id', 'user', 'mode'),)
-        app_label = "certificates"
-        verbose_name = _('badge assertion')
-        verbose_name_plural = _('badge assertions')
-
-
-def validate_badge_image(image):
-    """
-    Validates that a particular image is small enough, of the right type, and square to be a badge.
-    """
-    if image.width != image.height:
-        raise ValidationError(_(u"The badge image must be square."))
-    if not image.size < (250 * 1024):
-        raise ValidationError(_(u"The badge image file size must be less than 250KB."))
-
-
-class BadgeImageConfiguration(models.Model):
-    """
-    Contains the configuration for badges for a specific mode. The mode
-    """
-    class Meta(object):
-        app_label = "certificates"
-        verbose_name = _('badge image configuration')
-        verbose_name_plural = _('badge image configurations')
-
-    mode = models.CharField(
-        max_length=125,
-        verbose_name=_('mode'),
-        help_text=_(u'The course mode for this badge image. For example, "verified" or "honor".'),
-        unique=True,
-    )
-    icon = models.ImageField(
-        verbose_name=_('icon'),
-        # Actual max is 256KB, but need overhead for badge baking. This should be more than enough.
-        help_text=_(
-            u"Badge images must be square PNG files. The file size should be under 250KB."
-        ),
-        upload_to='badges',
-        validators=[validate_badge_image]
-    )
-    default = models.BooleanField(
-        verbose_name=_('default'),
-        default=False,
-        help_text=_(
-            u"Set this value to True if you want this image to be the default image for any course modes "
-            u"that do not have a specified badge image. You can have only one default image."
-        )
-    )
-
-    def clean(self):
-        """
-        Make sure there's not more than one default.
-        """
-        # pylint: disable=no-member
-        if self.default and BadgeImageConfiguration.objects.filter(default=True).exclude(id=self.id):
-            raise ValidationError(_(u"There can be only one default image."))
-
-    @classmethod
-    def image_for_mode(cls, mode):
-        """
-        Get the image for a particular mode.
-        """
-        try:
-            return cls.objects.get(mode=mode).icon
-        except cls.DoesNotExist:
-            # Fall back to default, if there is one.
-            return cls.objects.get(default=True).icon
-
-
 class CertificateTemplate(TimeStampedModel):
     """A set of custom web certificate templates.
 
@@ -1041,6 +1089,12 @@ class CertificateTemplateAsset(TimeStampedModel):
         verbose_name=_('asset'),
         help_text=_(u'Asset file. It could be an image or css file.'),
     )
+    asset_slug = models.SlugField(
+        max_length=255,
+        unique=True,
+        null=True,
+        help_text=_(u'Asset\'s unique slug. We can reference the asset in templates using this value.'),
+    )
 
     def save(self, *args, **kwargs):
         """save the certificate template asset """
@@ -1053,7 +1107,7 @@ class CertificateTemplateAsset(TimeStampedModel):
         super(CertificateTemplateAsset, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return u'%s' % (self.asset.url, )  # pylint: disable=no-member
+        return u'%s' % (self.asset.url, )
 
     class Meta(object):
         get_latest_by = 'created'
@@ -1062,25 +1116,26 @@ class CertificateTemplateAsset(TimeStampedModel):
         verbose_name_plural = _('certificate template assets')
 
 
-@receiver(post_save, sender=GeneratedCertificate)
-#pylint: disable=unused-argument
-def create_badge(sender, instance, **kwargs):
+@receiver(COURSE_CERT_AWARDED, sender=GeneratedCertificate)
+# pylint: disable=unused-argument
+def create_course_badge(sender, user, course_key, status, **kwargs):
     """
-    Standard signal hook to create badges when a certificate has been generated.
+    Standard signal hook to create course badges when a certificate has been generated.
     """
-    if not settings.FEATURES.get('ENABLE_OPENBADGES', False):
-        return
-    if not modulestore().get_course(instance.course_id).issue_badges:
-        LOGGER.info("Course is not configured to issue badges.")
-        return
-    if BadgeAssertion.objects.filter(user=instance.user, course_id=instance.course_id):
-        LOGGER.info("Badge already exists for this user on this course.")
-        # Badge already exists. Skip.
-        return
-    # Don't bake a badge until the certificate is available. Prevents user-facing requests from being paused for this
-    # by making sure it only gets run on the callback during normal workflow.
-    if not instance.status == CertificateStatuses.downloadable:
-        return
-    from .badge_handler import BadgeHandler
-    handler = BadgeHandler(instance.course_id)
-    handler.award(instance.user)
+    course_badge_check(user, course_key)
+
+
+@receiver(COURSE_CERT_AWARDED, sender=GeneratedCertificate)
+def create_completion_badge(sender, user, course_key, status, **kwargs):  # pylint: disable=unused-argument
+    """
+    Standard signal hook to create 'x courses completed' badges when a certificate has been generated.
+    """
+    completion_check(user)
+
+
+@receiver(COURSE_CERT_AWARDED, sender=GeneratedCertificate)
+def create_course_group_badge(sender, user, course_key, status, **kwargs):  # pylint: disable=unused-argument
+    """
+    Standard signal hook to create badges when a user has completed a prespecified set of courses.
+    """
+    course_group_check(user, course_key)

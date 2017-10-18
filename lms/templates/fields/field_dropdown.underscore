@@ -11,7 +11,7 @@
 <% } %>
 
 <% if (iconName) { %>
-    <i class="u-field-icon icon fa <%- iconName %> fa-fw" aria-hidden="true"></i>
+    <span class="u-field-icon icon fa <%- iconName %> fa-fw" aria-hidden="true"></span>
 <% } %>
 
 <span class="u-field-value">
@@ -23,8 +23,13 @@
             <% if (showBlankOption) { %>
                 <option value=""></option>
             <% } %>
-            <% _.each(selectOptions, function(selectOption) { %>
-                <option value="<%- selectOption[0] %>"><%- selectOption[1] %></option>
+            <% _.each(groupOptions, function(groupOption) { %>
+                <% if (groupOption.groupTitle != null) { %>
+                    <optgroup label="<%- groupOption.groupTitle %>">
+                <% } %>
+                <% _.each(groupOption.selectOptions, function(selectOption) { %>
+                    <option value="<%- selectOption[0] %>"><%- selectOption[1] %></option>
+                <% }); %>
             <% }); %>
         </select>
         <button class="u-field-value-display">

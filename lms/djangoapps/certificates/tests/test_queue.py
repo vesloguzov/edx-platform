@@ -1,20 +1,17 @@
 # -*- coding: utf-8 -*-
 """Tests for the XQueue certificates interface. """
-from contextlib import contextmanager
-import ddt
 import json
-from mock import patch, Mock
-from nose.plugins.attrib import attr
+from contextlib import contextmanager
+from datetime import datetime, timedelta
 
+import ddt
+import freezegun
+import pytz
 from django.test import TestCase
 from django.test.utils import override_settings
-
-from course_modes.models import CourseMode
+from mock import Mock, patch
+from nose.plugins.attrib import attr
 from opaque_keys.edx.locator import CourseLocator
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
-from student.tests.factories import UserFactory, CourseEnrollmentFactory
-from xmodule.modulestore.tests.factories import CourseFactory
-
 
 # It is really unfortunate that we are using the XQueue client
 # code from the capa library.  In the future, we should move this
@@ -22,20 +19,19 @@ from xmodule.modulestore.tests.factories import CourseFactory
 # and verify that items are being correctly added to the queue
 # in our `XQueueCertInterface` implementation.
 from capa.xqueue_interface import XQueueInterface
-
-from certificates.models import (
-    ExampleCertificateSet,
-    ExampleCertificate,
-    GeneratedCertificate,
-    CertificateStatuses,
-)
+from certificates.models import CertificateStatuses, ExampleCertificate, ExampleCertificateSet, GeneratedCertificate
 from certificates.queue import XQueueCertInterface
 from certificates.tests.factories import CertificateWhitelistFactory, GeneratedCertificateFactory
+from course_modes.models import CourseMode
+from lms.djangoapps.grades.tests.utils import mock_passing_grade
 from lms.djangoapps.verify_student.tests.factories import SoftwareSecurePhotoVerificationFactory
+from student.tests.factories import CourseEnrollmentFactory, UserFactory
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.factories import CourseFactory
 
 
 @ddt.ddt
-@attr('shard_1')
+@attr(shard=1)
 @override_settings(CERT_QUEUE='certificates')
 class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
     """Test the "add to queue" operation of the XQueue interface. """
@@ -55,7 +51,8 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         SoftwareSecurePhotoVerificationFactory.create(user=self.user_2, status='approved')
 
     def test_add_cert_callback_url(self):
-        with patch('courseware.grades.grade', Mock(return_value={'grade': 'Pass', 'percent': 0.75})):
+
+        with mock_passing_grade():
             with patch.object(XQueueInterface, 'send_to_queue') as mock_send:
                 mock_send.return_value = (0, None)
                 self.xqueue.add_cert(self.user, self.course.id)
@@ -70,7 +67,7 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         """
         Tests there is no certificate create message in the queue if generate_pdf is False
         """
-        with patch('courseware.grades.grade', Mock(return_value={'grade': 'Pass', 'percent': 0.75})):
+        with mock_passing_grade():
             with patch.object(XQueueInterface, 'send_to_queue') as mock_send:
                 self.xqueue.add_cert(self.user, self.course.id, generate_pdf=False)
 
@@ -81,6 +78,7 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         self.assertIsNotNone(certificate.verify_uuid)
 
     @ddt.data('honor', 'audit')
+    @override_settings(AUDIT_CERT_CUTOFF_DATE=datetime.now(pytz.UTC) - timedelta(days=1))
     def test_add_cert_with_honor_certificates(self, mode):
         """Test certificates generations for honor and audit modes."""
         template_name = 'certificate-template-{id.org}-{id.course}.pdf'.format(
@@ -118,30 +116,6 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         certificate = GeneratedCertificate.eligible_certificates.get(user=self.user_2, course_id=self.course.id)
         self.assertEqual(certificate.distinction, distinction)
 
-    def test_ineligible_cert_whitelisted(self):
-        """Test that audit mode students can receive a certificate if they are whitelisted."""
-        # Enroll as audit
-        CourseEnrollmentFactory(
-            user=self.user_2,
-            course_id=self.course.id,
-            is_active=True,
-            mode='audit'
-        )
-        # Whitelist student
-        CertificateWhitelistFactory(course_id=self.course.id, user=self.user_2)
-
-        # Generate certs
-        with patch('courseware.grades.grade', Mock(return_value={'grade': 'Pass', 'percent': 0.75})):
-            with patch.object(XQueueInterface, 'send_to_queue') as mock_send:
-                mock_send.return_value = (0, None)
-                self.xqueue.add_cert(self.user_2, self.course.id)
-
-        # Assert cert generated correctly
-        self.assertTrue(mock_send.called)
-        certificate = GeneratedCertificate.certificate_for_student(self.user_2, self.course.id)
-        self.assertIsNotNone(certificate)
-        self.assertEqual(certificate.mode, 'audit')
-
     @patch.dict(
         'django.conf.settings.FEATURES',
         {'CERTIFICATES_HTML_VIEW': True, 'CERTIFICATES_USE_CERTS_SERVICE': False}
@@ -155,7 +129,31 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         certificate = GeneratedCertificate.eligible_certificates.get(user=self.user_2, course_id=self.course.id)
         self.assertEqual(certificate.status, CertificateStatuses.error)
 
-    def add_cert_to_queue(self, mode, distinction=False):
+    def test_ineligible_cert_whitelisted(self):
+        """Test that audit mode students can receive a certificate if they are whitelisted."""
+        # Enroll as audit
+        CourseEnrollmentFactory(
+            user=self.user_2,
+            course_id=self.course.id,
+            is_active=True,
+            mode='audit'
+        )
+        # Whitelist student
+        CertificateWhitelistFactory(course_id=self.course.id, user=self.user_2)
+
+        # Generate certs
+        with mock_passing_grade():
+            with patch.object(XQueueInterface, 'send_to_queue') as mock_send:
+                mock_send.return_value = (0, None)
+                self.xqueue.add_cert(self.user_2, self.course.id)
+
+        # Assert cert generated correctly
+        self.assertTrue(mock_send.called)
+        certificate = GeneratedCertificate.certificate_for_student(self.user_2, self.course.id)
+        self.assertIsNotNone(certificate)
+        self.assertEqual(certificate.mode, 'audit')
+
+    def add_cert_to_queue(self, mode):
         """
         Dry method for course enrollment and adding request to
         queue. Returns a mock object containing information about the
@@ -168,8 +166,7 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
             is_active=True,
             mode=mode,
         )
-        with patch('courseware.grades.grade',
-                   Mock(return_value={'grade': 'Pass', 'percent': 0.75, 'distinction': distinction})):
+        with mock_passing_grade():
             with patch.object(XQueueInterface, 'send_to_queue') as mock_send:
                 mock_send.return_value = (0, None)
                 self.xqueue.add_cert(self.user_2, self.course.id)
@@ -233,7 +230,46 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
             else:
                 self.assertFalse(mock_send.called)
 
-    def test_regen_audit_certs_eligibility(self):
+    @ddt.data(
+        # Eligible and should stay that way
+        (
+            CertificateStatuses.downloadable,
+            datetime.now(pytz.UTC) - timedelta(days=2),
+            'Pass',
+            CertificateStatuses.generating
+        ),
+        # Ensure that certs in the wrong state can be fixed by regeneration
+        (
+            CertificateStatuses.downloadable,
+            datetime.now(pytz.UTC) - timedelta(hours=1),
+            'Pass',
+            CertificateStatuses.audit_passing
+        ),
+        # Ineligible and should stay that way
+        (
+            CertificateStatuses.audit_passing,
+            datetime.now(pytz.UTC) - timedelta(hours=1),
+            'Pass',
+            CertificateStatuses.audit_passing
+        ),
+        # As above
+        (
+            CertificateStatuses.audit_notpassing,
+            datetime.now(pytz.UTC) - timedelta(hours=1),
+            'Pass',
+            CertificateStatuses.audit_passing
+        ),
+        # As above
+        (
+            CertificateStatuses.audit_notpassing,
+            datetime.now(pytz.UTC) - timedelta(hours=1),
+            None,
+            CertificateStatuses.audit_notpassing
+        ),
+    )
+    @ddt.unpack
+    @override_settings(AUDIT_CERT_CUTOFF_DATE=datetime.now(pytz.UTC) - timedelta(days=1))
+    def test_regen_audit_certs_eligibility(self, status, created_date, grade, expected_status):
         """
         Test that existing audit certificates remain eligible even if cert
         generation is re-run.
@@ -245,23 +281,24 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
             is_active=True,
             mode=CourseMode.AUDIT,
         )
-        GeneratedCertificateFactory(
-            user=self.user_2,
-            course_id=self.course.id,
-            grade='1.0',
-            status=CertificateStatuses.downloadable,
-            mode=GeneratedCertificate.MODES.audit,
-        )
+        with freezegun.freeze_time(created_date):
+            GeneratedCertificateFactory(
+                user=self.user_2,
+                course_id=self.course.id,
+                grade='1.0',
+                status=status,
+                mode=GeneratedCertificate.MODES.audit,
+            )
 
         # Run grading/cert generation again
-        with patch('courseware.grades.grade', Mock(return_value={'grade': 'Pass', 'percent': 0.75})):
+        with mock_passing_grade(grade_pass=grade):
             with patch.object(XQueueInterface, 'send_to_queue') as mock_send:
                 mock_send.return_value = (0, None)
                 self.xqueue.add_cert(self.user_2, self.course.id)
 
         self.assertEqual(
             GeneratedCertificate.objects.get(user=self.user_2, course_id=self.course.id).status,  # pylint: disable=no-member
-            CertificateStatuses.generating
+            expected_status
         )
 
     def test_error_on_empty_name(self):
@@ -279,7 +316,7 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         self.assertIn('name', certificate.error_reason)
 
 
-@attr('shard_1')
+@attr(shard=1)
 @override_settings(CERT_QUEUE='certificates')
 class XQueueCertInterfaceExampleCertificateTest(TestCase):
     """Tests for the XQueue interface for certificate generation. """

@@ -4,18 +4,24 @@
 Tests for the Shopping Cart Models
 """
 import datetime
-import pytz
 import StringIO
 from textwrap import dedent
 
+import pytz
 from django.conf import settings
+from mock import patch
 
 from course_modes.models import CourseMode
-from shoppingcart.models import (Order, CertificateItem, PaidCourseRegistration, PaidCourseRegistrationAnnotation,
-                                 CourseRegCodeItemAnnotation)
+from shoppingcart.models import (
+    CertificateItem,
+    CourseRegCodeItemAnnotation,
+    Order,
+    PaidCourseRegistration,
+    PaidCourseRegistrationAnnotation
+)
 from shoppingcart.views import initialize_report
-from student.tests.factories import UserFactory
 from student.models import CourseEnrollment
+from student.tests.factories import UserFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 
@@ -26,9 +32,10 @@ class ReportTypeTests(ModuleStoreTestCase):
     """
     FIVE_MINS = datetime.timedelta(minutes=5)
 
-    def setUp(self):
+    @patch('student.models.CourseEnrollment.refund_cutoff_date')
+    def setUp(self, cutoff_date):
         super(ReportTypeTests, self).setUp()
-
+        cutoff_date.return_value = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=1)
         # Need to make a *lot* of users for this one
         self.first_verified_user = UserFactory.create(profile__name="John Doe")
         self.second_verified_user = UserFactory.create(profile__name="Jane Deer")
@@ -120,10 +127,7 @@ class ReportTypeTests(ModuleStoreTestCase):
         refunded_certs = report.rows()
 
         # check that we have the right number
-        num_certs = 0
-        for cert in refunded_certs:
-            num_certs += 1
-        self.assertEqual(num_certs, 2)
+        self.assertEqual(len(list(refunded_certs)), 2)
 
         self.assertTrue(CertificateItem.objects.get(user=self.first_refund_user, course_id=self.course_key))
         self.assertTrue(CertificateItem.objects.get(user=self.second_refund_user, course_id=self.course_key))
@@ -210,18 +214,11 @@ class ItemizedPurchaseReportTest(ModuleStoreTestCase):
         purchases = report.rows()
 
         # since there's not many purchases, just run through the generator to make sure we've got the right number
-        num_purchases = 0
-        for item in purchases:
-            num_purchases += 1
-        self.assertEqual(num_purchases, 2)
+        self.assertEqual(len(list(purchases)), 2)
 
         report = initialize_report("itemized_purchase_report", self.now + self.FIVE_MINS, self.now + self.FIVE_MINS + self.FIVE_MINS)
         no_purchases = report.rows()
-
-        num_purchases = 0
-        for item in no_purchases:
-            num_purchases += 1
-        self.assertEqual(num_purchases, 0)
+        self.assertEqual(len(list(no_purchases)), 0)
 
     def test_purchased_csv(self):
         """

@@ -1,14 +1,11 @@
 from django.conf import settings
-from django.conf.urls import patterns, include, url
-
+from django.conf.urls import include, patterns, url
 # There is a course creators admin table.
 from ratelimitbackend import admin
 
 from cms.djangoapps.contentstore.views.organization import OrganizationListView
 
 admin.autodiscover()
-
-# pylint: disable=bad-continuation
 
 # Pattern to match a course key or a library key
 COURSELIKE_KEY_PATTERN = r'(?P<course_key_string>({}|{}))'.format(
@@ -19,6 +16,8 @@ LIBRARY_KEY_PATTERN = r'(?P<library_key_string>library-v1:[^/+]+\+[^/+]+)'
 
 urlpatterns = patterns(
     '',
+
+    url(r'', include('student.urls')),
 
     url(r'^transcripts/upload$', 'contentstore.views.upload_transcripts', name='upload_transcripts'),
     url(r'^transcripts/download$', 'contentstore.views.download_transcripts', name='download_transcripts'),
@@ -37,35 +36,35 @@ urlpatterns = patterns(
     url(r'^xblock/resource/(?P<block_type>[^/]*)/(?P<uri>.*)$',
         'openedx.core.djangoapps.common_views.xblock.xblock_resource', name='xblock_resource_url'),
 
-    # temporary landing page for a course
-    url(r'^edge/(?P<org>[^/]+)/(?P<course>[^/]+)/course/(?P<coursename>[^/]+)$',
-        'contentstore.views.landing', name='landing'),
-
     url(r'^not_found$', 'contentstore.views.not_found', name='not_found'),
     url(r'^server_error$', 'contentstore.views.server_error', name='server_error'),
     url(r'^organizations$', OrganizationListView.as_view(), name='organizations'),
 
-    # temporary landing page for edge
-    url(r'^edge$', 'contentstore.views.edge', name='edge'),
     # noop to squelch ajax errors
     url(r'^event$', 'contentstore.views.event', name='event'),
 
     url(r'^xmodule/', include('pipeline_js.urls')),
-    url(r'^heartbeat$', include('heartbeat.urls')),
+    url(r'^heartbeat$', include('openedx.core.djangoapps.heartbeat.urls')),
 
     url(r'^user_api/', include('openedx.core.djangoapps.user_api.legacy_urls')),
-)
 
-# User creation and updating views
-urlpatterns += patterns(
-    '',
+    url(r'^i18n/', include('django.conf.urls.i18n')),
 
-    url(r'^create_account$', 'student.views.create_account', name='create_account'),
-    url(r'^activate/(?P<key>[^/]*)$', 'student.views.activate_account', name='activate'),
+    # User API endpoints
+    url(r'^api/user/', include('openedx.core.djangoapps.user_api.urls')),
 
-    # ajax view that actually does the work
-    url(r'^login_post$', 'student.views.login_user', name='login_post'),
-    url(r'^logout$', 'student.views.logout_user', name='logout'),
+    # Update session view
+    url(
+        r'^lang_pref/session_language',
+        'openedx.core.djangoapps.lang_pref.views.update_session_language',
+        name='session_language'
+    ),
+
+    # Darklang View to change the preview language (or dark language)
+    url(r'^update_lang/', include('openedx.core.djangoapps.dark_lang.urls', namespace='dark_lang')),
+
+    # For redirecting to help pages.
+    url(r'^help_token/', include('help_tokens.urls')),
 )
 
 # restful api
@@ -76,7 +75,7 @@ urlpatterns += patterns(
     url(r'^howitworks$', 'howitworks'),
     url(r'^signup$', 'signup', name='signup'),
     url(r'^signin$', 'login_page', name='login'),
-    url(r'^request_course_creator$', 'request_course_creator'),
+    url(r'^request_course_creator$', 'request_course_creator', name='request_course_creator'),
 
     url(r'^course_team/{}(?:/(?P<email>.+))?$'.format(COURSELIKE_KEY_PATTERN), 'course_team_handler'),
     url(r'^course_info/{}$'.format(settings.COURSE_KEY_PATTERN), 'course_info_handler'),
@@ -95,12 +94,18 @@ urlpatterns += patterns(
         'course_notifications_handler'),
     url(r'^course_rerun/{}$'.format(settings.COURSE_KEY_PATTERN), 'course_rerun_handler', name='course_rerun_handler'),
     url(r'^container/{}$'.format(settings.USAGE_KEY_PATTERN), 'container_handler'),
-    url(r'^checklists/{}/(?P<checklist_index>\d+)?$'.format(settings.COURSE_KEY_PATTERN), 'checklists_handler'),
     url(r'^orphan/{}$'.format(settings.COURSE_KEY_PATTERN), 'orphan_handler'),
     url(r'^assets/{}/{}?$'.format(settings.COURSE_KEY_PATTERN, settings.ASSET_KEY_PATTERN), 'assets_handler'),
     url(r'^import/{}$'.format(COURSELIKE_KEY_PATTERN), 'import_handler'),
     url(r'^import_status/{}/(?P<filename>.+)$'.format(COURSELIKE_KEY_PATTERN), 'import_status_handler'),
+    # rest api for course import/export
+    url(
+        r'^api/courses/',
+        include('cms.djangoapps.contentstore.api.urls', namespace='courses_api')
+    ),
     url(r'^export/{}$'.format(COURSELIKE_KEY_PATTERN), 'export_handler'),
+    url(r'^export_output/{}$'.format(COURSELIKE_KEY_PATTERN), 'export_output_handler'),
+    url(r'^export_status/{}$'.format(COURSELIKE_KEY_PATTERN), 'export_status_handler'),
     url(r'^xblock/outline/{}$'.format(settings.USAGE_KEY_PATTERN), 'xblock_outline_handler'),
     url(r'^xblock/container/{}$'.format(settings.USAGE_KEY_PATTERN), 'xblock_container_handler'),
     url(r'^xblock/{}/(?P<view_name>[^/]+)$'.format(settings.USAGE_KEY_PATTERN), 'xblock_view_handler'),
@@ -111,12 +116,13 @@ urlpatterns += patterns(
     url(r'^settings/advanced/{}$'.format(settings.COURSE_KEY_PATTERN), 'advanced_settings_handler'),
     url(r'^textbooks/{}$'.format(settings.COURSE_KEY_PATTERN), 'textbooks_list_handler'),
     url(r'^textbooks/{}/(?P<textbook_id>\d[^/]*)$'.format(settings.COURSE_KEY_PATTERN), 'textbooks_detail_handler'),
-    url(r'^videos/{}$'.format(settings.COURSE_KEY_PATTERN), 'videos_handler'),
+    url(r'^videos/{}(?:/(?P<edx_video_id>[-\w]+))?$'.format(settings.COURSE_KEY_PATTERN), 'videos_handler'),
     url(r'^video_encodings_download/{}$'.format(settings.COURSE_KEY_PATTERN), 'video_encodings_download'),
     url(r'^group_configurations/{}$'.format(settings.COURSE_KEY_PATTERN), 'group_configurations_list_handler'),
     url(r'^group_configurations/{}/(?P<group_configuration_id>\d+)(/)?(?P<group_id>\d+)?$'.format(
         settings.COURSE_KEY_PATTERN), 'group_configurations_detail_handler'),
     url(r'^api/val/v0/', include('edxval.urls')),
+    url(r'^api/tasks/v0/', include('user_tasks.urls')),
 )
 
 JS_INFO_DICT = {
@@ -124,12 +130,6 @@ JS_INFO_DICT = {
     # We need to explicitly include external Django apps that are not in LOCALE_PATHS.
     'packages': ('openassessment', 'edx_sga'),
 }
-
-urlpatterns += patterns(
-    '',
-    # Serve catalog of localized strings to be rendered by Javascript
-    url(r'^i18n.js$', 'django.views.i18n.javascript_catalog', JS_INFO_DICT),
-)
 
 if settings.FEATURES.get('ENABLE_CONTENT_LIBRARIES'):
     urlpatterns += (
@@ -151,7 +151,7 @@ if settings.FEATURES.get('ENABLE_EXPORT_GIT'):
 if settings.FEATURES.get('ENABLE_SERVICE_STATUS'):
     urlpatterns += patterns(
         '',
-        url(r'^status/', include('service_status.urls')),
+        url(r'^status/', include('openedx.core.djangoapps.service_status.urls')),
     )
 
 if settings.FEATURES.get('AUTH_USE_CAS'):
@@ -162,12 +162,6 @@ if settings.FEATURES.get('AUTH_USE_CAS'):
     )
 
 urlpatterns += patterns('', url(r'^admin/', include(admin.site.urls)),)
-
-# enable automatic login
-if settings.FEATURES.get('AUTOMATIC_AUTH_FOR_TESTING'):
-    urlpatterns += (
-        url(r'^auto_auth$', 'student.views.auto_auth'),
-    )
 
 # enable entrance exams
 if settings.FEATURES.get('ENTRANCE_EXAMS'):
@@ -188,6 +182,12 @@ if settings.FEATURES.get('CERTIFICATES_HTML_VIEW'):
             'contentstore.views.certificates.certificates_list_handler')
     )
 
+# Maintenance Dashboard
+urlpatterns += patterns(
+    '',
+    url(r'^maintenance/', include('maintenance.urls', namespace='maintenance')),
+)
+
 if settings.DEBUG:
     try:
         from .urls_dev import urlpatterns as dev_urlpatterns
@@ -202,12 +202,13 @@ if 'debug_toolbar' in settings.INSTALLED_APPS:
     )
 
 # Custom error pages
+# These are used by Django to render these error codes. Do not remove.
 # pylint: disable=invalid-name
 handler404 = 'contentstore.views.render_404'
 handler500 = 'contentstore.views.render_500'
 
 # display error page templates, for testing purposes
 urlpatterns += (
-    url(r'404', handler404),
-    url(r'500', handler500),
+    url(r'^404$', handler404),
+    url(r'^500$', handler500),
 )

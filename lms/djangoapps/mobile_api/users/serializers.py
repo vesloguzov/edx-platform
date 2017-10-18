@@ -1,82 +1,80 @@
 """
 Serializer for user API
 """
+from opaque_keys.edx.keys import CourseKey
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
-from django.template import defaultfilters
-
+from certificates.api import certificate_downloadable_status
 from courseware.access import has_access
 from student.models import CourseEnrollment, User
-from certificates.api import certificate_downloadable_status
-from xmodule.course_module import DEFAULT_START_DATE
+from util.course import get_encoded_course_sharing_utm_params, get_link_for_about_page
 
 
 class CourseOverviewField(serializers.RelatedField):
-    """Custom field to wrap a CourseDescriptor object. Read-only."""
+    """
+    Custom field to wrap a CourseOverview object. Read-only.
+    """
 
     def to_representation(self, course_overview):
         course_id = unicode(course_overview.id)
-        request = self.context.get('request', None)
-        if request:
-            video_outline_url = reverse(
-                'video-summary-list',
-                kwargs={'course_id': course_id},
-                request=request
-            )
-            course_updates_url = reverse(
+        request = self.context.get('request')
+        return {
+            # identifiers
+            'id': course_id,
+            'name': course_overview.display_name,
+            'number': course_overview.display_number_with_default,
+            'org': course_overview.display_org_with_default,
+
+            # dates
+            'start': course_overview.start,
+            'start_display': course_overview.start_display,
+            'start_type': course_overview.start_type,
+            'end': course_overview.end,
+
+            # notification info
+            'subscription_id': course_overview.clean_id(padding_char='_'),
+
+            # access info
+            'courseware_access': has_access(
+                request.user,
+                'load_mobile',
+                course_overview
+            ).to_json(),
+
+            # various URLs
+            # course_image is sent in both new and old formats
+            # (within media to be compatible with the new Course API)
+            'media': {
+                'course_image': {
+                    'uri': course_overview.course_image_url,
+                    'name': 'Course Image',
+                }
+            },
+            'course_image': course_overview.course_image_url,
+            'course_about': get_link_for_about_page(course_overview),
+            'course_sharing_utm_parameters': get_encoded_course_sharing_utm_params(),
+            'course_updates': reverse(
                 'course-updates-list',
                 kwargs={'course_id': course_id},
-                request=request
-            )
-            course_handouts_url = reverse(
+                request=request,
+            ),
+            'course_handouts': reverse(
                 'course-handouts-list',
                 kwargs={'course_id': course_id},
-                request=request
-            )
-            discussion_url = reverse(
+                request=request,
+            ),
+            'discussion_url': reverse(
                 'discussion_course',
                 kwargs={'course_id': course_id},
-                request=request
-            ) if course_overview.is_discussion_tab_enabled() else None
-        else:
-            video_outline_url = None
-            course_updates_url = None
-            course_handouts_url = None
-            discussion_url = None
+                request=request,
+            ) if course_overview.is_discussion_tab_enabled() else None,
 
-        if course_overview.advertised_start is not None:
-            start_type = "string"
-            start_display = course_overview.advertised_start
-        elif course_overview.start != DEFAULT_START_DATE:
-            start_type = "timestamp"
-            start_display = defaultfilters.date(course_overview.start, "DATE_FORMAT")
-        else:
-            start_type = "empty"
-            start_display = None
-
-        return {
-            "id": course_id,
-            "name": course_overview.display_name,
-            "number": course_overview.display_number_with_default,
-            "org": course_overview.display_org_with_default,
-            "start": course_overview.start,
-            "start_display": start_display,
-            "start_type": start_type,
-            "end": course_overview.end,
-            "course_image": course_overview.course_image_url,
-            "social_urls": {
-                "facebook": course_overview.facebook_url,
-            },
-            "latest_updates": {
-                "video": None
-            },
-            "video_outline": video_outline_url,
-            "course_updates": course_updates_url,
-            "course_handouts": course_handouts_url,
-            "discussion_url": discussion_url,
-            "subscription_id": course_overview.clean_id(padding_char='_'),
-            "courseware_access": has_access(request.user, 'load_mobile', course_overview).to_json() if request else None
+            'video_outline': reverse(
+                'video-summary-list',
+                kwargs={'course_id': course_id},
+                request=request,
+            ),
         }
 
 
@@ -92,7 +90,7 @@ class CourseEnrollmentSerializer(serializers.ModelSerializer):
         certificate_info = certificate_downloadable_status(model.user, model.course_id)
         if certificate_info['is_downloadable']:
             return {
-                "url": self.context['request'].build_absolute_uri(
+                'url': self.context['request'].build_absolute_uri(
                     certificate_info['download_url']
                 ),
             }

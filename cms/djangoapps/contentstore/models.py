@@ -1,11 +1,9 @@
 """
 Models for contentstore
 """
-# pylint: disable=no-member
-
-from django.db.models.fields import TextField
 
 from config_models.models import ConfigurationModel
+from django.db.models.fields import TextField
 
 
 class VideoUploadConfig(ConfigurationModel):

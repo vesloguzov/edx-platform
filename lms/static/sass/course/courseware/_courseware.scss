@@ -22,24 +22,23 @@ html.video-fullscreen {
   overflow: hidden;
 
   &.studio-view {
-    position: relative;
-    top: -($baseline/2);
     margin: 0;
+    display: inline;
   }
 
   .instructor-info-action {
     @extend %t-copy-sub2;
     @include float(right);
-    margin-left: ($baseline/2);
+    @include margin-left($baseline/2);
+    @include text-align(right);
     padding: ($baseline/4) ($baseline/2);
     border-radius: ($baseline/4);
-    background-color: $shadow-l2;
-    text-align: right;
+    background-color: $light-gray1;
     text-transform: uppercase;
-    color: $lighter-base-font-color;
+    color: $staff-color;
 
     &:hover {
-      background-color: $link-hover;
+      background-color: $staff-color;
       color: $white;
     }
   }
@@ -48,62 +47,92 @@ html.video-fullscreen {
 .content-wrapper {
 
   .container-footer {
+    @include text-align(right);
     margin: 0 auto;
     max-width: grid-width(12);
     min-width: 760px;
     color: $gray;
-    text-align: $bi-app-right;
   }
 }
 
 .content-wrapper {
 
-  .course-license, .xblock-license {
-    @include text-align(right);
-    @extend %t-title7;
-    display: block;
-    width: auto;
-    padding: ($baseline/4) 0;
+    .course-license,
+    .xblock-license {
+        @include text-align(right);
+        @extend %t-title7;
+        display: block;
+        width: auto;
+        padding: ($baseline/4) 0;
+        color: $base-font-color;
 
-    span {
-      color: inherit;
-    }
+        span {
+            color: inherit;
+        }
 
-    a:link, a:visited {
-      color: $gray;
-    }
-    a:active, a:hover {
-      color: $link-hover;
-    }
+        a:link,
+        a:visited {
+            color: $base-font-color;
+        }
 
-    .license-label,
-    .license-value,
-    .license-actions {
-      display: inline-block;
-      vertical-align: middle;
-      margin-bottom: 0;
-    }
+        a:active,
+        a:hover {
+            color: $uxpl-blue-base;
+        }
 
-    i {
-      font-style: normal;
-    }
+        .license-label,
+        .license-value,
+        .license-actions {
+            display: inline-block;
+            vertical-align: middle;
+            margin-bottom: 0;
+        }
 
-    img {
-      display: inline;
+        i,
+        em {
+            font-style: normal;
+        }
+
+        img {
+            display: inline;
+        }
     }
-  }
 }
 
 // TO-DO should this be content wrapper?
-div.course-wrapper {
+.course-wrapper {
   position: relative;
 
-  section.course-content {
+  .courseware-results-wrapper {
+    display: none;
+  }
+
+  main {
+    padding: $baseline;
+  }
+
+  .course-content {
+    padding: 0;
+  }
+
+  .courseware-results-wrapper {
+    padding: ($baseline*2) 3%; // percent allows for smaller padding on mobile
+  }
+
+  .course-content,
+  .courseware-results-wrapper {
     @extend .content;
-    padding: ($baseline*2);
     line-height: 1.6;
+
+    .xblock {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-word;
+    }
+
     h1 {
       margin: 0 0 lh();
+      letter-spacing: 0;
     }
     div.timed-exam {
       h3 {
@@ -137,7 +166,7 @@ div.course-wrapper {
       }
       button.gated-sequence {
         background: $transparent;
-        color: $blue-d1;
+        color: $uxpl-blue-base;
         border: none;
         box-shadow: none;
         @include text-align(left);
@@ -146,7 +175,7 @@ div.course-wrapper {
 
         &:hover {
           background-color: transparent;
-          color: $link-hover;
+          color: $uxpl-blue-hover-active;
         }
       }
 
@@ -155,12 +184,12 @@ div.course-wrapper {
         font-size: 1.3em;
       }
       .gated-sequence {
-        color: #147ABA;
+        color: $uxpl-blue-base;
         font-weight: 600;
         padding: ($baseline / 1.5) ($baseline / 4);
         a.start-timed-exam {
           cursor: pointer;
-          color: #147ABA;
+          color: $uxpl-blue-base;
           font-weight: 600;
           position: relative;
           top: ($baseline/10);
@@ -170,12 +199,12 @@ div.course-wrapper {
         }
       }
       .proctored-exam-select-code {
-        margin-left: 30px;
+        @include margin-left(30px);
       }
 
       .exam-action-button {
         @extend %t-weight4;
-        margin-right: $baseline;
+        @include margin-right($baseline);
         background-image: none;
         box-shadow: none;
         text-shadow: none;
@@ -191,7 +220,7 @@ div.course-wrapper {
         }
       }
 
-      background-color: #F2F4F5;
+      background-color: #F2F8FB;
       padding: 30px;
       font-size: 16px;
       box-shadow: inset 1px 1px 2px rgba(0, 0, 0, .1);
@@ -234,7 +263,7 @@ div.course-wrapper {
       @extend .timed-exam;
 
       .proctored-exam-message {
-        border-top: ($baseline/10) solid rgb(207, 216, 220);
+        border-top: ($baseline/10) solid $uxpl-gray-background;
         padding-top: 25px;
       }
 
@@ -248,56 +277,47 @@ div.course-wrapper {
           padding: 0 ($baseline*5) 0 ($baseline*2.5);
         }
       }
+
       hr {
-        border-bottom: 1px solid rgb(207, 216, 220);
+        border-bottom: 1px solid $uxpl-gray-background;
       }
+
       .gated-sequence {
-        border-bottom: 2px solid rgb(207, 216, 220);
+        border-bottom: 2px solid $uxpl-gray-background;
         padding: 22px ($baseline*5) 15px 50px;
         position: relative;
-        span {
-          .fa {
-            position: absolute;
-            font-size: 22px;
-            left: 0;
-            top: $baseline;
-            color: rgb(206, 216, 220);
-          }
-        }
-        .start-timed-exam {
+
+        &.start-timed-exam {
           margin-bottom:($baseline/2);
           display: block;
+
+          &.action-primary {
+            .icon {
+              color: $uxpl-blue-base;
+            }
+          }
         }
+
         p {
-          color: rgb(63, 58, 59);
+          color: $uxpl-gray-base;
           strong {
             font-weight: 600;
           }
         }
-        > .fa {
+
+        .icon {
+          @include right(35px);
           position: absolute;
-          right: 35px;
-          top: 50%;
           font-size: 30px;
-          margin-top: -15px;
-          &.fa-arrow-circle-right {
-            top: 30%;
-          }
+          color: $uxpl-gray-base;
         }
+
         &:last-child {
-          > .fa {
-            color: rgb(206, 216, 220);
-          }
-          border-bottom: none;
-        }
-        &:last-child {
-          > .practice-exam {
-            color: #147ABA;
-          }
           border-bottom: none;
         }
       }
     }
+
     .proctored-exam-skip-confirm-wrapper {
       border-left: ($baseline/4) solid $red;
       padding: $baseline ($baseline*1.5);;
@@ -325,7 +345,7 @@ div.course-wrapper {
       padding: 30px 0px 20px 0px;
       border-bottom: ($baseline/10) solid #CFD9DD;
       hr {
-        border-bottom: 1px solid rgb(207, 216, 220);
+        border-bottom: 1px solid $uxpl-gray-background;
       }
       .clearfix {
         clear: both;
@@ -347,19 +367,19 @@ div.course-wrapper {
 
       }
       a.contest-review {
-        float: right;
+        @include float(right);
+        @include text-align(right);
         font-size: 12px;
         margin: 0;
         width: 20%;
-        text-align: right;
       }
       p {
         margin-bottom: ($baseline/20);
         color: #797676;
       }
-      .proctored-exam-instruction{
+      .proctored-exam-instruction {
         padding: ($baseline/2) 0;
-        border-bottom: 2px solid rgb(207, 216, 220);
+        border-bottom: 2px solid $uxpl-gray-background;
       }
     }
     .border-b-0 {
@@ -373,7 +393,7 @@ div.course-wrapper {
       border-bottom : none;
       a.footer-link {
         display: block;
-        padding: 10px 0px 10px 0px;
+        padding: ($baseline/2) 0;
       }
     }
     p {
@@ -392,6 +412,13 @@ div.course-wrapper {
       li {
         margin-bottom: lh(0.5);
       }
+    }
+
+    .path {
+      @extend %t-copy-sub1;
+      margin-top: -($baseline);
+      margin-bottom: $baseline;
+      color: $gray;
     }
 
     div#seq_content {
@@ -430,11 +457,9 @@ div.course-wrapper {
           }
 
           h2 {
-            float: right;
+            @include border-right(0);
+            @include padding-right(0);
             margin: 12px 0 0;
-            text-align: right;
-            padding-right: 0;
-            border-right: 0;
             font-size: em(14, 24);
           }
         }
@@ -451,12 +476,12 @@ div.course-wrapper {
         }
 
         ul {
+          @include padding-left(1em);
           list-style: disc outside none;
-          padding-left: 1em;
 
           &.discussion-errors {
+            @include padding-left(2em);
             list-style: none;
-            padding-left: 2em;
           }
 
           &.admin-actions {
@@ -465,7 +490,7 @@ div.course-wrapper {
         }
 
         nav.sequence-nav ul li.prev {
-          left: 4px;
+          @include left(4px);
         }
 
         nav.sequence-bottom {
@@ -506,14 +531,14 @@ div.course-wrapper {
         list-style: none;
 
         li {
+          @include float(left);
+          @include margin-right(flex-gutter(9));
           width: flex-grid(3, 9);
-          float: left;
-          margin-right: flex-gutter(9);
           margin-bottom: lh();
           line-height: lh();
 
           &:nth-child(3n) {
-            margin-right: 0;
+            @include margin-right(0);
           }
 
           &:nth-child(3n+1) {
@@ -534,6 +559,14 @@ div.course-wrapper {
       p.success {
         color: $success-color;
       }
+    }
+
+    .xqa-modal, .staff-modal, .history-modal {
+        width: 80%;
+        height: 80%;
+        left: left(20%);
+        overflow: auto;
+        display: none;
     }
 
     div.staff_info {
@@ -641,16 +674,15 @@ section.self-assessment {
   }
 }
 
-section.foldit {
-  table {
-    margin-top: ($baseline/2);
-  }
-  th {
-    text-align: center;
-  }
-  td {
-    padding-left: ($baseline/4);
-    padding-right: ($baseline/4);
 
-  }
+/*
+ * CodeMirror color contrast overrides
+ * (so we don't change the vendor file)
+ */
+
+.CodeMirror {
+    
+    .CodeMirror-linenumber.CodeMirror-gutter-elt {
+        color: $gray-d3 !important;
+    }
 }

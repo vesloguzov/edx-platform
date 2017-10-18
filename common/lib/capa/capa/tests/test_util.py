@@ -4,8 +4,8 @@ Tests capa util
 import unittest
 from lxml import etree
 
-from . import test_capa_system
-from capa.util import compare_with_tolerance, sanitize_html, get_inner_html_from_xpath
+from capa.tests.helpers import test_capa_system
+from capa.util import compare_with_tolerance, sanitize_html, get_inner_html_from_xpath, remove_markup
 
 
 class UtilTest(unittest.TestCase):
@@ -124,5 +124,14 @@ class UtilTest(unittest.TestCase):
         """
         Test for getting inner html as string from xpath node.
         """
-        xpath_node = etree.XML('<hint style="smtng">aa<a href="#">bb</a>cc</hint>')  # pylint: disable=no-member
+        xpath_node = etree.XML('<hint style="smtng">aa<a href="#">bb</a>cc</hint>')
         self.assertEqual(get_inner_html_from_xpath(xpath_node), 'aa<a href="#">bb</a>cc')
+
+    def test_remove_markup(self):
+        """
+        Test for markup removal with bleach.
+        """
+        self.assertEqual(
+            remove_markup("The <mark>Truth</mark> is <em>Out There</em> & you need to <strong>find</strong> it"),
+            "The Truth is Out There &amp; you need to find it"
+        )

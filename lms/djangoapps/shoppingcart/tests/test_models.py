@@ -1,53 +1,69 @@
 """
 Tests for the Shopping Cart Models
 """
-from decimal import Decimal
-import datetime
-import sys
-import json
 import copy
-
+import datetime
+import json
 import smtplib
-from boto.exception import BotoServerError  # this is a super-class of SESError and catches connection errors
+import sys
+from decimal import Decimal
 
-from mock import patch, MagicMock
-import pytz
 import ddt
+import pytz
+from boto.exception import BotoServerError  # this is a super-class of SESError and catches connection errors
+from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
 from django.core import mail
 from django.core.mail.message import EmailMessage
-from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.db import DatabaseError
 from django.test import TestCase
 from django.test.utils import override_settings
-from django.core.urlresolvers import reverse
-from django.contrib.auth.models import AnonymousUser
+from mock import MagicMock, patch
+from nose.plugins.attrib import attr
+from opaque_keys.edx.locator import CourseLocator
+
+from course_modes.models import CourseMode
+from shoppingcart.exceptions import (
+    AlreadyEnrolledInCourseException,
+    CourseDoesNotExistException,
+    InvalidStatusToRetire,
+    ItemAlreadyInCartException,
+    PurchasedCallbackException,
+    UnexpectedOrderItemStatus
+)
+from shoppingcart.models import (
+    CertificateItem,
+    Coupon,
+    CouponRedemption,
+    CourseRegCodeItem,
+    CourseRegistrationCode,
+    CourseRegistrationCodeInvoiceItem,
+    Donation,
+    InvalidCartItem,
+    Invoice,
+    InvoiceHistory,
+    InvoiceTransaction,
+    Order,
+    OrderItem,
+    OrderItemSubclassPK,
+    PaidCourseRegistration,
+    RegistrationCodeRedemption
+)
+from student.models import CourseEnrollment
+from student.tests.factories import UserFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 
-from shoppingcart.models import (
-    Order, OrderItem, CertificateItem,
-    InvalidCartItem, CourseRegistrationCode, PaidCourseRegistration, CourseRegCodeItem,
-    Donation, OrderItemSubclassPK,
-    Invoice, CourseRegistrationCodeInvoiceItem, InvoiceTransaction, InvoiceHistory,
-    RegistrationCodeRedemption,
-    Coupon, CouponRedemption)
-from student.tests.factories import UserFactory
-from student.models import CourseEnrollment
-from course_modes.models import CourseMode
-from shoppingcart.exceptions import (
-    PurchasedCallbackException,
-    CourseDoesNotExistException,
-    ItemAlreadyInCartException,
-    AlreadyEnrolledInCourseException,
-    InvalidStatusToRetire,
-    UnexpectedOrderItemStatus,
-)
 
-from opaque_keys.edx.locator import CourseLocator
-
-
+@attr(shard=3)
 @ddt.ddt
 class OrderTest(ModuleStoreTestCase):
+    """
+    Test shopping cart orders (e.g., cart contains various items,
+    order is taken through various pieces of cart state, etc.)
+    """
+
     def setUp(self):
         super(OrderTest, self).setUp()
 
@@ -477,6 +493,7 @@ class OrderItemTest(TestCase):
         self.assertEqual(item.get_list_price(), item.list_price)
 
 
+@attr(shard=3)
 @patch.dict('django.conf.settings.FEATURES', {'ENABLE_PAID_COURSE_REGISTRATION': True})
 class PaidCourseRegistrationTest(ModuleStoreTestCase):
     """
@@ -690,7 +707,7 @@ class PaidCourseRegistrationTest(ModuleStoreTestCase):
 
         test_redemption = RegistrationCodeRedemption.registration_code_used_for_enrollment(enrollment)
 
-        self.assertEqual(test_redemption.id, redemption.id)  # pylint: disable=no-member
+        self.assertEqual(test_redemption.id, redemption.id)
 
     def test_regcode_multi_redemptions(self):
         """
@@ -716,7 +733,7 @@ class PaidCourseRegistrationTest(ModuleStoreTestCase):
                 course_enrollment=enrollment
             )
             redemption.save()
-            ids.append(redemption.id)  # pylint: disable=no-member
+            ids.append(redemption.id)
 
         test_redemption = RegistrationCodeRedemption.registration_code_used_for_enrollment(enrollment)
 
@@ -732,7 +749,7 @@ class PaidCourseRegistrationTest(ModuleStoreTestCase):
 
         self.assertEqual(reg1.unit_cost, 0)
         self.assertEqual(reg1.line_cost, 0)
-        self.assertEqual(reg1.mode, CourseMode.DEFAULT_MODE_SLUG)
+        self.assertEqual(reg1.mode, CourseMode.DEFAULT_SHOPPINGCART_MODE_SLUG)
         self.assertEqual(reg1.user, self.user)
         self.assertEqual(reg1.status, "cart")
         self.assertEqual(self.cart.total_cost, 0)
@@ -742,7 +759,7 @@ class PaidCourseRegistrationTest(ModuleStoreTestCase):
 
         self.assertEqual(course_reg_code_item.unit_cost, 0)
         self.assertEqual(course_reg_code_item.line_cost, 0)
-        self.assertEqual(course_reg_code_item.mode, CourseMode.DEFAULT_MODE_SLUG)
+        self.assertEqual(course_reg_code_item.mode, CourseMode.DEFAULT_SHOPPINGCART_MODE_SLUG)
         self.assertEqual(course_reg_code_item.user, self.user)
         self.assertEqual(course_reg_code_item.status, "cart")
         self.assertEqual(self.cart.total_cost, 0)
@@ -903,9 +920,10 @@ class CertificateItemTest(ModuleStoreTestCase):
             'STORE_BILLING_INFO': True,
         }
     )
-    def test_refund_cert_callback_no_expiration(self):
+    @patch('student.models.CourseEnrollment.refund_cutoff_date')
+    def test_refund_cert_callback_no_expiration(self, cutoff_date):
         # When there is no expiration date on a verified mode, the user can always get a refund
-
+        cutoff_date.return_value = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=1)
         # need to prevent analytics errors from appearing in stderr
         with patch('sys.stderr', sys.stdout.write):
             CourseEnrollment.enroll(self.user, self.course_key, 'verified')
@@ -944,7 +962,8 @@ class CertificateItemTest(ModuleStoreTestCase):
             'STORE_BILLING_INFO': True,
         }
     )
-    def test_refund_cert_callback_before_expiration(self):
+    @patch('student.models.CourseEnrollment.refund_cutoff_date')
+    def test_refund_cert_callback_before_expiration(self, cutoff_date):
         # If the expiration date has not yet passed on a verified mode, the user can be refunded
         many_days = datetime.timedelta(days=60)
 
@@ -957,6 +976,7 @@ class CertificateItemTest(ModuleStoreTestCase):
                                  expiration_datetime=(datetime.datetime.now(pytz.utc) + many_days))
         course_mode.save()
 
+        cutoff_date.return_value = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=1)
         # need to prevent analytics errors from appearing in stderr
         with patch('sys.stderr', sys.stdout.write):
             CourseEnrollment.enroll(self.user, self.course_key, 'verified')
@@ -971,7 +991,8 @@ class CertificateItemTest(ModuleStoreTestCase):
         self.assertEquals(target_certs[0].order.status, 'refunded')
         self._assert_refund_tracked()
 
-    def test_refund_cert_callback_before_expiration_email(self):
+    @patch('student.models.CourseEnrollment.refund_cutoff_date')
+    def test_refund_cert_callback_before_expiration_email(self, cutoff_date):
         """ Test that refund emails are being sent correctly. """
         course = CourseFactory.create()
         course_key = course.id
@@ -990,6 +1011,7 @@ class CertificateItemTest(ModuleStoreTestCase):
         cart.purchase()
 
         mail.outbox = []
+        cutoff_date.return_value = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=1)
         with patch('shoppingcart.models.log.error') as mock_error_logger:
             CourseEnrollment.unenroll(self.user, course_key)
             self.assertFalse(mock_error_logger.called)
@@ -998,8 +1020,9 @@ class CertificateItemTest(ModuleStoreTestCase):
             self.assertEquals(settings.PAYMENT_SUPPORT_EMAIL, mail.outbox[0].from_email)
             self.assertIn('has requested a refund on Order', mail.outbox[0].body)
 
+    @patch('student.models.CourseEnrollment.refund_cutoff_date')
     @patch('shoppingcart.models.log.error')
-    def test_refund_cert_callback_before_expiration_email_error(self, error_logger):
+    def test_refund_cert_callback_before_expiration_email_error(self, error_logger, cutoff_date):
         # If there's an error sending an email to billing, we need to log this error
         many_days = datetime.timedelta(days=60)
 
@@ -1018,6 +1041,7 @@ class CertificateItemTest(ModuleStoreTestCase):
         CertificateItem.add_to_order(cart, course_key, self.cost, 'verified')
         cart.purchase()
 
+        cutoff_date.return_value = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=1)
         with patch('shoppingcart.models.send_mail', side_effect=smtplib.SMTPException):
             CourseEnrollment.unenroll(self.user, course_key)
             self.assertTrue(error_logger.call_args[0][0].startswith('Failed sending email'))
@@ -1074,6 +1098,10 @@ class CertificateItemTest(ModuleStoreTestCase):
         email = mail.outbox[0]
         self.assertEquals('Order Payment Confirmation', email.subject)
         self.assertNotIn("If you haven't verified your identity yet, please start the verification process", email.body)
+        self.assertIn(
+            "You can unenroll in the course and receive a full refund for 2 days after the course start date. ",
+            email.body
+        )
 
 
 class DonationTest(ModuleStoreTestCase):
@@ -1094,7 +1122,7 @@ class DonationTest(ModuleStoreTestCase):
             donation,
             donation_type="general",
             unit_cost=self.COST,
-            line_desc="Donation for edX"
+            line_desc=u"Donation for {}".format(settings.PLATFORM_NAME)
         )
 
     def test_donate_to_course(self):

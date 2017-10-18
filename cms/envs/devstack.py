@@ -8,7 +8,8 @@ from .aws import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 # Don't use S3 in devstack, fall back to filesystem
 del DEFAULT_FILE_STORAGE
-MEDIA_ROOT = "/edx/var/edxapp/uploads"
+COURSE_IMPORT_EXPORT_STORAGE = 'django.core.files.storage.FileSystemStorage'
+USER_TASKS_ARTIFACT_STORAGE = COURSE_IMPORT_EXPORT_STORAGE
 
 DEBUG = True
 USE_I18N = True
@@ -31,24 +32,30 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ################################# LMS INTEGRATION #############################
 
 LMS_BASE = "localhost:8000"
+LMS_ROOT_URL = "http://{}".format(LMS_BASE)
 FEATURES['PREVIEW_LMS_BASE'] = "preview." + LMS_BASE
 
 ########################### PIPELINE #################################
 
 # Skip packaging and optimization in development
 PIPELINE_ENABLED = False
-STATICFILES_STORAGE = 'pipeline.storage.NonPackagingPipelineStorage'
+STATICFILES_STORAGE = 'openedx.core.storage.DevelopmentStorage'
 
 # Revert to the default set of finders as we don't want the production pipeline
 STATICFILES_FINDERS = [
+    'openedx.core.djangoapps.theming.finders.ThemeFilesFinder',
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
-############################# ADVANCED COMPONENTS #############################
+############################ PYFS XBLOCKS SERVICE #############################
+# Set configuration for Django pyfilesystem
 
-# Make it easier to test advanced components in local dev
-FEATURES['ALLOW_ALL_ADVANCED_COMPONENTS'] = True
+DJFS = {
+    'type': 'osfs',
+    'directory_root': 'cms/static/djpyfs',
+    'url_root': '/static/djpyfs',
+}
 
 ################################# CELERY ######################################
 
@@ -73,7 +80,13 @@ DEBUG_TOOLBAR_PANELS = (
 )
 
 DEBUG_TOOLBAR_CONFIG = {
-    'SHOW_TOOLBAR_CALLBACK': 'cms.envs.devstack.should_show_debug_toolbar'
+    # Profile panel is incompatible with wrapped views
+    # See https://github.com/jazzband/django-debug-toolbar/issues/792
+    'DISABLE_PANELS': (
+        'debug_toolbar.panels.profiling.ProfilingPanel',
+    ),
+    'SHOW_TOOLBAR_CALLBACK': 'cms.envs.devstack.should_show_debug_toolbar',
+    'JQUERY_URL': None,
 }
 
 
@@ -96,11 +109,7 @@ FEATURES['ENTRANCE_EXAMS'] = True
 ################################ COURSE LICENSES ################################
 FEATURES['LICENSING'] = True
 # Needed to enable licensing on video modules
-XBLOCK_SETTINGS = {
-    "VideoDescriptor": {
-        "licensing_enabled": True
-    }
-}
+XBLOCK_SETTINGS.update({'VideoDescriptor': {'licensing_enabled': True}})
 
 ################################ SEARCH INDEX ################################
 FEATURES['ENABLE_COURSEWARE_INDEX'] = True
@@ -110,10 +119,22 @@ SEARCH_ENGINE = "search.elastic.ElasticSearchEngine"
 ########################## Certificates Web/HTML View #######################
 FEATURES['CERTIFICATES_HTML_VIEW'] = True
 
+########################## AUTHOR PERMISSION #######################
+FEATURES['ENABLE_CREATOR_GROUP'] = False
+
 ################################# DJANGO-REQUIRE ###############################
 
 # Whether to run django-require in debug mode.
 REQUIRE_DEBUG = DEBUG
+
+########################### OAUTH2 #################################
+OAUTH_OIDC_ISSUER = 'http://127.0.0.1:8000/oauth2'
+
+JWT_AUTH.update({
+    'JWT_SECRET_KEY': 'lms-secret',
+    'JWT_ISSUER': 'http://127.0.0.1:8000/oauth2',
+    'JWT_AUDIENCE': 'lms-key',
+})
 
 ###############################################################################
 # See if the developer has any local overrides.

@@ -1,6 +1,13 @@
-from course_modes.models import CourseMode
+"""
+Factories for course mode models.
+"""
+import random
+
+from factory import lazy_attribute
 from factory.django import DjangoModelFactory
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
+
+from course_modes.models import CourseMode
 
 
 # Factories are self documenting
@@ -11,8 +18,16 @@ class CourseModeFactory(DjangoModelFactory):
 
     course_id = SlashSeparatedCourseKey('MITx', '999', 'Robot_Super_Course')
     mode_slug = 'audit'
-    mode_display_name = 'audit course'
-    min_price = 0
     currency = 'usd'
     expiration_datetime = None
     suggested_prices = ''
+
+    @lazy_attribute
+    def min_price(self):
+        if CourseMode.is_verified_slug(self.mode_slug):
+            return random.randint(1, 100)
+        return 0
+
+    @lazy_attribute
+    def mode_display_name(self):
+        return '{0} course'.format(self.mode_slug)

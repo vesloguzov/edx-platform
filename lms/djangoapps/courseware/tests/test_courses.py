@@ -2,45 +2,50 @@
 """
 Tests for course access
 """
-import ddt
 import itertools
-import mock
-from nose.plugins.attrib import attr
 
+import ddt
+import mock
 from django.conf import settings
-from django.test.utils import override_settings
 from django.core.urlresolvers import reverse
 from django.test.client import RequestFactory
-from opaque_keys.edx.locations import SlashSeparatedCourseKey
+from django.test.utils import override_settings
+from nose.plugins.attrib import attr
 
 from courseware.courses import (
-    get_course_by_id, get_cms_course_link, course_image_url,
-    get_course_info_section, get_course_about_section, get_cms_block_link
+    get_cms_block_link,
+    get_cms_course_link,
+    get_course_about_section,
+    get_course_by_id,
+    get_course_info_section,
+    get_course_overview_with_access,
+    get_course_with_access,
+    get_courses,
+    get_current_child
 )
-
-from courseware.courses import get_course_with_access
-from courseware.module_render import get_module_for_descriptor
-from courseware.tests.helpers import get_request_for_user
 from courseware.model_data import FieldDataCache
+from courseware.module_render import get_module_for_descriptor
 from lms.djangoapps.courseware.courseware_access_exception import CoursewareAccessException
+from openedx.core.djangolib.testing.utils import get_mock_request
+from openedx.core.lib.courses import course_image_url
 from student.tests.factories import UserFactory
-from xmodule.modulestore.django import _get_modulestore_branch_setting, modulestore
 from xmodule.modulestore import ModuleStoreEnum
-from xmodule.modulestore.xml_importer import import_course_from_xml
+from xmodule.modulestore.django import _get_modulestore_branch_setting, modulestore
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
-from xmodule.modulestore.tests.django_utils import TEST_DATA_MIXED_TOY_MODULESTORE
-from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
+from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory, check_mongo_calls
+from xmodule.modulestore.xml_importer import import_course_from_xml
 from xmodule.tests.xml import factories as xml
 from xmodule.tests.xml import XModuleXmlImportTest
-
 
 CMS_BASE_TEST = 'testcms'
 TEST_DATA_DIR = settings.COMMON_TEST_DATA_ROOT
 
 
-@attr('shard_1')
+@attr(shard=1)
+@ddt.ddt
 class CoursesTest(ModuleStoreTestCase):
     """Test methods related to fetching courses."""
+    ENABLED_SIGNALS = ['course_published']
 
     @override_settings(CMS_BASE=CMS_BASE_TEST)
     def test_get_cms_course_block_link(self):
@@ -56,18 +61,122 @@ class CoursesTest(ModuleStoreTestCase):
         cms_url = u"//{}/course/{}".format(CMS_BASE_TEST, unicode(self.course.location))
         self.assertEqual(cms_url, get_cms_block_link(self.course, 'course'))
 
-    def test_get_course_with_access(self):
+    @ddt.data(get_course_with_access, get_course_overview_with_access)
+    def test_get_course_func_with_access_error(self, course_access_func):
         user = UserFactory.create()
         course = CourseFactory.create(visible_to_staff_only=True)
 
         with self.assertRaises(CoursewareAccessException) as error:
-            get_course_with_access(user, 'load', course.id)
+            course_access_func(user, 'load', course.id)
         self.assertEqual(error.exception.message, "Course not found.")
         self.assertEqual(error.exception.access_response.error_code, "not_visible_to_user")
         self.assertFalse(error.exception.access_response.has_access)
 
+    @ddt.data(
+        (get_course_with_access, 1),
+        (get_course_overview_with_access, 0),
+    )
+    @ddt.unpack
+    def test_get_course_func_with_access(self, course_access_func, num_mongo_calls):
+        user = UserFactory.create()
+        course = CourseFactory.create(emit_signals=True)
+        with check_mongo_calls(num_mongo_calls):
+            course_access_func(user, 'load', course.id)
 
-@attr('shard_1')
+    def test_get_courses_by_org(self):
+        """
+        Verify that org filtering performs as expected, and that an empty result
+        is returned if the org passed by the caller does not match the designated
+        org.
+        """
+        primary = 'primary'
+        alternate = 'alternate'
+
+        def _fake_get_value(value, default=None):
+            """Used to stub out site_configuration.helpers.get_value()."""
+            if value == 'course_org_filter':
+                return alternate
+
+            return default
+
+        user = UserFactory.create()
+
+        # Pass `emit_signals=True` so that these courses are cached with CourseOverviews.
+        primary_course = CourseFactory.create(org=primary, emit_signals=True)
+        alternate_course = CourseFactory.create(org=alternate, emit_signals=True)
+
+        self.assertNotEqual(primary_course.org, alternate_course.org)
+
+        unfiltered_courses = get_courses(user)
+        for org in [primary_course.org, alternate_course.org]:
+            self.assertTrue(
+                any(course.org == org for course in unfiltered_courses)
+            )
+
+        filtered_courses = get_courses(user, org=primary)
+        self.assertTrue(
+            all(course.org == primary_course.org for course in filtered_courses)
+        )
+
+        with mock.patch(
+            'openedx.core.djangoapps.site_configuration.helpers.get_value',
+            autospec=True,
+        ) as mock_get_value:
+            mock_get_value.side_effect = _fake_get_value
+
+            # Request filtering for an org distinct from the designated org.
+            no_courses = get_courses(user, org=primary)
+            self.assertEqual(no_courses, [])
+
+            # Request filtering for an org matching the designated org.
+            site_courses = get_courses(user, org=alternate)
+            self.assertTrue(
+                all(course.org == alternate_course.org for course in site_courses)
+            )
+
+    def test_get_courses_with_filter(self):
+        """
+        Verify that filtering performs as expected.
+        """
+        user = UserFactory.create()
+        non_mobile_course = CourseFactory.create(emit_signals=True)
+        mobile_course = CourseFactory.create(mobile_available=True, emit_signals=True)
+
+        test_cases = (
+            (None, {non_mobile_course.id, mobile_course.id}),
+            (dict(mobile_available=True), {mobile_course.id}),
+            (dict(mobile_available=False), {non_mobile_course.id}),
+        )
+        for filter_, expected_courses in test_cases:
+            self.assertEqual(
+                {
+                    course.id
+                    for course in
+                    get_courses(user, filter_=filter_)
+                },
+                expected_courses,
+                "testing get_courses with filter_={}".format(filter_),
+            )
+
+    def test_get_current_child(self):
+        mock_xmodule = mock.MagicMock()
+        self.assertIsNone(get_current_child(mock_xmodule))
+
+        mock_xmodule.position = -1
+        mock_xmodule.get_display_items.return_value = ['one', 'two', 'three']
+        self.assertEqual(get_current_child(mock_xmodule), 'one')
+
+        mock_xmodule.position = 2
+        self.assertEqual(get_current_child(mock_xmodule), 'two')
+        self.assertEqual(get_current_child(mock_xmodule, requested_child='first'), 'one')
+        self.assertEqual(get_current_child(mock_xmodule, requested_child='last'), 'three')
+
+        mock_xmodule.position = 3
+        mock_xmodule.get_display_items.return_value = []
+        self.assertIsNone(get_current_child(mock_xmodule))
+
+
+@attr(shard=1)
 class ModuleStoreBranchSettingTest(ModuleStoreTestCase):
     """Test methods related to the modulestore branch setting."""
     @mock.patch(
@@ -93,7 +202,7 @@ class ModuleStoreBranchSettingTest(ModuleStoreTestCase):
         self.assertEqual(_get_modulestore_branch_setting(), 'fake_default_branch')
 
 
-@attr('shard_1')
+@attr(shard=1)
 @override_settings(CMS_BASE=CMS_BASE_TEST)
 class MongoCourseImageTestCase(ModuleStoreTestCase):
     """Tests for course image URLs when using a mongo modulestore."""
@@ -149,7 +258,7 @@ class MongoCourseImageTestCase(ModuleStoreTestCase):
         )
 
 
-@attr('shard_1')
+@attr(shard=1)
 class XmlCourseImageTestCase(XModuleXmlImportTest):
     """Tests for course image URLs when using an xml modulestore."""
 
@@ -167,7 +276,7 @@ class XmlCourseImageTestCase(XModuleXmlImportTest):
         self.assertEquals(course_image_url(course), u'/static/xml_test_course/before after.jpg')
 
 
-@attr('shard_1')
+@attr(shard=1)
 class CoursesRenderTest(ModuleStoreTestCase):
     """Test methods related to rendering courses content."""
 
@@ -183,11 +292,11 @@ class CoursesRenderTest(ModuleStoreTestCase):
         course_items = import_course_from_xml(store, self.user.id, TEST_DATA_DIR, ['toy'])
         course_key = course_items[0].id
         self.course = get_course_by_id(course_key)
-        self.request = get_request_for_user(UserFactory.create())
+        self.request = get_mock_request(UserFactory.create())
 
     def test_get_course_info_section_render(self):
         # Test render works okay
-        course_info = get_course_info_section(self.request, self.course, 'handouts')
+        course_info = get_course_info_section(self.request, self.request.user, self.course, 'handouts')
         self.assertEqual(course_info, u"<a href='/c4x/edX/toy/asset/handouts_sample_handout.txt'>Sample</a>")
 
         # Test when render raises an exception
@@ -195,15 +304,13 @@ class CoursesRenderTest(ModuleStoreTestCase):
             mock_module_render.return_value = mock.MagicMock(
                 render=mock.Mock(side_effect=Exception('Render failed!'))
             )
-            course_info = get_course_info_section(self.request, self.course, 'handouts')
+            course_info = get_course_info_section(self.request, self.request.user, self.course, 'handouts')
             self.assertIn("this module is temporarily unavailable", course_info)
 
-    @mock.patch('courseware.courses.get_request_for_thread')
-    def test_get_course_about_section_render(self, mock_get_request):
-        mock_get_request.return_value = self.request
+    def test_get_course_about_section_render(self):
 
         # Test render works okay
-        course_about = get_course_about_section(self.course, 'short_description')
+        course_about = get_course_about_section(self.request, self.course, 'short_description')
         self.assertEqual(course_about, "A course about toys.")
 
         # Test when render raises an exception
@@ -211,35 +318,11 @@ class CoursesRenderTest(ModuleStoreTestCase):
             mock_module_render.return_value = mock.MagicMock(
                 render=mock.Mock(side_effect=Exception('Render failed!'))
             )
-            course_about = get_course_about_section(self.course, 'short_description')
+            course_about = get_course_about_section(self.request, self.course, 'short_description')
             self.assertIn("this module is temporarily unavailable", course_about)
 
 
-@attr('shard_1')
-class XmlCoursesRenderTest(ModuleStoreTestCase):
-    """Test methods related to rendering courses content for an XML course."""
-    MODULESTORE = TEST_DATA_MIXED_TOY_MODULESTORE
-
-    toy_course_key = SlashSeparatedCourseKey('edX', 'toy', '2012_Fall')
-
-    def test_get_course_info_section_render(self):
-        course = get_course_by_id(self.toy_course_key)
-        request = get_request_for_user(UserFactory.create())
-
-        # Test render works okay. Note the href is different in XML courses.
-        course_info = get_course_info_section(request, course, 'handouts')
-        self.assertEqual(course_info, "<a href='/static/toy/handouts/sample_handout.txt'>Sample</a>")
-
-        # Test when render raises an exception
-        with mock.patch('courseware.courses.get_module') as mock_module_render:
-            mock_module_render.return_value = mock.MagicMock(
-                render=mock.Mock(side_effect=Exception('Render failed!'))
-            )
-            course_info = get_course_info_section(request, course, 'handouts')
-            self.assertIn("this module is temporarily unavailable", course_info)
-
-
-@attr('shard_1')
+@attr(shard=1)
 @ddt.ddt
 class CourseInstantiationTests(ModuleStoreTestCase):
     """

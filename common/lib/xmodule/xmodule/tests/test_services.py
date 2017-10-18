@@ -6,15 +6,30 @@ import ddt
 import mock
 from unittest import TestCase
 
+from config_models.models import ConfigurationModel
 from django.conf import settings
 from django.test.utils import override_settings
 
 from xblock.runtime import Mixologist
-from xmodule.services import SettingsService
+from xmodule.services import ConfigurationService, SettingsService
 
 
 class _DummyBlock(object):
     """ Dummy Xblock class """
+    pass
+
+
+class DummyConfig(ConfigurationModel):
+    """
+    Dummy Configuration
+    """
+    pass
+
+
+class DummyUnexpected(object):
+    """
+    Dummy Unexpected Class
+    """
     pass
 
 
@@ -52,20 +67,20 @@ class TestSettingsService(TestCase):
     @override_settings(XBLOCK_SETTINGS={xblock_setting_key2: {'b': 1}})
     def test_get_returns_none_or_default_if_bucket_not_found(self):
         """ Test if settings service returns default if setting not found """
-        self.assertEqual(getattr(settings, 'XBLOCK_SETTINGS'), {self.xblock_setting_key2: {'b': 1}})
+        self.assertEqual(settings.XBLOCK_SETTINGS, {self.xblock_setting_key2: {'b': 1}})
         self.assertEqual(self.settings_service.get_settings_bucket(self.xblock_mock), {})
         self.assertEqual(self.settings_service.get_settings_bucket(self.xblock_mock, 123), 123)
 
     @override_settings(XBLOCK_SETTINGS={xblock_setting_key1: 42})
     def test_get_returns_correct_value(self):
         """ Test if settings service returns correct bucket """
-        self.assertEqual(getattr(settings, 'XBLOCK_SETTINGS'), {self.xblock_setting_key1: 42})
+        self.assertEqual(settings.XBLOCK_SETTINGS, {self.xblock_setting_key1: 42})
         self.assertEqual(self.settings_service.get_settings_bucket(self.xblock_mock), 42)
 
     @override_settings(XBLOCK_SETTINGS={xblock_setting_key2: "I'm a setting"})
     def test_get_respects_block_settings_key(self):
         """ Test if settings service respects block_settings_key value """
-        self.assertEqual(getattr(settings, 'XBLOCK_SETTINGS'), {self.xblock_setting_key2: "I'm a setting"})
+        self.assertEqual(settings.XBLOCK_SETTINGS, {self.xblock_setting_key2: "I'm a setting"})
         self.xblock_mock.block_settings_key = self.xblock_setting_key2
         self.assertEqual(self.settings_service.get_settings_bucket(self.xblock_mock), "I'm a setting")
 
@@ -74,5 +89,25 @@ class TestSettingsService(TestCase):
         """ Test if settings service uses class name if block_settings_key attribute does not exist """
         mixologist = Mixologist([])
         block = mixologist.mix(_DummyBlock)
-        self.assertEqual(getattr(settings, 'XBLOCK_SETTINGS'), {"_DummyBlock": [1, 2, 3]})
+        self.assertEqual(settings.XBLOCK_SETTINGS, {"_DummyBlock": [1, 2, 3]})
         self.assertEqual(self.settings_service.get_settings_bucket(block), [1, 2, 3])
+
+
+class TestConfigurationService(TestCase):
+    """
+    Tests for ConfigurationService
+    """
+    def test_given_unexpected_class_throws_value_error(self):
+        """
+        Test that instantiating ConfigurationService raises exception on passing
+        a class which is not subclass of ConfigurationModel.
+        """
+        with self.assertRaises(ValueError):
+            ConfigurationService(DummyUnexpected)
+
+    def test_configuration_service(self):
+        """
+        Test the correct configuration on instantiating ConfigurationService.
+        """
+        config_service = ConfigurationService(DummyConfig)
+        self.assertEqual(config_service.configuration, DummyConfig)

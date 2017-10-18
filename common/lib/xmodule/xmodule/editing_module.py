@@ -1,9 +1,11 @@
 """Descriptors for XBlocks/Xmodules, that provide editing of atrributes"""
 
-from pkg_resources import resource_string
-from xmodule.mako_module import MakoModuleDescriptor
-from xblock.fields import Scope, String
 import logging
+
+from pkg_resources import resource_string
+from xblock.fields import Scope, String
+
+from xmodule.mako_module import MakoModuleDescriptor
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +22,8 @@ class EditingDescriptor(EditingFields, MakoModuleDescriptor):
 
     This class is intended to be used as a mixin.
     """
+    resources_dir = None
+
     mako_template = "widgets/raw-edit.html"
 
     @property

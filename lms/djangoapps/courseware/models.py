@@ -12,22 +12,17 @@ file and check it in at the same time as your model changes. To do that,
 ASSUMPTIONS: modules have unique IDs, even across different module_types
 
 """
-import logging
 import itertools
+import logging
 
-from django.contrib.auth.models import User
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
-from django.dispatch import receiver, Signal
-
 from model_utils.models import TimeStampedModel
-from student.models import user_by_anonymous_id
-from submissions.models import score_set, score_reset
 
-from openedx.core.djangoapps.call_stack_manager import CallStackManager, CallStackMixin
-from xmodule_django.models import CourseKeyField, LocationKeyField, BlockTypeKeyField  # pylint: disable=import-error
-log = logging.getLogger(__name__)
+import coursewarehistoryextended
+from openedx.core.djangoapps.xmodule_django.models import BlockTypeKeyField, CourseKeyField, LocationKeyField
 
 log = logging.getLogger("edx.courseware")
 
@@ -72,21 +67,10 @@ class ChunkingManager(models.Manager):
         return res
 
 
-class ChunkingCallStackManager(CallStackManager, ChunkingManager):
-    """
-    A derived class of ChunkingManager, and CallStackManager
-
-    Class is currently unused but remains as part of the CallStackManger work. To re-enable see comment in StudentModule
-    """
-    pass
-
-
-class StudentModule(CallStackMixin, models.Model):
+class StudentModule(models.Model):
     """
     Keeps student state for a particular module in a particular course.
     """
-    # Changed back to ChunkingManager from ChunkingCallStackManger. To re-enable CallStack Management change the line
-    # back to: objects = ChunkingCallStackManager() Ticket: PLAT-881
     objects = ChunkingManager()
     MODEL_TAGS = ['course_id', 'module_type']
 
@@ -152,7 +136,7 @@ class StudentModule(CallStackMixin, models.Model):
             # We use the student_id instead of username to avoid a database hop.
             # This can actually matter in cases where we're logging many of
             # these (e.g. on a broken progress page).
-            'student_id': self.student_id,  # pylint: disable=no-member
+            'student_id': self.student_id,
             'module_state_key': self.module_state_key,
             'state': str(self.state)[:20],
         },)
@@ -161,18 +145,15 @@ class StudentModule(CallStackMixin, models.Model):
         return unicode(repr(self))
 
 
-class StudentModuleHistory(CallStackMixin, models.Model):
-    """Keeps a complete history of state changes for a given XModule for a given
-    Student. Right now, we restrict this to problems so that the table doesn't
-    explode in size."""
-    objects = CallStackManager()
+class BaseStudentModuleHistory(models.Model):
+    """Abstract class containing most fields used by any class
+    storing Student Module History"""
+    objects = ChunkingManager()
     HISTORY_SAVING_TYPES = {'problem'}
 
     class Meta(object):
-        app_label = "courseware"
-        get_latest_by = "created"
+        abstract = True
 
-    student_module = models.ForeignKey(StudentModule, db_index=True)
     version = models.CharField(max_length=255, null=True, blank=True, db_index=True)
 
     # This should be populated from the modified field in StudentModule
@@ -181,11 +162,59 @@ class StudentModuleHistory(CallStackMixin, models.Model):
     grade = models.FloatField(null=True, blank=True)
     max_grade = models.FloatField(null=True, blank=True)
 
-    @receiver(post_save, sender=StudentModule)
+    @property
+    def csm(self):
+        """
+        Finds the StudentModule object for this history record, even if our data is split
+        across multiple data stores.  Django does not handle this correctly with the built-in
+        student_module property.
+        """
+        return StudentModule.objects.get(pk=self.student_module_id)
+
+    @staticmethod
+    def get_history(student_modules):
+        """
+        Find history objects across multiple backend stores for a given StudentModule
+        """
+
+        history_entries = []
+
+        if settings.FEATURES.get('ENABLE_CSMH_EXTENDED'):
+            history_entries += coursewarehistoryextended.models.StudentModuleHistoryExtended.objects.filter(
+                # Django will sometimes try to join to courseware_studentmodule
+                # so just do an in query
+                student_module__in=[module.id for module in student_modules]
+            ).order_by('-id')
+
+        # If we turn off reading from multiple history tables, then we don't want to read from
+        # StudentModuleHistory anymore, we believe that all history is in the Extended table.
+        if settings.FEATURES.get('ENABLE_READING_FROM_MULTIPLE_HISTORY_TABLES'):
+            # we want to save later SQL queries on the model which allows us to prefetch
+            history_entries += StudentModuleHistory.objects.prefetch_related('student_module').filter(
+                student_module__in=student_modules
+            ).order_by('-id')
+
+        return history_entries
+
+
+class StudentModuleHistory(BaseStudentModuleHistory):
+    """Keeps a complete history of state changes for a given XModule for a given
+    Student. Right now, we restrict this to problems so that the table doesn't
+    explode in size."""
+
+    class Meta(object):
+        app_label = "courseware"
+        get_latest_by = "created"
+
+    student_module = models.ForeignKey(StudentModule, db_index=True)
+
+    def __unicode__(self):
+        return unicode(repr(self))
+
     def save_history(sender, instance, **kwargs):  # pylint: disable=no-self-argument, unused-argument
         """
         Checks the instance's module_type, and creates & saves a
-        StudentModuleHistory entry if the module_type is one that
+        StudentModuleHistoryExtended entry if the module_type is one that
         we save.
         """
         if instance.module_type in StudentModuleHistory.HISTORY_SAVING_TYPES:
@@ -196,6 +225,12 @@ class StudentModuleHistory(CallStackMixin, models.Model):
                                                  grade=instance.grade,
                                                  max_grade=instance.max_grade)
             history_entry.save()
+
+    # When the extended studentmodulehistory table exists, don't save
+    # duplicate history into courseware_studentmodulehistory, just retain
+    # data for reading.
+    if not settings.FEATURES.get('ENABLE_CSMH_EXTENDED'):
+        post_save.connect(save_history, sender=StudentModule)
 
 
 class XBlockFieldBase(models.Model):
@@ -320,101 +355,3 @@ class StudentFieldOverride(TimeStampedModel):
 
     field = models.CharField(max_length=255)
     value = models.TextField(default='null')
-
-
-# Signal that indicates that a user's score for a problem has been updated.
-# This signal is generated when a scoring event occurs either within the core
-# platform or in the Submissions module. Note that this signal will be triggered
-# regardless of the new and previous values of the score (i.e. it may be the
-# case that this signal is generated when a user re-attempts a problem but
-# receives the same score).
-SCORE_CHANGED = Signal(
-    providing_args=[
-        'points_possible',  # Maximum score available for the exercise
-        'points_earned',   # Score obtained by the user
-        'user_id',  # Integer User ID
-        'course_id',  # Unicode string representing the course
-        'usage_id'  # Unicode string indicating the courseware instance
-    ]
-)
-
-
-@receiver(score_set)
-def submissions_score_set_handler(sender, **kwargs):  # pylint: disable=unused-argument
-    """
-    Consume the score_set signal defined in the Submissions API, and convert it
-    to a SCORE_CHANGED signal defined in this module. Converts the unicode keys
-    for user, course and item into the standard representation for the
-    SCORE_CHANGED signal.
-
-    This method expects that the kwargs dictionary will contain the following
-    entries (See the definition of score_set):
-      - 'points_possible': integer,
-      - 'points_earned': integer,
-      - 'anonymous_user_id': unicode,
-      - 'course_id': unicode,
-      - 'item_id': unicode
-    """
-    points_possible = kwargs.get('points_possible', None)
-    points_earned = kwargs.get('points_earned', None)
-    course_id = kwargs.get('course_id', None)
-    usage_id = kwargs.get('item_id', None)
-    user = None
-    if 'anonymous_user_id' in kwargs:
-        user = user_by_anonymous_id(kwargs.get('anonymous_user_id'))
-
-    # If any of the kwargs were missing, at least one of the following values
-    # will be None.
-    if all((user, points_possible, points_earned, course_id, usage_id)):
-        SCORE_CHANGED.send(
-            sender=None,
-            points_possible=points_possible,
-            points_earned=points_earned,
-            user_id=user.id,
-            course_id=course_id,
-            usage_id=usage_id
-        )
-    else:
-        log.exception(
-            u"Failed to process score_set signal from Submissions API. "
-            "points_possible: %s, points_earned: %s, user: %s, course_id: %s, "
-            "usage_id: %s", points_possible, points_earned, user, course_id, usage_id
-        )
-
-
-@receiver(score_reset)
-def submissions_score_reset_handler(sender, **kwargs):  # pylint: disable=unused-argument
-    """
-    Consume the score_reset signal defined in the Submissions API, and convert
-    it to a SCORE_CHANGED signal indicating that the score has been set to 0/0.
-    Converts the unicode keys for user, course and item into the standard
-    representation for the SCORE_CHANGED signal.
-
-    This method expects that the kwargs dictionary will contain the following
-    entries (See the definition of score_reset):
-      - 'anonymous_user_id': unicode,
-      - 'course_id': unicode,
-      - 'item_id': unicode
-    """
-    course_id = kwargs.get('course_id', None)
-    usage_id = kwargs.get('item_id', None)
-    user = None
-    if 'anonymous_user_id' in kwargs:
-        user = user_by_anonymous_id(kwargs.get('anonymous_user_id'))
-
-    # If any of the kwargs were missing, at least one of the following values
-    # will be None.
-    if all((user, course_id, usage_id)):
-        SCORE_CHANGED.send(
-            sender=None,
-            points_possible=0,
-            points_earned=0,
-            user_id=user.id,
-            course_id=course_id,
-            usage_id=usage_id
-        )
-    else:
-        log.exception(
-            u"Failed to process score_reset signal from Submissions API. "
-            "user: %s, course_id: %s, usage_id: %s", user, course_id, usage_id
-        )

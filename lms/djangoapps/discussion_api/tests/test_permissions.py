@@ -4,12 +4,13 @@ Tests for discussion API permission logic
 import itertools
 
 import ddt
+from nose.plugins.attrib import attr
 
 from discussion_api.permissions import (
     can_delete,
     get_editable_fields,
     get_initializable_comment_fields,
-    get_initializable_thread_fields,
+    get_initializable_thread_fields
 )
 from lms.lib.comment_client.comment import Comment
 from lms.lib.comment_client.thread import Thread
@@ -24,6 +25,7 @@ def _get_context(requester_id, is_requester_privileged, is_cohorted=False, threa
         "cc_requester": User(id=requester_id),
         "is_requester_privileged": is_requester_privileged,
         "course": CourseFactory(cohort_config={"cohorted": is_cohorted}),
+        "discussion_division_enabled": is_cohorted,
         "thread": thread,
     }
 
@@ -41,7 +43,7 @@ class GetInitializableFieldsTest(ModuleStoreTestCase):
         )
         actual = get_initializable_thread_fields(context)
         expected = {
-            "abuse_flagged", "course_id", "following", "raw_body", "title", "topic_id", "type", "voted"
+            "abuse_flagged", "course_id", "following", "raw_body", "read", "title", "topic_id", "type", "voted"
         }
         if is_privileged and is_cohorted:
             expected |= {"group_id"}
@@ -64,6 +66,7 @@ class GetInitializableFieldsTest(ModuleStoreTestCase):
         self.assertEqual(actual, expected)
 
 
+@attr(shard=3)
 @ddt.ddt
 class GetEditableFieldsTest(ModuleStoreTestCase):
     """Tests for get_editable_fields"""
@@ -77,7 +80,7 @@ class GetEditableFieldsTest(ModuleStoreTestCase):
             is_cohorted=is_cohorted
         )
         actual = get_editable_fields(thread, context)
-        expected = {"abuse_flagged", "following", "voted"}
+        expected = {"abuse_flagged", "following", "read", "voted"}
         if is_author or is_privileged:
             expected |= {"topic_id", "type", "title", "raw_body"}
         if is_privileged and is_cohorted:

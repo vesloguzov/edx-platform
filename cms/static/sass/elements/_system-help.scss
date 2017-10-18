@@ -220,7 +220,7 @@
   margin: 0 0 $baseline 0;
   border-bottom: 1px solid $gray-l4;
   padding: 0 0 $baseline 0;
-  color: $gray-l1;
+  color: $gray-d1;
 
   &:last-child {
     margin-bottom: 0;
@@ -245,6 +245,7 @@
 
   // learn more (aka external help button)
   .external-help-button {
+    display: inline-block;
     @extend %ui-btn-flat-outline;
     @extend %sizing;
   }
@@ -280,7 +281,7 @@
     .nav-item {
       @extend %wipe-last-child;
       margin-bottom: ($baseline/4);
-      border-bottom: 1px dotted $gray-l4;
+      border-bottom: 1px dotted $gray-l5;
       padding-bottom: ($baseline/4);
     }
   }

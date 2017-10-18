@@ -1,11 +1,13 @@
 """
 These modules exist to translate old format XML into newer, semantic forms
 """
-from .x_module import XModuleDescriptor
-from lxml import etree
-from functools import wraps
 import logging
 import traceback
+from functools import wraps
+
+from lxml import etree
+
+from .x_module import XModuleDescriptor
 
 log = logging.getLogger(__name__)
 
@@ -60,6 +62,8 @@ def process_includes(fn):
 
 
 class SemanticSectionDescriptor(XModuleDescriptor):
+    resources_dir = None
+
     @classmethod
     @process_includes
     def from_xml(cls, xml_data, system, id_generator):
@@ -82,6 +86,8 @@ class SemanticSectionDescriptor(XModuleDescriptor):
 
 
 class TranslateCustomTagDescriptor(XModuleDescriptor):
+    resources_dir = None
+
     @classmethod
     def from_xml(cls, xml_data, system, id_generator):
         """

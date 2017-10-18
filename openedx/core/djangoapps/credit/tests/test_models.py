@@ -5,19 +5,20 @@ Tests for credit course models.
 
 import ddt
 from django.test import TestCase
-
+from nose.plugins.attrib import attr
 from opaque_keys.edx.keys import CourseKey
 
 from openedx.core.djangoapps.credit.models import CreditCourse, CreditRequirement
 
 
+@attr(shard=2)
 @ddt.ddt
 class CreditEligibilityModelTests(TestCase):
     """
     Tests for credit models used to track credit eligibility.
     """
 
-    def setUp(self, **kwargs):
+    def setUp(self):
         super(CreditEligibilityModelTests, self).setUp()
         self.course_key = CourseKey.from_string("edX/DemoX/Demo_Course")
 
@@ -60,9 +61,9 @@ class CreditEligibilityModelTests(TestCase):
         self.assertEqual(created, True)
 
         requirement = {
-            "namespace": "reverification",
-            "name": "i4x://edX/DemoX/edx-reverification-block/assessment_uuid",
-            "display_name": "Assessment 1",
+            "namespace": "new_grade",
+            "name": "new_grade",
+            "display_name": "New Grade",
             "criteria": {},
         }
         credit_req, created = CreditRequirement.add_or_update_course_requirement(credit_course, requirement, 1)

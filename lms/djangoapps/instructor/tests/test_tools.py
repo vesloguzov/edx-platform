@@ -3,28 +3,27 @@ Tests for views/tools.py.
 """
 
 import datetime
-import mock
 import json
 import unittest
 from cStringIO import StringIO
 
+import mock
 import django.test
-from django.utils.timezone import utc
-from django.test.utils import override_settings
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.test.utils import override_settings
+from django.utils.timezone import utc
 from nose.plugins.attrib import attr
+from opaque_keys.edx.keys import CourseKey
 
-from courseware.field_overrides import OverrideFieldData  # pylint: disable=import-error
+from courseware.field_overrides import OverrideFieldData
 from lms.djangoapps.ccx.tests.test_overrides import inject_field_overrides
 from lms.djangoapps.courseware.tests.factories import GlobalStaffFactory
-from student.tests.factories import UserFactory  # pylint: disable=import-error
-
+from student.tests.factories import UserFactory
 from xmodule.fields import Date
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-from opaque_keys.edx.keys import CourseKey
 
 from util.testing import UrlResetMixin
 from courseware.models import StudentModule
@@ -36,7 +35,7 @@ from ..views import tools
 DATE_FIELD = Date()
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestDashboardError(unittest.TestCase):
     """
     Test DashboardError exceptions.
@@ -47,7 +46,7 @@ class TestDashboardError(unittest.TestCase):
         self.assertEqual(response, {'error': 'Oh noes!'})
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestHandleDashboardError(unittest.TestCase):
     """
     Test handle_dashboard_error decorator.
@@ -76,7 +75,7 @@ class TestHandleDashboardError(unittest.TestCase):
         self.assertEqual(view(None, None), "Oh yes!")
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestRequireStudentIdentifier(unittest.TestCase):
     """
     Test require_student_from_identifier()
@@ -99,7 +98,7 @@ class TestRequireStudentIdentifier(unittest.TestCase):
             tools.require_student_from_identifier("invalid")
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestRequireStudentEmailOrNickname(django.test.TestCase):
     """
     Test require_student_from_email_or_nickname
@@ -152,7 +151,7 @@ class TestRequireStudentEmailOrNickname(django.test.TestCase):
         return student
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestParseDatetime(unittest.TestCase):
     """
     Test date parsing.
@@ -167,7 +166,7 @@ class TestParseDatetime(unittest.TestCase):
             tools.parse_datetime('foo')
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestFindUnit(SharedModuleStoreTestCase):
     """
     Test the find_unit function.
@@ -197,7 +196,7 @@ class TestFindUnit(SharedModuleStoreTestCase):
             tools.find_unit(self.course, url)
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestGetUnitsWithDueDate(ModuleStoreTestCase):
     """
     Test the get_units_with_due_date function.
@@ -233,7 +232,7 @@ class TestGetUnitsWithDueDate(ModuleStoreTestCase):
             urls((self.week1, self.week2)))
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestTitleOrUrl(unittest.TestCase):
     """
     Test the title_or_url funciton.
@@ -248,7 +247,7 @@ class TestTitleOrUrl(unittest.TestCase):
         self.assertEquals(tools.title_or_url(unit), 'test:hello')
 
 
-@attr('shard_1')
+@attr(shard=1)
 @override_settings(
     FIELD_OVERRIDE_PROVIDERS=(
         'courseware.student_field_overrides.IndividualStudentOverrideProvider',),
@@ -328,7 +327,7 @@ class TestSetDueDateExtension(ModuleStoreTestCase):
         self.assertEqual(self.week1.due, self.due)
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestDataDumps(ModuleStoreTestCase):
     """
     Test data dumps for reporting.

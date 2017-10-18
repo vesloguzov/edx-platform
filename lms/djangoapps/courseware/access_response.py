@@ -3,6 +3,7 @@ This file contains all the classes used by has_access for error handling
 """
 
 from django.utils.translation import ugettext as _
+
 from xmodule.course_metadata_utils import DEFAULT_START_DATE
 
 
@@ -55,6 +56,14 @@ class AccessResponse(object):
             "developer_message": self.developer_message,
             "user_message": self.user_message
         }
+
+    def __repr__(self):
+        return "AccessResponse({!r}, {!r}, {!r}, {!r})".format(
+            self.has_access,
+            self.error_code,
+            self.developer_message,
+            self.user_message
+        )
 
 
 class AccessError(AccessResponse):

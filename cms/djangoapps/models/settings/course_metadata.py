@@ -1,11 +1,15 @@
 """
 Django module for Course Metadata class -- manages advanced settings and related parameters
 """
+from django.conf import settings
+from django.utils.translation import ugettext as _
 from xblock.fields import Scope
+
+from openedx.core.djangoapps.waffle_utils import WaffleSwitchNamespace
+
+from xblock_django.models import XBlockStudioConfigurationFlag
 from xmodule.modulestore.django import modulestore
 from xmodule.tabs import CourseTabList
-from django.utils.translation import ugettext as _
-from django.conf import settings
 
 
 class CourseMetadata(object):
@@ -27,7 +31,6 @@ class CourseMetadata(object):
         'enrollment_end',
         'tabs',
         'graceperiod',
-        'checklists',
         'show_timezone',
         'format',
         'graded',
@@ -51,7 +54,12 @@ class CourseMetadata(object):
         'is_proctored_enabled',
         'is_time_limited',
         'is_practice_exam',
-        'self_paced'
+        'exam_review_rules',
+        'hide_after_due',
+        'self_paced',
+        'show_correctness',
+        'chrome',
+        'default_tab',
     ]
 
     @classmethod
@@ -74,10 +82,6 @@ class CourseMetadata(object):
         if not settings.FEATURES.get('ENABLE_VIDEO_UPLOAD_PIPELINE'):
             filtered_list.append('video_upload_pipeline')
 
-        # Do not show facebook_url if the feature is disabled.
-        if not settings.FEATURES.get('ENABLE_MOBILE_SOCIAL_FACEBOOK_FEATURES'):
-            filtered_list.append('facebook_url')
-
         # Do not show social sharing url field if the feature is disabled.
         if (not hasattr(settings, 'SOCIAL_SHARING_SETTINGS') or
                 not getattr(settings, 'SOCIAL_SHARING_SETTINGS', {}).get("CUSTOM_COURSE_URLS")):
@@ -93,6 +97,19 @@ class CourseMetadata(object):
         # Do not show enable_ccx if feature is not enabled.
         if not settings.FEATURES.get('CUSTOM_COURSES_EDX'):
             filtered_list.append('enable_ccx')
+            filtered_list.append('ccx_connector')
+
+        # If the XBlockStudioConfiguration table is not being used, there is no need to
+        # display the "Allow Unsupported XBlocks" setting.
+        if not XBlockStudioConfigurationFlag.is_enabled():
+            filtered_list.append('allow_unsupported_xblocks')
+
+        # TODO: https://openedx.atlassian.net/browse/EDUCATOR-736
+        # Before we roll out the auto-certs feature, move this to a good, shared
+        # place such that we're not repeating code found in LMS.
+        switches = WaffleSwitchNamespace(name=u'certificates', log_prefix=u'Certificates: ')
+        if not switches.is_enabled(u'instructor_paced_only'):
+            filtered_list.append('certificate_available_date')
 
         return filtered_list
 

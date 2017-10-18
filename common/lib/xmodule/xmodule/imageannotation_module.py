@@ -1,17 +1,17 @@
 """
 Module for Image annotations using annotator.
 """
+import textwrap
+
 from lxml import etree
 from pkg_resources import resource_string
-
-from xmodule.x_module import XModule
-from xmodule.raw_module import RawDescriptor
 from xblock.core import Scope, String
-from xmodule.annotator_mixin import get_instructions, html_to_text
-from xmodule.annotator_token import retrieve_token
 from xblock.fragment import Fragment
 
-import textwrap
+from xmodule.annotator_mixin import get_instructions, html_to_text
+from xmodule.annotator_token import retrieve_token
+from xmodule.raw_module import RawDescriptor
+from xmodule.x_module import XModule
 
 # Make '_' a no-op so we can scrape strings. Using lambda instead of
 #  `django.utils.translation.ugettext_noop` because Django cannot be imported in this file
@@ -45,7 +45,7 @@ class AnnotatableFields(object):
         """))
     display_name = String(
         display_name=_("Display Name"),
-        help=_("Display name for this module"),
+        help=_("The display name for this component."),
         scope=Scope.settings,
         default=_('Image Annotation'),
     )
@@ -92,11 +92,11 @@ class ImageAnnotationModule(AnnotatableFields, XModule):
     '''Image Annotation Module'''
     js = {
         'coffee': [
-            resource_string(__name__, 'js/src/javascript_loader.coffee'),
             resource_string(__name__, 'js/src/html/display.coffee'),
             resource_string(__name__, 'js/src/annotatable/display.coffee'),
         ],
         'js': [
+            resource_string(__name__, 'js/src/javascript_loader.js'),
             resource_string(__name__, 'js/src/collapsible.js'),
         ]
     }
@@ -127,7 +127,7 @@ class ImageAnnotationModule(AnnotatableFields, XModule):
     def student_view(self, context):
         """ Renders parameters to template. """
         context = {
-            'display_name': self.display_name_with_default,
+            'display_name': self.display_name_with_default_escaped,
             'instructions_html': self.instructions,
             'token': retrieve_token(self.user_email, self.annotation_token_secret),
             'tag': self.instructor_tags,
@@ -148,9 +148,10 @@ class ImageAnnotationModule(AnnotatableFields, XModule):
         return fragment
 
 
-class ImageAnnotationDescriptor(AnnotatableFields, RawDescriptor):  # pylint: disable=abstract-method
+class ImageAnnotationDescriptor(AnnotatableFields, RawDescriptor):
     ''' Image annotation descriptor '''
     module_class = ImageAnnotationModule
+    resources_dir = None
     mako_template = "widgets/raw-edit.html"
 
     @property

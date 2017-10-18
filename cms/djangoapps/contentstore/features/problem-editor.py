@@ -2,10 +2,12 @@
 # pylint: disable=missing-docstring
 
 import json
-from lettuce import world, step
-from nose.tools import assert_equal, assert_true  # pylint: disable=no-name-in-module
-from common import type_in_codemirror, open_new_course
-from advanced_settings import change_value, ADVANCED_MODULES_KEY
+
+from lettuce import step, world
+from nose.tools import assert_equal, assert_true
+
+from advanced_settings import ADVANCED_MODULES_KEY, change_value
+from common import open_new_course, type_in_codemirror
 from course_import import import_file
 
 DISPLAY_NAME = "Display Name"
@@ -125,7 +127,10 @@ def my_display_name_change_is_persisted_on_save(step):
 
 @step('the problem display name is "(.*)"$')
 def verify_problem_display_name(step, name):
-    assert_equal(name.upper(), world.browser.find_by_css('.problem-header').text)
+    """
+    name is uppercased because the heading styles are uppercase in css
+    """
+    assert_equal(name, world.browser.find_by_css('.problem-header').text)
 
 
 @step('I can specify special characters in the display name')
@@ -332,8 +337,8 @@ def i_edit_blank_problem_for_annotation_response(_step):
 
 @step(u'I can see cheatsheet$')
 def verify_cheat_sheet_displaying(_step):
-    world.css_click("a.cheatsheet-toggle")
-    css_selector = 'article.simple-editor-cheatsheet'
+    world.css_click(".cheatsheet-toggle")
+    css_selector = '.simple-editor-cheatsheet'
     world.wait_for_visible(css_selector)
 
 

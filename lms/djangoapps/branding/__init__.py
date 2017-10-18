@@ -12,43 +12,56 @@ from xmodule.course_module import CourseDescriptor
 from django.conf import settings
 
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
-from microsite_configuration import microsite
-from django.contrib.staticfiles.storage import staticfiles_storage
+from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 
 
-def get_visible_courses():
+def get_visible_courses(org=None, filter_=None):
     """
-    Return the set of CourseDescriptors that should be visible in this branded instance
+    Return the set of CourseOverviews that should be visible in this branded
+    instance.
+
+    Arguments:
+        org (string): Optional parameter that allows case-insensitive
+            filtering by organization.
+        filter_ (dict): Optional parameter that allows custom filtering by
+            fields on the course.
     """
+    courses = []
+    current_site_orgs = configuration_helpers.get_current_site_orgs()
 
-    filtered_by_org = microsite.get_value('course_org_filter')
+    if org:
+        # Check the current site's orgs to make sure the org's courses should be displayed
+        if not current_site_orgs or org in current_site_orgs:
+            courses = CourseOverview.get_all_courses(orgs=[org], filter_=filter_)
+    elif current_site_orgs:
+        # Only display courses that should be displayed on this site
+        courses = CourseOverview.get_all_courses(orgs=current_site_orgs, filter_=filter_)
+    else:
+        courses = CourseOverview.get_all_courses(filter_=filter_)
 
-    _courses = modulestore().get_courses(org=filtered_by_org)
-
-    courses = [c for c in _courses
-               if isinstance(c, CourseDescriptor)]
     courses = sorted(courses, key=lambda course: course.number)
 
-    subdomain = microsite.get_value('subdomain', 'default')
+    # Filtering can stop here.
+    if current_site_orgs:
+        return courses
 
     # See if we have filtered course listings in this domain
     filtered_visible_ids = None
 
-    # this is legacy format which is outside of the microsite feature -- also handle dev case, which should not filter
+    # this is legacy format, which also handle dev case, which should not filter
+    subdomain = configuration_helpers.get_value('subdomain', 'default')
     if hasattr(settings, 'COURSE_LISTINGS') and subdomain in settings.COURSE_LISTINGS and not settings.DEBUG:
         filtered_visible_ids = frozenset(
             [SlashSeparatedCourseKey.from_deprecated_string(c) for c in settings.COURSE_LISTINGS[subdomain]]
         )
 
-    if filtered_by_org:
-        return [course for course in courses if course.location.org == filtered_by_org]
     if filtered_visible_ids:
         return [course for course in courses if course.id in filtered_visible_ids]
     else:
-        # Let's filter out any courses in an "org" that has been declared to be
-        # in a Microsite
-        org_filter_out_set = microsite.get_all_orgs()
-        return [course for course in courses if course.location.org not in org_filter_out_set]
+        # Filter out any courses based on current org, to avoid leaking these.
+        orgs = configuration_helpers.get_all_orgs()
+        return [course for course in courses if course.location.org not in orgs]
 
 
 def get_university_for_request():
@@ -56,63 +69,4 @@ def get_university_for_request():
     Return the university name specified for the domain, or None
     if no university was specified
     """
-    return microsite.get_value('university')
-
-
-def get_logo_url():
-    """
-    Return the url for the branded logo image to be used
-    """
-
-    # if the MicrositeConfiguration has a value for the logo_image_url
-    # let's use that
-    image_url = microsite.get_value('logo_image_url')
-    if image_url:
-        return '{static_url}{image_url}'.format(
-            static_url=settings.STATIC_URL,
-            image_url=image_url
-        )
-
-    # otherwise, use the legacy means to configure this
-    university = microsite.get_value('university')
-
-    if university is None and settings.FEATURES.get('IS_EDX_DOMAIN', False):
-        return staticfiles_storage.url('images/edx-theme/edx-logo-77x36.png')
-    elif university:
-        return staticfiles_storage.url('images/{uni}-on-edx-logo.png'.format(uni=university))
-    else:
-        return staticfiles_storage.url('images/default-theme/logo.png')
-
-
-# TODO (lektorium): remove when api extracted from branding app
-import urlparse
-from edxmako.shortcuts import marketing_link
-
-EMPTY_URL = '#'
-
-
-def _get_url(name):
-    return marketing_link(name) or EMPTY_URL
-
-
-def get_tos_and_honor_code_url():
-    return _get_url('TOS_AND_HONOR')
-
-
-def get_privacy_url():
-    return _get_url('PRIVACY')
-
-
-def get_about_url():
-    return _get_url('ABOUT')
-
-
-def get_base_url(is_secure):
-    """
-    Return Base URL or site.
-    Arguments:
-        is_secure (bool): If true, use HTTPS as the protocol.
-    """
-    site_name = microsite.get_value('SITE_NAME', settings.SITE_NAME)
-    parts = ('https' if is_secure else 'http', site_name, '', '', '', '')
-    return urlparse.urlunparse(parts)
+    return configuration_helpers.get_value('university')

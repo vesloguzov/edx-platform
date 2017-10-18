@@ -14,10 +14,6 @@
     <div class="finish-auth-inner">
         <h1>${_('Please wait')}</h1>
 
-        <div class="loading-animation"></div>
+        <div class="loading-animation"><span class='icon fa fa-spinner' aria-hidden='true'></span></div>
     </div>
 </div>
-
-## This overwrites the "footer" block declared in main.html
-## with an empty block, effectively hiding the footer.
-<%block name="footer"/>

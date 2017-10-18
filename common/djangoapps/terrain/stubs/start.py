@@ -1,28 +1,30 @@
 """
 Command-line utility to start a stub service.
 """
+import logging
 import sys
 import time
-import logging
+
+from .catalog import StubCatalogService
 from .comments import StubCommentsService
-from .xqueue import StubXQueueService
-from .youtube import StubYouTubeService
-from .ora import StubOraService
+from .ecommerce import StubEcommerceService
+from .edxnotes import StubEdxNotesService
 from .lti import StubLtiService
 from .video_source import VideoSourceHttpService
-from .edxnotes import StubEdxNotesService
-
+from .xqueue import StubXQueueService
+from .youtube import StubYouTubeService
 
 USAGE = "USAGE: python -m stubs.start SERVICE_NAME PORT_NUM [CONFIG_KEY=CONFIG_VAL, ...]"
 
 SERVICES = {
     'xqueue': StubXQueueService,
     'youtube': StubYouTubeService,
-    'ora': StubOraService,
     'comments': StubCommentsService,
     'lti': StubLtiService,
     'video': VideoSourceHttpService,
     'edxnotes': StubEdxNotesService,
+    'ecommerce': StubEcommerceService,
+    'catalog': StubCatalogService,
 }
 
 # Log to stdout, including debug messages
@@ -76,7 +78,6 @@ def _parse_config_args(args):
 
         except:
             print "Warning: could not interpret config value '{0}'".format(config_str)
-            pass
 
     return config_dict
 

@@ -2,10 +2,9 @@
 Unit tests for Edx Proctoring feature flag in new instructor dashboard.
 """
 
-from mock import patch
-
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from mock import patch
 from nose.plugins.attrib import attr
 
 from student.roles import CourseFinanceAdminRole
@@ -14,7 +13,7 @@ from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 
 
-@attr('shard_1')
+@attr(shard=1)
 @patch.dict(settings.FEATURES, {'ENABLE_SPECIAL_EXAMS': True})
 class TestProctoringDashboardViews(SharedModuleStoreTestCase):
     """
@@ -27,7 +26,8 @@ class TestProctoringDashboardViews(SharedModuleStoreTestCase):
 
         # URL for instructor dash
         cls.url = reverse('instructor_dashboard', kwargs={'course_id': cls.course.id.to_deprecated_string()})
-        cls.proctoring_link = '<a href="" data-section="special_exams">Special Exams</a>'
+        button = '<button type="button" class="btn-link special_exams" data-section="special_exams">Special Exams</button>'
+        cls.proctoring_link = button
 
     def setUp(self):
         super(TestProctoringDashboardViews, self).setUp()
@@ -46,8 +46,8 @@ class TestProctoringDashboardViews(SharedModuleStoreTestCase):
         self.instructor.save()
 
         response = self.client.get(self.url)
-        self.assertTrue(self.proctoring_link in response.content)
-        self.assertTrue('Allowance Section' in response.content)
+        self.assertIn(self.proctoring_link, response.content)
+        self.assertIn('Allowance Section', response.content)
 
     def test_no_tab_non_global_staff(self):
         """
@@ -58,8 +58,8 @@ class TestProctoringDashboardViews(SharedModuleStoreTestCase):
         self.instructor.save()
 
         response = self.client.get(self.url)
-        self.assertFalse(self.proctoring_link in response.content)
-        self.assertFalse('Allowance Section' in response.content)
+        self.assertNotIn(self.proctoring_link, response.content)
+        self.assertNotIn('Allowance Section', response.content)
 
     @patch.dict(settings.FEATURES, {'ENABLE_SPECIAL_EXAMS': False})
     def test_no_tab_flag_unset(self):
@@ -71,5 +71,5 @@ class TestProctoringDashboardViews(SharedModuleStoreTestCase):
         self.instructor.save()
 
         response = self.client.get(self.url)
-        self.assertFalse(self.proctoring_link in response.content)
-        self.assertFalse('Allowance Section' in response.content)
+        self.assertNotIn(self.proctoring_link, response.content)
+        self.assertNotIn('Allowance Section', response.content)

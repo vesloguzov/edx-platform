@@ -14,7 +14,7 @@ from openedx.core.lib.api.permissions import ApiKeyHeaderPermission
 from rest_framework.test import APITestCase
 from django.conf import settings
 from django.test.utils import override_settings
-from social.apps.django_app.default.models import UserSocialAuth
+from social_django.models import UserSocialAuth
 
 from student.tests.factories import UserFactory
 from third_party_auth.api.permissions import ThirdPartyAuthProviderApiPermission
@@ -51,7 +51,11 @@ class TpaAPITestCase(ThirdPartyAuthTestMixin, APITestCase):
         self.configure_facebook_provider(enabled=True)
         self.configure_linkedin_provider(enabled=False)
         self.enable_saml()
-        testshib = self.configure_saml_provider(name='TestShib', enabled=True, idp_slug=IDP_SLUG_TESTSHIB)
+        testshib = self.configure_saml_provider(
+            name='TestShib',
+            enabled=True,
+            idp_slug=IDP_SLUG_TESTSHIB
+        )
 
         # Create several users and link each user to Google and TestShib
         for username in LINKED_USERS:

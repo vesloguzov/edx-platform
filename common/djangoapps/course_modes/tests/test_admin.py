@@ -5,23 +5,22 @@ import unittest
 from datetime import datetime, timedelta
 
 import ddt
-from pytz import timezone, UTC
-
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from pytz import UTC, timezone
 
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
-from util.date_utils import get_time_display
-from xmodule.modulestore.tests.factories import CourseFactory
-from student.tests.factories import UserFactory
-from course_modes.models import CourseMode
 from course_modes.admin import CourseModeForm
-
+from course_modes.models import CourseMode
+from course_modes.tests.factories import CourseModeFactory
 # Technically, we shouldn't be importing verify_student, since it's
 # defined in the LMS and course_modes is in common.  However, the benefits
 # of putting all this configuration in one place outweigh the downsides.
 # Once the course admin tool is deployed, we can remove this dependency.
 from lms.djangoapps.verify_student.models import VerificationDeadline
+from student.tests.factories import UserFactory
+from util.date_utils import get_time_display
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.factories import CourseFactory
 
 
 # We can only test this in the LMS because the course modes admin relies
@@ -48,8 +47,8 @@ class AdminCourseModePageTest(ModuleStoreTestCase):
             'mode_display_name': 'verified',
             'min_price': 10,
             'currency': 'usd',
-            'expiration_datetime_0': expiration.date(),  # due to django admin datetime widget passing as seperate vals
-            'expiration_datetime_1': expiration.time(),
+            '_expiration_datetime_0': expiration.date(),  # due to django admin datetime widget passing as separate vals
+            '_expiration_datetime_1': expiration.time(),
 
         }
 
@@ -178,7 +177,7 @@ class AdminCourseModeFormTest(ModuleStoreTestCase):
 
     def _configure(self, mode, upgrade_deadline=None, verification_deadline=None):
         """Configure course modes and deadlines. """
-        course_mode = CourseMode.objects.create(
+        course_mode = CourseModeFactory.create(
             mode_slug=mode,
             mode_display_name=mode,
         )
@@ -193,7 +192,7 @@ class AdminCourseModeFormTest(ModuleStoreTestCase):
 
     def _admin_form(self, mode, upgrade_deadline=None):
         """Load the course mode admin form. """
-        course_mode = CourseMode.objects.create(
+        course_mode = CourseModeFactory.create(
             course_id=self.course.id,
             mode_slug=mode,
         )
@@ -201,7 +200,7 @@ class AdminCourseModeFormTest(ModuleStoreTestCase):
             "course_id": unicode(self.course.id),
             "mode_slug": mode,
             "mode_display_name": mode,
-            "expiration_datetime": upgrade_deadline,
+            "_expiration_datetime": upgrade_deadline,
             "currency": "usd",
             "min_price": 10,
         }, instance=course_mode)

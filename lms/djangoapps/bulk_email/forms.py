@@ -5,14 +5,12 @@ import logging
 
 from django import forms
 from django.core.exceptions import ValidationError
-
-from bulk_email.models import CourseEmailTemplate, COURSE_EMAIL_MESSAGE_BODY_TAG, CourseAuthorization
-
 from opaque_keys import InvalidKeyError
-from xmodule.modulestore import ModuleStoreEnum
-from xmodule.modulestore.django import modulestore
 from opaque_keys.edx.keys import CourseKey
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
+
+from bulk_email.models import COURSE_EMAIL_MESSAGE_BODY_TAG, CourseAuthorization, CourseEmailTemplate
+from xmodule.modulestore.django import modulestore
 
 log = logging.getLogger(__name__)
 
@@ -98,13 +96,6 @@ class CourseAuthorizationAdminForm(forms.ModelForm):
             msg = u'COURSE NOT FOUND'
             msg += u' --- Entered course id was: "{0}". '.format(course_key.to_deprecated_string())
             msg += 'Please recheck that you have supplied a valid course id.'
-            raise forms.ValidationError(msg)
-
-        # Now, try and discern if it is a Studio course - HTML editor doesn't work with XML courses
-        is_studio_course = modulestore().get_modulestore_type(course_key) != ModuleStoreEnum.Type.xml
-        if not is_studio_course:
-            msg = "Course Email feature is only available for courses authored in Studio. "
-            msg += '"{0}" appears to be an XML backed course.'.format(course_key.to_deprecated_string())
             raise forms.ValidationError(msg)
 
         return course_key

@@ -3,24 +3,26 @@
 LibraryContent: The XBlock used to include blocks from a library in a course.
 """
 import json
-from lxml import etree
-from copy import copy
-from capa.responsetypes import registry
-from gettext import ngettext
-from lazy import lazy
-
-from .mako_module import MakoModuleDescriptor
-from opaque_keys.edx.locator import LibraryLocator
 import random
+from copy import copy
+from gettext import ngettext
+
+from lazy import lazy
+from lxml import etree
+from opaque_keys.edx.locator import LibraryLocator
+from pkg_resources import resource_string
 from webob import Response
 from xblock.core import XBlock
-from xblock.fields import Scope, String, List, Integer, Boolean
+from xblock.fields import Boolean, Integer, List, Scope, String
 from xblock.fragment import Fragment
-from xmodule.validation import StudioValidationMessage, StudioValidation
-from xmodule.x_module import XModule, STUDENT_VIEW
-from xmodule.studio_editable import StudioEditableModule, StudioEditableDescriptor
+
+from capa.responsetypes import registry
+from xmodule.studio_editable import StudioEditableDescriptor, StudioEditableModule
+from xmodule.validation import StudioValidation, StudioValidationMessage
+from xmodule.x_module import STUDENT_VIEW, XModule
+
+from .mako_module import MakoModuleDescriptor
 from .xml_module import XmlDescriptor
-from pkg_resources import resource_string  # pylint: disable=no-name-in-module
 
 # Make '_' a no-op so we can scrape strings. Using lambda instead of
 #  `django.utils.translation.ugettext_noop` because Django cannot be imported in this file
@@ -60,7 +62,7 @@ class LibraryContentFields(object):
     # to locate input elements - keep synchronized
     display_name = String(
         display_name=_("Display Name"),
-        help=_("Display name for this module"),
+        help=_("The display name for this component."),
         default="Randomized Content Block",
         scope=Scope.settings,
     )
@@ -97,13 +99,6 @@ class LibraryContentFields(object):
         help=_('Choose a problem type to fetch from the library. If "Any Type" is selected no filtering is applied.'),
         default=ANY_CAPA_TYPE_VALUE,
         values=_get_capa_types(),
-        scope=Scope.settings,
-    )
-    filters = String(default="")  # TBD
-    has_score = Boolean(
-        display_name=_("Scored"),
-        help=_("Set this value to True if this module is either a graded assignment or a practice problem."),
-        default=False,
         scope=Scope.settings,
     )
     selected = List(
@@ -317,6 +312,7 @@ class LibraryContentModule(LibraryContentFields, XModule, StudioEditableModule):
         fragment.add_content(self.system.render_template('vert_module.html', {
             'items': contents,
             'xblock_context': context,
+            'show_bookmark_button': False,
         }))
         return fragment
 
@@ -344,6 +340,7 @@ class LibraryContentModule(LibraryContentFields, XModule, StudioEditableModule):
                     'display_name': self.display_name or self.url_name,
                 }))
                 context['can_edit_visibility'] = False
+                context['can_move'] = False
                 self.render_children(context, fragment, can_reorder=False, can_add=False)
         # else: When shown on a unit page, don't show any sort of preview -
         # just the status of this block in the validation area.
@@ -367,6 +364,9 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
     """
     Descriptor class for LibraryContentModule XBlock.
     """
+
+    resources_dir = 'assets/library_content'
+
     module_class = LibraryContentModule
     mako_template = 'widgets/metadata-edit.html'
     js = {'coffee': [resource_string(__name__, 'js/src/vertical/edit.coffee')]}
@@ -573,12 +573,10 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
         """
         lib_tools = self.runtime.service(self, 'library_tools')
         user_perms = self.runtime.service(self, 'studio_user_permissions')
-        all_libraries = lib_tools.list_available_libraries()
-        if user_perms:
-            all_libraries = [
-                (key, name) for key, name in all_libraries
-                if user_perms.can_read(key) or self.source_library_id == unicode(key)
-            ]
+        all_libraries = [
+            (key, name) for key, name in lib_tools.list_available_libraries()
+            if user_perms.can_read(key) or self.source_library_id == unicode(key)
+        ]
         all_libraries.sort(key=lambda entry: entry[1])  # Sort by name
         if self.source_library_id and self.source_library_key not in [entry[0] for entry in all_libraries]:
             all_libraries.append((self.source_library_id, _(u"Invalid Library")))
@@ -621,7 +619,6 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
     @classmethod
     def definition_from_xml(cls, xml_object, system):
         children = [
-            # pylint: disable=no-member
             system.process_xml(etree.tostring(child)).scope_ids.usage_id
             for child in xml_object.getchildren()
         ]
@@ -633,7 +630,6 @@ class LibraryContentDescriptor(LibraryContentFields, MakoModuleDescriptor, XmlDe
 
     def definition_to_xml(self, resource_fs):
         """ Exports Library Content Module to XML """
-        # pylint: disable=no-member
         xml_object = etree.Element('library_content')
         for child in self.get_children():
             self.runtime.add_block_as_child_node(child, xml_object)

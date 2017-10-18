@@ -6,12 +6,11 @@ from unittest import TestCase
 from urllib import urlencode
 
 import ddt
-
 from django.http import QueryDict
-
 from opaque_keys.edx.locator import CourseLocator
-from openedx.core.djangoapps.util.test_forms import FormTestMixin
+
 from discussion_api.forms import CommentListGetForm, ThreadListGetForm
+from openedx.core.djangoapps.util.test_forms import FormTestMixin
 
 
 class PaginationTestMixin(object):
@@ -69,6 +68,7 @@ class ThreadListGetFormTest(FormTestMixin, PaginationTestMixin, TestCase):
                 "view": "",
                 "order_by": "last_activity_at",
                 "order_direction": "desc",
+                "requested_fields": set(),
             }
         )
 
@@ -100,13 +100,19 @@ class ThreadListGetFormTest(FormTestMixin, PaginationTestMixin, TestCase):
         self.form_data.setlist("topic_id", ["", "not empty"])
         self.assert_error("topic_id", "This field cannot be empty.")
 
-    def test_following_true(self):
-        self.form_data["following"] = "True"
+    @ddt.data("True", "true", 1, True)
+    def test_following_true(self, value):
+        self.form_data["following"] = value
         self.assert_field_value("following", True)
 
-    def test_following_false(self):
-        self.form_data["following"] = "False"
+    @ddt.data("False", "false", 0, False)
+    def test_following_false(self, value):
+        self.form_data["following"] = value
         self.assert_error("following", "The value of the 'following' parameter must be true.")
+
+    def test_invalid_following(self):
+        self.form_data["following"] = "invalid-boolean"
+        self.assert_error("following", "Invalid Boolean Value.")
 
     @ddt.data(*itertools.combinations(["topic_id", "text_search", "following"], 2))
     def test_mutually_exclusive(self, params):
@@ -134,7 +140,29 @@ class ThreadListGetFormTest(FormTestMixin, PaginationTestMixin, TestCase):
             "Select a valid choice. not_a_valid_choice is not one of the available choices."
         )
 
+    @ddt.data(
+        ("view", "unread"),
+        ("view", "unanswered"),
+        ("order_by", "last_activity_at"),
+        ("order_by", "comment_count"),
+        ("order_by", "vote_count"),
+        ("order_direction", "desc"),
+    )
+    @ddt.unpack
+    def test_valid_choice_fields(self, field, value):
+        self.form_data[field] = value
+        self.assert_field_value(field, value)
 
+    def test_requested_fields(self):
+        self.form_data["requested_fields"] = "profile_image"
+        form = self.get_form(expected_valid=True)
+        self.assertEqual(
+            form.cleaned_data["requested_fields"],
+            {"profile_image"},
+        )
+
+
+@ddt.ddt
 class CommentListGetFormTest(FormTestMixin, PaginationTestMixin, TestCase):
     """Tests for CommentListGetForm"""
     FORM_CLASS = CommentListGetForm
@@ -157,7 +185,7 @@ class CommentListGetFormTest(FormTestMixin, PaginationTestMixin, TestCase):
                 "endorsed": False,
                 "page": 2,
                 "page_size": 13,
-                "mark_as_read": False
+                "requested_fields": set(),
             }
         )
 
@@ -168,3 +196,25 @@ class CommentListGetFormTest(FormTestMixin, PaginationTestMixin, TestCase):
     def test_missing_endorsed(self):
         self.form_data.pop("endorsed")
         self.assert_field_value("endorsed", None)
+
+    @ddt.data("True", "true", True, 1)
+    def test_endorsed_true(self, value):
+        self.form_data["endorsed"] = value
+        self.assert_field_value("endorsed", True)
+
+    @ddt.data("False", "false", False, 0)
+    def test_endorsed_false(self, value):
+        self.form_data["endorsed"] = value
+        self.assert_field_value("endorsed", False)
+
+    def test_invalid_endorsed(self):
+        self.form_data["endorsed"] = "invalid-boolean"
+        self.assert_error("endorsed", "Invalid Boolean Value.")
+
+    def test_requested_fields(self):
+        self.form_data["requested_fields"] = {"profile_image"}
+        form = self.get_form(expected_valid=True)
+        self.assertEqual(
+            form.cleaned_data["requested_fields"],
+            {"profile_image"},
+        )

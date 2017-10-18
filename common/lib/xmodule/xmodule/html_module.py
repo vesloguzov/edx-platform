@@ -1,26 +1,28 @@
-import os
-import sys
-import re
 import copy
 import logging
+import os
+import re
+import sys
 import textwrap
+from datetime import datetime
+
+from fs.errors import ResourceNotFoundError
 from lxml import etree
 from path import Path as path
-from fs.errors import ResourceNotFoundError
 from pkg_resources import resource_string
+from xblock.core import XBlock
+from xblock.fields import Boolean, List, Scope, String
+from xblock.fragment import Fragment
 
 import dogstats_wrapper as dog_stats_api
-from xmodule.util.misc import escape_html_characters
 from xmodule.contentstore.content import StaticContent
 from xmodule.editing_module import EditingDescriptor
 from xmodule.edxnotes_utils import edxnotes
 from xmodule.html_checker import check_html
 from xmodule.stringify import stringify_children
-from xmodule.x_module import XModule, DEPRECATION_VSCOMPAT_EVENT
+from xmodule.util.misc import escape_html_characters
+from xmodule.x_module import DEPRECATION_VSCOMPAT_EVENT, XModule
 from xmodule.xml_module import XmlDescriptor, name_to_pathname
-from xblock.core import XBlock
-from xblock.fields import Scope, String, Boolean, List
-from xblock.fragment import Fragment
 
 log = logging.getLogger("edx.courseware")
 
@@ -37,7 +39,7 @@ class HtmlBlock(object):
     """
     display_name = String(
         display_name=_("Display Name"),
-        help=_("This name appears in the horizontal navigation at the top of the page."),
+        help=_("The display name for this component."),
         scope=Scope.settings,
         # it'd be nice to have a useful default but it screws up other things; so,
         # use display_name_with_default for those
@@ -75,10 +77,10 @@ class HtmlBlock(object):
         return Fragment(self.get_html())
 
     def get_html(self):
-        """
-        When we switch this to an XBlock, we can merge this with student_view,
-        but for now the XModule mixin requires that this method be defined.
-        """
+        """ Returns html required for rendering XModule. """
+
+        # When we switch this to an XBlock, we can merge this with student_view,
+        # but for now the XModule mixin requires that this method be defined.
         # pylint: disable=no-member
         if self.system.anonymous_student_id:
             return self.data.replace("%%USER_ID%%", self.system.anonymous_student_id)
@@ -91,13 +93,13 @@ class HtmlModuleMixin(HtmlBlock, XModule):
     """
     js = {
         'coffee': [
-            resource_string(__name__, 'js/src/javascript_loader.coffee'),
             resource_string(__name__, 'js/src/html/display.coffee'),
         ],
         'js': [
+            resource_string(__name__, 'js/src/javascript_loader.js'),
             resource_string(__name__, 'js/src/collapsible.js'),
             resource_string(__name__, 'js/src/html/imageModal.js'),
-            resource_string(__name__, 'js/common_static/js/vendor/draggabilly.pkgd.js'),
+            resource_string(__name__, 'js/common_static/js/vendor/draggabilly.js'),
         ]
     }
     js_module_name = "HTMLModule"
@@ -117,6 +119,7 @@ class HtmlDescriptor(HtmlBlock, XmlDescriptor, EditingDescriptor):  # pylint: di
     """
     mako_template = "widgets/html-edit.html"
     module_class = HtmlModule
+    resources_dir = None
     filename_extension = "xml"
     template_dir_name = "html"
     show_in_read_only_mode = True
@@ -327,7 +330,7 @@ class HtmlDescriptor(HtmlBlock, XmlDescriptor, EditingDescriptor):  # pylint: di
 
 class AboutFields(object):
     display_name = String(
-        help=_("Display name for this module"),
+        help=_("The display name for this component."),
         scope=Scope.settings,
         default="overview",
     )
@@ -362,9 +365,16 @@ class StaticTabFields(object):
     """
     display_name = String(
         display_name=_("Display Name"),
-        help=_("This name appears in the horizontal navigation at the top of the page."),
+        help=_("The display name for this component."),
         scope=Scope.settings,
         default="Empty",
+    )
+    course_staff_only = Boolean(
+        display_name=_("Hide Page From Learners"),
+        help=_("If you select this option, only course team members with"
+               " the Staff or Admin role see this page."),
+        default=False,
+        scope=Scope.settings
     )
     data = String(
         default=textwrap.dedent(u"""\
@@ -417,6 +427,56 @@ class CourseInfoModule(CourseInfoFields, HtmlModuleMixin):
     # statuses
     STATUS_VISIBLE = 'visible'
     STATUS_DELETED = 'deleted'
+    TEMPLATE_DIR = 'courseware'
+
+    @XBlock.supports("multi_device")
+    def student_view(self, _context):
+        """
+        Return a fragment that contains the html for the student view
+        """
+        return Fragment(self.get_html())
+
+    def get_html(self):
+        """ Returns html required for rendering XModule. """
+
+        # When we switch this to an XBlock, we can merge this with student_view,
+        # but for now the XModule mixin requires that this method be defined.
+        # pylint: disable=no-member
+        if self.data != "":
+            if self.system.anonymous_student_id:
+                return self.data.replace("%%USER_ID%%", self.system.anonymous_student_id)
+            return self.data
+        else:
+            # This should no longer be called on production now that we are using a separate updates page
+            # and using a fragment HTML file - it will be called in tests until those are removed.
+            course_updates = self.order_updates(self.items)
+            context = {
+                'visible_updates': course_updates[:3],
+                'hidden_updates': course_updates[3:],
+            }
+            return self.system.render_template("{0}/course_updates.html".format(self.TEMPLATE_DIR), context)
+
+    @classmethod
+    def order_updates(self, updates):
+        """
+        Returns any course updates in reverse chronological order.
+        """
+        sorted_updates = [update for update in updates if update.get('status') == self.STATUS_VISIBLE]
+        sorted_updates.sort(
+            key=lambda item: (self.safe_parse_date(item['date']), item['id']),
+            reverse=True
+        )
+        return sorted_updates
+
+    @staticmethod
+    def safe_parse_date(date):
+        """
+        Since this is used solely for ordering purposes, use today's date as a default
+        """
+        try:
+            return datetime.strptime(date, '%B %d, %Y')
+        except ValueError:  # occurs for ill-formatted date values
+            return datetime.today()
 
 
 @XBlock.tag("detached")

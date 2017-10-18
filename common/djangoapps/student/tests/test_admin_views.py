@@ -1,21 +1,30 @@
 """
 Tests student admin.py
 """
+from django.contrib.admin.sites import AdminSite
+from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
+from django.test import TestCase
+from mock import Mock
 
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
-from xmodule.modulestore.tests.factories import CourseFactory
+from student.admin import UserAdmin
 from student.tests.factories import UserFactory
+from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
+from xmodule.modulestore.tests.factories import CourseFactory
 
 
-class AdminCourseRolesPageTest(ModuleStoreTestCase):
+class AdminCourseRolesPageTest(SharedModuleStoreTestCase):
     """Test the django admin course roles form saving data in db.
     """
+    @classmethod
+    def setUpClass(cls):
+        super(AdminCourseRolesPageTest, cls).setUpClass()
+        cls.course = CourseFactory.create(org='edx')
+
     def setUp(self):
         super(AdminCourseRolesPageTest, self).setUp()
         self.user = UserFactory.create(is_staff=True, is_superuser=True)
         self.user.save()
-        self.course = CourseFactory.create(org='edx')
 
     def test_save_valid_data(self):
 
@@ -146,3 +155,24 @@ class AdminCourseRolesPageTest(ModuleStoreTestCase):
                 'edxxx', 'edx'
             )
         )
+
+
+class AdminUserPageTest(TestCase):
+    """
+    Unit tests for the UserAdmin view.
+    """
+    def setUp(self):
+        super(AdminUserPageTest, self).setUp()
+        self.admin = UserAdmin(User, AdminSite())
+
+    def test_username_is_readonly(self):
+        """
+        Ensures that the username is readonly to skip Django validation in the `auth_user_change` view.
+
+        Changing the username is still possible using the database or from the model directly.
+
+        However, changing the username might cause issues with the logs and/or the cs_comments_service since it
+        stores the username in a different database.
+        """
+        request = Mock()
+        self.assertIn('username', self.admin.get_readonly_fields(request))

@@ -1,20 +1,20 @@
 """
 django admin pages for certificates models
 """
-from django.contrib import admin
+from config_models.admin import ConfigurationModelAdmin
 from django import forms
+from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
-from config_models.admin import ConfigurationModelAdmin
-from util.organizations_helpers import get_organizations
 from certificates.models import (
     CertificateGenerationConfiguration,
+    CertificateGenerationCourseSetting,
     CertificateHtmlViewConfiguration,
-    BadgeImageConfiguration,
     CertificateTemplate,
     CertificateTemplateAsset,
-    GeneratedCertificate,
+    GeneratedCertificate
 )
+from util.organizations_helpers import get_organizations
 
 
 class CertificateTemplateForm(forms.ModelForm):
@@ -57,14 +57,19 @@ class CertificateTemplateAssetAdmin(admin.ModelAdmin):
     """
     Django admin customizations for CertificateTemplateAsset model
     """
-    list_display = ('description', '__unicode__')
+    list_display = ('description', 'asset_slug',)
+    prepopulated_fields = {"asset_slug": ("description",)}
 
 
 class GeneratedCertificateAdmin(admin.ModelAdmin):
+    """
+    Django admin customizations for GeneratedCertificate model
+    """
+    raw_id_fields = ('user',)
+    show_full_result_count = False
+    search_fields = ('course_id', 'user__username', 'user__email')
     list_select_related = ('user',)
     list_display = ('id', 'username', 'email', 'course_id', 'mode', 'download_url',)
-    raw_id_fields = ('user',)
-    search_fields = ('user__username', 'user__email', 'course_id',)
 
     def username(self, obj):
         return obj.user.username
@@ -74,9 +79,19 @@ class GeneratedCertificateAdmin(admin.ModelAdmin):
         return obj.user.email
     email.short_description = _('Email')
 
+class CertificateGenerationCourseSettingAdmin(admin.ModelAdmin):
+    """
+    Django admin customizations for CertificateGenerationCourseSetting model
+    """
+    list_display = ('course_key',)
+    readonly_fields = ('course_key',)
+    search_fields = ('course_key',)
+    show_full_result_count = False
+
+
 admin.site.register(CertificateGenerationConfiguration)
+admin.site.register(CertificateGenerationCourseSetting, CertificateGenerationCourseSettingAdmin)
 admin.site.register(CertificateHtmlViewConfiguration, ConfigurationModelAdmin)
-admin.site.register(BadgeImageConfiguration)
 admin.site.register(CertificateTemplate, CertificateTemplateAdmin)
 admin.site.register(CertificateTemplateAsset, CertificateTemplateAssetAdmin)
 admin.site.register(GeneratedCertificate, GeneratedCertificateAdmin)

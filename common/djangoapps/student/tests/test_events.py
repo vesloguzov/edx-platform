@@ -2,15 +2,14 @@
 """
 Test that various events are fired for models in the student app.
 """
+import mock
+from django.db.utils import IntegrityError
 from django.test import TestCase
-
 from django_countries.fields import Country
 
 from student.models import PasswordHistory
 from student.tests.factories import UserFactory
 from student.tests.tests import UserSettingsEventTestMixin
-import mock
-from django.db.utils import IntegrityError
 
 
 class TestUserProfileEvents(UserSettingsEventTestMixin, TestCase):
@@ -36,7 +35,7 @@ class TestUserProfileEvents(UserSettingsEventTestMixin, TestCase):
         # Verify that we remove the temporary `_changed_fields` property from
         # the model after we're done emitting events.
         with self.assertRaises(AttributeError):
-            getattr(self.profile, '_changed_fields')
+            self.profile._changed_fields    # pylint: disable=pointless-statement, protected-access
 
     def test_change_many_fields(self):
         """

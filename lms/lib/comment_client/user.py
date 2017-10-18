@@ -1,7 +1,9 @@
-from .utils import merge_dict, perform_request, CommentClientRequestError
+""" User model wrapper for comment service"""
+import settings
 
 import models
-import settings
+
+from .utils import CommentClientPaginatedResult, CommentClientRequestError, merge_dict, perform_request
 
 
 class User(models.Model):
@@ -28,6 +30,19 @@ class User(models.Model):
         return cls(id=str(user.id),
                    external_id=str(user.id),
                    username=user.username)
+
+    def read(self, source):
+        """
+        Calls cs_comments_service to mark thread as read for the user
+        """
+        params = {'source_type': source.type, 'source_id': source.id}
+        perform_request(
+            'post',
+            _url_for_read(self.id),
+            params,
+            metric_action='user.read',
+            metric_tags=self._metric_tags + ['target.type:{}'.format(source.type)],
+        )
 
     def follow(self, source):
         params = {'source_type': source.type, 'source_id': source.id}
@@ -113,7 +128,12 @@ class User(models.Model):
             metric_tags=self._metric_tags,
             paged_results=True
         )
-        return response.get('collection', []), response.get('page', 1), response.get('num_pages', 1)
+        return CommentClientPaginatedResult(
+            collection=response.get('collection', []),
+            page=response.get('page', 1),
+            num_pages=response.get('num_pages', 1),
+            thread_count=response.get('thread_count', 0)
+        )
 
     def _retrieve(self, *args, **kwargs):
         url = self.url(action='get', params=self.attributes)
@@ -166,3 +186,10 @@ def _url_for_user_active_threads(user_id):
 
 def _url_for_user_subscribed_threads(user_id):
     return "{prefix}/users/{user_id}/subscribed_threads".format(prefix=settings.PREFIX, user_id=user_id)
+
+
+def _url_for_read(user_id):
+    """
+    Returns cs_comments_service url endpoint to mark thread as read for given user_id
+    """
+    return "{prefix}/users/{user_id}/read".format(prefix=settings.PREFIX, user_id=user_id)

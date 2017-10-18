@@ -1,13 +1,17 @@
 """
 User Partitions Transformer
 """
-from openedx.core.lib.block_cache.transformer import BlockStructureTransformer
+from openedx.core.djangoapps.content.block_structure.transformer import (
+    BlockStructureTransformer,
+    FilteringTransformerMixin
+)
+from xmodule.partitions.partitions_service import get_all_partitions_for_course
 
 from .split_test import SplitTestTransformer
 from .utils import get_field_on_block
 
 
-class UserPartitionTransformer(BlockStructureTransformer):
+class UserPartitionTransformer(FilteringTransformerMixin, BlockStructureTransformer):
     """
     A transformer that enforces the group access rules on course blocks,
     by honoring their user_partitions and group_access fields, and
@@ -16,7 +20,8 @@ class UserPartitionTransformer(BlockStructureTransformer):
 
     Staff users are *not* exempted from user partition pathways.
     """
-    VERSION = 1
+    WRITE_VERSION = 1
+    READ_VERSION = 1
 
     @classmethod
     def name(cls):
@@ -42,7 +47,7 @@ class UserPartitionTransformer(BlockStructureTransformer):
         # Because user partitions are course-wide, only store data for
         # them on the root block.
         root_block = block_structure.get_xblock(block_structure.root_block_usage_key)
-        user_partitions = getattr(root_block, 'user_partitions', []) or []
+        user_partitions = get_all_partitions_for_course(root_block, active_only=True)
         block_structure.set_transformer_data(cls, 'user_partitions', user_partitions)
 
         # If there are no user partitions, this transformation is a
@@ -64,30 +69,24 @@ class UserPartitionTransformer(BlockStructureTransformer):
             merged_group_access = _MergedGroupAccess(user_partitions, xblock, merged_parent_access_list)
             block_structure.set_transformer_block_field(block_key, cls, 'merged_group_access', merged_group_access)
 
-    def transform(self, usage_info, block_structure):
-        """
-        Mutates block_structure and block_data based on the given
-        usage_info.
-
-        Arguments:
-            usage_info (object)
-            block_structure (BlockStructureCollectedData)
-        """
-        SplitTestTransformer().transform(usage_info, block_structure)
+    def transform_block_filters(self, usage_info, block_structure):
+        result_list = SplitTestTransformer().transform_block_filters(usage_info, block_structure)
 
         user_partitions = block_structure.get_transformer_data(self, 'user_partitions')
-
         if not user_partitions:
-            return
+            return [block_structure.create_universal_filter()]
 
         user_groups = _get_user_partition_groups(
             usage_info.course_key, user_partitions, usage_info.user
         )
-        block_structure.remove_block_if(
+        group_access_filter = block_structure.create_removal_filter(
             lambda block_key: not block_structure.get_transformer_block_field(
                 block_key, self, 'merged_group_access'
             ).check_group_access(user_groups)
         )
+
+        result_list.append(group_access_filter)
+        return result_list
 
 
 class _MergedGroupAccess(object):
@@ -161,19 +160,21 @@ class _MergedGroupAccess(object):
                 for merged_parent_access in merged_parent_access_list:
                     # pylint: disable=protected-access
                     if partition.id in merged_parent_access._access:
-                        # Since this parent has group access restrictions,
-                        # merge it with the running list of
-                        # parent-introduced restrictions.
+                        # Since this parent has group access
+                        # restrictions, merge it with the running list
+                        # of parent-introduced restrictions.
                         merged_parent_group_ids.update(merged_parent_access._access[partition.id])
                     else:
-                        # Since at least one parent chain has no group
-                        # access restrictions for this partition, allow
-                        # unfettered group access or this partition.
+                        # Since this parent chain has no group access
+                        # restrictions for this partition, allow
+                        # unfettered group access for this partition
+                        # and don't bother checking the rest of the
+                        # parents.
                         merged_parent_group_ids = None
                         break
 
             # Group access for this partition as stored on the xblock
-            xblock_partition_access = set(xblock_group_access.get(partition.id, [])) or None
+            xblock_partition_access = set(xblock_group_access.get(partition.id) or []) or None
 
             # Compute this block's access by intersecting the block's
             # own access with the merged access from its parent chains.

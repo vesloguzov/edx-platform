@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from django.db import migrations, models
+
+
 # Converted from the original South migration 0002_default_rate_limit_config.py
 
-from django.db import migrations, models
 
 
 def forwards(apps, schema_editor):
     """Ensure that rate limiting is enabled by default. """
     RateLimitConfiguration = apps.get_model("util", "RateLimitConfiguration")
-    db_alias = schema_editor.connection.alias
-    objects = RateLimitConfiguration.objects.using(db_alias)
+    objects = RateLimitConfiguration.objects
     if not objects.exists():
         objects.create(enabled=True)
 

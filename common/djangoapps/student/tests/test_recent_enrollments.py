@@ -2,25 +2,30 @@
 Tests for the recently enrolled messaging within the Dashboard.
 """
 import datetime
+import unittest
+
+import ddt
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from nose.plugins.attrib import attr
 from opaque_keys.edx import locator
 from pytz import UTC
-import unittest
-import ddt
-from shoppingcart.models import DonationConfiguration
 
+from common.test.utils import XssTestMixin
+from course_modes.tests.factories import CourseModeFactory
+from openedx.core.djangoapps.site_configuration.tests.test_util import with_site_configuration_context
+from shoppingcart.models import DonationConfiguration
+from student.models import CourseEnrollment, DashboardConfiguration
 from student.tests.factories import UserFactory
+from student.views import _get_recently_enrolled_courses, get_course_enrollments
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
-from course_modes.tests.factories import CourseModeFactory
-from student.models import CourseEnrollment, DashboardConfiguration
-from student.views import get_course_enrollments, _get_recently_enrolled_courses  # pylint: disable=protected-access
 
 
+@attr(shard=3)
 @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
 @ddt.ddt
-class TestRecentEnrollments(ModuleStoreTestCase):
+class TestRecentEnrollments(ModuleStoreTestCase, XssTestMixin):
     """
     Unit tests for getting the list of courses for a logged in user
     """
@@ -37,7 +42,7 @@ class TestRecentEnrollments(ModuleStoreTestCase):
 
         # Old Course
         old_course_location = locator.CourseLocator('Org0', 'Course0', 'Run0')
-        course, enrollment = self._create_course_and_enrollment(old_course_location)
+        __, enrollment = self._create_course_and_enrollment(old_course_location)
         enrollment.created = datetime.datetime(1900, 12, 31, 0, 0, 0, 0)
         enrollment.save()
 
@@ -126,6 +131,30 @@ class TestRecentEnrollments(ModuleStoreTestCase):
         response = self.client.get(reverse("dashboard"))
         self.assertContains(response, "Thank you for enrolling in")
 
+    def test_dashboard_escaped_rendering(self):
+        """
+        Tests that the dashboard renders the escaped recent enrollment messages appropriately.
+        """
+        self._configure_message_timeout(600)
+        self.client.login(username=self.student.username, password=self.PASSWORD)
+
+        # New Course
+        course_location = locator.CourseLocator('TestOrg', 'TestCourse', 'TestRun')
+        xss_content = "<script>alert('XSS')</script>"
+        course = CourseFactory.create(
+            org=course_location.org,
+            number=course_location.course,
+            run=course_location.run,
+            display_name=xss_content
+        )
+        CourseEnrollment.enroll(self.student, course.id)
+
+        response = self.client.get(reverse("dashboard"))
+        self.assertContains(response, "Thank you for enrolling in")
+
+        # Check if response is escaped
+        self.assert_no_xss(response, xss_content)
+
     @ddt.data(
         # Register as honor in any course modes with no payment option
         ([('audit', 0), ('honor', 0)], 'honor', True),
@@ -157,7 +186,7 @@ class TestRecentEnrollments(ModuleStoreTestCase):
 
         # Create the course mode(s)
         for mode, min_price in course_modes:
-            CourseModeFactory(mode_slug=mode, course_id=self.course.id, min_price=min_price)
+            CourseModeFactory.create(mode_slug=mode, course_id=self.course.id, min_price=min_price)
 
         self.enrollment.mode = enrollment_mode
         self.enrollment.save()
@@ -178,9 +207,35 @@ class TestRecentEnrollments(ModuleStoreTestCase):
 
         # Create a white-label course mode
         # (honor mode with a price set)
-        CourseModeFactory(mode_slug="honor", course_id=self.course.id, min_price=100)
+        CourseModeFactory.create(mode_slug="honor", course_id=self.course.id, min_price=100)
 
         # Check that the donate button is NOT displayed
         self.client.login(username=self.student.username, password=self.PASSWORD)
         response = self.client.get(reverse("dashboard"))
         self.assertNotContains(response, "donate-container")
+
+    @ddt.data(
+        (True, False,),
+        (True, True,),
+        (False, False,),
+        (False, True,),
+    )
+    @ddt.unpack
+    def test_donate_button_with_enabled_site_configuration(self, enable_donation_config, enable_donation_site_config):
+        # Enable the enrollment success message and donations
+        self._configure_message_timeout(10000)
+
+        # DonationConfiguration has low precedence if 'ENABLE_DONATIONS' is enable in SiteConfiguration
+        DonationConfiguration(enabled=enable_donation_config).save()
+
+        CourseModeFactory.create(mode_slug="audit", course_id=self.course.id, min_price=0)
+        self.enrollment.mode = "audit"
+        self.enrollment.save()
+        self.client.login(username=self.student.username, password=self.PASSWORD)
+
+        with with_site_configuration_context(configuration={'ENABLE_DONATIONS': enable_donation_site_config}):
+            response = self.client.get(reverse("dashboard"))
+            if enable_donation_site_config:
+                self.assertContains(response, "donate-container")
+            else:
+                self.assertNotContains(response, "donate-container")

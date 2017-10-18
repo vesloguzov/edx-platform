@@ -1,37 +1,40 @@
-'''
+"""
 Tests for student activation and login
-'''
+"""
 import json
 import unittest
 
-from django.test import TestCase
-from django.test.client import Client
-from django.test.utils import override_settings
+import httpretty
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.core.urlresolvers import reverse, NoReverseMatch
-from django.http import HttpResponseBadRequest, HttpResponse
-import httpretty
+from django.core.urlresolvers import NoReverseMatch, reverse
+from django.http import HttpResponse, HttpResponseBadRequest
+from django.test import TestCase
+from django.test.client import Client
+from django.test.utils import override_settings
 from mock import patch
-from social.apps.django_app.default.models import UserSocialAuth
+from social_django.models import UserSocialAuth
 
-from external_auth.models import ExternalAuthMap
-from student.tests.factories import UserFactory, RegistrationFactory, UserProfileFactory
+from openedx.core.djangoapps.external_auth.models import ExternalAuthMap
+from openedx.core.djangolib.testing.utils import CacheIsolationTestCase
+from student.tests.factories import RegistrationFactory, UserFactory, UserProfileFactory
 from student.views import login_oauth_token
 from third_party_auth.tests.utils import (
     ThirdPartyOAuthTestMixin,
     ThirdPartyOAuthTestMixinFacebook,
     ThirdPartyOAuthTestMixinGoogle
 )
-from xmodule.modulestore.tests.factories import CourseFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.factories import CourseFactory
 
 
-class LoginTest(TestCase):
-    '''
+class LoginTest(CacheIsolationTestCase):
+    """
     Test student.views.login_user() view
-    '''
+    """
+
+    ENABLED_CACHES = ['default']
 
     def setUp(self):
         super(LoginTest, self).setUp()
@@ -123,7 +126,7 @@ class LoginTest(TestCase):
         # Should now be unable to login
         response, mock_audit_log = self._login_response('test@edx.org', 'test_password')
         self._assert_response(response, success=False,
-                              value="This account has not been activated")
+                              value="In order to sign in, you need to activate your account.")
         self._assert_audit_log(mock_audit_log, 'warning', [u'Login failed', u'Account not active for user'])
 
     @patch.dict("django.conf.settings.FEATURES", {'SQUELCH_PII_IN_LOGS': True})
@@ -135,7 +138,7 @@ class LoginTest(TestCase):
         # Should now be unable to login
         response, mock_audit_log = self._login_response('test@edx.org', 'test_password')
         self._assert_response(response, success=False,
-                              value="This account has not been activated")
+                              value="In order to sign in, you need to activate your account.")
         self._assert_audit_log(mock_audit_log, 'warning', [u'Login failed', u'Account not active for user'])
         self._assert_not_in_audit_log(mock_audit_log, 'warning', [u'test'])
 
@@ -168,12 +171,8 @@ class LoginTest(TestCase):
         cookie = self.client.cookies[settings.EDXMKTG_USER_INFO_COOKIE_NAME]
         user_info = json.loads(cookie.value)
 
-        # Check that the version is set
         self.assertEqual(user_info["version"], settings.EDXMKTG_USER_INFO_COOKIE_VERSION)
-
-        # Check that the username and email are set
         self.assertEqual(user_info["username"], self.user.username)
-        self.assertEqual(user_info["email"], self.user.email)
 
         # Check that the URLs are absolute
         for url in user_info["header_urls"].values():
@@ -273,6 +272,48 @@ class LoginTest(TestCase):
         self.assertEqual(response.status_code, 302)
 
     @patch.dict("django.conf.settings.FEATURES", {'PREVENT_CONCURRENT_LOGINS': True})
+    def test_single_session_with_no_user_profile(self):
+        """
+        Assert that user login with cas (Central Authentication Service) is
+        redirect to dashboard in case of lms or upload_transcripts in case of
+        cms
+        """
+        user = UserFactory.build(username='tester', email='tester@edx.org')
+        user.set_password('test_password')
+        user.save()
+
+        # Assert that no profile is created.
+        self.assertFalse(hasattr(user, 'profile'))
+
+        creds = {'email': 'tester@edx.org', 'password': 'test_password'}
+        client1 = Client()
+        client2 = Client()
+
+        response = client1.post(self.url, creds)
+        self._assert_response(response, success=True)
+
+        # Reload the user from the database
+        user = User.objects.get(pk=user.pk)
+
+        # Assert that profile is created.
+        self.assertTrue(hasattr(user, 'profile'))
+
+        # second login should log out the first
+        response = client2.post(self.url, creds)
+        self._assert_response(response, success=True)
+
+        try:
+            # this test can be run with either lms or studio settings
+            # since studio does not have a dashboard url, we should
+            # look for another url that is login_required, in that case
+            url = reverse('dashboard')
+        except NoReverseMatch:
+            url = reverse('upload_transcripts')
+        response = client1.get(url)
+        # client1 will be logged out
+        self.assertEqual(response.status_code, 302)
+
+    @patch.dict("django.conf.settings.FEATURES", {'PREVENT_CONCURRENT_LOGINS': True})
     def test_single_session_with_url_not_having_login_required_decorator(self):
         # accessing logout url as it does not have login-required decorator it will avoid redirect
         # and go inside the enforce_single_login
@@ -285,7 +326,7 @@ class LoginTest(TestCase):
         self._assert_response(response, success=True)
 
         # Reload the user from the database
-        self.user = User.objects.get(pk=self.user.pk)       # pylint: disable=no-member
+        self.user = User.objects.get(pk=self.user.pk)
 
         self.assertEqual(self.user.profile.get_meta()['session_id'], client1.session.session_key)
 
@@ -367,8 +408,8 @@ class LoginTest(TestCase):
 
         if value is not None:
             msg = ("'%s' did not contain '%s'" %
-                   (str(response_dict['value']), str(value)))
-            self.assertTrue(value in response_dict['value'], msg)
+                   (unicode(response_dict['value']), unicode(value)))
+            self.assertIn(value, response_dict['value'], msg)
 
     def _assert_audit_log(self, mock_audit_log, level, log_strings):
         """
@@ -457,10 +498,10 @@ class ExternalAuthShibTest(ModuleStoreTestCase):
         Should vary by course depending on its enrollment_domain
         """
         TARGET_URL = reverse('courseware', args=[self.course.id.to_deprecated_string()])            # pylint: disable=invalid-name
-        noshib_response = self.client.get(TARGET_URL, follow=True)
+        noshib_response = self.client.get(TARGET_URL, follow=True, HTTP_ACCEPT="text/html")
         self.assertEqual(noshib_response.redirect_chain[-1],
                          ('http://testserver/login?next={url}'.format(url=TARGET_URL), 302))
-        self.assertContains(noshib_response, ("Sign in or Register | {platform_name}"
+        self.assertContains(noshib_response, (u"Sign in or Register | {platform_name}"
                                               .format(platform_name=settings.PLATFORM_NAME)))
         self.assertEqual(noshib_response.status_code, 200)
 
@@ -468,7 +509,8 @@ class ExternalAuthShibTest(ModuleStoreTestCase):
         shib_response = self.client.get(**{'path': TARGET_URL_SHIB,
                                            'follow': True,
                                            'REMOTE_USER': self.extauth.external_id,
-                                           'Shib-Identity-Provider': 'https://idp.stanford.edu/'})
+                                           'Shib-Identity-Provider': 'https://idp.stanford.edu/',
+                                           'HTTP_ACCEPT': "text/html"})
         # Test that the shib-login redirect page with ?next= and the desired page are part of the redirect chain
         # The 'courseware' page actually causes a redirect itself, so it's not the end of the chain and we
         # won't test its contents
@@ -498,7 +540,6 @@ class LoginOAuthTokenMixin(ThirdPartyOAuthTestMixin):
         """Assert that the given response was a 400 with the given error code"""
         self.assertEqual(response.status_code, status_code)
         self.assertEqual(json.loads(response.content), {"error": error})
-        self.assertNotIn("partial_pipeline", self.client.session)
 
     def test_success(self):
         self._setup_provider_response(success=True)

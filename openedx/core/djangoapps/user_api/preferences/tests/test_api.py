@@ -4,34 +4,46 @@ Unit tests for preference APIs.
 """
 import datetime
 import ddt
-import unittest
 from mock import patch
-from pytz import UTC
+from nose.plugins.attrib import attr
+from pytz import common_timezones, utc
 
-from django.conf import settings
 from django.contrib.auth.models import User
-from django.test import TestCase
 from django.test.utils import override_settings
 from django.test.client import RequestFactory
 from dateutil.parser import parse as parse_datetime
 from django.core.urlresolvers import reverse
 
+from openedx.core.djangolib.testing.utils import CacheIsolationTestCase, skip_unless_lms
+from openedx.core.lib.time_zone_utils import get_display_time_zone
 from student.tests.factories import UserFactory
 
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 
 from ...accounts.api import create_account
-from ...errors import UserNotFound, UserNotAuthorized, PreferenceValidationError, PreferenceUpdateError
+from ...errors import (
+    UserNotFound,
+    UserNotAuthorized,
+    PreferenceValidationError,
+    PreferenceUpdateError,
+    CountryCodeError,
+)
 from ...models import UserProfile, UserOrgTag
 from ...preferences.api import (
-    get_user_preference, get_user_preferences, set_user_preference, update_user_preferences, delete_user_preference,
-    update_email_opt_in
+    get_user_preference,
+    get_user_preferences,
+    set_user_preference,
+    update_user_preferences,
+    delete_user_preference,
+    update_email_opt_in,
+    get_country_time_zones,
 )
 
 
-@unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Account APIs are only supported in LMS')
-class TestPreferenceAPI(TestCase):
+@attr(shard=2)
+@skip_unless_lms
+class TestPreferenceAPI(CacheIsolationTestCase):
     """
     These tests specifically cover the parts of the API methods that are not covered by test_views.py.
     This includes the specific types of error raised, and default behavior when optional arguments
@@ -43,9 +55,8 @@ class TestPreferenceAPI(TestCase):
         super(TestPreferenceAPI, self).setUp()
         self.user = UserFactory.create(password=self.password)
         self.different_user = UserFactory.create(password=self.password)
-        self.staff_user = UserFactory(is_staff=True, password=self.password)
-        self.no_such_user = UserFactory.create(password=self.password)
-        self.no_such_user.username = "no_such_user"
+        self.staff_user = UserFactory.create(is_staff=True, password=self.password)
+        self.no_such_user = UserFactory.build(password=self.password, username="no_such_user")
         self.test_preference_key = "test_key"
         self.test_preference_value = "test_value"
         set_user_preference(self.user, self.test_preference_key, self.test_preference_value)
@@ -171,9 +182,6 @@ class TestPreferenceAPI(TestCase):
         """
         Verifies the basic behavior of update_user_preferences.
         """
-        expected_user_preferences = {
-            self.test_preference_key: "new_value",
-        }
         set_user_preference(self.user, self.test_preference_key, "new_value")
         self.assertEqual(
             get_user_preference(self.user, self.test_preference_key),
@@ -323,6 +331,7 @@ class TestPreferenceAPI(TestCase):
         )
 
 
+@attr(shard=2)
 @ddt.ddt
 class UpdateEmailOptInTests(ModuleStoreTestCase):
     """
@@ -408,7 +417,7 @@ class UpdateEmailOptInTests(ModuleStoreTestCase):
         # Set year of birth
         user = User.objects.get(username=self.USERNAME)
         profile = UserProfile.objects.get(user=user)
-        year_of_birth = datetime.datetime.now(UTC).year - age
+        year_of_birth = datetime.datetime.now(utc).year - age
         profile.year_of_birth = year_of_birth
         profile.save()
 
@@ -430,6 +439,33 @@ class UpdateEmailOptInTests(ModuleStoreTestCase):
             return False
         else:
             return True
+
+
+@ddt.ddt
+class CountryTimeZoneTest(CacheIsolationTestCase):
+    """
+    Test cases to validate country code api functionality
+    """
+
+    @ddt.data(('ES', ['Africa/Ceuta', 'Atlantic/Canary', 'Europe/Madrid']),
+              (None, common_timezones[:10]))
+    @ddt.unpack
+    def test_get_country_time_zones(self, country_code, expected_time_zones):
+        """Verify that list of common country time zones dictionaries is returned"""
+        expected_dict = [
+            {
+                'time_zone': time_zone,
+                'description': get_display_time_zone(time_zone)
+            }
+            for time_zone in expected_time_zones
+        ]
+        country_time_zones_dicts = get_country_time_zones(country_code)[:10]
+        self.assertEqual(country_time_zones_dicts, expected_dict)
+
+    def test_country_code_errors(self):
+        """Verify that country code error is raised for invalid country code"""
+        with self.assertRaises(CountryCodeError):
+            get_country_time_zones('AA')
 
 
 def get_expected_validation_developer_message(preference_key, preference_value):

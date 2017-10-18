@@ -2,61 +2,41 @@
 Functions for accessing and displaying courses within the
 courseware.
 """
-from datetime import datetime
-from collections import defaultdict
-from fs.errors import ResourceNotFoundError
 import logging
-import inspect
+from collections import defaultdict
+from datetime import datetime
 
-from path import Path as path
 import pytz
-from django.http import Http404
 from django.conf import settings
+from django.core.urlresolvers import reverse
+from django.http import Http404
+from fs.errors import ResourceNotFoundError
+from opaque_keys.edx.keys import UsageKey
+from path import Path as path
 
-from edxmako.shortcuts import render_to_string
-from xmodule.modulestore import ModuleStoreEnum
-from opaque_keys.edx.keys import CourseKey
-from xmodule.modulestore.django import modulestore
-from xmodule.contentstore.content import StaticContent
-from xmodule.modulestore.exceptions import ItemNotFoundError
-from static_replace import replace_static_urls
-from xmodule.modulestore import ModuleStoreEnum
-from xmodule.x_module import STUDENT_VIEW
-from microsite_configuration import microsite
-
+import branding
 from courseware.access import has_access
 from courseware.date_summary import (
     CourseEndDate,
     CourseStartDate,
     TodaysDate,
     VerificationDeadlineDate,
-    VerifiedUpgradeDeadlineDate,
+    VerifiedUpgradeDeadlineDate
 )
 from courseware.model_data import FieldDataCache
-from courseware.module_render import get_module
+from courseware.module_render import get_module, get_module_for_descriptor
+from edxmako.shortcuts import render_to_string
 from lms.djangoapps.courseware.courseware_access_exception import CoursewareAccessException
+from lms.djangoapps.courseware.exceptions import CourseAccessRedirect
+from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
+from static_replace import replace_static_urls
 from student.models import CourseEnrollment
-import branding
-
-from opaque_keys.edx.keys import UsageKey
-
+from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.exceptions import ItemNotFoundError
+from xmodule.x_module import STUDENT_VIEW
 
 log = logging.getLogger(__name__)
-
-
-def get_request_for_thread():
-    """Walk up the stack, return the nearest first argument named "request"."""
-    frame = None
-    try:
-        for f in inspect.stack()[1:]:
-            frame = f[0]
-            code = frame.f_code
-            if code.co_varnames[:1] == ("request",):
-                return frame.f_locals["request"]
-            elif code.co_varnames[:2] == ("self", "request",):
-                return frame.f_locals["request"]
-    finally:
-        del frame
 
 
 def get_course(course_id, depth=0):
@@ -75,7 +55,6 @@ def get_course(course_id, depth=0):
     return course
 
 
-# TODO please rename this function to get_course_by_key at next opportunity!
 def get_course_by_id(course_key, depth=0):
     """
     Given a course id, return the corresponding course descriptor.
@@ -89,13 +68,7 @@ def get_course_by_id(course_key, depth=0):
     if course:
         return course
     else:
-        raise Http404("Course not found.")
-
-
-class UserNotEnrolled(Http404):
-    def __init__(self, course_key):
-        super(UserNotEnrolled, self).__init__()
-        self.course_key = course_key
+        raise Http404("Course not found: {}.".format(unicode(course_key)))
 
 
 def get_course_with_access(user, action, course_key, depth=0, check_if_enrolled=False):
@@ -111,9 +84,39 @@ def get_course_with_access(user, action, course_key, depth=0, check_if_enrolled=
     check_if_enrolled: If true, additionally verifies that the user is either enrolled in the course
       or has staff access.
     """
-    assert isinstance(course_key, CourseKey)
-    course = get_course_by_id(course_key, depth=depth)
-    access_response = has_access(user, action, course, course_key)
+    course = get_course_by_id(course_key, depth)
+    check_course_access(course, user, action, check_if_enrolled)
+    return course
+
+
+def get_course_overview_with_access(user, action, course_key, check_if_enrolled=False):
+    """
+    Given a course_key, look up the corresponding course overview,
+    check that the user has the access to perform the specified action
+    on the course, and return the course overview.
+
+    Raises a 404 if the course_key is invalid, or the user doesn't have access.
+
+    check_if_enrolled: If true, additionally verifies that the user is either enrolled in the course
+      or has staff access.
+    """
+    try:
+        course_overview = CourseOverview.get_from_id(course_key)
+    except CourseOverview.DoesNotExist:
+        raise Http404("Course not found.")
+    check_course_access(course_overview, user, action, check_if_enrolled)
+    return course_overview
+
+
+def check_course_access(course, user, action, check_if_enrolled=False):
+    """
+    Check that the user has the access to perform the specified action
+    on the course (CourseDescriptor|CourseOverview).
+
+    check_if_enrolled: If true, additionally verifies that the user is either
+    enrolled in the course or has staff access.
+    """
+    access_response = has_access(user, action, course, course.id)
 
     if not access_response:
         # Deliberately return a non-specific error message to avoid
@@ -121,34 +124,11 @@ def get_course_with_access(user, action, course_key, depth=0, check_if_enrolled=
         raise CoursewareAccessException(access_response)
 
     if check_if_enrolled:
-        # Verify that the user is either enrolled in the course or a staff member.
-        # If user is not enrolled, raise UserNotEnrolled exception that will be caught by middleware.
-        if not ((user.id and CourseEnrollment.is_enrolled(user, course_key)) or has_access(user, 'staff', course)):
-            raise UserNotEnrolled(course_key)
-
-    return course
-
-
-def course_image_url(course):
-    """Try to look up the image url for the course.  If it's not found,
-    log an error and return the dead link"""
-    if course.static_asset_path or modulestore().get_modulestore_type(course.id) == ModuleStoreEnum.Type.xml:
-        # If we are a static course with the course_image attribute
-        # set different than the default, return that path so that
-        # courses can use custom course image paths, otherwise just
-        # return the default static path.
-        url = '/static/' + (course.static_asset_path or getattr(course, 'data_dir', ''))
-        if hasattr(course, 'course_image') and course.course_image != course.fields['course_image'].default:
-            url += '/' + course.course_image
-        else:
-            url += '/images/course_image.jpg'
-    elif not course.course_image:
-        # if course_image is empty, use the default image url from settings
-        url = settings.STATIC_URL + settings.DEFAULT_COURSE_ABOUT_IMAGE_URL
-    else:
-        loc = StaticContent.compute_location(course.id, course.course_image)
-        url = StaticContent.serialize_asset_key_with_slash(loc)
-    return url
+        # Verify that the user is either enrolled in the course or a staff
+        # member.  If the user is not enrolled, raise a Redirect exception
+        # that will be handled by middleware.
+        if not ((user.id and CourseEnrollment.is_enrolled(user, course.id)) or has_access(user, 'staff', course)):
+            raise CourseAccessRedirect(reverse('about_course', args=[unicode(course.id)]))
 
 
 def find_file(filesystem, dirs, filename):
@@ -168,26 +148,13 @@ def find_file(filesystem, dirs, filename):
     raise ResourceNotFoundError(u"Could not find {0}".format(filename))
 
 
-def get_course_university_about_section(course):  # pylint: disable=invalid-name
-    """
-    Returns a snippet of HTML displaying the course's university.
-
-    Arguments:
-        course (CourseDescriptor|CourseOverview): A course.
-    """
-    return course.display_org_with_default
-
-
-def get_course_about_section(course, section_key):
+def get_course_about_section(request, course, section_key):
     """
     This returns the snippet of html to be rendered on the course about page,
     given the key for the section.
 
     Valid keys:
     - overview
-    - title
-    - university
-    - number
     - short_description
     - description
     - key_dates (includes start, end, exams, etc)
@@ -198,6 +165,7 @@ def get_course_about_section(course, section_key):
     - syllabus
     - textbook
     - faq
+    - effort
     - more_info
     - ocw_links
     """
@@ -206,17 +174,27 @@ def get_course_about_section(course, section_key):
     # markup. This can change without effecting this interface when we find a
     # good format for defining so many snippets of text/html.
 
-    # TODO: Remove number, instructors from this list
-    if section_key in ['short_description', 'description', 'key_dates', 'video',
-                       'course_staff_short', 'course_staff_extended',
-                       'requirements', 'syllabus', 'textbook', 'faq', 'more_info',
-                       'number', 'instructors', 'overview',
-                       'effort', 'end_date', 'prerequisites', 'ocw_links']:
+    html_sections = {
+        'short_description',
+        'description',
+        'key_dates',
+        'video',
+        'course_staff_short',
+        'course_staff_extended',
+        'requirements',
+        'syllabus',
+        'textbook',
+        'faq',
+        'more_info',
+        'overview',
+        'effort',
+        'end_date',
+        'prerequisites',
+        'ocw_links'
+    }
 
+    if section_key in html_sections:
         try:
-
-            request = get_request_for_thread()
-
             loc = course.location.replace(category='about', name=section_key)
 
             # Use an empty cache
@@ -251,17 +229,18 @@ def get_course_about_section(course, section_key):
                 section_key, course.location.to_deprecated_string()
             )
             return None
-    elif section_key == "title":
-        return course.display_name_with_default
-    elif section_key == "university":
-        return get_course_university_about_section(course)
-    elif section_key == "number":
-        return course.display_number_with_default
 
     raise KeyError("Invalid about key " + str(section_key))
 
 
-def get_course_info_section_module(request, course, section_key):
+def get_course_info_usage_key(course, section_key):
+    """
+    Returns the usage key for the specified section's course info module.
+    """
+    return course.id.make_usage_key('course_info', section_key)
+
+
+def get_course_info_section_module(request, user, course, section_key):
     """
     This returns the course info module for a given section_key.
 
@@ -271,13 +250,13 @@ def get_course_info_section_module(request, course, section_key):
     - updates
     - guest_updates
     """
-    usage_key = course.id.make_usage_key('course_info', section_key)
+    usage_key = get_course_info_usage_key(course, section_key)
 
     # Use an empty cache
-    field_data_cache = FieldDataCache([], course.id, request.user)
+    field_data_cache = FieldDataCache([], course.id, user)
 
     return get_module(
-        request.user,
+        user,
         request,
         usage_key,
         field_data_cache,
@@ -288,7 +267,7 @@ def get_course_info_section_module(request, course, section_key):
     )
 
 
-def get_course_info_section(request, course, section_key):
+def get_course_info_section(request, user, course, section_key):
     """
     This returns the snippet of html to be rendered on the course info page,
     given the key for the section.
@@ -299,34 +278,23 @@ def get_course_info_section(request, course, section_key):
     - updates
     - guest_updates
     """
-    info_module = get_course_info_section_module(request, course, section_key)
+    info_module = get_course_info_section_module(request, user, course, section_key)
 
     html = ''
     if info_module is not None:
         try:
-            html = info_module.render(STUDENT_VIEW).content
+            html = info_module.render(STUDENT_VIEW).content.strip()
         except Exception:  # pylint: disable=broad-except
             html = render_to_string('courseware/error-message.html', None)
             log.exception(
-                u"Error rendering course=%s, section_key=%s",
-                course, section_key
+                u"Error rendering course_id=%s, section_key=%s",
+                unicode(course.id), section_key
             )
 
     return html
 
 
-def get_course_date_summary(course, user):
-    """
-    Return the snippet of HTML to be included on the course info page
-    in the 'Date Summary' section.
-    """
-    blocks = _get_course_date_summary_blocks(course, user)
-    return '\n'.join(
-        b.render() for b in blocks
-    )
-
-
-def _get_course_date_summary_blocks(course, user):
+def get_course_date_blocks(course, user):
     """
     Return the list of blocks to display on the course info page,
     sorted by date.
@@ -392,38 +360,31 @@ def get_course_syllabus_section(course, section_key):
     raise KeyError("Invalid about key " + str(section_key))
 
 
-def get_courses_by_university(user, domain=None):
-    '''
-    Returns dict of lists of courses available, keyed by course.org (ie university).
-    Courses are sorted by course.number.
-    '''
-    # TODO: Clean up how 'error' is done.
-    # filter out any courses that errored.
-    visible_courses = get_courses(user, domain)
+def get_courses(user, org=None, filter_=None):
+    """
+    Returns a list of courses available, sorted by course.number and optionally
+    filtered by org code (case-insensitive).
+    """
+    courses = branding.get_visible_courses(org=org, filter_=filter_)
 
-    universities = defaultdict(list)
-    for course in visible_courses:
-        universities[course.org].append(course)
-
-    return universities
-
-
-def get_courses(user, domain=None):
-    '''
-    Returns a list of courses available, sorted by course.number
-    '''
-    courses = branding.get_visible_courses()
-
-    permission_name = microsite.get_value(
+    permission_name = configuration_helpers.get_value(
         'COURSE_CATALOG_VISIBILITY_PERMISSION',
         settings.COURSE_CATALOG_VISIBILITY_PERMISSION
     )
 
     courses = [c for c in courses if has_access(user, permission_name, c)]
 
-    courses = sorted(courses, key=lambda course: course.number)
-
     return courses
+
+
+def get_permission_for_course_about():
+    """
+    Returns the CourseOverview object for the course after checking for access.
+    """
+    return configuration_helpers.get_value(
+        'COURSE_ABOUT_VISIBILITY_PERMISSION',
+        settings.COURSE_ABOUT_VISIBILITY_PERMISSION
+    )
 
 
 def sort_by_announcement(courses):
@@ -479,10 +440,8 @@ def get_studio_url(course, page):
     Args:
         course (CourseDescriptor)
     """
-    is_studio_course = course.course_edit_method == "Studio"
-    is_mongo_course = modulestore().get_modulestore_type(course.id) != ModuleStoreEnum.Type.xml
     studio_link = None
-    if is_studio_course and is_mongo_course:
+    if course.course_edit_method == "Studio":
         studio_link = get_cms_course_link(course, page)
     return studio_link
 
@@ -511,3 +470,56 @@ def get_problems_in_section(section):
                     problem_descriptors[unicode(component.location)] = component
 
     return problem_descriptors
+
+
+def get_current_child(xmodule, min_depth=None, requested_child=None):
+    """
+    Get the xmodule.position's display item of an xmodule that has a position and
+    children.  If xmodule has no position or is out of bounds, return the first
+    child with children of min_depth.
+
+    For example, if chapter_one has no position set, with two child sections,
+    section-A having no children and section-B having a discussion unit,
+    `get_current_child(chapter, min_depth=1)`  will return section-B.
+
+    Returns None only if there are no children at all.
+    """
+    # TODO: convert this method to use the Course Blocks API
+    def _get_child(children):
+        """
+        Returns either the first or last child based on the value of
+        the requested_child parameter.  If requested_child is None,
+        returns the first child.
+        """
+        if requested_child == 'first':
+            return children[0]
+        elif requested_child == 'last':
+            return children[-1]
+        else:
+            return children[0]
+
+    def _get_default_child_module(child_modules):
+        """Returns the first child of xmodule, subject to min_depth."""
+        if min_depth <= 0:
+            return _get_child(child_modules)
+        else:
+            content_children = [
+                child for child in child_modules
+                if child.has_children_at_depth(min_depth - 1) and child.get_display_items()
+            ]
+            return _get_child(content_children) if content_children else None
+
+    child = None
+    if hasattr(xmodule, 'position'):
+        children = xmodule.get_display_items()
+        if len(children) > 0:
+            if xmodule.position is not None and not requested_child:
+                pos = xmodule.position - 1  # position is 1-indexed
+                if 0 <= pos < len(children):
+                    child = children[pos]
+                    if min_depth > 0 and not child.has_children_at_depth(min_depth - 1):
+                        child = None
+            if child is None:
+                child = _get_default_child_module(children)
+
+    return child

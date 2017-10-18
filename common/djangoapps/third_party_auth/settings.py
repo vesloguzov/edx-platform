@@ -10,9 +10,12 @@ If true, it:
     b) calls apply_settings(), passing in the Django settings
 """
 
+from openedx.features.enterprise_support.api import insert_enterprise_pipeline_elements
+
 _FIELDS_STORED_IN_SESSION = ['auth_entry', 'next']
 _MIDDLEWARE_CLASSES = (
     'third_party_auth.middleware.ExceptionMiddleware',
+    'third_party_auth.middleware.PipelineQuarantineMiddleware',
 )
 _SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/dashboard'
 
@@ -37,23 +40,26 @@ def apply_settings(django_settings):
 
     # Inject our customized auth pipeline. All auth backends must work with
     # this pipeline.
-    django_settings.SOCIAL_AUTH_PIPELINE = (
+    django_settings.SOCIAL_AUTH_PIPELINE = [
         'third_party_auth.pipeline.parse_query_params',
-        'social.pipeline.social_auth.social_details',
-        'social.pipeline.social_auth.social_uid',
-        'social.pipeline.social_auth.auth_allowed',
-        'social.pipeline.social_auth.social_user',
+        'social_core.pipeline.social_auth.social_details',
+        'social_core.pipeline.social_auth.social_uid',
+        'social_core.pipeline.social_auth.auth_allowed',
+        'social_core.pipeline.social_auth.social_user',
         'third_party_auth.pipeline.associate_by_email_if_login_api',
-        'social.pipeline.user.get_username',
+        'social_core.pipeline.user.get_username',
         'third_party_auth.pipeline.set_pipeline_timeout',
         'third_party_auth.pipeline.ensure_user_information',
-        'social.pipeline.user.create_user',
-        'social.pipeline.social_auth.associate_user',
-        'social.pipeline.social_auth.load_extra_data',
-        'social.pipeline.user.user_details',
+        'social_core.pipeline.user.create_user',
+        'social_core.pipeline.social_auth.associate_user',
+        'social_core.pipeline.social_auth.load_extra_data',
+        'social_core.pipeline.user.user_details',
         'third_party_auth.pipeline.set_logged_in_cookies',
         'third_party_auth.pipeline.login_analytics',
-    )
+    ]
+
+    # Add enterprise pipeline elements if the enterprise app is installed
+    insert_enterprise_pipeline_elements(django_settings.SOCIAL_AUTH_PIPELINE)
 
     # Required so that we can use unmodified PSA OAuth2 backends:
     django_settings.SOCIAL_AUTH_STRATEGY = 'third_party_auth.strategy.ConfigurationModelStrategy'
@@ -67,15 +73,20 @@ def apply_settings(django_settings):
     django_settings.SOCIAL_AUTH_RAISE_EXCEPTIONS = False
 
     # Allow users to login using social auth even if their account is not verified yet
-    # The 'ensure_user_information' step controls this and only allows brand new users
-    # to login without verification. Repeat logins are not permitted until the account
-    # gets verified.
-    django_settings.INACTIVE_USER_LOGIN = True
-    django_settings.INACTIVE_USER_URL = '/auth/inactive'
+    # This is required since we [ab]use django's 'is_active' flag to indicate verified
+    # accounts; without this set to True, python-social-auth won't allow us to link the
+    # user's account to the third party account during registration (since the user is
+    # not verified at that point).
+    # We also generally allow unverified third party auth users to login (see the logic
+    # in ensure_user_information in pipeline.py) because otherwise users who use social
+    # auth to register with an invalid email address can become "stuck".
+    # TODO: Remove the following if/when email validation is separated from the is_active flag.
+    django_settings.SOCIAL_AUTH_INACTIVE_USER_LOGIN = True
+    django_settings.SOCIAL_AUTH_INACTIVE_USER_URL = '/auth/inactive'
 
     # Context processors required under Django.
     django_settings.SOCIAL_AUTH_UUID_LENGTH = 4
     django_settings.DEFAULT_TEMPLATE_ENGINE['OPTIONS']['context_processors'] += (
-        'social.apps.django_app.context_processors.backends',
-        'social.apps.django_app.context_processors.login_redirect',
+        'social_django.context_processors.backends',
+        'social_django.context_processors.login_redirect',
     )

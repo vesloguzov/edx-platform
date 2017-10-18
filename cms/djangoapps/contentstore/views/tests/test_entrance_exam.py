@@ -2,28 +2,33 @@
 Test module for Entrance Exams AJAX callback handler workflows
 """
 import json
-from mock import patch
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test.client import RequestFactory
+from milestones.tests.utils import MilestonesTestCaseMixin
+from mock import patch
+from opaque_keys.edx.keys import UsageKey
 
 from contentstore.tests.utils import AjaxEnabledTestClient, CourseTestCase
 from contentstore.utils import reverse_url
-from contentstore.views.entrance_exam import create_entrance_exam, update_entrance_exam, delete_entrance_exam,\
-    add_entrance_exam_milestone, remove_entrance_exam_milestone_reference
-from contentstore.views.helpers import GRADER_TYPES
+from contentstore.views.entrance_exam import (
+    add_entrance_exam_milestone,
+    create_entrance_exam,
+    delete_entrance_exam,
+    remove_entrance_exam_milestone_reference,
+    update_entrance_exam
+)
+from contentstore.views.helpers import GRADER_TYPES, create_xblock
 from models.settings.course_grading import CourseGradingModel
 from models.settings.course_metadata import CourseMetadata
-from opaque_keys.edx.keys import UsageKey
 from student.tests.factories import UserFactory
 from util import milestones_helpers
 from xmodule.modulestore.django import modulestore
-from contentstore.views.helpers import create_xblock
 
 
 @patch.dict(settings.FEATURES, {'ENTRANCE_EXAMS': True})
-class EntranceExamHandlerTests(CourseTestCase):
+class EntranceExamHandlerTests(CourseTestCase, MilestonesTestCaseMixin):
     """
     Base test class for create, save, and delete
     """
@@ -36,7 +41,6 @@ class EntranceExamHandlerTests(CourseTestCase):
         self.usage_key = self.course.location
         self.course_url = '/course/{}'.format(unicode(self.course.id))
         self.exam_url = '/course/{}/entrance_exam/'.format(unicode(self.course.id))
-        milestones_helpers.seed_milestone_relationship_types()
         self.milestone_relationship_types = milestones_helpers.get_milestone_relationship_types()
 
     def test_entrance_exam_milestone_addition(self):

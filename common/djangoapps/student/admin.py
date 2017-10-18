@@ -1,17 +1,31 @@
 """ Django admin pages for student app """
+from config_models.admin import ConfigurationModelAdmin
 from django import forms
-from django.contrib.auth.models import User
-from ratelimitbackend import admin
-from xmodule.modulestore.django import modulestore
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.translation import ugettext_lazy as _
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
+from ratelimitbackend import admin
 
-from config_models.admin import ConfigurationModelAdmin
 from student.models import (
-    UserProfile, UserTestGroup, CourseEnrollmentAllowed, DashboardConfiguration, CourseEnrollment, Registration,
-    PendingNameChange, CourseAccessRole, LinkedInAddToProfileConfiguration
+    CourseAccessRole,
+    CourseEnrollment,
+    CourseEnrollmentAllowed,
+    DashboardConfiguration,
+    LinkedInAddToProfileConfiguration,
+    LogoutViewConfiguration,
+    PendingNameChange,
+    Registration,
+    RegistrationCookieConfiguration,
+    UserAttribute,
+    UserProfile,
+    UserTestGroup
 )
 from student.roles import REGISTERED_ACCESS_ROLES
+from xmodule.modulestore.django import modulestore
+
+User = get_user_model()  # pylint:disable=invalid-name
 
 
 class CourseAccessRoleForm(forms.ModelForm):
@@ -99,6 +113,7 @@ class CourseAccessRoleForm(forms.ModelForm):
             self.fields['email'].initial = self.instance.user.email
 
 
+@admin.register(CourseAccessRole)
 class CourseAccessRoleAdmin(admin.ModelAdmin):
     """Admin panel for the Course Access Role. """
     form = CourseAccessRoleForm
@@ -123,6 +138,7 @@ class CourseAccessRoleAdmin(admin.ModelAdmin):
         super(CourseAccessRoleAdmin, self).save_model(request, obj, form, change)
 
 
+@admin.register(LinkedInAddToProfileConfiguration)
 class LinkedInAddToProfileConfigurationAdmin(admin.ModelAdmin):
     """Admin interface for the LinkedIn Add to Profile configuration. """
 
@@ -133,6 +149,7 @@ class LinkedInAddToProfileConfigurationAdmin(admin.ModelAdmin):
     exclude = ('dashboard_tracking_code',)
 
 
+@admin.register(CourseEnrollment)
 class CourseEnrollmentAdmin(admin.ModelAdmin):
     """ Admin interface for the CourseEnrollment model. """
     list_display = ('id', 'course_id', 'mode', 'username', 'email', 'is_active',)
@@ -154,42 +171,47 @@ class CourseEnrollmentAdmin(admin.ModelAdmin):
         model = CourseEnrollment
 
 
-class UserProfileAdmin(admin.ModelAdmin):
-    """ Admin interface for UserProfile model. """
-    list_display = ('username', 'email', 'nickname', 'name', 'birthdate', 'city')
-    list_select_related = ('user',)
-    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'user__email', 'name', 'nickname')
+class UserProfileInline(admin.StackedInline):
+    """ Inline admin interface for UserProfile model. """
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = _('User profile')
 
-    def get_readonly_fields(self, request, obj=None):
-        # The user field should not be editable for an existing user profile.
-        if obj:
-            return self.readonly_fields + ('user',)
-        return self.readonly_fields
 
-    def username(self, obj):
-        return obj.user.username
+class UserAdmin(BaseUserAdmin):
+    """ Admin interface for the User model. """
+    inlines = (UserProfileInline,)
 
-    def email(self, obj):
-        return obj.user.email
+    def get_readonly_fields(self, *args, **kwargs):
+        """
+        Allows editing the users while skipping the username check, so we can have Unicode username with no problems.
+        The username is marked read-only regardless of `ENABLE_UNICODE_USERNAME`, to simplify the bokchoy tests.
+        """
+
+        django_readonly = super(UserAdmin, self).get_readonly_fields(*args, **kwargs)
+        return django_readonly + ('username',)
+
+
+@admin.register(UserAttribute)
+class UserAttributeAdmin(admin.ModelAdmin):
+    """ Admin interface for the UserAttribute model. """
+    list_display = ('user', 'name', 'value',)
+    list_filter = ('name',)
+    raw_id_fields = ('user',)
+    search_fields = ('name', 'value', 'user__username',)
 
     class Meta(object):
-        model = UserProfile
+        model = UserAttribute
 
 
 admin.site.register(UserTestGroup)
-
 admin.site.register(CourseEnrollmentAllowed)
-
 admin.site.register(Registration)
-
 admin.site.register(PendingNameChange)
-
-admin.site.register(CourseAccessRole, CourseAccessRoleAdmin)
-
 admin.site.register(DashboardConfiguration, ConfigurationModelAdmin)
+admin.site.register(LogoutViewConfiguration, ConfigurationModelAdmin)
+admin.site.register(RegistrationCookieConfiguration, ConfigurationModelAdmin)
 
-admin.site.register(LinkedInAddToProfileConfiguration, LinkedInAddToProfileConfigurationAdmin)
 
-admin.site.register(CourseEnrollment, CourseEnrollmentAdmin)
-
-admin.site.register(UserProfile, UserProfileAdmin)
+# We must first un-register the User model since it may also be registered by the auth app.
+admin.site.register(User, UserAdmin)

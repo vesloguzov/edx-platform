@@ -1,25 +1,25 @@
 """
 This test file will test registration, login, activation, and session activity timeouts
 """
-import time
-import mock
-import unittest
 import datetime
-from pytz import UTC
-from freezegun import freeze_time
-from ddt import ddt, data, unpack
+import time
+import unittest
 
-from django.test import TestCase
-from django.test.utils import override_settings
-from django.core.cache import cache
+import mock
+from ddt import data, ddt, unpack
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.urlresolvers import reverse
+from django.test import TestCase
+from django.test.utils import override_settings
+from freezegun import freeze_time
+from pytz import UTC
 
 from contentstore.models import PushNotificationConfig
-from contentstore.tests.utils import parse_json, user, registration, AjaxEnabledTestClient
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from contentstore.tests.test_course_settings import CourseTestCase
+from contentstore.tests.utils import AjaxEnabledTestClient, parse_json, registration, user
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 from student.models import UserProfile
 
@@ -89,8 +89,11 @@ class ContentStoreTestCase(ModuleStoreTestCase):
 class AuthTestCase(ContentStoreTestCase):
     """Check that various permissions-related things work"""
 
+    CREATE_USER = False
+    ENABLED_CACHES = ['default', 'mongo_metadata_inheritance', 'loc_cache']
+
     def setUp(self):
-        super(AuthTestCase, self).setUp(create_user=False)
+        super(AuthTestCase, self).setUp()
 
         self.email = 'a@b.com'
         self.pw = 'xyz'
@@ -237,8 +240,8 @@ class AuthTestCase(ContentStoreTestCase):
 
         # check the the HTML has links to the right login page. Note that this is merely a content
         # check and thus could be fragile should the wording change on this page
-        expected = 'You can now <a href="' + reverse('login') + '">login</a>.'
-        self.assertIn(expected, resp.content)
+        expected = 'You can now <a href="' + reverse('login') + '">sign in</a>.'
+        self.assertIn(expected, resp.content.decode('utf-8'))
 
     def test_private_pages_auth(self):
         """Make sure pages that do require login work."""
@@ -303,6 +306,34 @@ class AuthTestCase(ContentStoreTestCase):
 
         # re-request, and we should get a redirect to login page
         self.assertRedirects(resp, settings.LOGIN_REDIRECT_URL + '?next=/home/')
+
+    @mock.patch.dict(settings.FEATURES, {"ALLOW_PUBLIC_ACCOUNT_CREATION": False})
+    def test_signup_button_index_page(self):
+        """
+        Navigate to the home page and check the Sign Up button is hidden when ALLOW_PUBLIC_ACCOUNT_CREATION flag
+        is turned off
+        """
+        response = self.client.get(reverse('homepage'))
+        self.assertNotIn('<a class="action action-signup" href="/signup">Sign Up</a>', response.content)
+
+    @mock.patch.dict(settings.FEATURES, {"ALLOW_PUBLIC_ACCOUNT_CREATION": False})
+    def test_signup_button_login_page(self):
+        """
+        Navigate to the login page and check the Sign Up button is hidden when ALLOW_PUBLIC_ACCOUNT_CREATION flag
+        is turned off
+        """
+        response = self.client.get(reverse('login'))
+        self.assertNotIn('<a class="action action-signup" href="/signup">Sign Up</a>', response.content)
+
+    @mock.patch.dict(settings.FEATURES, {"ALLOW_PUBLIC_ACCOUNT_CREATION": False})
+    def test_signup_link_login_page(self):
+        """
+        Navigate to the login page and check the Sign Up link is hidden when ALLOW_PUBLIC_ACCOUNT_CREATION flag
+        is turned off
+        """
+        response = self.client.get(reverse('login'))
+        self.assertNotIn('<a href="/signup" class="action action-signin">Don&#39;t have a Studio Account? Sign up!</a>',
+                         response.content)
 
 
 class ForumTestCase(CourseTestCase):

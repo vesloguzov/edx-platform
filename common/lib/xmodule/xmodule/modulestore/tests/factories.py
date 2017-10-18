@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from uuid import uuid4
 
 from factory import Factory, Sequence, lazy_attribute_sequence, lazy_attribute
-from factory.containers import CyclicDefinitionError
+from factory.errors import CyclicDefinitionError
 from mock import patch
 from nose.tools import assert_less_equal, assert_greater_equal
 import dogstats_wrapper as dog_stats_api
@@ -25,6 +25,7 @@ from xmodule.modulestore import prefer_xmodules, ModuleStoreEnum
 from xmodule.modulestore.tests.sample_courses import default_block_info_tree, TOY_BLOCK_INFO_TREE
 from xmodule.tabs import CourseTab
 from xmodule.x_module import DEPRECATION_VSCOMPAT_EVENT
+from xmodule.course_module import Textbook
 
 
 class Dummy(object):
@@ -141,7 +142,6 @@ class SampleCourseFactory(CourseFactory):
     """
     Factory for sample courses using block_info_tree definitions.
     """
-    # pylint: disable=unused-argument
     @classmethod
     def _create(cls, target_class, **kwargs):
         """
@@ -181,7 +181,6 @@ class ToyCourseFactory(SampleCourseFactory):
     run = '2012_Fall'
     display_name = 'Toy Course'
 
-    # pylint: disable=unused-argument
     @classmethod
     def _create(cls, target_class, **kwargs):
         """
@@ -189,17 +188,17 @@ class ToyCourseFactory(SampleCourseFactory):
         """
         store = kwargs.get('modulestore')
         user_id = kwargs.get('user_id', ModuleStoreEnum.UserID.test)
-        toy_course = super(ToyCourseFactory, cls)._create(
-            target_class,
-            block_info_tree=TOY_BLOCK_INFO_TREE,
-            textbooks=[["Textbook", "path/to/a/text_book"]],
-            wiki_slug="toy",
-            graded=True,
-            discussion_topics={"General": {"id": "i4x-edX-toy-course-2012_Fall"}},
-            graceperiod=datetime.timedelta(days=2, seconds=21599),
-            start=datetime.datetime(2015, 07, 17, 12, tzinfo=pytz.utc),
-            xml_attributes={"filename": ["course/2012_Fall.xml", "course/2012_Fall.xml"]},
-            pdf_textbooks=[
+
+        fields = {
+            'block_info_tree': TOY_BLOCK_INFO_TREE,
+            'textbooks': [Textbook("Textbook", "path/to/a/text_book")],
+            'wiki_slug': "toy",
+            'graded': True,
+            'discussion_topics': {"General": {"id": "i4x-edX-toy-course-2012_Fall"}},
+            'graceperiod': datetime.timedelta(days=2, seconds=21599),
+            'start': datetime.datetime(2015, 07, 17, 12, tzinfo=pytz.utc),
+            'xml_attributes': {"filename": ["course/2012_Fall.xml", "course/2012_Fall.xml"]},
+            'pdf_textbooks': [
                 {
                     "tab_title": "Sample Multi Chapter Textbook",
                     "id": "MyTextbook",
@@ -209,8 +208,13 @@ class ToyCourseFactory(SampleCourseFactory):
                     ]
                 }
             ],
-            course_image="just_a_test.jpg",
-            **kwargs
+            'course_image': "just_a_test.jpg",
+        }
+        fields.update(kwargs)
+
+        toy_course = super(ToyCourseFactory, cls)._create(
+            target_class,
+            **fields
         )
         with store.bulk_operations(toy_course.id, emit_signals=False):
             with store.branch_setting(ModuleStoreEnum.Branch.draft_preferred, toy_course.id):
@@ -657,7 +661,8 @@ def check_mongo_calls(num_finds=0, num_sends=None):
 # This dict represents the attribute keys for a course's 'about' info.
 # Note: The 'video' attribute is intentionally excluded as it must be
 # handled separately; its value maps to an alternate key name.
-# Reference : cms/djangoapps/models/settings/course_details.py
+# Reference : from openedx.core.djangoapps.models.course_details.py
+
 
 ABOUT_ATTRIBUTES = {
     'effort': "Testing effort",

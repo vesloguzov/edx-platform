@@ -1,28 +1,27 @@
 # pylint: disable=missing-docstring
-# pylint: disable=redefined-outer-name
 
-from lettuce import world
-
-import time
 import json
-import re
 import platform
+import re
+import time
+from textwrap import dedent
+from urllib import quote_plus
 
 # django_url is assigned late in the process of loading lettuce,
 # so we import this as a module, and then read django_url from
 # it to get the correct value
 import lettuce.django
-
-
-from textwrap import dedent
-from urllib import quote_plus
+from lettuce import world
+from nose.tools import assert_true
 from selenium.common.exceptions import (
-    WebDriverException, TimeoutException,
-    StaleElementReferenceException, InvalidElementStateException)
-from selenium.webdriver.support import expected_conditions as EC
+    InvalidElementStateException,
+    StaleElementReferenceException,
+    TimeoutException,
+    WebDriverException
+)
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from nose.tools import assert_true  # pylint: disable=no-name-in-module
 
 GLOBAL_WAIT_FOR_TIMEOUT = 60
 
@@ -40,7 +39,7 @@ REQUIREJS_WAIT = {
     # Unit page
     re.compile(r'^Unit \|'): [
         "jquery", "js/base", "js/models/xblock_info", "js/views/pages/container",
-        "js/collections/component_template", "xmodule", "coffee/src/main", "xblock/cms.runtime.v1"],
+        "js/collections/component_template", "xmodule", "cms/js/main", "xblock/cms.runtime.v1"],
 
     # Content - Outline
     # Note that calling your org, course number, or display name, 'course' will mess this up
@@ -50,18 +49,18 @@ REQUIREJS_WAIT = {
     # Dashboard
     re.compile(r'^Studio Home \|'): [
         "js/sock", "gettext", "js/base",
-        "jquery.ui", "coffee/src/main", "underscore"],
+        "jquery.ui", "cms/js/main", "underscore"],
 
     # Upload
     re.compile(r'^\s*Files & Uploads'): [
-        'js/base', 'jquery.ui', 'coffee/src/main', 'underscore',
+        'js/base', 'jquery.ui', 'cms/js/main', 'underscore',
         'js/views/assets', 'js/views/asset'
     ],
 
     # Pages
     re.compile(r'^Pages \|'): [
-        'js/models/explicit_url', 'coffee/src/views/tabs',
-        'xmodule', 'coffee/src/main', 'xblock/cms.runtime.v1'
+        'js/models/explicit_url', 'js/views/tabs',
+        'xmodule', 'cms/js/main', 'xblock/cms.runtime.v1'
     ],
 }
 
@@ -347,9 +346,9 @@ def css_contains_text(css_selector, partial_text, index=0):
     # If we're expecting a non-empty string, give the page
     # a chance to fill in text fields.
     if partial_text:
-        wait_for(lambda _: css_text(css_selector, index=index))
+        wait_for(lambda _: css_html(css_selector, index=index), timeout=8)
 
-    actual_text = css_text(css_selector, index=index)
+    actual_text = css_html(css_selector, index=index)
 
     return partial_text in actual_text
 
@@ -535,6 +534,14 @@ def css_fill(css_selector, text, index=0):
 def click_link(partial_text, index=0):
     retry_on_exception(lambda: world.browser.find_link_by_partial_text(partial_text)[index].click())
     wait_for_js_to_load()
+
+
+@world.absorb
+def click_button(data_attr, index=0):
+    xpath = '//button[text()="{button_text}"]'.format(
+        button_text=data_attr
+    )
+    world.browser.find_by_xpath(xpath)[index].click()
 
 
 @world.absorb

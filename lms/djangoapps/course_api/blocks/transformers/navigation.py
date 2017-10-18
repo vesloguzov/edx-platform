@@ -1,7 +1,8 @@
 """
 TODO
 """
-from openedx.core.lib.block_cache.transformer import BlockStructureTransformer
+from openedx.core.djangoapps.content.block_structure.transformer import BlockStructureTransformer
+
 from .block_depth import BlockDepthTransformer
 
 
@@ -20,7 +21,8 @@ class BlockNavigationTransformer(BlockStructureTransformer):
     Prerequisites: BlockDepthTransformer must be run before this in the
     transform phase.
     """
-    VERSION = 1
+    WRITE_VERSION = 1
+    READ_VERSION = 1
     BLOCK_NAVIGATION = 'block_nav'
     BLOCK_NAVIGATION_FOR_CHILDREN = 'children_block_nav'
 
@@ -40,7 +42,7 @@ class BlockNavigationTransformer(BlockStructureTransformer):
         # collect basic xblock fields
         block_structure.request_xblock_fields('hide_from_toc')
 
-    def transform(self, usage_info, block_structure):  # pylint: disable=unused-argument
+    def transform(self, usage_info, block_structure):
         """
         Mutates block_structure based on the given usage_info.
         """

@@ -1,26 +1,24 @@
+# -*- coding: utf-8 -*-
 """
 Acceptance tests for studio related to the outline page.
 """
+import itertools
 import json
 from datetime import datetime, timedelta
-import itertools
-from pytz import UTC
-from bok_choy.promise import EmptyPromise
-from nose.plugins.attrib import attr
 
-from ...pages.studio.settings_advanced import AdvancedSettingsPage
-from ...pages.studio.overview import CourseOutlinePage, ContainerPage, ExpandCollapseLinkState
-from ...pages.studio.utils import add_discussion, drag, verify_ordering
-from ...pages.lms.courseware import CoursewarePage
-from ...pages.lms.course_nav import CourseNavPage
-from ...pages.lms.staff_view import StaffPage
-from ...fixtures.config import ConfigModelFixture
-from ...fixtures.course import XBlockFixtureDesc
+from nose.plugins.attrib import attr
+from pytz import UTC
 
 from base_studio_test import StudioCourseTest
-from ..helpers import load_data_str
-from ...pages.lms.progress import ProgressPage
-
+from common.test.acceptance.fixtures.config import ConfigModelFixture
+from common.test.acceptance.fixtures.course import XBlockFixtureDesc
+from common.test.acceptance.pages.lms.course_home import CourseHomePage
+from common.test.acceptance.pages.lms.courseware import CoursewarePage
+from common.test.acceptance.pages.lms.progress import ProgressPage
+from common.test.acceptance.pages.studio.overview import ContainerPage, CourseOutlinePage, ExpandCollapseLinkState
+from common.test.acceptance.pages.studio.settings_advanced import AdvancedSettingsPage
+from common.test.acceptance.pages.studio.utils import add_discussion, drag, verify_ordering
+from common.test.acceptance.tests.helpers import disable_animations, load_data_str
 
 SECTION_NAME = 'Test Section'
 SUBSECTION_NAME = 'Test Subsection'
@@ -74,7 +72,7 @@ class CourseOutlineTest(StudioCourseTest):
         verify_ordering(self, outline_page, expected_ordering)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class CourseOutlineDragAndDropTest(CourseOutlineTest):
     """
     Tests of drag and drop within the outline page.
@@ -129,7 +127,7 @@ class CourseOutlineDragAndDropTest(CourseOutlineTest):
         self.drag_and_verify(self.seq_1_vert_2_handle, self.chap_1_seq_2_handle, expected_ordering, course_outline_page)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class WarningMessagesTest(CourseOutlineTest):
     """
     Feature: Warning messages on sections, subsections, and units
@@ -337,7 +335,7 @@ class WarningMessagesTest(CourseOutlineTest):
             unit.toggle_staff_lock()
 
 
-@attr('shard_3')
+@attr(shard=3)
 class EditingSectionsTest(CourseOutlineTest):
     """
     Feature: Editing Release date, Due date and grading type.
@@ -372,22 +370,30 @@ class EditingSectionsTest(CourseOutlineTest):
 
         # Verify fields
         self.assertTrue(modal.has_release_date())
+        self.assertTrue(modal.has_release_time())
         self.assertTrue(modal.has_due_date())
+        self.assertTrue(modal.has_due_time())
         self.assertTrue(modal.has_policy())
 
         # Verify initial values
         self.assertEqual(modal.release_date, u'1970-01-01')
+        self.assertEqual(modal.release_time, u'00:00')
         self.assertEqual(modal.due_date, u'')
+        self.assertEqual(modal.due_time, u'')
         self.assertEqual(modal.policy, u'Not Graded')
 
         # Set new values
         modal.release_date = '1972-03-12'
+        modal.release_time = '04:01'
         modal.due_date = '2014-07-21'
+        modal.due_time = '23:39'
         modal.policy = 'Lab'
 
         modal.save()
         self.assertIn(u'Released: Mar 12, 1972', subsection.release_date)
+        self.assertIn(u'04:01', subsection.release_date)
         self.assertIn(u'Due: Jul 21, 2014', subsection.due_date)
+        self.assertIn(u'23:39', subsection.due_date)
         self.assertIn(u'Lab', subsection.policy)
 
     def test_can_edit_section(self):
@@ -485,7 +491,7 @@ class EditingSectionsTest(CourseOutlineTest):
         self.assertIn(release_text, self.course_outline_page.section_at(0).subsection_at(0).release_date)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class StaffLockTest(CourseOutlineTest):
     """
     Feature: Sections, subsections, and units can be locked and unlocked from the course outline.
@@ -721,19 +727,21 @@ class StaffLockTest(CourseOutlineTest):
             Given I have a course with two sections
             When I enable explicit staff lock on one section
             And I click the View Live button to switch to staff view
-            Then I see two sections in the sidebar
+            And I visit the course home with the outline
+            Then I see two sections in the outline
             And when I switch the view mode to student view
-            Then I see one section in the sidebar
+            Then I see one section in the outline
         """
         self.course_outline_page.visit()
         self.course_outline_page.add_section_from_top_button()
         self.course_outline_page.section_at(1).set_staff_lock(True)
         self.course_outline_page.view_live()
-        courseware = CoursewarePage(self.browser, self.course_id)
-        courseware.wait_for_page()
-        self.assertEqual(courseware.num_sections, 2)
-        StaffPage(self.browser, self.course_id).set_staff_view_mode('Student')
-        self.assertEqual(courseware.num_sections, 1)
+
+        course_home_page = CourseHomePage(self.browser, self.course_id)
+        course_home_page.visit()
+        self.assertEqual(course_home_page.outline.num_sections, 2)
+        course_home_page.preview.set_staff_view_mode('Learner')
+        self.assertEqual(course_home_page.outline.num_sections, 1)
 
     def test_locked_subsections_do_not_appear_in_lms(self):
         """
@@ -741,18 +749,20 @@ class StaffLockTest(CourseOutlineTest):
             Given I have a course with two subsections
             When I enable explicit staff lock on one subsection
             And I click the View Live button to switch to staff view
-            Then I see two subsections in the sidebar
+            And I visit the course home with the outline
+            Then I see two subsections in the outline
             And when I switch the view mode to student view
-            Then I see one section in the sidebar
+            Then I see one subsection in the outline
         """
         self.course_outline_page.visit()
         self.course_outline_page.section_at(0).subsection_at(1).set_staff_lock(True)
         self.course_outline_page.view_live()
-        courseware = CoursewarePage(self.browser, self.course_id)
-        courseware.wait_for_page()
-        self.assertEqual(courseware.num_subsections, 2)
-        StaffPage(self.browser, self.course_id).set_staff_view_mode('Student')
-        self.assertEqual(courseware.num_subsections, 1)
+
+        course_home_page = CourseHomePage(self.browser, self.course_id)
+        course_home_page.visit()
+        self.assertEqual(course_home_page.outline.num_subsections, 2)
+        course_home_page.preview.set_staff_view_mode('Learner')
+        self.assertEqual(course_home_page.outline.num_subsections, 1)
 
     def test_toggling_staff_lock_on_section_does_not_publish_draft_units(self):
         """
@@ -867,7 +877,7 @@ class StaffLockTest(CourseOutlineTest):
         self._remove_staff_lock_and_verify_warning(subsection, False)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class EditNamesTest(CourseOutlineTest):
     """
     Feature: Click-to-edit section/subsection names
@@ -983,7 +993,7 @@ class EditNamesTest(CourseOutlineTest):
         self.assertTrue(self.course_outline_page.section_at(0).is_collapsed)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class CreateSectionsTest(CourseOutlineTest):
     """
     Feature: Create new sections/subsections/units
@@ -1066,11 +1076,11 @@ class CreateSectionsTest(CourseOutlineTest):
         self.assertEqual(len(self.course_outline_page.section_at(0).subsections()), 1)
         self.course_outline_page.section_at(0).subsection_at(0).add_unit()
         unit_page = ContainerPage(self.browser, None)
-        EmptyPromise(unit_page.is_browser_on_page, 'Browser is on the unit page').fulfill()
+        unit_page.wait_for_page()
         self.assertTrue(unit_page.is_inline_editing_display_name())
 
 
-@attr('shard_3')
+@attr(shard=3)
 class DeleteContentTest(CourseOutlineTest):
     """
     Feature: Deleting sections/subsections/units
@@ -1182,7 +1192,7 @@ class DeleteContentTest(CourseOutlineTest):
         self.assertTrue(self.course_outline_page.has_no_content_message)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class ExpandCollapseMultipleSectionsTest(CourseOutlineTest):
     """
     Feature: Courses with multiple sections can expand and collapse all sections.
@@ -1306,15 +1316,19 @@ class ExpandCollapseMultipleSectionsTest(CourseOutlineTest):
             And all sections are expanded
         """
         self.course_outline_page.visit()
+        # We have seen unexplainable sporadic failures in this test. Try disabling animations to see
+        # if that helps.
+        disable_animations(self.course_outline_page)
         self.course_outline_page.toggle_expand_collapse()
         self.assertEquals(self.course_outline_page.expand_collapse_link_state, ExpandCollapseLinkState.EXPAND)
+        self.verify_all_sections(collapsed=True)
         self.course_outline_page.section_at(0).expand_subsection()
         self.course_outline_page.toggle_expand_collapse()
         self.assertEquals(self.course_outline_page.expand_collapse_link_state, ExpandCollapseLinkState.COLLAPSE)
         self.verify_all_sections(collapsed=False)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class ExpandCollapseSingleSectionTest(CourseOutlineTest):
     """
     Feature: Courses with a single section can expand and collapse all sections.
@@ -1354,7 +1368,7 @@ class ExpandCollapseSingleSectionTest(CourseOutlineTest):
         self.assertFalse(self.course_outline_page.section_at(0).subsection_at(1).is_collapsed)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class ExpandCollapseEmptyTest(CourseOutlineTest):
     """
     Feature: Courses with no sections initially can expand and collapse all sections after addition.
@@ -1392,7 +1406,7 @@ class ExpandCollapseEmptyTest(CourseOutlineTest):
         self.assertFalse(self.course_outline_page.section_at(0).is_collapsed)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class DefaultStatesEmptyTest(CourseOutlineTest):
     """
     Feature: Misc course outline default states/actions when starting with an empty course
@@ -1417,7 +1431,7 @@ class DefaultStatesEmptyTest(CourseOutlineTest):
         self.assertTrue(self.course_outline_page.bottom_add_section_button.is_present())
 
 
-@attr('shard_3')
+@attr(shard=3)
 class DefaultStatesContentTest(CourseOutlineTest):
     """
     Feature: Misc course outline default states/actions when starting with a course with content
@@ -1442,7 +1456,7 @@ class DefaultStatesContentTest(CourseOutlineTest):
         self.assertEqual(courseware.xblock_component_type(2), 'discussion')
 
 
-@attr('shard_3')
+@attr(shard=3)
 class UnitNavigationTest(CourseOutlineTest):
     """
     Feature: Navigate to units
@@ -1460,10 +1474,10 @@ class UnitNavigationTest(CourseOutlineTest):
         self.course_outline_page.visit()
         self.course_outline_page.section_at(0).subsection_at(0).expand_subsection()
         unit = self.course_outline_page.section_at(0).subsection_at(0).unit_at(0).go_to()
-        self.assertTrue(unit.is_browser_on_page)
+        unit.wait_for_page()
 
 
-@attr('shard_3')
+@attr(shard=3)
 class PublishSectionTest(CourseOutlineTest):
     """
     Feature: Publish sections.
@@ -1477,7 +1491,7 @@ class PublishSectionTest(CourseOutlineTest):
         The first subsection has 2 units, and the second subsection has one unit.
         """
         self.courseware = CoursewarePage(self.browser, self.course_id)
-        self.course_nav = CourseNavPage(self.browser)
+        self.course_home_page = CourseHomePage(self.browser, self.course_id)
         course_fixture.add_children(
             XBlockFixtureDesc('chapter', SECTION_NAME).add_children(
                 XBlockFixtureDesc('sequential', SUBSECTION_NAME).add_children(
@@ -1538,7 +1552,7 @@ class PublishSectionTest(CourseOutlineTest):
         self.assertTrue(section.publish_action)
         self.courseware.visit()
         self.assertEqual(1, self.courseware.num_xblock_components)
-        self.course_nav.go_to_sequential_position(2)
+        self.courseware.go_to_sequential_position(2)
         self.assertEqual(1, self.courseware.num_xblock_components)
 
     def test_section_publishing(self):
@@ -1563,9 +1577,10 @@ class PublishSectionTest(CourseOutlineTest):
         self.assertFalse(unit.publish_action)
         self.courseware.visit()
         self.assertEqual(1, self.courseware.num_xblock_components)
-        self.course_nav.go_to_sequential_position(2)
+        self.courseware.go_to_sequential_position(2)
         self.assertEqual(1, self.courseware.num_xblock_components)
-        self.course_nav.go_to_section(SECTION_NAME, 'Test Subsection 2')
+        self.course_home_page.visit()
+        self.course_home_page.outline.go_to_section(SECTION_NAME, 'Test Subsection 2')
         self.assertEqual(1, self.courseware.num_xblock_components)
 
     def _add_unpublished_content(self):
@@ -1589,17 +1604,19 @@ class PublishSectionTest(CourseOutlineTest):
         return (section, subsection, unit)
 
 
-@attr('shard_3')
+@attr(shard=3)
 class DeprecationWarningMessageTest(CourseOutlineTest):
     """
     Feature: Verify deprecation warning message.
     """
     HEADING_TEXT = 'This course uses features that are no longer supported.'
     COMPONENT_LIST_HEADING = 'You must delete or replace the following components.'
-    ADVANCE_MODULES_REMOVE_TEXT = ('To avoid errors, edX strongly recommends that you remove unsupported features '
-                                   'from the course advanced settings. To do this, go to the Advanced Settings '
-                                   'page, locate the "Advanced Module List" setting, and then delete the following '
-                                   'modules from the list.')
+    ADVANCE_MODULES_REMOVE_TEXT = (
+        u'To avoid errors, édX strongly recommends that you remove unsupported features '
+        u'from the course advanced settings. To do this, go to the Advanced Settings '
+        u'page, locate the "Advanced Module List" setting, and then delete the following '
+        u'modules from the list.'
+    )
     DEFAULT_DISPLAYNAME = "Deprecated Component"
 
     def _add_deprecated_advance_modules(self, block_types):
@@ -1620,9 +1637,9 @@ class DeprecationWarningMessageTest(CourseOutlineTest):
 
         self.course_fixture.create_xblock(
             parent_vertical.locator,
-            XBlockFixtureDesc('combinedopenended', "Open", data=load_data_str('ora_peer_problem.xml'))
+            XBlockFixtureDesc('poll', "Poll", data=load_data_str('poll_markdown.xml'))
         )
-        self.course_fixture.create_xblock(parent_vertical.locator, XBlockFixtureDesc('peergrading', 'Peer'))
+        self.course_fixture.create_xblock(parent_vertical.locator, XBlockFixtureDesc('survey', 'Survey'))
 
     def _verify_deprecation_warning_info(
             self,
@@ -1655,56 +1672,56 @@ class DeprecationWarningMessageTest(CourseOutlineTest):
 
     def test_no_deprecation_warning_message_present(self):
         """
-        Scenario: Verify that deprecation warning message is not shown if ORA1
-            advance modules are not present and also no ORA1 component exist in
+        Scenario: Verify that deprecation warning message is not shown if no deprecated
+            advance modules are not present and also no deprecated component exist in
             course outline.
 
         When I goto course outline
-        Then I don't see ORA1 deprecated warning
+        Then I don't see any deprecation warning
         """
         self.course_outline_page.visit()
         self.assertFalse(self.course_outline_page.deprecated_warning_visible)
 
     def test_deprecation_warning_message_present(self):
         """
-        Scenario: Verify deprecation warning message if ORA1 advance modules
-            and ORA1 components are present.
+        Scenario: Verify deprecation warning message if deprecated modules
+            and components are present.
 
-        Given I have ORA1 advance modules present in `Advanced Module List`
-        And I have created 2 ORA1 components
+        Given I have "poll" advance modules present in `Advanced Module List`
+        And I have created 2 poll components
         When I go to course outline
-        Then I see ORA1 deprecated warning
-        And I see correct ORA1 deprecated warning heading text
-        And I see correct ORA1 deprecated warning advance modules remove text
-        And I see list of ORA1 components with correct display names
+        Then I see poll deprecated warning
+        And I see correct poll deprecated warning heading text
+        And I see correct poll deprecated warning advance modules remove text
+        And I see list of poll components with correct display names
         """
-        self._add_deprecated_advance_modules(block_types=['peergrading', 'combinedopenended'])
+        self._add_deprecated_advance_modules(block_types=['poll', 'survey'])
         self._create_deprecated_components()
         self.course_outline_page.visit()
         self._verify_deprecation_warning_info(
             deprecated_blocks_present=True,
             components_present=True,
-            components_display_name_list=['Open', 'Peer'],
-            deprecated_modules_list=['peergrading', 'combinedopenended']
+            components_display_name_list=['Poll', 'Survey'],
+            deprecated_modules_list=['poll', 'survey']
         )
 
     def test_deprecation_warning_with_no_displayname(self):
         """
-        Scenario: Verify deprecation warning message if  ORA1 components are present.
+        Scenario: Verify deprecation warning message if poll components are present.
 
-        Given I have created 1 ORA1 deprecated component
+        Given I have created 1 poll deprecated component
         When I go to course outline
-        Then I see ORA1 deprecated warning
-        And I see correct ORA1 deprecated warning heading text
-        And I see list of ORA1 components with correct message
+        Then I see poll deprecated warning
+        And I see correct poll deprecated warning heading text
+        And I see list of poll components with correct message
         """
         parent_vertical = self.course_fixture.get_nested_xblocks(category="vertical")[0]
 
-        # Create a deprecated ORA1 component with display_name to be empty and make sure
+        # Create a deprecated component with display_name to be empty and make sure
         # the deprecation warning is displayed with
         self.course_fixture.create_xblock(
             parent_vertical.locator,
-            XBlockFixtureDesc(category='combinedopenended', display_name="", data=load_data_str('ora_peer_problem.xml'))
+            XBlockFixtureDesc(category='poll', display_name="", data=load_data_str('poll_markdown.xml'))
         )
         self.course_outline_page.visit()
 
@@ -1714,47 +1731,48 @@ class DeprecationWarningMessageTest(CourseOutlineTest):
             components_display_name_list=[self.DEFAULT_DISPLAYNAME],
         )
 
-    def test_warning_with_ora1_advance_modules_only(self):
+    def test_warning_with_poll_advance_modules_only(self):
         """
         Scenario: Verify that deprecation warning message is shown if only
-            ORA1 advance modules are present and no ORA1 component exist.
+            poll advance modules are present and no poll component exist.
 
-        Given I have ORA1 advance modules present in `Advanced Module List`
+        Given I have poll advance modules present in `Advanced Module List`
         When I go to course outline
-        Then I see ORA1 deprecated warning
-        And I see correct ORA1 deprecated warning heading text
-        And I see correct ORA1 deprecated warning advance modules remove text
-        And I don't see list of ORA1 components
+        Then I see poll deprecated warning
+        And I see correct poll deprecated warning heading text
+        And I see correct poll deprecated warning advance modules remove text
+        And I don't see list of poll components
         """
-        self._add_deprecated_advance_modules(block_types=['peergrading', 'combinedopenended'])
+        self._add_deprecated_advance_modules(block_types=['poll', 'survey'])
         self.course_outline_page.visit()
         self._verify_deprecation_warning_info(
             deprecated_blocks_present=True,
             components_present=False,
-            deprecated_modules_list=['peergrading', 'combinedopenended']
+            deprecated_modules_list=['poll', 'survey']
         )
 
-    def test_warning_with_ora1_components_only(self):
+    def test_warning_with_poll_components_only(self):
         """
         Scenario: Verify that deprecation warning message is shown if only
-            ORA1 component exist and no ORA1 advance modules are present.
+            poll component exist and no poll advance modules are present.
 
-        Given I have created two ORA1 components
+        Given I have created two poll components
         When I go to course outline
-        Then I see ORA1 deprecated warning
-        And I see correct ORA1 deprecated warning heading text
-        And I don't see ORA1 deprecated warning advance modules remove text
-        And I see list of ORA1 components with correct display names
+        Then I see poll deprecated warning
+        And I see correct poll deprecated warning heading text
+        And I don't see poll deprecated warning advance modules remove text
+        And I see list of poll components with correct display names
         """
         self._create_deprecated_components()
         self.course_outline_page.visit()
         self._verify_deprecation_warning_info(
             deprecated_blocks_present=False,
             components_present=True,
-            components_display_name_list=['Open', 'Peer']
+            components_display_name_list=['Poll', 'Survey']
         )
 
 
+@attr(shard=4)
 class SelfPacedOutlineTest(CourseOutlineTest):
     """Test the course outline for a self-paced course."""
 

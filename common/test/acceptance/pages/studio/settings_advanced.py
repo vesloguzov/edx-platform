@@ -3,9 +3,13 @@ Course Advanced Settings page
 """
 
 from bok_choy.promise import EmptyPromise
-from .course_page import CoursePage
-from .utils import press_the_notification_button, type_in_codemirror, get_codemirror_value
 
+from common.test.acceptance.pages.studio.course_page import CoursePage
+from common.test.acceptance.pages.studio.utils import (
+    get_codemirror_value,
+    press_the_notification_button,
+    type_in_codemirror
+)
 
 KEY_CSS = '.key h3.title'
 UNDO_BUTTON_SELECTOR = ".action-item .action-undo"
@@ -172,22 +176,21 @@ class AdvancedSettingsPage(CoursePage):
             'cert_name_short',
             'certificates_display_behavior',
             'course_image',
+            'banner_image',
+            'video_thumbnail_image',
             'cosmetic_display_price',
             'advertised_start',
             'announcement',
             'display_name',
             'info_sidebar_name',
             'is_new',
-            'ispublic',
             'issue_badges',
             'max_student_enrollments_allowed',
             'no_grade',
             'display_coursenumber',
             'display_organization',
             'catalog_visibility',
-            'chrome',
             'days_early_for_beta',
-            'default_tab',
             'disable_progress_graph',
             'discussion_blackouts',
             'discussion_link',
@@ -212,11 +215,18 @@ class AdvancedSettingsPage(CoursePage):
             'show_calculator',
             'show_reset_button',
             'static_asset_path',
-            'text_customization',
+            'teams_configuration',
             'annotation_storage_url',
             'social_sharing_url',
             'video_bumper',
             'cert_html_view_enabled',
             'enable_proctored_exams',
+            'allow_proctoring_opt_out',
             'enable_timed_exams',
+            'enable_subsection_gating',
+            'learning_info',
+            'instructor_info',
+            'create_zendesk_tickets',
+            'ccx_connector',
+            'enable_ccx',
         ]

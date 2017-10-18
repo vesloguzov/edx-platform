@@ -2,8 +2,10 @@
 Tests for helper functions.
 """
 import json
+import re
 import mock
 import ddt
+from django import forms
 from django.http import HttpRequest, HttpResponse
 from django.test import TestCase
 from nose.tools import raises
@@ -32,7 +34,7 @@ def intercepted_function(raise_error=None):
 
     """
     if raise_error is not None:
-        raise raise_error
+        raise raise_error                   # pylint: disable=raising-bad-type
 
 
 class InterceptErrorsTest(TestCase):
@@ -51,22 +53,35 @@ class InterceptErrorsTest(TestCase):
 
     @mock.patch('openedx.core.djangoapps.user_api.helpers.LOGGER')
     def test_logs_errors(self, mock_logger):
+        self.maxDiff = None
         exception = 'openedx.core.djangoapps.user_api.tests.test_helpers.FakeInputException'
         expected_log_msg = (
             u"An unexpected error occurred when calling 'intercepted_function' with arguments '()' and "
-            u"keyword arguments '{'raise_error': <class '" + exception + u"'>}': FakeInputException()"
-        )
+            u"keyword arguments '{{'raise_error': <class '{}'>}}' "
+            u"from File \"{}\", line XXX, in test_logs_errors\n"
+            u"    intercepted_function(raise_error=FakeInputException): FakeInputException()"
+        ).format(exception, __file__.rstrip('c'))
 
         # Verify that the raised exception has the error message
         try:
             intercepted_function(raise_error=FakeInputException)
         except FakeOutputException as ex:
-            self.assertEqual(ex.message, expected_log_msg)
+            actual_message = re.sub(r'line \d+', 'line XXX', ex.message, flags=re.MULTILINE)
+            self.assertEqual(actual_message, expected_log_msg)
 
         # Verify that the error logger is called
         # This will include the stack trace for the original exception
         # because it's called with log level "ERROR"
-        mock_logger.exception.assert_called_once_with(expected_log_msg)
+        calls = mock_logger.exception.mock_calls
+        self.assertEqual(len(calls), 1)
+        name, args, kwargs = calls[0]
+
+        self.assertEqual(name, '')
+        self.assertEqual(len(args), 1)
+        self.assertEqual(kwargs, {})
+
+        actual_message = re.sub(r'line \d+', 'line XXX', args[0], flags=re.MULTILINE)
+        self.assertEqual(actual_message, expected_log_msg)
 
 
 class FormDescriptionTest(TestCase):
@@ -87,7 +102,9 @@ class FormDescriptionTest(TestCase):
             },
             error_messages={
                 "required": "You must provide a value!"
-            }
+            },
+            supplementalLink="",
+            supplementalText="",
         )
 
         self.assertEqual(desc.to_json(), json.dumps({
@@ -108,7 +125,9 @@ class FormDescriptionTest(TestCase):
                     },
                     "errorMessages": {
                         "required": "You must provide a value!"
-                    }
+                    },
+                    "supplementalLink": "",
+                    "supplementalText": ""
                 }
             ]
         }))
@@ -127,6 +146,44 @@ class FormDescriptionTest(TestCase):
         desc = FormDescription("post", "/submit")
         with self.assertRaises(InvalidFieldError):
             desc.add_field("name", field_type="text", restrictions={"invalid": 0})
+
+    def test_option_overrides(self):
+        desc = FormDescription("post", "/submit")
+        field = {
+            "name": "country",
+            "label": "Country",
+            "field_type": "select",
+            "default": "PK",
+            "required": True,
+            "error_messages": {
+                "required": "You must provide a value!"
+            },
+            "options": [
+                ("US", "United States of America"),
+                ("PK", "Pakistan")
+            ]
+        }
+        desc.override_field_properties(
+            field["name"],
+            default="PK"
+        )
+        desc.add_field(**field)
+        self.assertEqual(
+            desc.fields[0]["options"],
+            [
+                {
+                    'default': False,
+                    'name': 'United States of America',
+                    'value': 'US'
+                },
+                {
+                    'default': True,
+                    'name': 'Pakistan',
+                    'value': 'PK'
+                }
+
+            ]
+        )
 
 
 @ddt.ddt
@@ -214,3 +271,62 @@ class StudentViewShimTest(TestCase):
             self.captured_request = request
             return response
         return shim_student_view(stub_view, check_logged_in=check_logged_in)
+
+
+class DummyRegistrationExtensionModel(object):
+    """
+    Dummy registration object
+    """
+    user = None
+
+    def save(self):
+        """
+        Dummy save method for dummy model.
+        """
+        return None
+
+
+class TestCaseForm(forms.Form):
+    """
+    Test registration extension form.
+    """
+    DUMMY_STORAGE = {}
+
+    MOVIE_MIN_LEN = 3
+    MOVIE_MAX_LEN = 100
+
+    FAVORITE_EDITOR = (
+        ('vim', 'Vim'),
+        ('emacs', 'Emacs'),
+        ('np', 'Notepad'),
+        ('cat', 'cat > filename')
+    )
+
+    favorite_movie = forms.CharField(
+        label="Fav Flick", min_length=MOVIE_MIN_LEN, max_length=MOVIE_MAX_LEN, error_messages={
+            "required": u"Please tell us your favorite movie.",
+            "invalid": u"We're pretty sure you made that movie up."
+        }
+    )
+    favorite_editor = forms.ChoiceField(label="Favorite Editor", choices=FAVORITE_EDITOR, required=False, initial='cat')
+
+    def save(self, commit=None):  # pylint: disable=unused-argument
+        """
+        Store the result in the dummy storage dict.
+        """
+        self.DUMMY_STORAGE.update({
+            'favorite_movie': self.cleaned_data.get('favorite_movie'),
+            'favorite_editor': self.cleaned_data.get('favorite_editor'),
+        })
+        dummy_model = DummyRegistrationExtensionModel()
+        return dummy_model
+
+    class Meta(object):
+        """
+        Set options for fields which can't be conveyed in their definition.
+        """
+        serialization_options = {
+            'favorite_editor': {
+                'default': 'vim',
+            },
+        }

@@ -4,17 +4,19 @@
 from __future__ import absolute_import
 
 import time
+from logging import getLogger
 
-from lettuce import world, step
-from lettuce.django import django_url
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
-from student.models import CourseEnrollment
-from xmodule.modulestore.django import modulestore
-from xmodule.course_module import CourseDescriptor
+from lettuce import before, step, world
+from lettuce.django import django_url
+
 from courseware.courses import get_course_by_id
+from student.models import CourseEnrollment
 from xmodule import seq_module, vertical_block
-from logging import getLogger
+from xmodule.course_module import CourseDescriptor
+from xmodule.modulestore.django import modulestore
+
 logger = getLogger(__name__)
 
 
@@ -223,9 +225,9 @@ def get_courseware_with_tabs(course_id):
     course = get_course_by_id(course_id)
     chapters = [chapter for chapter in course.get_children() if not chapter.hide_from_toc]
     courseware = [{
-        'chapter_name': c.display_name_with_default,
+        'chapter_name': c.display_name_with_default_escaped,
         'sections': [{
-            'section_name': s.display_name_with_default,
+            'section_name': s.display_name_with_default_escaped,
             'clickable_tab_count': len(s.get_children()) if (type(s) == seq_module.SequenceDescriptor) else 0,
             'tabs': [{
                 'children_count': len(t.get_children()) if (type(t) == vertical_block.VerticalBlock) else 0,

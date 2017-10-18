@@ -42,7 +42,7 @@ class HelpDeskEddyError(Exception):
 
 class HelpDeskEddyMixin(object):
     @staticmethod
-    def record_feedback(realname, email, subject, details, tags, additional_info):
+    def record_feedback(context, **kwargs):
         """
         Create a new user-requested HelpDeskEddy ticket.
 
@@ -58,28 +58,28 @@ class HelpDeskEddyMixin(object):
         )
         # Get creator id for ticket
         name = (
-            realname
-            or additional_info.get('nickname')
-            or additional_info.get('username')
+            context['realname']
+            or context['additional_info'].get('nickname')
+            or context['additional_info'].get('username')
             or _('Anonymous')
         )
         try:
-            creator_id = helpdeskeddy_api.get_or_create_user(email, name)
+            creator_id = helpdeskeddy_api.get_or_create_user(context['email'], name)
         except HelpDeskEddyError as e:
             log.exception("Error creating HelpDeskEddy user: %s", e.msg)
             return False
 
         # Tag all issues with LMS to distinguish channel in Zendesk; requested by student support team
-        helpdeskeddy_tags = [v for v in tags.values() if v] + ["LMS"]
+        helpdeskeddy_tags = [v for v in context['tags'].values() if v] + ["LMS"]
 
         # via tagging
         white_label_org = microsite.get_value('course_org_filter')
         if white_label_org:
             helpdeskeddy_tags = helpdeskeddy_tags + ["whitelabel_{org}".format(org=white_label_org)]
 
-        full_ticket_description = u'{}\n\n#{}'.format(details, u' #'.join(helpdeskeddy_tags))
+        full_ticket_description = u'{}\n\n#{}'.format(context['details'], u' #'.join(helpdeskeddy_tags))
         try:
-            ticket_id = helpdeskeddy_api.create_ticket(creator_id, subject, full_ticket_description)
+            ticket_id = helpdeskeddy_api.create_ticket(creator_id, context['subject'], full_ticket_description)
         except HelpDeskEddyError as e:
             log.exception("Error creating HelpDeskEddy ticket: %s", e.msg)
             return False

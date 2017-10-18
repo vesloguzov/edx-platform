@@ -2,47 +2,44 @@
 This module creates a sysadmin dashboard for managing and viewing
 courses.
 """
-import csv
+import unicodecsv as csv
 import json
 import logging
 import os
-import subprocess
-import time
 import StringIO
+import subprocess
 
+import mongoengine
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import IntegrityError
-from django.http import HttpResponse, Http404
+from django.http import Http404, HttpResponse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.html import escape
-from django.utils import timezone
 from django.utils.translation import ugettext as _
 from django.views.decorators.cache import cache_control
-from django.views.generic.base import TemplateView
-from django.views.decorators.http import condition
 from django.views.decorators.csrf import ensure_csrf_cookie
-from edxmako.shortcuts import render_to_response
-import mongoengine
+from django.views.decorators.http import condition
+from django.views.generic.base import TemplateView
+from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from path import Path as path
 
-from courseware.courses import get_course_by_id
 import dashboard.git_import as git_import
-from dashboard.git_import import GitImportError
-from student.roles import CourseStaffRole, CourseInstructorRole
-from dashboard.models import CourseImportLog
-from external_auth.models import ExternalAuthMap
-from external_auth.views import generate_password
-from student.models import CourseEnrollment, UserProfile, Registration
 import track.views
-from xmodule.modulestore import ModuleStoreEnum
+from courseware.courses import get_course_by_id
+from dashboard.git_import import GitImportError
+from dashboard.models import CourseImportLog
+from edxmako.shortcuts import render_to_response
+from openedx.core.djangoapps.external_auth.models import ExternalAuthMap
+from openedx.core.djangoapps.external_auth.views import generate_password
+from student.models import CourseEnrollment, Registration, UserProfile
+from student.roles import CourseInstructorRole, CourseStaffRole
 from xmodule.modulestore.django import modulestore
-from opaque_keys.edx.locations import SlashSeparatedCourseKey
-
 
 log = logging.getLogger(__name__)
 
@@ -59,10 +56,6 @@ class SysadminDashboardView(TemplateView):
         """
 
         self.def_ms = modulestore()
-
-        self.is_using_mongo = True
-        if self.def_ms.get_modulestore_type(None) == 'xml':
-            self.is_using_mongo = False
         self.msg = u''
         self.datatable = []
         super(SysadminDashboardView, self).__init__(**kwargs)
@@ -169,12 +162,12 @@ class Users(SysadminDashboardView):
         msg = u''
         if settings.FEATURES['AUTH_USE_CERTIFICATES']:
             if '@' not in uname:
-                email = u'{0}@{1}'.format(uname, email_domain)
+                email = '{0}@{1}'.format(uname, email_domain)
             else:
                 email = uname
-            if not email.endswith(u'@{0}'.format(email_domain)):
+            if not email.endswith('@{0}'.format(email_domain)):
                 # Translators: Domain is an email domain, such as "@gmail.com"
-                msg += _('Email address must end in {domain}').format(domain=u"@{0}".format(email_domain))
+                msg += _('Email address must end in {domain}').format(domain="@{0}".format(email_domain))
                 return msg
             mit_domain = 'ssl:MIT'
             if ExternalAuthMap.objects.filter(external_id=email,
@@ -201,7 +194,7 @@ class Users(SysadminDashboardView):
         try:
             user.save()
         except IntegrityError:
-            msg += _(u'Oops, failed to create user {user}, {error}').format(
+            msg += _('Oops, failed to create user {user}, {error}').format(
                 user=user,
                 error="IntegrityError"
             )
@@ -350,7 +343,8 @@ class Courses(SysadminDashboardView):
 
         # Try the data dir, then try to find it in the git import dir
         if not gdir.exists():
-            gdir = path(git_import.GIT_REPO_DIR) / cdir
+            git_repo_dir = getattr(settings, 'GIT_REPO_DIR', git_import.DEFAULT_GIT_REPO_DIR)
+            gdir = path(git_repo_dir) / cdir
             if not gdir.exists():
                 return info
 
@@ -374,10 +368,7 @@ class Courses(SysadminDashboardView):
             return _("The git repo location should end with '.git', "
                      "and be a valid url")
 
-        if self.is_using_mongo:
-            return self.import_mongo_course(gitloc, branch)
-
-        return self.import_xml_course(gitloc, branch)
+        return self.import_mongo_course(gitloc, branch)
 
     def import_mongo_course(self, gitloc, branch):
         """
@@ -387,7 +378,7 @@ class Courses(SysadminDashboardView):
 
         msg = u''
 
-        log.debug(u'Adding course using git repo %s', gitloc)
+        log.debug('Adding course using git repo %s', gitloc)
 
         # Grab logging output for debugging imports
         output = StringIO.StringIO()
@@ -427,80 +418,6 @@ class Courses(SysadminDashboardView):
 
         msg = u"<h4 style='color:{0}'>{1}</h4>".format(color, msg_header)
         msg += u"<pre>{0}</pre>".format(escape(ret))
-        return msg
-
-    def import_xml_course(self, gitloc, branch):
-        """Imports a git course into the XMLModuleStore"""
-
-        msg = u''
-        if not getattr(settings, 'GIT_IMPORT_WITH_XMLMODULESTORE', False):
-            # Translators: "GIT_IMPORT_WITH_XMLMODULESTORE" is a variable name.
-            # "XMLModuleStore" and "MongoDB" are database systems. You should not
-            # translate these names.
-            return _('Refusing to import. GIT_IMPORT_WITH_XMLMODULESTORE is '
-                     'not turned on, and it is generally not safe to import '
-                     'into an XMLModuleStore with multithreaded. We '
-                     'recommend you enable the MongoDB based module store '
-                     'instead, unless this is a development environment.')
-        cdir = (gitloc.rsplit('/', 1)[1])[:-4]
-        gdir = settings.DATA_DIR / cdir
-        if os.path.exists(gdir):
-            msg += _("The course {0} already exists in the data directory! "
-                     "(reloading anyway)").format(cdir)
-            cmd = ['git', 'pull', ]
-            cwd = gdir
-        else:
-            cmd = ['git', 'clone', gitloc, ]
-            cwd = settings.DATA_DIR
-        cwd = os.path.abspath(cwd)
-        try:
-            cmd_output = escape(
-                subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=cwd)
-            )
-        except subprocess.CalledProcessError as ex:
-            log.exception('Git pull or clone output was: %r', ex.output)
-            # Translators: unable to download the course content from
-            # the source git repository. Clone occurs if this is brand
-            # new, and pull is when it is being updated from the
-            # source.
-            return _('Unable to clone or pull repository. Please check '
-                     'your url. Output was: {0!r}').format(ex.output)
-
-        msg += u'<pre>{0}</pre>'.format(cmd_output)
-        if not os.path.exists(gdir):
-            msg += _('Failed to clone repository to {directory_name}').format(directory_name=gdir)
-            return msg
-        # Change branch if specified
-        if branch:
-            try:
-                git_import.switch_branch(branch, gdir)
-            except GitImportError as ex:
-                return str(ex)
-            # Translators: This is a git repository branch, which is a
-            # specific version of a courses content
-            msg += u'<p>{0}</p>'.format(
-                _('Successfully switched to branch: '
-                  '{branch_name}').format(branch_name=branch))
-
-        self.def_ms.try_load_course(os.path.abspath(gdir))
-        errlog = self.def_ms.errored_courses.get(cdir, '')
-        if errlog:
-            msg += u'<hr width="50%"><pre>{0}</pre>'.format(escape(errlog))
-        else:
-            course = self.def_ms.courses[os.path.abspath(gdir)]
-            msg += _('Loaded course {course_name}<br/>Errors:').format(
-                course_name="{} {}".format(cdir, course.display_name)
-            )
-            errors = self.def_ms.get_course_errors(course.id)
-            if not errors:
-                msg += u'None'
-            else:
-                msg += u'<ul>'
-                for (summary, err) in errors:
-                    msg += u'<li><pre>{0}: {1}</pre></li>'.format(escape(summary),
-                                                                  escape(err))
-                msg += u'</ul>'
-
         return msg
 
     def make_datatable(self):
@@ -572,23 +489,7 @@ class Courses(SysadminDashboardView):
                         escape(str(err))
                     )
 
-            is_xml_course = (modulestore().get_modulestore_type(course_key) == ModuleStoreEnum.Type.xml)
-            if course_found and is_xml_course:
-                cdir = course.data_dir
-                self.def_ms.courses.pop(cdir)
-
-                # now move the directory (don't actually delete it)
-                new_dir = u"{course_dir}_deleted_{timestamp}".format(
-                    course_dir=cdir,
-                    timestamp=int(time.time())
-                )
-                os.rename(settings.DATA_DIR / cdir, settings.DATA_DIR / new_dir)
-
-                self.msg += (u"<font color='red'>Deleted "
-                             u"{0} = {1} ({2})</font>".format(
-                                 cdir, course.id, course.display_name))
-
-            elif course_found and not is_xml_course:
+            if course_found:
                 # delete course that is stored with mongodb backend
                 self.def_ms.delete_course(course.id, request.user.id)
                 # don't delete user permission groups, though
@@ -619,7 +520,7 @@ class Staffing(SysadminDashboardView):
             raise Http404
         data = []
 
-        for course in self.get_courses():  # pylint: disable=unused-variable
+        for course in self.get_courses():
             datum = [course.display_name, course.id]
             datum += [CourseEnrollment.objects.filter(
                 course_id=course.id).count()]
@@ -653,7 +554,7 @@ class Staffing(SysadminDashboardView):
             data = []
             roles = [CourseInstructorRole, CourseStaffRole, ]
 
-            for course in self.get_courses():  # pylint: disable=unused-variable
+            for course in self.get_courses():
                 for role in roles:
                     for user in role(course.id).users_with_role():
                         datum = [course.id, role, user.username, user.email,
@@ -722,8 +623,8 @@ class GitLogs(TemplateView):
         else:
             try:
                 course = get_course_by_id(course_id)
-            except Exception:  # pylint: disable=broad-except
-                log.info(u'Cannot find course %s', course_id)
+            except Exception:
+                log.info('Cannot find course %s', course_id)
                 raise Http404
 
             # Allow only course team, instructors, and staff
@@ -731,7 +632,7 @@ class GitLogs(TemplateView):
                     CourseInstructorRole(course.id).has_user(request.user) or
                     CourseStaffRole(course.id).has_user(request.user)):
                 raise Http404
-            log.debug(u'course_id=%s', course_id)
+            log.debug('course_id=%s', course_id)
             cilset = CourseImportLog.objects.filter(
                 course_id=course_id
             ).order_by('-created')

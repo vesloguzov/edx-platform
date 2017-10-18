@@ -9,6 +9,7 @@ import logging
 from urlparse import urlparse
 
 from celery.signals import task_postrun
+import crum
 from django.conf import settings
 from django.test.client import RequestFactory
 
@@ -24,7 +25,8 @@ def clear_request_cache(**kwargs):  # pylint: disable=unused-argument
     Once a celery task completes, clear the request cache to
     prevent memory leaks.
     """
-    middleware.RequestCache.clear_request_cache()
+    if getattr(settings, 'CLEAR_REQUEST_CACHE_ON_TASK_COMPLETION', True):
+        middleware.RequestCache.clear_request_cache()
 
 
 def get_cache(name):
@@ -39,11 +41,23 @@ def get_cache(name):
     return middleware.RequestCache.get_request_cache(name)
 
 
+def clear_cache(name):
+    """
+    Clears the request cache named ``name``.
+
+    Arguments:
+        name (str): The name of the request cache to clear
+    """
+    return middleware.RequestCache.clear_request_cache(name)
+
+
 def get_request():
     """
     Return the current request.
+
+    Deprecated: Please use crum to retrieve current requests.
     """
-    return middleware.RequestCache.get_current_request()
+    return crum.get_current_request()
 
 
 def get_request_or_stub():
@@ -54,16 +68,11 @@ def get_request_or_stub():
     request that can be used to build an absolute URI.
 
     This is useful in cases where we need to pass in a request object
-    but don't have an active request (for example, in test cases).
+    but don't have an active request (for example, in tests, celery tasks, and XBlocks).
     """
-    request = get_request()
+    request = crum.get_current_request()
 
     if request is None:
-        log.warning(
-            "Could not retrieve the current request. "
-            "A stub request will be created instead using settings.SITE_NAME. "
-            "This should be used *only* in test cases, never in production!"
-        )
 
         # The settings SITE_NAME may contain a port number, so we need to
         # parse the full URL.

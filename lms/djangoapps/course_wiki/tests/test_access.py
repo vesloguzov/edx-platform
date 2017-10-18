@@ -4,16 +4,15 @@ Tests for wiki permissions
 
 from django.contrib.auth.models import Group
 from nose.plugins.attrib import attr
-from student.tests.factories import UserFactory
-from xmodule.modulestore.tests.factories import CourseFactory
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
-
-from courseware.tests.factories import InstructorFactory, StaffFactory
-
 from wiki.models import URLPath
-from course_wiki.views import get_or_create_root
-from course_wiki.utils import user_is_article_course_staff, course_wiki_slug
+
 from course_wiki import settings
+from course_wiki.utils import course_wiki_slug, user_is_article_course_staff
+from course_wiki.views import get_or_create_root
+from courseware.tests.factories import InstructorFactory, StaffFactory
+from student.tests.factories import UserFactory
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from xmodule.modulestore.tests.factories import CourseFactory
 
 
 class TestWikiAccessBase(ModuleStoreTestCase):
@@ -52,7 +51,7 @@ class TestWikiAccessBase(ModuleStoreTestCase):
         ]
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestWikiAccess(TestWikiAccessBase):
     """Test wiki access for course staff."""
     def setUp(self):
@@ -113,7 +112,7 @@ class TestWikiAccess(TestWikiAccessBase):
             self.assertFalse(user_is_article_course_staff(course_staff, self.wiki_310b.article))
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestWikiAccessForStudent(TestWikiAccessBase):
     """Test access for students."""
     def setUp(self):
@@ -129,7 +128,7 @@ class TestWikiAccessForStudent(TestWikiAccessBase):
             self.assertFalse(user_is_article_course_staff(self.student, page.article))
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestWikiAccessForNumericalCourseNumber(TestWikiAccessBase):
     """Test staff has access if course number is numerical and wiki slug has an underscore appended."""
     def setUp(self):
@@ -143,13 +142,13 @@ class TestWikiAccessForNumericalCourseNumber(TestWikiAccessBase):
         wiki_200_page_page = self.create_urlpath(wiki_200_page, 'Grandchild')
         self.wiki_200_pages = [wiki_200, wiki_200_page, wiki_200_page_page]
 
-    def test_course_staff_is_course_wiki_staff_for_numerical_course_number(self):  # pylint: disable=invalid-name
+    def test_course_staff_is_course_wiki_staff_for_numerical_course_number(self):
         for page in self.wiki_200_pages:
             for course_staff in self.course_200_staff:
                 self.assertTrue(user_is_article_course_staff(course_staff, page.article))
 
 
-@attr('shard_1')
+@attr(shard=1)
 class TestWikiAccessForOldFormatCourseStaffGroups(TestWikiAccessBase):
     """Test staff has access if course group has old format."""
     def setUp(self):

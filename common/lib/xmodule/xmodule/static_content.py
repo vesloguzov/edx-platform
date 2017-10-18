@@ -4,17 +4,17 @@ This module has utility functions for gathering up the static content
 that is defined by XModules and XModuleDescriptors (javascript and css)
 """
 
-import logging
-import hashlib
-import os
 import errno
+import hashlib
+import logging
+import os
 import sys
 from collections import defaultdict
+
 from docopt import docopt
 from path import Path as path
 
 from xmodule.x_module import XModuleDescriptor
-
 
 LOG = logging.getLogger(__name__)
 
@@ -173,7 +173,7 @@ def _write_files(output_root, contents, generated_suffix_map=None):
 
         # not_file is included to short-circuit this check, because
         # read_md5 depends on the file already existing
-        write_file = not_file or output_file.read_md5() != hashlib.md5(file_content).digest()  # pylint: disable=too-many-function-args
+        write_file = not_file or output_file.read_md5() != hashlib.md5(file_content).digest()
         if write_file:
             LOG.debug("Writing %s", output_file)
             output_file.write_bytes(file_content)

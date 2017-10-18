@@ -1,57 +1,79 @@
-import logging
 import datetime
 import decimal
+import json
+import logging
+
 import pytz
-from ipware.ip import get_ip
-from django.db.models import Q
+from config_models.decorators import require_config
 from django.conf import settings
-from django.contrib.auth.models import Group
-from django.shortcuts import redirect
-from django.http import (
-    HttpResponse, HttpResponseRedirect, HttpResponseNotFound,
-    HttpResponseBadRequest, HttpResponseForbidden, Http404
-)
-from django.utils.translation import ugettext as _
-from course_modes.models import CourseMode
-from util.json_request import JsonResponse
-from django.views.decorators.http import require_POST, require_http_methods
-from django.core.urlresolvers import reverse
-from django.views.decorators.csrf import csrf_exempt
-from util.bad_request_rate_limiter import BadRequestRateLimiter
-from util.date_utils import get_default_time_display
 from django.contrib.auth.decorators import login_required
-from microsite_configuration import microsite
-from edxmako.shortcuts import render_to_response
+from django.contrib.auth.models import Group
+from django.core.urlresolvers import reverse
+from django.db.models import Q
+from django.http import (
+    Http404,
+    HttpResponse,
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    HttpResponseNotFound,
+    HttpResponseRedirect
+)
+from django.shortcuts import redirect
+from django.utils.translation import ugettext as _
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods, require_POST
+from ipware.ip import get_ip
+from opaque_keys import InvalidKeyError
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from opaque_keys.edx.locator import CourseLocator
-from opaque_keys import InvalidKeyError
+
+from course_modes.models import CourseMode
 from courseware.courses import get_course_by_id
-from config_models.decorators import require_config
-from shoppingcart.reports import RefundReport, ItemizedPurchaseReport, UniversityRevenueShareReport, CertificateStatusReport
-from student.models import CourseEnrollment, EnrollmentClosedError, CourseFullError, \
-    AlreadyEnrolledError
-from embargo import api as embargo_api
+from edxmako.shortcuts import render_to_response
+from openedx.core.djangoapps.embargo import api as embargo_api
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
+from shoppingcart.reports import (
+    CertificateStatusReport,
+    ItemizedPurchaseReport,
+    RefundReport,
+    UniversityRevenueShareReport
+)
+from student.models import AlreadyEnrolledError, CourseEnrollment, CourseFullError, EnrollmentClosedError
+from util.bad_request_rate_limiter import BadRequestRateLimiter
+from util.date_utils import get_default_time_display
+from util.json_request import JsonResponse
+
+from .decorators import enforce_shopping_cart_enabled
 from .exceptions import (
-    ItemAlreadyInCartException, AlreadyEnrolledInCourseException,
-    CourseDoesNotExistException, ReportTypeDoesNotExistException,
-    MultipleCouponsNotAllowedException, InvalidCartItem,
-    ItemNotFoundInCartException, RedemptionCodeError
+    AlreadyEnrolledInCourseException,
+    CourseDoesNotExistException,
+    InvalidCartItem,
+    ItemAlreadyInCartException,
+    ItemNotFoundInCartException,
+    MultipleCouponsNotAllowedException,
+    RedemptionCodeError,
+    ReportTypeDoesNotExistException
 )
 from .models import (
-    Order, OrderTypes,
-    PaidCourseRegistration, OrderItem, Coupon,
-    CertificateItem, CouponRedemption, CourseRegistrationCode,
-    RegistrationCodeRedemption, CourseRegCodeItem,
-    Donation, DonationConfiguration
+    CertificateItem,
+    Coupon,
+    CouponRedemption,
+    CourseRegCodeItem,
+    CourseRegistrationCode,
+    Donation,
+    DonationConfiguration,
+    Order,
+    OrderItem,
+    OrderTypes,
+    PaidCourseRegistration,
+    RegistrationCodeRedemption
 )
 from .processors import (
-    process_postpay_callback, render_purchase_form_html,
-    get_signed_purchase_params, get_purchase_endpoint
+    get_purchase_endpoint,
+    get_signed_purchase_params,
+    process_postpay_callback,
+    render_purchase_form_html
 )
-
-import json
-from .decorators import enforce_shopping_cart_enabled
-
 
 log = logging.getLogger("shoppingcart")
 AUDIT_LOG = logging.getLogger("audit")
@@ -169,7 +191,7 @@ def show_cart(request):
     cart = Order.get_cart_for_user(request.user)
     is_any_course_expired, expired_cart_items, expired_cart_item_names, valid_cart_item_tuples = \
         verify_for_closed_enrollment(request.user, cart)
-    site_name = microsite.get_value('SITE_NAME', settings.SITE_NAME)
+    site_name = configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME)
 
     if is_any_course_expired:
         for expired_item in expired_cart_items:
@@ -190,6 +212,7 @@ def show_cart(request):
         'form_html': form_html,
         'currency_symbol': settings.PAID_COURSE_REGISTRATION_CURRENCY[1],
         'currency': settings.PAID_COURSE_REGISTRATION_CURRENCY[0],
+        'enable_bulk_purchase': configuration_helpers.get_value('ENABLE_SHOPPING_CART_BULK_PURCHASE', True)
     }
     return render_to_response("shoppingcart/shopping_cart.html", context)
 
@@ -217,7 +240,7 @@ def remove_item(request):
     """
     This will remove an item from the user cart and also delete the corresponding coupon codes redemption.
     """
-    item_id = request.REQUEST.get('id', '-1')
+    item_id = request.GET.get('id') or request.POST.get('id') or '-1'
 
     items = OrderItem.objects.filter(id=item_id, status='cart').select_subclasses()
 
@@ -293,7 +316,7 @@ def get_reg_code_validity(registration_code, request, limiter):
         reg_code_already_redeemed = RegistrationCodeRedemption.is_registration_code_redeemed(registration_code)
     if not reg_code_is_valid:
         # tick the rate limiter counter
-        AUDIT_LOG.info(u"Redemption of a invalid RegistrationCode %s", registration_code)
+        AUDIT_LOG.info("Redemption of a invalid RegistrationCode %s", registration_code)
         limiter.tick_bad_request_counter(request)
         raise Http404()
 
@@ -309,7 +332,7 @@ def register_code_redemption(request, registration_code):
     """
 
     # Add some rate limiting here by re-using the RateLimitMixin as a helper class
-    site_name = microsite.get_value('SITE_NAME', settings.SITE_NAME)
+    site_name = configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME)
     limiter = BadRequestRateLimiter()
     if limiter.is_rate_limit_exceeded(request):
         AUDIT_LOG.warning("Rate limit exceeded in registration code redemption.")
@@ -319,7 +342,7 @@ def register_code_redemption(request, registration_code):
     if request.method == "GET":
         reg_code_is_valid, reg_code_already_redeemed, course_registration = get_reg_code_validity(registration_code,
                                                                                                   request, limiter)
-        course = get_course_by_id(getattr(course_registration, 'course_id'), depth=0)
+        course = get_course_by_id(course_registration.course_id, depth=0)
 
         # Restrict the user from enrolling based on country access rules
         embargo_redirect = embargo_api.redirect_if_blocked(
@@ -344,7 +367,7 @@ def register_code_redemption(request, registration_code):
             request,
             limiter
         )
-        course = get_course_by_id(getattr(course_registration, 'course_id'), depth=0)
+        course = get_course_by_id(course_registration.course_id, depth=0)
 
         # Restrict the user from enrolling based on country access rules
         embargo_redirect = embargo_api.redirect_if_blocked(
@@ -703,7 +726,7 @@ def billing_details(request):
 
     cart = Order.get_cart_for_user(request.user)
     cart_items = cart.orderitem_set.all().select_subclasses()
-    if getattr(cart, 'order_type') != OrderTypes.BUSINESS:
+    if cart.order_type != OrderTypes.BUSINESS:
         raise Http404('Page not found!')
 
     if request.method == "GET":
@@ -718,7 +741,7 @@ def billing_details(request):
             'form_html': form_html,
             'currency_symbol': settings.PAID_COURSE_REGISTRATION_CURRENCY[1],
             'currency': settings.PAID_COURSE_REGISTRATION_CURRENCY[0],
-            'site_name': microsite.get_value('SITE_NAME', settings.SITE_NAME),
+            'site_name': configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME),
         }
         return render_to_response("shoppingcart/billing_details.html", context)
     elif request.method == "POST":
@@ -848,7 +871,7 @@ def _show_receipt_json(order):
                 'unit_cost': item.unit_cost,
                 'line_cost': item.line_cost,
                 'line_desc': item.line_desc,
-                'course_key': unicode(getattr(item, 'course_id'))
+                'course_key': unicode(item.course_id)
             }
             for item in OrderItem.objects.filter(order=order).select_subclasses()
         ]
@@ -871,7 +894,7 @@ def _show_receipt_html(request, order):
     shoppingcart_items = []
     course_names_list = []
     for order_item in order_items:
-        course_key = getattr(order_item, 'course_id')
+        course_key = order_item.course_id
         if course_key:
             course = get_course_by_id(course_key, depth=0)
             shoppingcart_items.append((order_item, course))
@@ -881,12 +904,12 @@ def _show_receipt_html(request, order):
     any_refunds = any(i.status == "refunded" for i in order_items)
     receipt_template = 'shoppingcart/receipt.html'
     __, instructions = order.generate_receipt_instructions()
-    order_type = getattr(order, 'order_type')
+    order_type = order.order_type
 
     recipient_list = []
     total_registration_codes = None
     reg_code_info_list = []
-    recipient_list.append(getattr(order.user, 'email'))
+    recipient_list.append(order.user.email)
     if order_type == OrderTypes.BUSINESS:
         if order.company_contact_email:
             recipient_list.append(order.company_contact_email)
@@ -913,7 +936,7 @@ def _show_receipt_html(request, order):
         'shoppingcart_items': shoppingcart_items,
         'any_refunds': any_refunds,
         'instructions': instructions,
-        'site_name': microsite.get_value('SITE_NAME', settings.SITE_NAME),
+        'site_name': configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME),
         'order_type': order_type,
         'appended_course_names': appended_course_names,
         'appended_recipient_emails': appended_recipient_emails,

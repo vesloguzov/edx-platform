@@ -4,17 +4,17 @@ import ddt
 from django.conf import settings
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
+from opaque_keys.edx.locator import CourseLocator
 
-from openedx.core.djangoapps.course_groups.models import CourseUserGroup
-from django_comment_common.models import Role, Permission
-from lang_pref import LANGUAGE_KEY
+from django_comment_common.models import Permission, Role
 from notification_prefs import NOTIFICATION_PREF_KEY
 from notifier_api.views import NotifierUsersViewSet
-from opaque_keys.edx.locator import CourseLocator
-from student.models import CourseEnrollment
-from student.tests.factories import UserFactory, CourseEnrollmentFactory
+from openedx.core.djangoapps.course_groups.tests.helpers import CohortFactory
+from openedx.core.djangoapps.lang_pref import LANGUAGE_KEY
 from openedx.core.djangoapps.user_api.models import UserPreference
 from openedx.core.djangoapps.user_api.tests.factories import UserPreferenceFactory
+from student.models import CourseEnrollment
+from student.tests.factories import CourseEnrollmentFactory, UserFactory
 from util.testing import UrlResetMixin
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
@@ -46,12 +46,11 @@ class NotifierUsersViewSetTest(UrlResetMixin, ModuleStoreTestCase):
         self.courses.append(course)
         CourseEnrollmentFactory(user=self.user, course_id=course.id)
         if is_user_cohorted:
-            cohort = CourseUserGroup.objects.create(
+            cohort = CohortFactory.create(
                 name="Test Cohort",
                 course_id=course.id,
-                group_type=CourseUserGroup.COHORT
+                users=[self.user]
             )
-            cohort.users.add(self.user)
             self.cohorts.append(cohort)
         if is_moderator:
             moderator_perm, _ = Permission.objects.get_or_create(name="see_all_cohorts")

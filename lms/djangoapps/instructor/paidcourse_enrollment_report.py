@@ -2,15 +2,22 @@
 Defines concrete class for cybersource  Enrollment Report.
 
 """
-from courseware.access import has_access
 import collections
+
 from django.conf import settings
 from django.utils.translation import ugettext as _
+
+from courseware.access import has_access
 from courseware.courses import get_course_by_id
-from instructor.enrollment_report import BaseAbstractEnrollmentReportProvider
-from microsite_configuration import microsite
-from shoppingcart.models import RegistrationCodeRedemption, PaidCourseRegistration, CouponRedemption, OrderItem, \
-    InvoiceTransaction
+from lms.djangoapps.instructor.enrollment_report import BaseAbstractEnrollmentReportProvider
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
+from shoppingcart.models import (
+    CouponRedemption,
+    InvoiceTransaction,
+    OrderItem,
+    PaidCourseRegistration,
+    RegistrationCodeRedemption
+)
 from student.models import CourseEnrollment, ManualEnrollmentAudit
 
 
@@ -25,10 +32,11 @@ class PaidCourseEnrollmentReportProvider(BaseAbstractEnrollmentReportProvider):
         """
         course = get_course_by_id(course_id, depth=0)
         is_course_staff = bool(has_access(user, 'staff', course))
+        manual_enrollment_reason = 'N/A'
 
         # check the user enrollment role
         if user.is_staff:
-            platform_name = microsite.get_value('platform_name', settings.PLATFORM_NAME)
+            platform_name = configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME)
             enrollment_role = _('{platform_name} Staff').format(platform_name=platform_name)
         elif is_course_staff:
             enrollment_role = _('Course Staff')
@@ -59,8 +67,10 @@ class PaidCourseEnrollmentReportProvider(BaseAbstractEnrollmentReportProvider):
                 manual_enrollment = ManualEnrollmentAudit.get_manual_enrollment(course_enrollment)
                 if manual_enrollment is not None:
                     enrollment_source = _(
-                        'manually enrolled by {username} - reason: {reason}'
-                    ).format(username=manual_enrollment.enrolled_by.username, reason=manual_enrollment.reason)
+                        'manually enrolled by username: {username}'
+                    ).format(username=manual_enrollment.enrolled_by.username)
+
+                    manual_enrollment_reason = manual_enrollment.reason
                 else:
                     enrollment_source = _('Manually Enrolled')
 
@@ -71,6 +81,7 @@ class PaidCourseEnrollmentReportProvider(BaseAbstractEnrollmentReportProvider):
         course_enrollment_data['Enrollment Date'] = enrollment_date
         course_enrollment_data['Currently Enrolled'] = currently_enrolled
         course_enrollment_data['Enrollment Source'] = enrollment_source
+        course_enrollment_data['Manual (Un)Enrollment Reason'] = manual_enrollment_reason
         course_enrollment_data['Enrollment Role'] = enrollment_role
         return course_enrollment_data
 
@@ -107,12 +118,12 @@ class PaidCourseEnrollmentReportProvider(BaseAbstractEnrollmentReportProvider):
             if registration_code_redemption is not None:
                 registration_code = registration_code_redemption.registration_code
                 registration_code_used = registration_code.code
-                if getattr(registration_code, 'invoice_item_id'):
+                if registration_code.invoice_item_id:
                     list_price, payment_amount, payment_status, transaction_reference_number =\
                         self._get_invoice_data(registration_code_redemption)
                     coupon_codes_used = 'N/A'
 
-                elif getattr(registration_code_redemption.registration_code, 'order_id'):
+                elif registration_code_redemption.registration_code.order_id:
                     list_price, payment_amount, coupon_codes_used, payment_status, transaction_reference_number = \
                         self._get_order_data(registration_code_redemption, course_id)
 
@@ -164,7 +175,7 @@ class PaidCourseEnrollmentReportProvider(BaseAbstractEnrollmentReportProvider):
         Returns the Invoice data
         """
         registration_code = registration_code_redemption.registration_code
-        list_price = getattr(registration_code.invoice_item, 'unit_price')
+        list_price = registration_code.invoice_item.unit_price
         total_amount = registration_code_redemption.registration_code.invoice.total_amount
         qty = registration_code_redemption.registration_code.invoice_item.qty
         payment_amount = total_amount / qty

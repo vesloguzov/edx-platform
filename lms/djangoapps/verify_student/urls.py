@@ -5,7 +5,6 @@ from django.conf.urls import patterns, url
 
 from lms.djangoapps.verify_student import views
 
-
 urlpatterns = patterns(
     '',
 
@@ -18,6 +17,16 @@ urlpatterns = patterns(
         # decorated with `classonlymethod` instead of `classmethod`.
         views.PayAndVerifyView.as_view(),
         name="verify_student_start_flow",
+        kwargs={
+            'message': views.PayAndVerifyView.FIRST_TIME_VERIFY_MSG
+        }
+    ),
+
+    # This is for A/B testing.
+    url(
+        r'^begin-flow/{course}/$'.format(course=settings.COURSE_ID_PATTERN),
+        views.PayAndVerifyView.as_view(),
+        name="verify_student_begin_flow",
         kwargs={
             'message': views.PayAndVerifyView.FIRST_TIME_VERIFY_MSG
         }
@@ -94,18 +103,6 @@ urlpatterns = patterns(
         r'^reverify$',
         views.ReverifyView.as_view(),
         name="verify_student_reverify"
-    ),
-
-    # Endpoint for in-course reverification
-    # Users are sent to this end-point from within courseware
-    # to re-verify their identities by re-submitting face photos.
-    url(
-        r'^reverify/{course_id}/{usage_id}/$'.format(
-            course_id=settings.COURSE_ID_PATTERN,
-            usage_id=settings.USAGE_ID_PATTERN
-        ),
-        views.InCourseReverifyView.as_view(),
-        name="verify_student_incourse_reverify"
     ),
 )
 

@@ -5,118 +5,116 @@ JSON views which the instructor dashboard requests.
 
 Many of these GETs may become PUTs in the future.
 """
-import StringIO
+import csv
+import decimal
 import json
 import logging
+import random
 import re
+import string
+import StringIO
 import time
-import requests
+
+import unicodecsv
 from django.conf import settings
-from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
-from django.views.decorators.http import require_POST, require_http_methods
-from django.views.decorators.cache import cache_control
-from django.core.exceptions import ValidationError, PermissionDenied
+from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.mail.message import EmailMessage
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.db import IntegrityError, transaction
 from django.core.urlresolvers import reverse
 from django.core.validators import validate_email
-from django.utils.translation import ugettext as _
+from django.db import IntegrityError, transaction
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound
-from django.utils.html import strip_tags
 from django.shortcuts import redirect
-from util.db import outer_atomic
-import string  # pylint: disable=deprecated-module
-import random
-import unicodecsv
-import urllib
-import decimal
-from student import auth
-from student.roles import GlobalStaff, CourseSalesAdminRole, CourseFinanceAdminRole
-from util.file import (
-    store_uploaded_file, course_and_time_based_filename_generator,
-    FileValidationException, UniversalNewlineIterator
-)
-from util.json_request import JsonResponse, JsonResponseBadRequest
-from instructor.views.instructor_task_helpers import extract_email_features, extract_task_features
-
-from microsite_configuration import microsite
-
-from courseware.access import has_access
-from courseware.courses import get_course_with_access, get_course_by_id
-from django.contrib.auth.models import User
-from django_comment_client.utils import has_forum_access
-from django_comment_common.models import (
-    Role,
-    FORUM_ROLE_ADMINISTRATOR,
-    FORUM_ROLE_MODERATOR,
-    FORUM_ROLE_COMMUNITY_TA,
-)
-from edxmako.shortcuts import render_to_response, render_to_string
-from courseware.models import StudentModule
-from shoppingcart.models import (
-    Coupon,
-    CourseRegistrationCode,
-    RegistrationCodeRedemption,
-    Invoice,
-    CourseMode,
-    CourseRegistrationCodeInvoiceItem,
-)
-from student.models import (
-    CourseEnrollment, unique_id_for_user, anonymous_id_for_user,
-    UserProfile, Registration, EntranceExamConfiguration,
-    ManualEnrollmentAudit, UNENROLLED_TO_ALLOWEDTOENROLL, ALLOWEDTOENROLL_TO_ENROLLED,
-    ENROLLED_TO_ENROLLED, ENROLLED_TO_UNENROLLED, UNENROLLED_TO_ENROLLED,
-    UNENROLLED_TO_UNENROLLED, ALLOWEDTOENROLL_TO_UNENROLLED, DEFAULT_TRANSITION_STATE
-)
-import instructor_task.api
-from instructor_task.api_helper import AlreadyRunningError
-from instructor_task.models import ReportStore
-import instructor.enrollment as enrollment
-from instructor.enrollment import (
-    get_user_email_language,
-    enroll_email,
-    send_mail_to_student,
-    get_email_params,
-    send_beta_role_email,
-    unenroll_email,
-)
-from instructor.access import list_with_level, allow_access, revoke_access, ROLES, update_forum_role
-from instructor.offline_gradecalc import student_grades
-import instructor_analytics.basic
-import instructor_analytics.distributions
-import instructor_analytics.csvs
-import csv
-from openedx.core.djangoapps.user_api.preferences.api import get_user_preference, set_user_preference
-from instructor.views import INVOICE_KEY
-
-from submissions import api as sub_api  # installed from the edx-submissions repository
-
-from certificates import api as certs_api
-from certificates.models import CertificateWhitelist, GeneratedCertificate
-
-from bulk_email.models import CourseEmail
-from student.models import get_user_by_username_or_email
-
-from .tools import (
-    dump_student_extensions,
-    dump_module_extensions,
-    find_unit,
-    get_student_from_identifier,
-    require_student_from_identifier,
-    get_student_from_email_or_nickname,
-    require_student_from_email_or_nickname,
-    handle_dashboard_error,
-    parse_datetime,
-    set_due_date_extension,
-    strip_if_string,
-    bulk_email_is_enabled_for_course,
-    add_block_ids,
-)
+from django.utils.html import strip_tags
+from django.utils.translation import ugettext as _
+from django.views.decorators.cache import cache_control
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods, require_POST
+from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey, UsageKey
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
-from opaque_keys import InvalidKeyError
+
+import instructor_analytics.basic
+import instructor_analytics.csvs
+import instructor_analytics.distributions
+import lms.djangoapps.instructor.enrollment as enrollment
+import lms.djangoapps.instructor_task.api
+from bulk_email.models import BulkEmailFlag, CourseEmail
+from certificates import api as certs_api
+from certificates.models import CertificateInvalidation, CertificateStatuses, CertificateWhitelist, GeneratedCertificate
+from courseware.access import has_access
+from courseware.courses import get_course_by_id, get_course_with_access
+from courseware.models import StudentModule
+from django_comment_client.utils import has_forum_access
+from django_comment_common.models import FORUM_ROLE_ADMINISTRATOR, FORUM_ROLE_COMMUNITY_TA, FORUM_ROLE_MODERATOR, Role
+from edxmako.shortcuts import render_to_string
+from lms.djangoapps.instructor.access import ROLES, allow_access, list_with_level, revoke_access, update_forum_role
+from lms.djangoapps.instructor.enrollment import (
+    enroll_email,
+    get_email_params,
+    get_user_email_language,
+    send_beta_role_email,
+    send_mail_to_student,
+    unenroll_email
+)
+from lms.djangoapps.instructor.views import INVOICE_KEY
+from lms.djangoapps.instructor.views.instructor_task_helpers import extract_email_features, extract_task_features
+from lms.djangoapps.instructor_task.api_helper import AlreadyRunningError
+from lms.djangoapps.instructor_task.models import ReportStore
+from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from openedx.core.djangoapps.course_groups.cohorts import is_course_cohorted
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
+from openedx.core.djangoapps.user_api.preferences.api import get_user_preference, set_user_preference
+from openedx.core.djangolib.markup import HTML, Text
+from shoppingcart.models import (
+    Coupon,
+    CourseMode,
+    CourseRegistrationCode,
+    CourseRegistrationCodeInvoiceItem,
+    Invoice,
+    RegistrationCodeRedemption
+)
+from student import auth
+from student.models import (
+    ALLOWEDTOENROLL_TO_ENROLLED,
+    ALLOWEDTOENROLL_TO_UNENROLLED,
+    DEFAULT_TRANSITION_STATE,
+    ENROLLED_TO_ENROLLED,
+    ENROLLED_TO_UNENROLLED,
+    UNENROLLED_TO_ALLOWEDTOENROLL,
+    UNENROLLED_TO_ENROLLED,
+    UNENROLLED_TO_UNENROLLED,
+    CourseEnrollment,
+    EntranceExamConfiguration,
+    ManualEnrollmentAudit,
+    Registration,
+    UserProfile,
+    anonymous_id_for_user,
+    get_user_by_username_or_email,
+    unique_id_for_user
+)
+from student.roles import CourseFinanceAdminRole, CourseSalesAdminRole
+from submissions import api as sub_api  # installed from the edx-submissions repository
+from util.file import (
+    FileValidationException,
+    UniversalNewlineIterator,
+    course_and_time_based_filename_generator,
+    store_uploaded_file
+)
+from util.json_request import JsonResponse, JsonResponseBadRequest
+from util.views import require_global_staff
+
+from .tools import (
+    dump_module_extensions,
+    dump_student_extensions,
+    find_unit,
+    get_student_from_identifier,
+    handle_dashboard_error,
+    parse_datetime,
+    require_student_from_identifier,
+    set_due_date_extension,
+    strip_if_string
+)
 
 log = logging.getLogger(__name__)
 
@@ -126,12 +124,6 @@ def common_exceptions_400(func):
     Catches common exceptions and renders matching 400 errors.
     (decorator without arguments)
     """
-    def bad_request(message, use_json):
-        if use_json:
-            return JsonResponse({"error": message}, 400)
-        else:
-            return HttpResponseBadRequest(message)
-
     def wrapped(request, *args, **kwargs):  # pylint: disable=missing-docstring
         use_json = (request.is_ajax() or
                     request.META.get("HTTP_ACCEPT", "").startswith("application/json"))
@@ -139,52 +131,17 @@ def common_exceptions_400(func):
             return func(request, *args, **kwargs)
         except User.DoesNotExist:
             message = _("User does not exist.")
-            return bad_request(message, use_json)
-        except User.MultipleObjectsReturned:
-            message = _('Multiple users found, use email instead')
-            return bad_request(message, use_json)
+            if use_json:
+                return JsonResponse({"error": message}, 400)
+            else:
+                return HttpResponseBadRequest(message)
         except AlreadyRunningError:
             message = _("Task is already running.")
-            return bad_request(message, use_json)
-    return wrapped
-
-
-def require_query_params(*args, **kwargs):
-    """
-    Checks for required paremters or renders a 400 error.
-    (decorator with arguments)
-
-    `args` is a *list of required GET parameter names.
-    `kwargs` is a **dict of required GET parameter names
-        to string explanations of the parameter
-    """
-    required_params = []
-    required_params += [(arg, None) for arg in args]
-    required_params += [(key, kwargs[key]) for key in kwargs]
-    # required_params = e.g. [('action', 'enroll or unenroll'), ['emails', None]]
-
-    def decorator(func):  # pylint: disable=missing-docstring
-        def wrapped(*args, **kwargs):  # pylint: disable=missing-docstring
-            request = args[0]
-
-            error_response_data = {
-                'error': 'Missing required query parameter(s)',
-                'parameters': [],
-                'info': {},
-            }
-
-            for (param, extra) in required_params:
-                default = object()
-                if request.GET.get(param, default) == default:
-                    error_response_data['parameters'].append(param)
-                    error_response_data['info'][param] = extra
-
-            if len(error_response_data['parameters']) > 0:
-                return JsonResponse(error_response_data, status=400)
+            if use_json:
+                return JsonResponse({"error": message}, 400)
             else:
-                return func(*args, **kwargs)
-        return wrapped
-    return decorator
+                return HttpResponseBadRequest(message)
+    return wrapped
 
 
 def require_post_params(*args, **kwargs):
@@ -192,8 +149,9 @@ def require_post_params(*args, **kwargs):
     Checks for required parameters or renders a 400 error.
     (decorator with arguments)
 
-    Functions like 'require_query_params', but checks for
-    POST parameters rather than GET parameters.
+    `args` is a *list of required POST parameter names.
+    `kwargs` is a **dict of required POST parameter names
+        to string explanations of the parameter
     """
     required_params = []
     required_params += [(arg, None) for arg in args]
@@ -253,20 +211,6 @@ def require_level(level):
     return decorator
 
 
-def require_global_staff(func):
-    """View decorator that requires that the user have global staff permissions. """
-    def wrapped(request, *args, **kwargs):  # pylint: disable=missing-docstring
-        if GlobalStaff().has_user(request.user):
-            return func(request, *args, **kwargs)
-        else:
-            return HttpResponseForbidden(
-                u"Must be {platform_name} staff to perform this action.".format(
-                    platform_name=settings.PLATFORM_NAME
-                )
-            )
-    return wrapped
-
-
 def require_sales_admin(func):
     """
     Decorator for checking sales administrator access before executing an HTTP endpoint. This decorator
@@ -323,6 +267,7 @@ NAME_INDEX = 2
 COUNTRY_INDEX = 3
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -345,13 +290,23 @@ def register_and_enroll_students(request, course_id):  # pylint: disable=too-man
      The failure will be messaged in a response in the browser.
     """
 
-    if not microsite.get_value('ALLOW_AUTOMATED_SIGNUPS', settings.FEATURES.get('ALLOW_AUTOMATED_SIGNUPS', False)):
+    if not configuration_helpers.get_value(
+            'ALLOW_AUTOMATED_SIGNUPS',
+            settings.FEATURES.get('ALLOW_AUTOMATED_SIGNUPS', False),
+    ):
         return HttpResponseForbidden()
 
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     warnings = []
     row_errors = []
     general_errors = []
+
+    # for white labels we use 'shopping cart' which uses CourseMode.DEFAULT_SHOPPINGCART_MODE_SLUG as
+    # course mode for creating course enrollments.
+    if CourseMode.is_white_label(course_id):
+        course_mode = CourseMode.DEFAULT_SHOPPINGCART_MODE_SLUG
+    else:
+        course_mode = None
 
     if 'students_list' in request.FILES:
         students = []
@@ -426,17 +381,16 @@ def register_and_enroll_students(request, course_id):  # pylint: disable=too-man
                             email
                         )
 
-                    # make sure user is enrolled in course
+                    # enroll a user if it is not already enrolled.
                     if not CourseEnrollment.is_enrolled(user, course_id):
-                        enrollment_obj = CourseEnrollment.enroll(user, course_id)
-                        reason = 'Enrolling via csv upload'
-                        ManualEnrollmentAudit.create_manual_enrollment_audit(
-                            request.user, email, UNENROLLED_TO_ENROLLED, reason, enrollment_obj
-                        )
-                        log.info(
-                            u'user %s enrolled in the course %s',
-                            username,
-                            course.id,
+                        # Enroll user to the course and add manual enrollment audit trail
+                        create_manual_course_enrollment(
+                            user=user,
+                            course_id=course_id,
+                            mode=course_mode,
+                            enrolled_by=request.user,
+                            reason='Enrolling via csv upload',
+                            state_transition=UNENROLLED_TO_ENROLLED,
                         )
                         enroll_email(course_id=course_id, student_email=email, auto_enroll=True, email_students=True, email_params=email_params)
                 else:
@@ -444,29 +398,10 @@ def register_and_enroll_students(request, course_id):  # pylint: disable=too-man
                     # If username already exists in the database, then create_and_enroll_user
                     # will raise an IntegrityError exception.
                     password = generate_unique_password(generated_passwords)
-
-                    try:
-                        with transaction.atomic():
-                            enrollment_obj = create_and_enroll_user(email, username, name, country, password, course_id)
-                            reason = 'Enrolling via csv upload'
-                            ManualEnrollmentAudit.create_manual_enrollment_audit(
-                                request.user, email, UNENROLLED_TO_ENROLLED, reason, enrollment_obj
-                            )
-                    except IntegrityError:
-                        row_errors.append({
-                            'username': username, 'email': email, 'response': _('Username {user} already exists.').format(user=username)})
-                    except Exception as ex:
-                        log.exception(type(ex).__name__)
-                        row_errors.append({
-                            'username': username, 'email': email, 'response': type(ex).__name__})
-                    else:
-                        # It's a new user, an email will be sent to each newly created user.
-                        email_params['message'] = 'account_creation_and_enrollment'
-                        email_params['email_address'] = email
-                        email_params['password'] = password
-                        email_params['platform_name'] = microsite.get_value('platform_name', settings.PLATFORM_NAME)
-                        send_mail_to_student(email, email_params)
-                        log.info(u'email sent to new created user at %s', email)
+                    errors = create_and_enroll_user(
+                        email, username, name, country, password, course_id, course_mode, request.user, email_params
+                    )
+                    row_errors.extend(errors)
 
     else:
         general_errors.append({
@@ -507,9 +442,18 @@ def generate_unique_password(generated_passwords, password_length=12):
     return password
 
 
-def create_and_enroll_user(email, username, name, country, password, course_id):
-    """ Creates a user and enroll him/her in the course"""
+def create_user_and_user_profile(email, username, name, country, password):
+    """
+    Create a new user, add a new Registration instance for letting user verify its identity and create a user profile.
 
+    :param email: user's email address
+    :param username: user's username
+    :param name: user's name
+    :param country: user's country
+    :param password: user's password
+
+    :return: User instance of the new user.
+    """
     user = User.objects.create_user(username, email, password)
     reg = Registration()
     reg.register(user)
@@ -519,10 +463,105 @@ def create_and_enroll_user(email, username, name, country, password, course_id):
     profile.country = country
     profile.save()
 
-    # try to enroll the user in this course
-    return CourseEnrollment.enroll(user, course_id)
+    return user
 
 
+def create_manual_course_enrollment(user, course_id, mode, enrolled_by, reason, state_transition):
+    """
+    Create course enrollment for the given student and create manual enrollment audit trail.
+
+    :param user: User who is to enroll in course
+    :param course_id: course identifier of the course in which to enroll the user.
+    :param mode: mode for user enrollment, e.g. 'honor', 'audit' etc.
+    :param enrolled_by: User who made the manual enrollment entry (usually instructor or support)
+    :param reason: Reason behind manual enrollment
+    :param state_transition: state transition denoting whether student enrolled from un-enrolled,
+            un-enrolled from enrolled etc.
+    :return CourseEnrollment instance.
+    """
+    enrollment_obj = CourseEnrollment.enroll(user, course_id, mode=mode)
+    ManualEnrollmentAudit.create_manual_enrollment_audit(
+        enrolled_by, user.email, state_transition, reason, enrollment_obj
+    )
+
+    log.info(u'user %s enrolled in the course %s', user.username, course_id)
+    return enrollment_obj
+
+
+def create_and_enroll_user(email, username, name, country, password, course_id, course_mode, enrolled_by, email_params):
+    """
+    Create a new user and enroll him/her to the given course, return list of errors in the following format
+        Error format:
+            each error is key-value pait dict with following key-value pairs.
+            1. username: username of the user to enroll
+            1. email: email of the user to enroll
+            1. response: readable error message
+
+    :param email: user's email address
+    :param username: user's username
+    :param name: user's name
+    :param country: user's country
+    :param password: user's password
+    :param course_id: course identifier of the course in which to enroll the user.
+    :param course_mode: mode for user enrollment, e.g. 'honor', 'audit' etc.
+    :param enrolled_by: User who made the manual enrollment entry (usually instructor or support)
+    :param email_params: information to send to the user via email
+
+    :return: list of errors
+    """
+    errors = list()
+    try:
+        with transaction.atomic():
+            # Create a new user
+            user = create_user_and_user_profile(email, username, name, country, password)
+
+            # Enroll user to the course and add manual enrollment audit trail
+            create_manual_course_enrollment(
+                user=user,
+                course_id=course_id,
+                mode=course_mode,
+                enrolled_by=enrolled_by,
+                reason='Enrolling via csv upload',
+                state_transition=UNENROLLED_TO_ENROLLED,
+            )
+    except IntegrityError:
+        errors.append({
+            'username': username, 'email': email, 'response': _('Username {user} already exists.').format(user=username)
+        })
+    except Exception as ex:  # pylint: disable=broad-except
+        log.exception(type(ex).__name__)
+        errors.append({
+            'username': username, 'email': email, 'response': type(ex).__name__,
+        })
+    else:
+        try:
+            # It's a new user, an email will be sent to each newly created user.
+            email_params.update({
+                'message': 'account_creation_and_enrollment',
+                'email_address': email,
+                'password': password,
+                'platform_name': configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME),
+            })
+            send_mail_to_student(email, email_params)
+        except Exception as ex:  # pylint: disable=broad-except
+            log.exception(
+                "Exception '{exception}' raised while sending email to new user.".format(exception=type(ex).__name__)
+            )
+            errors.append({
+                'username': username,
+                'email': email,
+                'response':
+                    _("Error '{error}' while sending email to new user (user email={email}). "
+                      "Without the email student would not be able to login. "
+                      "Please contact support for further information.").format(error=type(ex).__name__, email=email),
+            })
+        else:
+            log.info(u'email sent to new created user at %s', email)
+
+    return errors
+
+
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -567,9 +606,9 @@ def students_update_enrollment(request, course_id):
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     action = request.POST.get('action')
     identifiers_raw = request.POST.get('identifiers')
-    identifiers = _split_input_list_with_nicknames(identifiers_raw)
-    auto_enroll = request.POST.get('auto_enroll') in ['true', 'True', True]
-    email_students = request.POST.get('email_students') in ['true', 'True', True]
+    identifiers = _split_input_list(identifiers_raw)
+    auto_enroll = _get_boolean_param(request, 'auto_enroll')
+    email_students = _get_boolean_param(request, 'email_students')
     is_white_label = CourseMode.is_white_label(course_id)
     reason = request.POST.get('reason')
     if is_white_label:
@@ -595,13 +634,7 @@ def students_update_enrollment(request, course_id):
         email = None
         language = None
         try:
-            user = get_student_from_email_or_nickname(identifier)
-        except User.MultipleObjectsReturned:
-            results.append({
-                'identifier': identifier,
-                'nonuniqueNickname': True,
-            })
-            continue
+            user = get_student_from_identifier(identifier)
         except User.DoesNotExist:
             email = identifier
         else:
@@ -642,6 +675,7 @@ def students_update_enrollment(request, course_id):
                 )
                 before_enrollment = before.to_dict()['enrollment']
                 before_allowed = before.to_dict()['allowed']
+                enrollment_obj = CourseEnrollment.get_enrollment(user, course_id)
 
                 if before_enrollment:
                     state_transition = ENROLLED_TO_UNENROLLED
@@ -653,7 +687,7 @@ def students_update_enrollment(request, course_id):
 
             else:
                 return HttpResponseBadRequest(strip_tags(
-                    u"Unrecognized action '{}'".format(action)
+                    "Unrecognized action '{}'".format(action)
                 ))
 
         except ValidationError:
@@ -692,6 +726,7 @@ def students_update_enrollment(request, course_id):
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('instructor')
@@ -712,9 +747,9 @@ def bulk_beta_modify_access(request, course_id):
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     action = request.POST.get('action')
     identifiers_raw = request.POST.get('identifiers')
-    identifiers = _split_input_list_with_nicknames(identifiers_raw)
-    email_students = request.POST.get('email_students') in ['true', 'True', True]
-    auto_enroll = request.POST.get('auto_enroll') in ['true', 'True', True]
+    identifiers = _split_input_list(identifiers_raw)
+    email_students = _get_boolean_param(request, 'email_students')
+    auto_enroll = _get_boolean_param(request, 'auto_enroll')
     results = []
     rolename = 'beta'
     course = get_course_by_id(course_id)
@@ -727,7 +762,9 @@ def bulk_beta_modify_access(request, course_id):
     for identifier in identifiers:
         try:
             error = False
-            user = get_student_from_email_or_nickname(identifier)
+            user_does_not_exist = False
+            user = get_student_from_identifier(identifier)
+            user_active = user.is_active
 
             if action == 'add':
                 allow_access(course, user, rolename)
@@ -735,13 +772,12 @@ def bulk_beta_modify_access(request, course_id):
                 revoke_access(course, user, rolename)
             else:
                 return HttpResponseBadRequest(strip_tags(
-                    u"Unrecognized action '{}'".format(action)
+                    "Unrecognized action '{}'".format(action)
                 ))
         except User.DoesNotExist:
-            error = 'userDoesNotExist'
-        except User.MultipleObjectsReturned:
-            error = 'nonuniqueNickname'
-
+            error = True
+            user_does_not_exist = True
+            user_active = None
         # catch and log any unexpected exceptions
         # so that one error doesn't cause a 500.
         except Exception as exc:  # pylint: disable=broad-except
@@ -762,9 +798,9 @@ def bulk_beta_modify_access(request, course_id):
             # Tabulate the action result of this email address
             results.append({
                 'identifier': identifier,
-                'error': bool(error),
-                'userDoesNotExist': error == 'userDoesNotExist',
-                'nonuniqueNickname': error == 'nonuniqueNickname'
+                'error': error,
+                'userDoesNotExist': user_does_not_exist,
+                'is_active': user_active
             })
 
     response_payload = {
@@ -774,12 +810,13 @@ def bulk_beta_modify_access(request, course_id):
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('instructor')
 @common_exceptions_400
-@require_query_params(
-    student_identifier="email or nickname of user to change access",
+@require_post_params(
+    unique_student_identifier="email or username of user to change access",
     rolename="'instructor', 'staff', 'beta', or 'ccx_coach'",
     action="'allow' or 'revoke'"
 )
@@ -791,7 +828,7 @@ def modify_access(request, course_id):
     NOTE: instructors cannot remove their own instructor access.
 
     Query parameters:
-    student_identifier is the target user's email or nickname
+    unique_student_identifier is the target user's username or email
     rolename is one of ['instructor', 'staff', 'beta', 'ccx_coach']
     action is one of ['allow', 'revoke']
     """
@@ -800,42 +837,36 @@ def modify_access(request, course_id):
         request.user, 'instructor', course_id, depth=None
     )
     try:
-        identifier = request.GET.get('student_identifier')
-        user = get_student_from_email_or_nickname(identifier)
+        user = get_student_from_identifier(request.POST.get('unique_student_identifier'))
     except User.DoesNotExist:
         response_payload = {
-            'student_identifier': identifier,
+            'unique_student_identifier': request.POST.get('unique_student_identifier'),
             'userDoesNotExist': True,
         }
         return JsonResponse(response_payload)
-    except User.MultipleObjectsReturned:
-        return JsonResponse({
-            'student_identifier': identifier,
-            'multipleUsers': True,
-        })
 
     # Check that user is active, because add_users
     # in common/djangoapps/student/roles.py fails
     # silently when we try to add an inactive user.
     if not user.is_active:
         response_payload = {
-            'student_identifier': identifier,
+            'unique_student_identifier': request.POST.get('unique_student_identifier'),
             'inactiveUser': True,
         }
         return JsonResponse(response_payload)
 
-    rolename = request.GET.get('rolename')
-    action = request.GET.get('action')
+    rolename = request.POST.get('rolename')
+    action = request.POST.get('action')
 
     if rolename not in ROLES:
-        error = strip_tags(u"unknown rolename '{}'".format(rolename))
+        error = strip_tags("unknown rolename '{}'".format(rolename))
         log.error(error)
         return HttpResponseBadRequest(error)
 
     # disallow instructors from removing their own instructor access.
     if rolename == 'instructor' and user == request.user and action != 'allow':
         response_payload = {
-            'student_identifier': user.profile.nickname or user.email,
+            'unique_student_identifier': request.POST.get('unique_student_identifier'),
             'rolename': rolename,
             'action': action,
             'removingSelfAsInstructor': True,
@@ -848,11 +879,11 @@ def modify_access(request, course_id):
         revoke_access(course, user, rolename)
     else:
         return HttpResponseBadRequest(strip_tags(
-            u"unrecognized action '{}'".format(action)
+            "unrecognized action '{}'".format(action)
         ))
 
     response_payload = {
-        'student_identifier': user.profile.nickname or user.email,
+        'unique_student_identifier': request.POST.get('unique_student_identifier'),
         'rolename': rolename,
         'action': action,
         'success': 'yes',
@@ -860,10 +891,11 @@ def modify_access(request, course_id):
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('instructor')
-@require_query_params(rolename="'instructor', 'staff', or 'beta'")
+@require_post_params(rolename="'instructor', 'staff', or 'beta'")
 def list_course_role_members(request, course_id):
     """
     List instructors and staff.
@@ -889,7 +921,7 @@ def list_course_role_members(request, course_id):
         request.user, 'instructor', course_id, depth=None
     )
 
-    rolename = request.GET.get('rolename')
+    rolename = request.POST.get('rolename')
 
     if rolename not in ROLES:
         return HttpResponseBadRequest()
@@ -914,6 +946,7 @@ def list_course_role_members(request, course_id):
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -930,12 +963,12 @@ def get_problem_responses(request, course_id):
     Responds with BadRequest if problem location is faulty.
     """
     course_key = CourseKey.from_string(course_id)
-    problem_location = request.GET.get('problem_location', '')
+    problem_location = request.POST.get('problem_location', '')
 
     try:
         problem_key = UsageKey.from_string(problem_location)
         # Are we dealing with an "old-style" problem location?
-        run = getattr(problem_key, 'run')
+        run = problem_key.run
         if not run:
             problem_key = course_key.make_usage_key_from_deprecated_string(problem_location)
         if problem_key.course_key != course_key:
@@ -944,7 +977,7 @@ def get_problem_responses(request, course_id):
         return JsonResponseBadRequest(_("Could not find problem with this location."))
 
     try:
-        instructor_task.api.submit_calculate_problem_responses_csv(request, course_key, problem_location)
+        lms.djangoapps.instructor_task.api.submit_calculate_problem_responses_csv(request, course_key, problem_location)
         success_status = _(
             "The problem responses report is being created."
             " To view the status of the report, see Pending Tasks below."
@@ -959,6 +992,7 @@ def get_problem_responses(request, course_id):
         return JsonResponse({"status": already_running_status})
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -989,7 +1023,7 @@ def get_sale_records(request, course_id, csv=False):  # pylint: disable=unused-a
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     query_features = [
         'company_name', 'company_contact_name', 'company_contact_email', 'total_codes', 'total_used_codes',
-        'total_amount', 'created_at', 'customer_reference_number', 'recipient_name', 'recipient_email', 'created_by',
+        'total_amount', 'created', 'customer_reference_number', 'recipient_name', 'recipient_email', 'created_by',
         'internal_reference', 'invoice_number', 'codes', 'course_id'
     ]
 
@@ -1013,7 +1047,7 @@ def get_sale_records(request, course_id, csv=False):  # pylint: disable=unused-a
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
-def get_sale_order_records(request, course_id):  # pylint: disable=unused-argument, redefined-outer-name
+def get_sale_order_records(request, course_id):  # pylint: disable=unused-argument
     """
     return the summary of all sales records for a particular course
     """
@@ -1066,7 +1100,7 @@ def sale_validation(request, course_id):
         invoice_number = int(invoice_number)
     except ValueError:
         return HttpResponseBadRequest(
-            u"invoice_number must be an integer, {value} provided".format(
+            "invoice_number must be an integer, {value} provided".format(
                 value=invoice_number
             )
         )
@@ -1120,7 +1154,7 @@ def re_validate_invoice(obj_invoice):
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
-def get_issued_certificates(request, course_id):  # pylint: disable=invalid-name
+def get_issued_certificates(request, course_id):
     """
     Responds with JSON if CSV is not required. contains a list of issued certificates.
     Arguments:
@@ -1157,6 +1191,7 @@ def get_issued_certificates(request, course_id):  # pylint: disable=invalid-name
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -1174,14 +1209,21 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=red
 
     available_features = instructor_analytics.basic.AVAILABLE_FEATURES
 
-    # Allow for microsites to be able to define additional columns (e.g. )
-    query_features = microsite.get_value('student_profile_download_fields')
+    # Allow for sites to be able to define additional columns.
+    # Note that adding additional columns has the potential to break
+    # the student profile report due to a character limit on the
+    # asynchronous job input which in this case is a JSON string
+    # containing the list of columns to include in the report.
+    # TODO: Refactor the student profile report code to remove the list of columns
+    # that should be included in the report from the asynchronous job input.
+    # We need to clone the list because we modify it below
+    query_features = list(configuration_helpers.get_value('student_profile_download_fields', []))
 
     if not query_features:
         query_features = [
             'id', 'nickname', 'name', 'email', 'language', 'location',
             'year_of_birth', 'gender', 'level_of_education', 'mailing_address',
-            'goals'
+            'goals', 'enrollment_mode', 'verification_status',
         ]
 
     # Provide human-friendly and translatable names for these features. These names
@@ -1199,6 +1241,8 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=red
         'level_of_education': _('Level of Education'),
         'mailing_address': _('Mailing Address'),
         'goals': _('Goals'),
+        'enrollment_mode': _('Enrollment Mode'),
+        'verification_status': _('Verification Status'),
     }
 
     if is_course_cohorted(course.id):
@@ -1209,6 +1253,12 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=red
     if course.teams_enabled:
         query_features.append('team')
         query_features_names['team'] = _('Team')
+
+    # For compatibility reasons, city and country should always appear last.
+    query_features.append('city')
+    query_features_names['city'] = _('City')
+    query_features.append('country')
+    query_features_names['country'] = _('Country')
 
     if not csv:
         student_data = instructor_analytics.basic.enrolled_students_features(course_key, query_features)
@@ -1223,19 +1273,24 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=red
         return JsonResponse(response_payload)
     else:
         try:
-            instructor_task.api.submit_calculate_students_features_csv(request, course_key, query_features)
+            lms.djangoapps.instructor_task.api.submit_calculate_students_features_csv(
+                request,
+                course_key,
+                query_features
+            )
             success_status = _("The enrolled learner profile report is being created."
-                               " To view the status of the report, see Pending Instructor Tasks below.")
+                               " To view the status of the report, see Pending Tasks below.")
             return JsonResponse({"status": success_status})
         except AlreadyRunningError:
             already_running_status = _(
                 "This enrollment report is currently being created."
-                " To view the status of the report, see Pending Instructor Tasks below."
+                " To view the status of the report, see Pending Tasks below."
                 " You will be able to download the report when it is complete.")
             return JsonResponse({"status": already_running_status})
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -1251,17 +1306,17 @@ def get_students_who_may_enroll(request, course_id):
     course_key = CourseKey.from_string(course_id)
     query_features = ['email']
     try:
-        instructor_task.api.submit_calculate_may_enroll_csv(request, course_key, query_features)
+        lms.djangoapps.instructor_task.api.submit_calculate_may_enroll_csv(request, course_key, query_features)
         success_status = _(
             "The enrollment report is being created. This report contains"
             " information about learners who can enroll in the course."
-            " To view the status of the report, see Pending Instructor Tasks below."
+            " To view the status of the report, see Pending Tasks below."
         )
         return JsonResponse({"status": success_status})
     except AlreadyRunningError:
         already_running_status = _(
             "This enrollment report is currently being created."
-            " To view the status of the report, see Pending Instructor Tasks below."
+            " To view the status of the report, see Pending Tasks below."
             " You will be able to download the report when it is complete."
         )
         return JsonResponse({"status": already_running_status})
@@ -1306,7 +1361,7 @@ def add_users_to_cohorts(request, course_id):
             validator=validator
         )
         # The task will assume the default file storage.
-        instructor_task.api.submit_cohort_students(request, course_key, filename)
+        lms.djangoapps.instructor_task.api.submit_cohort_students(request, course_key, filename)
     except (FileValidationException, PermissionDenied) as err:
         return JsonResponse({"error": unicode(err)}, status=400)
 
@@ -1343,6 +1398,7 @@ def get_coupon_codes(request, course_id):  # pylint: disable=unused-argument
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -1353,13 +1409,13 @@ def get_enrollment_report(request, course_id):
     """
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     try:
-        instructor_task.api.submit_detailed_enrollment_features_csv(request, course_key)
+        lms.djangoapps.instructor_task.api.submit_detailed_enrollment_features_csv(request, course_key)
         success_status = _("The detailed enrollment report is being created."
-                           " To view the status of the report, see Pending Instructor Tasks below.")
+                           " To view the status of the report, see Pending Tasks below.")
         return JsonResponse({"status": success_status})
     except AlreadyRunningError:
         already_running_status = _("The detailed enrollment report is being created."
-                                   " To view the status of the report, see Pending Instructor Tasks below."
+                                   " To view the status of the report, see Pending Tasks below."
                                    " You will be able to download the report when it is complete.")
         return JsonResponse({
             "status": already_running_status
@@ -1367,6 +1423,7 @@ def get_enrollment_report(request, course_id):
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -1377,13 +1434,13 @@ def get_exec_summary_report(request, course_id):
     """
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     try:
-        instructor_task.api.submit_executive_summary_report(request, course_key)
+        lms.djangoapps.instructor_task.api.submit_executive_summary_report(request, course_key)
         status_response = _("The executive summary report is being created."
-                            " To view the status of the report, see Pending Instructor Tasks below.")
+                            " To view the status of the report, see Pending Tasks below.")
     except AlreadyRunningError:
         status_response = _(
             "The executive summary report is currently being created."
-            " To view the status of the report, see Pending Instructor Tasks below."
+            " To view the status of the report, see Pending Tasks below."
             " You will be able to download the report when it is complete."
         )
     return JsonResponse({
@@ -1392,6 +1449,7 @@ def get_exec_summary_report(request, course_id):
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -1401,13 +1459,13 @@ def get_course_survey_results(request, course_id):
     """
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     try:
-        instructor_task.api.submit_course_survey_report(request, course_key)
+        lms.djangoapps.instructor_task.api.submit_course_survey_report(request, course_key)
         status_response = _("The survey report is being created."
-                            " To view the status of the report, see Pending Instructor Tasks below.")
+                            " To view the status of the report, see Pending Tasks below.")
     except AlreadyRunningError:
         status_response = _(
             "The survey report is currently being created."
-            " To view the status of the report, see Pending Instructor Tasks below."
+            " To view the status of the report, see Pending Tasks below."
             " You will be able to download the report when it is complete."
         )
     return JsonResponse({
@@ -1416,6 +1474,7 @@ def get_course_survey_results(request, course_id):
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -1426,6 +1485,7 @@ def get_proctored_exam_results(request, course_id):
     query_features = [
         'user_email',
         'exam_name',
+        'attempt_code',
         'allowed_time_limit_mins',
         'is_sample_attempt',
         'started_at',
@@ -1435,13 +1495,13 @@ def get_proctored_exam_results(request, course_id):
 
     course_key = CourseKey.from_string(course_id)
     try:
-        instructor_task.api.submit_proctored_exam_results_report(request, course_key, query_features)
+        lms.djangoapps.instructor_task.api.submit_proctored_exam_results_report(request, course_key, query_features)
         status_response = _("The proctored exam results report is being created."
-                            " To view the status of the report, see Pending Instructor Tasks below.")
+                            " To view the status of the report, see Pending Tasks below.")
     except AlreadyRunningError:
         status_response = _(
             "The proctored exam results report is currently being created."
-            " To view the status of the report, see Pending Instructor Tasks below."
+            " To view the status of the report, see Pending Tasks below."
             " You will be able to download the report when it is complete."
         )
     return JsonResponse({
@@ -1526,7 +1586,7 @@ def random_code_generator():
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
 @require_POST
-def get_registration_codes(request, course_id):  # pylint: disable=unused-argument
+def get_registration_codes(request, course_id):
     """
     Respond with csv which contains a summary of all Registration Codes.
     """
@@ -1642,25 +1702,25 @@ def generate_registration_codes(request, course_id):
     course_price = course_mode.min_price
 
     registration_codes = []
-    for __ in range(course_code_number):  # pylint: disable=redefined-outer-name
+    for __ in range(course_code_number):
         generated_registration_code = save_registration_code(
             request.user, course_id, course_mode.slug, invoice=sale_invoice, order=None, invoice_item=invoice_item
         )
         registration_codes.append(generated_registration_code)
 
-    site_name = microsite.get_value('SITE_NAME', 'localhost')
-    mktg_site_name = microsite.get_value(
+    site_name = configuration_helpers.get_value('SITE_NAME', 'localhost')
+    mktg_site_name = configuration_helpers.get_value(
         'MKTG_SITE_NAME',
-        microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+        configuration_helpers.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
     )
     quantity = course_code_number
     discount = (float(quantity * course_price) - float(sale_price))
-    course_url = u'{base_url}{course_about}'.format(
-        base_url=microsite.get_value('SITE_NAME', settings.SITE_NAME),
+    course_url = '{base_url}{course_about}'.format(
+        base_url=configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME),
         course_about=reverse('about_course', kwargs={'course_id': course_id.to_deprecated_string()})
     )
-    dashboard_url = u'{base_url}{dashboard}'.format(
-        base_url=microsite.get_value('SITE_NAME', settings.SITE_NAME),
+    dashboard_url = '{base_url}{dashboard}'.format(
+        base_url=configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME),
         dashboard=reverse('dashboard')
     )
 
@@ -1670,7 +1730,7 @@ def generate_registration_codes(request, course_id):
         log.exception('Exception at creating pdf file.')
         pdf_file = None
 
-    from_address = microsite.get_value('email_from_address', settings.DEFAULT_FROM_EMAIL)
+    from_address = configuration_helpers.get_value('email_from_address', settings.DEFAULT_FROM_EMAIL)
     context = {
         'invoice': sale_invoice,
         'site_name': site_name,
@@ -1684,11 +1744,14 @@ def generate_registration_codes(request, course_id):
         'registration_codes': registration_codes,
         'currency_symbol': settings.PAID_COURSE_REGISTRATION_CURRENCY[1],
         'course_url': course_url,
-        'platform_name': microsite.get_value('platform_name', settings.PLATFORM_NAME),
+        'platform_name': configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME),
         'dashboard_url': dashboard_url,
         'contact_email': from_address,
-        'corp_address': microsite.get_value('invoice_corp_address', settings.INVOICE_CORP_ADDRESS),
-        'payment_instructions': microsite.get_value('invoice_payment_instructions', settings. INVOICE_PAYMENT_INSTRUCTIONS),
+        'corp_address': configuration_helpers.get_value('invoice_corp_address', settings.INVOICE_CORP_ADDRESS),
+        'payment_instructions': configuration_helpers.get_value(
+            'invoice_payment_instructions',
+            settings. INVOICE_PAYMENT_INSTRUCTIONS,
+        ),
         'date': time.strftime("%m/%d/%Y")
     }
     # composes registration codes invoice email
@@ -1701,12 +1764,12 @@ def generate_registration_codes(request, course_id):
     csv_file = StringIO.StringIO()
     csv_writer = csv.writer(csv_file)
     for registration_code in registration_codes:
-        full_redeem_code_url = u'http://{base_url}{redeem_code_url}'.format(
-            base_url=microsite.get_value('SITE_NAME', settings.SITE_NAME),
+        full_redeem_code_url = 'http://{base_url}{redeem_code_url}'.format(
+            base_url=configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME),
             redeem_code_url=reverse('register_code_redemption', kwargs={'registration_code': registration_code.code})
         )
         csv_writer.writerow([registration_code.code, full_redeem_code_url])
-    finance_email = microsite.get_value('finance_email', settings.FINANCE_EMAIL)
+    finance_email = configuration_helpers.get_value('finance_email', settings.FINANCE_EMAIL)
     if finance_email:
         # append the finance email into the recipient_list
         recipient_list.append(finance_email)
@@ -1734,7 +1797,7 @@ def generate_registration_codes(request, course_id):
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
 @require_POST
-def active_registration_codes(request, course_id):  # pylint: disable=unused-argument
+def active_registration_codes(request, course_id):
     """
     Respond with csv which contains a summary of all Active Registration Codes.
     """
@@ -1765,7 +1828,7 @@ def active_registration_codes(request, course_id):  # pylint: disable=unused-arg
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
 @require_POST
-def spent_registration_codes(request, course_id):  # pylint: disable=unused-argument
+def spent_registration_codes(request, course_id):
     """
     Respond with csv which contains a summary of all Spent(used) Registration Codes.
     """
@@ -1826,25 +1889,26 @@ def get_anon_ids(request, course_id):  # pylint: disable=unused-argument
     return csv_response(course_id.to_deprecated_string().replace('/', '-') + '-anon-ids.csv', header, rows)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @common_exceptions_400
 @require_level('staff')
-@require_query_params(
-    student_identifier="email or username of student for whom to get progress url"
+@require_post_params(
+    unique_student_identifier="email or username of student for whom to get progress url"
 )
 def get_student_progress_url(request, course_id):
     """
     Get the progress url of a student.
     Limited to staff access.
 
-    Takes query paremeter student_identifier and if the student exists
+    Takes query parameter unique_student_identifier and if the student exists
     returns e.g. {
         'progress_url': '/../...'
     }
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-    user = get_student_from_email_or_nickname(request.GET.get('student_identifier'))
+    user = get_student_from_identifier(request.POST.get('unique_student_identifier'))
 
     progress_url = reverse('student_progress', kwargs={'course_id': course_id.to_deprecated_string(), 'student_id': user.id})
 
@@ -1856,10 +1920,11 @@ def get_student_progress_url(request, course_id):
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
-@require_query_params(
+@require_post_params(
     problem_to_reset="problem urlname to reset"
 )
 @common_exceptions_400
@@ -1872,7 +1937,7 @@ def reset_student_attempts(request, course_id):
 
     Takes some of the following query paremeters
         - problem_to_reset is a urlname of a problem
-        - student_identifier is an email or username
+        - unique_student_identifier is an email or username
         - all_students is a boolean
             requires instructor access
             mutually exclusive with delete_module
@@ -1886,18 +1951,18 @@ def reset_student_attempts(request, course_id):
         request.user, 'staff', course_id, depth=None
     )
 
-    problem_to_reset = strip_if_string(request.GET.get('problem_to_reset'))
-    student_identifier = request.GET.get('student_identifier', None)
+    problem_to_reset = strip_if_string(request.POST.get('problem_to_reset'))
+    student_identifier = request.POST.get('unique_student_identifier', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_email_or_nickname(student_identifier)
-    all_students = request.GET.get('all_students', False) in ['true', 'True', True]
-    delete_module = request.GET.get('delete_module', False) in ['true', 'True', True]
+        student = get_student_from_identifier(student_identifier)
+    all_students = _get_boolean_param(request, 'all_students')
+    delete_module = _get_boolean_param(request, 'delete_module')
 
     # parameter combinations
     if all_students and student:
         return HttpResponseBadRequest(
-            "all_students and student_identifier are mutually exclusive."
+            "all_students and unique_student_identifier are mutually exclusive."
         )
     if all_students and delete_module:
         return HttpResponseBadRequest(
@@ -1919,7 +1984,13 @@ def reset_student_attempts(request, course_id):
 
     if student:
         try:
-            enrollment.reset_student_attempts(course_id, student, module_state_key, delete_module=delete_module)
+            enrollment.reset_student_attempts(
+                course_id,
+                student,
+                module_state_key,
+                requesting_user=request.user,
+                delete_module=delete_module
+            )
         except StudentModule.DoesNotExist:
             return HttpResponseBadRequest(_("Module does not exist."))
         except sub_api.SubmissionError:
@@ -1928,7 +1999,7 @@ def reset_student_attempts(request, course_id):
             return HttpResponse(error_msg, status=500)
         response_payload['student'] = student_identifier
     elif all_students:
-        instructor_task.api.submit_reset_problem_attempts_for_all_students(request, module_state_key)
+        lms.djangoapps.instructor_task.api.submit_reset_problem_attempts_for_all_students(request, module_state_key)
         response_payload['task'] = 'created'
         response_payload['student'] = 'All Students'
     else:
@@ -1938,6 +2009,7 @@ def reset_student_attempts(request, course_id):
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -1950,7 +2022,7 @@ def reset_student_attempts_for_entrance_exam(request, course_id):  # pylint: dis
     entrance exam. Limited to staff access. Some sub-methods limited to instructor access.
 
     Following are possible query parameters
-        - student_identifier is an email or nickname
+        - unique_student_identifier is an email or username
         - all_students is a boolean
             requires instructor access
             mutually exclusive with delete_module
@@ -1968,17 +2040,17 @@ def reset_student_attempts_for_entrance_exam(request, course_id):  # pylint: dis
             _("Course has no entrance exam section.")
         )
 
-    student_identifier = request.GET.get('student_identifier', None)
+    student_identifier = request.POST.get('unique_student_identifier', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_email_or_nickname(student_identifier)
-    all_students = request.GET.get('all_students', False) in ['true', 'True', True]
-    delete_module = request.GET.get('delete_module', False) in ['true', 'True', True]
+        student = get_student_from_identifier(student_identifier)
+    all_students = _get_boolean_param(request, 'all_students')
+    delete_module = _get_boolean_param(request, 'delete_module')
 
     # parameter combinations
     if all_students and student:
         return HttpResponseBadRequest(
-            _("all_students and student_identifier are mutually exclusive.")
+            _("all_students and unique_student_identifier are mutually exclusive.")
         )
     if all_students and delete_module:
         return HttpResponseBadRequest(
@@ -1993,9 +2065,17 @@ def reset_student_attempts_for_entrance_exam(request, course_id):  # pylint: dis
     try:
         entrance_exam_key = course_id.make_usage_key_from_deprecated_string(course.entrance_exam_id)
         if delete_module:
-            instructor_task.api.submit_delete_entrance_exam_state_for_student(request, entrance_exam_key, student)
+            lms.djangoapps.instructor_task.api.submit_delete_entrance_exam_state_for_student(
+                request,
+                entrance_exam_key,
+                student
+            )
         else:
-            instructor_task.api.submit_reset_problem_attempts_in_entrance_exam(request, entrance_exam_key, student)
+            lms.djangoapps.instructor_task.api.submit_reset_problem_attempts_in_entrance_exam(
+                request,
+                entrance_exam_key,
+                student
+            )
     except InvalidKeyError:
         return HttpResponseBadRequest(_("Course has no valid entrance exam section."))
 
@@ -2004,10 +2084,11 @@ def reset_student_attempts_for_entrance_exam(request, course_id):  # pylint: dis
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('instructor')
-@require_query_params(problem_to_reset="problem urlname to reset")
+@require_post_params(problem_to_reset="problem urlname to reset")
 @common_exceptions_400
 def rescore_problem(request, course_id):
     """
@@ -2016,26 +2097,27 @@ def rescore_problem(request, course_id):
 
     Takes either of the following query paremeters
         - problem_to_reset is a urlname of a problem
-        - student_identifier is an email or nickname
+        - unique_student_identifier is an email or username
         - all_students is a boolean
 
-    all_students and student_identifier cannot both be present.
+    all_students and unique_student_identifier cannot both be present.
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-    problem_to_reset = strip_if_string(request.GET.get('problem_to_reset'))
-    student_identifier = request.GET.get('student_identifier', None)
+    problem_to_reset = strip_if_string(request.POST.get('problem_to_reset'))
+    student_identifier = request.POST.get('unique_student_identifier', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_email_or_nickname(student_identifier)
+        student = get_student_from_identifier(student_identifier)
 
-    all_students = request.GET.get('all_students') in ['true', 'True', True]
+    all_students = _get_boolean_param(request, 'all_students')
+    only_if_higher = _get_boolean_param(request, 'only_if_higher')
 
     if not (problem_to_reset and (all_students or student)):
         return HttpResponseBadRequest("Missing query parameters.")
 
     if all_students and student:
         return HttpResponseBadRequest(
-            "Cannot rescore with all_students and student_identifier."
+            "Cannot rescore with all_students and unique_student_identifier."
         )
 
     try:
@@ -2043,23 +2125,37 @@ def rescore_problem(request, course_id):
     except InvalidKeyError:
         return HttpResponseBadRequest("Unable to parse problem id")
 
-    response_payload = {}
-    response_payload['problem_to_reset'] = problem_to_reset
+    response_payload = {'problem_to_reset': problem_to_reset}
 
     if student:
         response_payload['student'] = student_identifier
-        instructor_task.api.submit_rescore_problem_for_student(request, module_state_key, student)
-        response_payload['task'] = 'created'
+        try:
+            lms.djangoapps.instructor_task.api.submit_rescore_problem_for_student(
+                request,
+                module_state_key,
+                student,
+                only_if_higher,
+            )
+        except NotImplementedError as exc:
+            return HttpResponseBadRequest(exc.message)
     elif all_students:
-        instructor_task.api.submit_rescore_problem_for_all_students(request, module_state_key)
-        response_payload['task'] = 'created'
+        try:
+            lms.djangoapps.instructor_task.api.submit_rescore_problem_for_all_students(
+                request,
+                module_state_key,
+                only_if_higher,
+            )
+        except NotImplementedError as exc:
+            return HttpResponseBadRequest(exc.message)
     else:
         return HttpResponseBadRequest()
 
+    response_payload['task'] = 'created'
     return JsonResponse(response_payload)
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('instructor')
@@ -2070,22 +2166,23 @@ def rescore_entrance_exam(request, course_id):
     Optionally deletes student state for a problem. Limited to instructor access.
 
     Takes either of the following query parameters
-        - student_identifier is an email or username
+        - unique_student_identifier is an email or username
         - all_students is a boolean
 
-    all_students and student_identifier cannot both be present.
+    all_students and unique_student_identifier cannot both be present.
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     course = get_course_with_access(
         request.user, 'staff', course_id, depth=None
     )
 
-    student_identifier = request.GET.get('student_identifier', None)
+    student_identifier = request.POST.get('unique_student_identifier', None)
+    only_if_higher = request.POST.get('only_if_higher', None)
     student = None
     if student_identifier is not None:
-        student = get_student_from_email_or_nickname(student_identifier)
+        student = get_student_from_identifier(student_identifier)
 
-    all_students = request.GET.get('all_students') in ['true', 'True', True]
+    all_students = _get_boolean_param(request, 'all_students')
 
     if not course.entrance_exam_id:
         return HttpResponseBadRequest(
@@ -2094,7 +2191,7 @@ def rescore_entrance_exam(request, course_id):
 
     if all_students and student:
         return HttpResponseBadRequest(
-            _("Cannot rescore with all_students and student_identifier.")
+            _("Cannot rescore with all_students and unique_student_identifier.")
         )
 
     try:
@@ -2107,11 +2204,15 @@ def rescore_entrance_exam(request, course_id):
         response_payload['student'] = student_identifier
     else:
         response_payload['student'] = _("All Students")
-    instructor_task.api.submit_rescore_entrance_exam_for_student(request, entrance_exam_key, student)
+
+    lms.djangoapps.instructor_task.api.submit_rescore_entrance_exam_for_student(
+        request, entrance_exam_key, student, only_if_higher,
+    )
     response_payload['task'] = 'created'
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -2122,7 +2223,10 @@ def list_background_email_tasks(request, course_id):  # pylint: disable=unused-a
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     task_type = 'bulk_course_email'
     # Specifying for the history of a single task type
-    tasks = instructor_task.api.get_instructor_task_history(course_id, task_type=task_type)
+    tasks = lms.djangoapps.instructor_task.api.get_instructor_task_history(
+        course_id,
+        task_type=task_type
+    )
 
     response_payload = {
         'tasks': map(extract_task_features, tasks),
@@ -2130,6 +2234,7 @@ def list_background_email_tasks(request, course_id):  # pylint: disable=unused-a
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -2140,7 +2245,7 @@ def list_email_content(request, course_id):  # pylint: disable=unused-argument
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     task_type = 'bulk_course_email'
     # First get tasks list of bulk emails sent
-    emails = instructor_task.api.get_instructor_task_history(course_id, task_type=task_type)
+    emails = lms.djangoapps.instructor_task.api.get_instructor_task_history(course_id, task_type=task_type)
 
     response_payload = {
         'emails': map(extract_email_features, emails),
@@ -2148,6 +2253,7 @@ def list_email_content(request, course_id):  # pylint: disable=unused-argument
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -2158,18 +2264,18 @@ def list_instructor_tasks(request, course_id):
     Takes optional query paremeters.
         - With no arguments, lists running tasks.
         - `problem_location_str` lists task history for problem
-        - `problem_location_str` and `student_identifier` lists task
+        - `problem_location_str` and `unique_student_identifier` lists task
             history for problem AND student (intersection)
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-    problem_location_str = strip_if_string(request.GET.get('problem_location_str', False))
-    student = request.GET.get('student_identifier', None)
+    problem_location_str = strip_if_string(request.POST.get('problem_location_str', False))
+    student = request.POST.get('unique_student_identifier', None)
     if student is not None:
-        student = get_student_from_email_or_nickname(student)
+        student = get_student_from_identifier(student)
 
     if student and not problem_location_str:
         return HttpResponseBadRequest(
-            "student_identifier must accompany problem_location_str"
+            "unique_student_identifier must accompany problem_location_str"
         )
 
     if problem_location_str:
@@ -2179,13 +2285,13 @@ def list_instructor_tasks(request, course_id):
             return HttpResponseBadRequest()
         if student:
             # Specifying for a single student's history on this problem
-            tasks = instructor_task.api.get_instructor_task_history(course_id, module_state_key, student)
+            tasks = lms.djangoapps.instructor_task.api.get_instructor_task_history(course_id, module_state_key, student)
         else:
             # Specifying for single problem's history
-            tasks = instructor_task.api.get_instructor_task_history(course_id, module_state_key)
+            tasks = lms.djangoapps.instructor_task.api.get_instructor_task_history(course_id, module_state_key)
     else:
         # If no problem or student, just get currently running tasks
-        tasks = instructor_task.api.get_running_instructor_tasks(course_id)
+        tasks = lms.djangoapps.instructor_task.api.get_running_instructor_tasks(course_id)
 
     response_payload = {
         'tasks': map(extract_task_features, tasks),
@@ -2193,6 +2299,7 @@ def list_instructor_tasks(request, course_id):
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -2201,14 +2308,14 @@ def list_entrance_exam_instructor_tasks(request, course_id):  # pylint: disable=
     List entrance exam related instructor tasks.
 
     Takes either of the following query parameters
-        - student_identifier is an email or username
+        - unique_student_identifier is an email or username
         - all_students is a boolean
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     course = get_course_by_id(course_id)
-    student = request.GET.get('student_identifier', None)
+    student = request.POST.get('unique_student_identifier', None)
     if student is not None:
-        student = get_student_from_email_or_nickname(student)
+        student = get_student_from_identifier(student)
 
     try:
         entrance_exam_key = course_id.make_usage_key_from_deprecated_string(course.entrance_exam_id)
@@ -2216,10 +2323,17 @@ def list_entrance_exam_instructor_tasks(request, course_id):  # pylint: disable=
         return HttpResponseBadRequest(_("Course has no valid entrance exam section."))
     if student:
         # Specifying for a single student's entrance exam history
-        tasks = instructor_task.api.get_entrance_exam_instructor_task_history(course_id, entrance_exam_key, student)
+        tasks = lms.djangoapps.instructor_task.api.get_entrance_exam_instructor_task_history(
+            course_id,
+            entrance_exam_key,
+            student
+        )
     else:
         # Specifying for all student's entrance exam history
-        tasks = instructor_task.api.get_entrance_exam_instructor_task_history(course_id, entrance_exam_key)
+        tasks = lms.djangoapps.instructor_task.api.get_entrance_exam_instructor_task_history(
+            course_id,
+            entrance_exam_key
+        )
 
     response_payload = {
         'tasks': map(extract_task_features, tasks),
@@ -2227,6 +2341,7 @@ def list_entrance_exam_instructor_tasks(request, course_id):  # pylint: disable=
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -2239,13 +2354,14 @@ def list_report_downloads(_request, course_id):
 
     response_payload = {
         'downloads': [
-            dict(name=name, url=url, link='<a href="{}">{}</a>'.format(url, name))
+            dict(name=name, url=url, link=HTML('<a href="{}">{}</a>').format(HTML(url), Text(name)))
             for name, url in report_store.links_for(course_id)
         ]
     }
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -2259,7 +2375,7 @@ def list_financial_report_downloads(_request, course_id):
 
     response_payload = {
         'downloads': [
-            dict(name=name, url=url, link=u'<a href="{}">{}</a>'.format(url, name))
+            dict(name=name, url=url, link=HTML('<a href="{}">{}</a>').format(HTML(url), Text(name)))
             for name, url in report_store.links_for(course_id)
         ]
     }
@@ -2267,6 +2383,33 @@ def list_financial_report_downloads(_request, course_id):
 
 
 @transaction.non_atomic_requests
+@require_POST
+@ensure_csrf_cookie
+@cache_control(no_cache=True, no_store=True, must_revalidate=True)
+@require_level('staff')
+def export_ora2_data(request, course_id):
+    """
+    Pushes a Celery task which will aggregate ora2 responses for a course into a .csv
+    """
+    course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+    try:
+        lms.djangoapps.instructor_task.api.submit_export_ora2_data(request, course_key)
+        success_status = _("The ORA data report is being generated.")
+
+        return JsonResponse({"status": success_status})
+    except AlreadyRunningError:
+        already_running_status = _(
+            "An ORA data report generation task is already in "
+            "progress. Check the 'Pending Tasks' table "
+            "for the status of the task. When completed, the report "
+            "will be available for download in the table below."
+        )
+
+        return JsonResponse({"status": already_running_status})
+
+
+@transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -2276,20 +2419,19 @@ def calculate_grades_csv(request, course_id):
     """
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     try:
-        instructor_task.api.submit_calculate_grades_csv(request, course_key)
+        lms.djangoapps.instructor_task.api.submit_calculate_grades_csv(request, course_key)
         success_status = _("The grade report is being created."
-                           " To view the status of the report, see Pending Instructor Tasks below.")
+                           " To view the status of the report, see Pending Tasks below.")
         return JsonResponse({"status": success_status})
     except AlreadyRunningError:
         already_running_status = _("The grade report is currently being created."
-                                   " To view the status of the report, see Pending Instructor Tasks below."
+                                   " To view the status of the report, see Pending Tasks below."
                                    " You will be able to download the report when it is complete.")
-        return JsonResponse({
-            "status": already_running_status
-        })
+        return JsonResponse({"status": already_running_status})
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -2303,23 +2445,24 @@ def problem_grade_report(request, course_id):
     """
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
     try:
-        instructor_task.api.submit_problem_grade_report(request, course_key)
+        lms.djangoapps.instructor_task.api.submit_problem_grade_report(request, course_key)
         success_status = _("The problem grade report is being created."
-                           " To view the status of the report, see Pending Instructor Tasks below.")
+                           " To view the status of the report, see Pending Tasks below.")
         return JsonResponse({"status": success_status})
     except AlreadyRunningError:
         already_running_status = _("A problem grade report is already being generated."
-                                   " To view the status of the report, see Pending Instructor Tasks below."
+                                   " To view the status of the report, see Pending Tasks below."
                                    " You will be able to download the report when it is complete.")
         return JsonResponse({
             "status": already_running_status
         })
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
-@require_query_params('rolename')
+@require_post_params('rolename')
 def list_forum_members(request, course_id):
     """
     Lists forum members of a certain rolename.
@@ -2338,7 +2481,7 @@ def list_forum_members(request, course_id):
         request.user, course_id, FORUM_ROLE_ADMINISTRATOR
     )
 
-    rolename = request.GET.get('rolename')
+    rolename = request.POST.get('rolename')
 
     # default roles require either (staff & forum admin) or (instructor)
     if not (has_forum_admin or has_instructor_access):
@@ -2353,7 +2496,7 @@ def list_forum_members(request, course_id):
     # filter out unsupported for roles
     if rolename not in [FORUM_ROLE_ADMINISTRATOR, FORUM_ROLE_MODERATOR, FORUM_ROLE_COMMUNITY_TA]:
         return HttpResponseBadRequest(strip_tags(
-            u"Unrecognized rolename '{}'.".format(rolename)
+            "Unrecognized rolename '{}'.".format(rolename)
         ))
 
     try:
@@ -2379,13 +2522,14 @@ def list_forum_members(request, course_id):
 
 
 @transaction.non_atomic_requests
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
 @require_post_params(send_to="sending to whom", subject="subject line", message="message text")
 def send_email(request, course_id):
     """
-    Send an email to self, staff, or everyone involved in a course.
+    Send an email to self, staff, cohorts, or everyone involved in a course.
     Query Parameters:
     - 'send_to' specifies what group the email should be sent to
        Options are defined by the CourseEmail model in
@@ -2393,37 +2537,57 @@ def send_email(request, course_id):
     - 'subject' specifies email's subject
     - 'message' specifies email's content
     """
-    course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+    course_id = CourseKey.from_string(course_id)
 
-    if not bulk_email_is_enabled_for_course(course_id):
+    if not BulkEmailFlag.feature_enabled(course_id):
+        log.warning(u'Email is not enabled for course %s', course_id)
         return HttpResponseForbidden("Email is not enabled for this course.")
 
-    send_to = request.POST.get("send_to")
+    targets = json.loads(request.POST.get("send_to"))
     subject = request.POST.get("subject")
     message = request.POST.get("message")
 
-    # allow two branding points to come from Microsites: which CourseEmailTemplate should be used
+    # allow two branding points to come from Site Configuration: which CourseEmailTemplate should be used
     # and what the 'from' field in the email should be
     #
-    # If these are None (because we are not in a Microsite or they are undefined in Microsite config) than
+    # If these are None (there is no site configuration enabled for the current site) than
     # the system will use normal system defaults
-    template_name = microsite.get_value('course_email_template_name')
-    from_addr = microsite.get_value('course_email_from_addr')
+    course_overview = CourseOverview.get_from_id(course_id)
+    from_addr = configuration_helpers.get_value('course_email_from_addr')
+    if isinstance(from_addr, dict):
+        # If course_email_from_addr is a dict, we are customizing
+        # the email template for each organization that has courses
+        # on the site. The dict maps from addresses by org allowing
+        # us to find the correct from address to use here.
+        from_addr = from_addr.get(course_overview.display_org_with_default)
+
+    template_name = configuration_helpers.get_value('course_email_template_name')
+    if isinstance(template_name, dict):
+        # If course_email_template_name is a dict, we are customizing
+        # the email template for each organization that has courses
+        # on the site. The dict maps template names by org allowing
+        # us to find the correct template to use here.
+        template_name = template_name.get(course_overview.display_org_with_default)
 
     # Create the CourseEmail object.  This is saved immediately, so that
     # any transaction that has been pending up to this point will also be
     # committed.
-    email = CourseEmail.create(
-        course_id,
-        request.user,
-        send_to,
-        subject, message,
-        template_name=template_name,
-        from_addr=from_addr
-    )
+    try:
+        email = CourseEmail.create(
+            course_id,
+            request.user,
+            targets,
+            subject, message,
+            template_name=template_name,
+            from_addr=from_addr
+        )
+    except ValueError as err:
+        log.exception(u'Cannot create course email for course %s requested by user %s for targets %s',
+                      course_id, request.user, targets)
+        return HttpResponseBadRequest(repr(err))
 
     # Submit the task, so that the correct InstructorTask object gets created (for monitoring purposes)
-    instructor_task.api.submit_bulk_course_email(request, course_id, email.id)  # pylint: disable=no-member
+    lms.djangoapps.instructor_task.api.submit_bulk_course_email(request, course_id, email.id)
 
     response_payload = {
         'course_id': course_id.to_deprecated_string(),
@@ -2432,11 +2596,12 @@ def send_email(request, course_id):
     return JsonResponse(response_payload)
 
 
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
-@require_query_params(
-    student_identifier="email or nickname of user to change access",
+@require_post_params(
+    unique_student_identifier="email or username of user to change access",
     rolename="the forum role",
     action="'allow' or 'revoke'",
 )
@@ -2462,9 +2627,9 @@ def update_forum_role_membership(request, course_id):
         request.user, course_id, FORUM_ROLE_ADMINISTRATOR
     )
 
-    student_identifier = request.GET.get('student_identifier')
-    rolename = request.GET.get('rolename')
-    action = request.GET.get('action')
+    unique_student_identifier = request.POST.get('unique_student_identifier')
+    rolename = request.POST.get('rolename')
+    action = request.POST.get('action')
 
     # default roles require either (staff & forum admin) or (instructor)
     if not (has_forum_admin or has_instructor_access):
@@ -2478,10 +2643,10 @@ def update_forum_role_membership(request, course_id):
 
     if rolename not in [FORUM_ROLE_ADMINISTRATOR, FORUM_ROLE_MODERATOR, FORUM_ROLE_COMMUNITY_TA]:
         return HttpResponseBadRequest(strip_tags(
-            u"Unrecognized rolename '{}'.".format(rolename)
+            "Unrecognized rolename '{}'.".format(rolename)
         ))
 
-    user = get_student_from_email_or_nickname(student_identifier)
+    user = get_student_from_identifier(unique_student_identifier)
 
     try:
         update_forum_role(course_id, user, rolename, action)
@@ -2522,18 +2687,19 @@ def _display_unit(unit):
 
 
 @handle_dashboard_error
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
-@require_query_params('student', 'url', 'due_datetime')
+@require_post_params('student', 'url', 'due_datetime')
 def change_due_date(request, course_id):
     """
     Grants a due date extension to a student for a particular unit.
     """
     course = get_course_by_id(SlashSeparatedCourseKey.from_deprecated_string(course_id))
-    student = require_student_from_email_or_nickname(request.GET.get('student'))
-    unit = find_unit(course, request.GET.get('url'))
-    due_date = parse_datetime(request.GET.get('due_datetime'))
+    student = require_student_from_identifier(request.POST.get('student'))
+    unit = find_unit(course, request.POST.get('url'))
+    due_date = parse_datetime(request.POST.get('due_datetime'))
     set_due_date_extension(course, unit, student, due_date)
 
     return JsonResponse(_(
@@ -2543,17 +2709,18 @@ def change_due_date(request, course_id):
 
 
 @handle_dashboard_error
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
-@require_query_params('student', 'url')
+@require_post_params('student', 'url')
 def reset_due_date(request, course_id):
     """
     Rescinds a due date extension for a student on a particular unit.
     """
     course = get_course_by_id(SlashSeparatedCourseKey.from_deprecated_string(course_id))
-    student = require_student_from_email_or_nickname(request.GET.get('student'))
-    unit = find_unit(course, request.GET.get('url'))
+    student = require_student_from_identifier(request.POST.get('student'))
+    unit = find_unit(course, request.POST.get('url'))
     set_due_date_extension(course, unit, student, None)
     if not getattr(unit, "due", None):
         # It's possible the normal due date was deleted after an extension was granted:
@@ -2569,30 +2736,32 @@ def reset_due_date(request, course_id):
 
 
 @handle_dashboard_error
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
-@require_query_params('url')
+@require_post_params('url')
 def show_unit_extensions(request, course_id):
     """
     Shows all of the students which have due date extensions for the given unit.
     """
     course = get_course_by_id(SlashSeparatedCourseKey.from_deprecated_string(course_id))
-    unit = find_unit(course, request.GET.get('url'))
+    unit = find_unit(course, request.POST.get('url'))
     return JsonResponse(dump_module_extensions(course, unit))
 
 
 @handle_dashboard_error
+@require_POST
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
-@require_query_params('student')
+@require_post_params('student')
 def show_student_extensions(request, course_id):
     """
     Shows all of the due date extensions granted to a particular student in a
     particular course.
     """
-    student = require_student_from_email_or_nickname(request.GET.get('student'))
+    student = require_student_from_identifier(request.POST.get('student'))
     course = get_course_by_id(SlashSeparatedCourseKey.from_deprecated_string(course_id))
     return JsonResponse(dump_student_extensions(course, student))
 
@@ -2610,17 +2779,6 @@ def _split_input_list(str_list):
     """
 
     new_list = re.split(r'[\n\r\s,]', str_list)
-    new_list = [s.strip() for s in new_list]
-    new_list = [s for s in new_list if s != '']
-
-    return new_list
-
-
-def _split_input_list_with_nicknames(str_list):
-    """
-    Same as _split_input_list, but splits only on line breaks and commas
-    """
-    new_list = re.split(r'[\n\r,]', str_list)
     new_list = [s.strip() for s in new_list]
     new_list = [s for s in new_list if s != '']
 
@@ -2681,48 +2839,6 @@ def enable_certificate_generation(request, course_id=None):
     return redirect(_instructor_dash_url(course_key, section='certificates'))
 
 
-#---- Gradebook (shown to small courses only) ----
-# Grades can potentially be written - if so, let grading manage the transaction.
-@transaction.non_atomic_requests
-@cache_control(no_cache=True, no_store=True, must_revalidate=True)
-@require_level('staff')
-def spoc_gradebook(request, course_id):
-    """
-    Show the gradebook for this course:
-    - Only shown for courses with enrollment < settings.FEATURES.get("MAX_ENROLLMENT_INSTR_BUTTONS")
-    - Only displayed to course staff
-    """
-    course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-    course = get_course_with_access(request.user, 'staff', course_key, depth=None)
-
-    enrolled_students = User.objects.filter(
-        courseenrollment__course_id=course_key,
-        courseenrollment__is_active=1
-    ).order_by('profile__nickname').select_related("profile")
-
-    # possible extension: implement pagination to show to large courses
-
-    student_info = [
-        {
-            'nickname': student.profile.nickname_or_default,
-            'id': student.id,
-            'email': student.email,
-            'grade_summary': student_grades(student, request, course),
-            'realname': student.profile.name,
-        }
-        for student in enrolled_students
-    ]
-
-    return render_to_response('courseware/gradebook.html', {
-        'students': student_info,
-        'course': course,
-        'course_id': course_key,
-        # Checked above
-        'staff_access': True,
-        'ordered_grades': sorted(course.grade_cutoffs.items(), key=lambda i: i[1], reverse=True),
-    })
-
-
 @ensure_csrf_cookie
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_level('staff')
@@ -2730,11 +2846,11 @@ def spoc_gradebook(request, course_id):
 def mark_student_can_skip_entrance_exam(request, course_id):  # pylint: disable=invalid-name
     """
     Mark a student to skip entrance exam.
-    Takes `student_identifier` as required POST parameter.
+    Takes `unique_student_identifier` as required POST parameter.
     """
     course_id = SlashSeparatedCourseKey.from_deprecated_string(course_id)
-    student_identifier = request.POST.get('student_identifier')
-    student = get_student_from_email_or_nickname(student_identifier)
+    student_identifier = request.POST.get('unique_student_identifier')
+    student = get_student_from_identifier(student_identifier)
 
     __, created = EntranceExamConfiguration.objects.get_or_create(user=student, course_id=course_id)
     if created:
@@ -2757,12 +2873,56 @@ def start_certificate_generation(request, course_id):
     Start generating certificates for all students enrolled in given course.
     """
     course_key = CourseKey.from_string(course_id)
-    task = instructor_task.api.generate_certificates_for_students(request, course_key)
+    task = lms.djangoapps.instructor_task.api.generate_certificates_for_students(request, course_key)
     message = _('Certificate generation task for all students of this course has been started. '
                 'You can view the status of the generation task in the "Pending Tasks" section.')
     response_payload = {
         'message': message,
         'task_id': task.task_id
+    }
+    return JsonResponse(response_payload)
+
+
+@transaction.non_atomic_requests
+@ensure_csrf_cookie
+@cache_control(no_cache=True, no_store=True, must_revalidate=True)
+@require_global_staff
+@require_POST
+def start_certificate_regeneration(request, course_id):
+    """
+    Start regenerating certificates for students whose certificate statuses lie with in 'certificate_statuses'
+    entry in POST data.
+    """
+    course_key = CourseKey.from_string(course_id)
+    certificates_statuses = request.POST.getlist('certificate_statuses', [])
+    if not certificates_statuses:
+        return JsonResponse(
+            {'message': _('Please select one or more certificate statuses that require certificate regeneration.')},
+            status=400
+        )
+
+    # Check if the selected statuses are allowed
+    allowed_statuses = [
+        CertificateStatuses.downloadable,
+        CertificateStatuses.error,
+        CertificateStatuses.notpassing,
+        CertificateStatuses.audit_passing,
+        CertificateStatuses.audit_notpassing,
+    ]
+    if not set(certificates_statuses).issubset(allowed_statuses):
+        return JsonResponse(
+            {'message': _('Please select certificate statuses from the list only.')},
+            status=400
+        )
+    try:
+        lms.djangoapps.instructor_task.api.regenerate_certificates(request, course_key, certificates_statuses)
+    except AlreadyRunningError as error:
+        return JsonResponse({'message': error.message}, status=400)
+
+    response_payload = {
+        'message': _('Certificate regeneration task has been started. '
+                     'You can view the status of the generation task in the "Pending Tasks" section.'),
+        'success': True
     }
     return JsonResponse(response_payload)
 
@@ -2783,7 +2943,7 @@ def certificate_exception_view(request, course_id):
     course_key = CourseKey.from_string(course_id)
     # Validate request data and return error response in case of invalid data
     try:
-        certificate_exception, student = parse_request_data_and_get_user(request)
+        certificate_exception, student = parse_request_data_and_get_user(request, course_key)
     except ValueError as error:
         return JsonResponse({'success': False, 'message': error.message}, status=400)
 
@@ -2828,12 +2988,20 @@ def add_certificate_exception(course_key, student, certificate_exception):
             'notes': certificate_exception.get('notes', '')
         }
     )
+    log.info(u'%s has been added to the whitelist in course %s', student.username, course_key)
+
+    generated_certificate = GeneratedCertificate.eligible_certificates.filter(
+        user=student,
+        course_id=course_key,
+        status=CertificateStatuses.downloadable,
+    ).first()
 
     exception = dict({
         'id': certificate_white_list.id,
         'user_email': student.email,
         'user_name': student.username,
         'user_id': student.id,
+        'certificate_generated': generated_certificate and generated_certificate.created_date.strftime("%B %d, %Y"),
         'created': certificate_white_list.created.strftime("%A, %B %d, %Y"),
     })
 
@@ -2854,41 +3022,84 @@ def remove_certificate_exception(course_key, student):
         certificate_exception = CertificateWhitelist.objects.get(user=student, course_id=course_key)
     except ObjectDoesNotExist:
         raise ValueError(
-            _('Certificate exception [user={}] does not exist in '
-              'certificate white list.').format(student.username)
+            _('Certificate exception (user={user}) does not exist in certificate white list. '
+              'Please refresh the page and try again.').format(user=student.username)
         )
 
     try:
-        generated_certificate = GeneratedCertificate.objects.get(user=student, course_id=course_key)
+        generated_certificate = GeneratedCertificate.objects.get(  # pylint: disable=no-member
+            user=student,
+            course_id=course_key
+        )
         generated_certificate.invalidate()
+        log.info(
+            u'Certificate invalidated for %s in course %s when removed from certificate exception list',
+            student.username,
+            course_key
+        )
     except ObjectDoesNotExist:
         # Certificate has not been generated yet, so just remove the certificate exception from white list
         pass
+    log.info(u'%s has been removed from the whitelist in course %s', student.username, course_key)
     certificate_exception.delete()
 
 
-def parse_request_data_and_get_user(request):
+def parse_request_data_and_get_user(request, course_key):
     """
         Parse request data into Certificate Exception and User object.
         Certificate Exception is the dict object containing information about certificate exception.
 
     :param request:
+    :param course_key: Course Identifier of the course for whom to process certificate exception
     :return: key-value pairs containing certificate exception data and User object
     """
-    try:
-        certificate_exception = json.loads(request.body or '{}')
-    except ValueError:
-        raise ValueError(_('Invalid Json data'))
+    certificate_exception = parse_request_data(request)
 
     user = certificate_exception.get('user_name', '') or certificate_exception.get('user_email', '')
     if not user:
-        raise ValueError(_('Student username/email is required.'))
-    try:
-        db_user = get_user_by_username_or_email(user)
-    except ObjectDoesNotExist:
-        raise ValueError(_('Student (username/email={user}) does not exist').format(user=user))
+        raise ValueError(_('Student username/email field is required and can not be empty. '
+                           'Kindly fill in username/email and then press "Add to Exception List" button.'))
+    db_user = get_student(user, course_key)
 
     return certificate_exception, db_user
+
+
+def parse_request_data(request):
+    """
+    Parse and return request data, raise ValueError in case of invalid JSON data.
+
+    :param request: HttpRequest request object.
+    :return: dict object containing parsed json data.
+    """
+    try:
+        data = json.loads(request.body or '{}')
+    except ValueError:
+        raise ValueError(_('The record is not in the correct format. Please add a valid username or email address.'))
+
+    return data
+
+
+def get_student(username_or_email, course_key):
+    """
+    Retrieve and return User object from db, raise ValueError
+    if user is does not exists or is not enrolled in the given course.
+
+    :param username_or_email: String containing either user name or email of the student.
+    :param course_key: CourseKey object identifying the current course.
+    :return: User object
+    """
+    try:
+        student = get_user_by_username_or_email(username_or_email)
+    except ObjectDoesNotExist:
+        raise ValueError(_("{user} does not exist in the LMS. Please check your spelling and retry.").format(
+            user=username_or_email
+        ))
+
+    # Make Sure the given student is enrolled in the course
+    if not CourseEnrollment.is_enrolled(student, course_key):
+        raise ValueError(_("{user} is not enrolled in this course. Please check your spelling and retry.")
+                         .format(user=username_or_email))
+    return student
 
 
 @transaction.non_atomic_requests
@@ -2908,41 +3119,24 @@ def generate_certificate_exceptions(request, course_id, generate_for=None):
     """
     course_key = CourseKey.from_string(course_id)
 
-    try:
-        certificate_white_list = json.loads(request.body)
-    except ValueError:
-        return JsonResponse({
-            'success': False,
-            'message': _('Invalid Json data')
-        }, status=400)
-
-    users = [exception.get('user_id', False) for exception in certificate_white_list]
-
     if generate_for == 'all':
         # Generate Certificates for all white listed students
-        students = User.objects.filter(
-            certificatewhitelist__course_id=course_key,
-            certificatewhitelist__whitelist=True
-        )
-    elif not all(users):
-        # Invalid data, user_id must be present for all certificate exceptions
+        students = 'all_whitelisted'
+
+    elif generate_for == 'new':
+        students = 'whitelisted_not_generated'
+
+    else:
+        # Invalid data, generate_for must be present for all certificate exceptions
         return JsonResponse(
             {
                 'success': False,
-                'message': _('Invalid data, user_id must be present for all certificate exceptions.'),
+                'message': _('Invalid data, generate_for must be "new" or "all".'),
             },
             status=400
         )
-    else:
-        students = User.objects.filter(
-            id__in=users,
-            certificatewhitelist__course_id=course_key,
-            certificatewhitelist__whitelist=True
-        )
 
-    if students:
-        # generate certificates for students if 'students' list is not empty
-        instructor_task.api.generate_certificates_for_students(request, course_key, students=students)
+    lms.djangoapps.instructor_task.api.generate_certificates_for_students(request, course_key, student_set=students)
 
     response_payload = {
         'success': True,
@@ -2952,7 +3146,6 @@ def generate_certificate_exceptions(request, course_id, generate_for=None):
     return JsonResponse(response_payload)
 
 
-@csrf_exempt
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_global_staff
 @require_POST
@@ -2982,7 +3175,7 @@ def generate_bulk_certificate_exceptions(request, course_id):  # pylint: disable
         """
         inner method to build dict of csv data as row errors.
         """
-        row_errors[key].append(_('user "{user}" in row#    {row}').format(user=_user, row=row_count))
+        row_errors[key].append(_('user "{user}" in row# {row}').format(user=_user, row=row_count))
 
     if 'students_list' in request.FILES:
         try:
@@ -3044,3 +3237,153 @@ def generate_bulk_certificate_exceptions(request, course_id):  # pylint: disable
     }
 
     return JsonResponse(results)
+
+
+@transaction.non_atomic_requests
+@ensure_csrf_cookie
+@cache_control(no_cache=True, no_store=True, must_revalidate=True)
+@require_global_staff
+@require_http_methods(['POST', 'DELETE'])
+def certificate_invalidation_view(request, course_id):
+    """
+    Invalidate/Re-Validate students to/from certificate.
+
+    :param request: HttpRequest object
+    :param course_id: course identifier of the course for whom to add/remove certificates exception.
+    :return: JsonResponse object with success/error message or certificate invalidation data.
+    """
+    course_key = CourseKey.from_string(course_id)
+    # Validate request data and return error response in case of invalid data
+    try:
+        certificate_invalidation_data = parse_request_data(request)
+        certificate = validate_request_data_and_get_certificate(certificate_invalidation_data, course_key)
+    except ValueError as error:
+        return JsonResponse({'message': error.message}, status=400)
+
+    # Invalidate certificate of the given student for the course course
+    if request.method == 'POST':
+        try:
+            certificate_invalidation = invalidate_certificate(request, certificate, certificate_invalidation_data)
+        except ValueError as error:
+            return JsonResponse({'message': error.message}, status=400)
+        return JsonResponse(certificate_invalidation)
+
+    # Re-Validate student certificate for the course course
+    elif request.method == 'DELETE':
+        try:
+            re_validate_certificate(request, course_key, certificate)
+        except ValueError as error:
+            return JsonResponse({'message': error.message}, status=400)
+
+        return JsonResponse({}, status=204)
+
+
+def invalidate_certificate(request, generated_certificate, certificate_invalidation_data):
+    """
+    Invalidate given GeneratedCertificate and add CertificateInvalidation record for future reference or re-validation.
+
+    :param request: HttpRequest object
+    :param generated_certificate: GeneratedCertificate object, the certificate we want to invalidate
+    :param certificate_invalidation_data: dict object containing data for CertificateInvalidation.
+    :return: dict object containing updated certificate invalidation data.
+    """
+    if len(CertificateInvalidation.get_certificate_invalidations(
+            generated_certificate.course_id,
+            generated_certificate.user,
+    )) > 0:
+        raise ValueError(
+            _("Certificate of {user} has already been invalidated. Please check your spelling and retry.").format(
+                user=generated_certificate.user.username,
+            )
+        )
+
+    # Verify that certificate user wants to invalidate is a valid one.
+    if not generated_certificate.is_valid():
+        raise ValueError(
+            _("Certificate for student {user} is already invalid, kindly verify that certificate was generated "
+              "for this student and then proceed.").format(user=generated_certificate.user.username)
+        )
+
+    # Add CertificateInvalidation record for future reference or re-validation
+    certificate_invalidation, __ = CertificateInvalidation.objects.update_or_create(
+        generated_certificate=generated_certificate,
+        defaults={
+            'invalidated_by': request.user,
+            'notes': certificate_invalidation_data.get("notes", ""),
+            'active': True,
+        }
+    )
+
+    # Invalidate GeneratedCertificate
+    generated_certificate.invalidate()
+    return {
+        'id': certificate_invalidation.id,
+        'user': certificate_invalidation.generated_certificate.user.username,
+        'invalidated_by': certificate_invalidation.invalidated_by.username,
+        'created': certificate_invalidation.created.strftime("%B %d, %Y"),
+        'notes': certificate_invalidation.notes,
+    }
+
+
+def re_validate_certificate(request, course_key, generated_certificate):
+    """
+    Remove certificate invalidation from db and start certificate generation task for this student.
+    Raises ValueError if certificate invalidation is present.
+
+    :param request: HttpRequest object
+    :param course_key: CourseKey object identifying the current course.
+    :param generated_certificate: GeneratedCertificate object of the student for the given course
+    """
+    try:
+        # Fetch CertificateInvalidation object
+        certificate_invalidation = CertificateInvalidation.objects.get(generated_certificate=generated_certificate)
+    except ObjectDoesNotExist:
+        raise ValueError(_("Certificate Invalidation does not exist, Please refresh the page and try again."))
+    else:
+        # Deactivate certificate invalidation if it was fetched successfully.
+        certificate_invalidation.deactivate()
+
+    # We need to generate certificate only for a single student here
+    student = certificate_invalidation.generated_certificate.user
+    lms.djangoapps.instructor_task.api.generate_certificates_for_students(
+        request, course_key, student_set="specific_student", specific_student_id=student.id
+    )
+
+
+def validate_request_data_and_get_certificate(certificate_invalidation, course_key):
+    """
+    Fetch and return GeneratedCertificate of the student passed in request data for the given course.
+
+    Raises ValueError in case of missing student username/email or
+    if student does not have certificate for the given course.
+
+    :param certificate_invalidation: dict containing certificate invalidation data
+    :param course_key: CourseKey object identifying the current course.
+    :return: GeneratedCertificate object of the student for the given course
+    """
+    user = certificate_invalidation.get("user")
+
+    if not user:
+        raise ValueError(
+            _('Student username/email field is required and can not be empty. '
+              'Kindly fill in username/email and then press "Invalidate Certificate" button.')
+        )
+
+    student = get_student(user, course_key)
+
+    certificate = GeneratedCertificate.certificate_for_student(student, course_key)
+    if not certificate:
+        raise ValueError(_(
+            "The student {student} does not have certificate for the course {course}. Kindly verify student "
+            "username/email and the selected course are correct and try again."
+        ).format(student=student.username, course=course_key.course))
+    return certificate
+
+
+def _get_boolean_param(request, param_name):
+    """
+    Returns the value of the boolean parameter with the given
+    name in the POST request. Handles translation from string
+    values to boolean values.
+    """
+    return request.POST.get(param_name, False) in ['true', 'True', True]

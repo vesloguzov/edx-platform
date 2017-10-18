@@ -21,15 +21,16 @@ from optparse import make_option
 from textwrap import dedent
 
 from django.core.management.base import BaseCommand, CommandError
-
-from xmodule.modulestore.django import modulestore
-from xmodule.modulestore.inheritance import own_metadata, compute_inherited_metadata
-from xblock.fields import Scope
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
+from xblock.fields import Scope
 
-FILTER_LIST = ['xml_attributes', 'checklists']
-INHERITED_FILTER_LIST = ['children', 'xml_attributes', 'checklists']
+from xblock_discussion import DiscussionXBlock
+from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.inheritance import compute_inherited_metadata, own_metadata
+
+FILTER_LIST = ['xml_attributes']
+INHERITED_FILTER_LIST = ['children', 'xml_attributes']
 
 
 class Command(BaseCommand):
@@ -94,6 +95,10 @@ def dump_module(module, destination=None, inherited=False, defaults=False):
     destination = destination if destination else {}
 
     items = own_metadata(module)
+
+    # HACK: add discussion ids to list of items to export (AN-6696)
+    if isinstance(module, DiscussionXBlock) and 'discussion_id' not in items:
+        items['discussion_id'] = module.discussion_id
 
     filtered_metadata = {k: v for k, v in items.iteritems() if k not in FILTER_LIST}
 

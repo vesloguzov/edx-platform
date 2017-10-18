@@ -3,8 +3,9 @@ Field overrides for self-paced courses. This allows overriding due
 dates for each block in the course.
 """
 
-from .field_overrides import FieldOverrideProvider
 from openedx.core.djangoapps.self_paced.models import SelfPacedConfiguration
+
+from .field_overrides import FieldOverrideProvider
 
 
 class SelfPacedDateOverrideProvider(FieldOverrideProvider):
@@ -20,9 +21,10 @@ class SelfPacedDateOverrideProvider(FieldOverrideProvider):
         # Remove release dates for course content
         if name == 'start' and block.category != 'course':
             return None
+
         return default
 
     @classmethod
-    def enabled_for(cls, course):
+    def enabled_for(cls, block):
         """This provider is enabled for self-paced courses only."""
-        return SelfPacedConfiguration.current().enabled and course.self_paced
+        return block is not None and block.self_paced and SelfPacedConfiguration.current().enabled

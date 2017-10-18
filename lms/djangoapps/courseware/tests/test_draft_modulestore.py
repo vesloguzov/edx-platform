@@ -1,11 +1,11 @@
 from django.test import TestCase
 from nose.plugins.attrib import attr
-
-from xmodule.modulestore.django import modulestore
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
+from xmodule.modulestore.django import modulestore
 
-@attr('shard_1')
+
+@attr(shard=1)
 class TestDraftModuleStore(TestCase):
     """
     Test the draft modulestore

@@ -1,27 +1,21 @@
 """
 Utilities related to API views
 """
-import functools
-from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ObjectDoesNotExist, ValidationError
 from django.http import Http404
 from django.utils.translation import ugettext as _
-
-from rest_framework import status, response
+from edx_rest_framework_extensions.authentication import JwtAuthentication
+from rest_framework import status
 from rest_framework.exceptions import APIException
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import clone_request
 from rest_framework.response import Response
-from rest_framework.mixins import RetrieveModelMixin, UpdateModelMixin
-from rest_framework.generics import GenericAPIView
-
-from lms.djangoapps.courseware.courses import get_course_with_access
-from lms.djangoapps.courseware.courseware_access_exception import CoursewareAccessException
-from opaque_keys.edx.keys import CourseKey
-from xmodule.modulestore.django import modulestore
 
 from openedx.core.lib.api.authentication import (
-    SessionAuthenticationAllowInactiveUser,
     OAuth2AuthenticationAllowInactiveUser,
+    SessionAuthenticationAllowInactiveUser
 )
 from openedx.core.lib.api.permissions import IsUserInUrl
 
@@ -32,11 +26,14 @@ class DeveloperErrorViewMixin(object):
     (auth failure, method not allowed, etc.) by generating an error response
     conforming to our API conventions with a developer message.
     """
-    def make_error_response(self, status_code, developer_message):
+    def make_error_response(self, status_code, developer_message, error_code=None):
         """
         Build an error response with the given status code and developer_message
         """
-        return Response({"developer_message": developer_message}, status=status_code)
+        error_data = {"developer_message": developer_message}
+        if error_code is not None:
+            error_data['error_code'] = error_code
+        return Response(error_data, status=status_code)
 
     def make_validation_error_response(self, validation_error):
         """
@@ -68,7 +65,7 @@ class DeveloperErrorViewMixin(object):
 
         if isinstance(exc, APIException):
             return self.make_error_response(exc.status_code, exc.detail)
-        elif isinstance(exc, Http404):
+        elif isinstance(exc, Http404) or isinstance(exc, ObjectDoesNotExist):
             return self.make_error_response(404, exc.message or "Not found.")
         elif isinstance(exc, ValidationError):
             return self.make_validation_error_response(exc)
@@ -86,37 +83,7 @@ class ExpandableFieldViewMixin(object):
         return result
 
 
-def view_course_access(depth=0, access_action='load', check_for_milestones=False):
-    """
-    Method decorator for an API endpoint that verifies the user has access to the course.
-    """
-    def _decorator(func):
-        """Outer method decorator."""
-        @functools.wraps(func)
-        def _wrapper(self, request, *args, **kwargs):
-            """
-            Expects kwargs to contain 'course_id'.
-            Passes the course descriptor to the given decorated function.
-            Raises 404 if access to course is disallowed.
-            """
-            course_id = CourseKey.from_string(kwargs.pop('course_id'))
-            with modulestore().bulk_operations(course_id):
-                try:
-                    course = get_course_with_access(
-                        request.user,
-                        access_action,
-                        course_id,
-                        depth=depth,
-                        check_if_enrolled=True,
-                    )
-                except CoursewareAccessException as error:
-                    return response.Response(data=error.to_json(), status=status.HTTP_404_NOT_FOUND)
-                return func(self, request, course=course, *args, **kwargs)
-        return _wrapper
-    return _decorator
-
-
-def view_auth_classes(is_user=False):
+def view_auth_classes(is_user=False, is_authenticated=True):
     """
     Function and class decorator that abstracts the authentication and permission checks for api views.
     """
@@ -126,10 +93,13 @@ def view_auth_classes(is_user=False):
         If is_user is True, also requires username in URL matches the request user.
         """
         func_or_class.authentication_classes = (
+            JwtAuthentication,
             OAuth2AuthenticationAllowInactiveUser,
             SessionAuthenticationAllowInactiveUser
         )
-        func_or_class.permission_classes = (IsAuthenticated,)
+        func_or_class.permission_classes = ()
+        if is_authenticated:
+            func_or_class.permission_classes += (IsAuthenticated,)
         if is_user:
             func_or_class.permission_classes += (IsUserInUrl,)
         return func_or_class
@@ -185,7 +155,7 @@ class RetrievePatchAPIView(RetrieveModelMixin, UpdateModelMixin, GenericAPIView)
         """Validates a JSON merge patch. Captures DRF serializer errors and converts them to edX's standard format."""
         field_errors = {}
         serializer = self.get_serializer(self.get_object_or_none(), data=patch, partial=True)
-        fields = self.get_serializer().get_fields()  # pylint: disable=maybe-no-member
+        fields = self.get_serializer().get_fields()
 
         for key in patch:
             if key in fields and fields[key].read_only:

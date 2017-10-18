@@ -1,25 +1,24 @@
 """
 Acceptance tests for Content Libraries in Studio
 """
-from ddt import ddt, data
+from ddt import data, ddt
 from nose.plugins.attrib import attr
-from flaky import flaky
 
-from .base_studio_test import StudioLibraryTest
-from ...fixtures.course import XBlockFixtureDesc
-from ...pages.studio.auto_auth import AutoAuthPage
-from ...pages.studio.utils import add_component
-from ...pages.studio.library import LibraryEditPage
-from ...pages.studio.users import LibraryUsersPage
+from common.test.acceptance.fixtures.course import XBlockFixtureDesc
+from common.test.acceptance.pages.common.auto_auth import AutoAuthPage
+from common.test.acceptance.pages.studio.library import LibraryEditPage
+from common.test.acceptance.pages.studio.users import LibraryUsersPage
+from common.test.acceptance.pages.studio.utils import add_component
+from common.test.acceptance.tests.studio.base_studio_test import StudioLibraryTest
 
 
-@attr('shard_2')
+@attr(shard=2)
 @ddt
 class LibraryEditPageTest(StudioLibraryTest):
     """
     Test the functionality of the library edit page.
     """
-    def setUp(self):  # pylint: disable=arguments-differ
+    def setUp(self):
         """
         Ensure a library exists and navigate to the library edit page.
         """
@@ -121,7 +120,7 @@ class LibraryEditPageTest(StudioLibraryTest):
         # Check that the save worked:
         self.assertEqual(len(self.lib_page.xblocks), 1)
         problem_block = self.lib_page.xblocks[0]
-        self.assertIn("Laura Roslin", problem_block.student_content)
+        self.assertIn("Laura Roslin", problem_block.author_content)
 
     def test_no_discussion_button(self):
         """
@@ -129,7 +128,6 @@ class LibraryEditPageTest(StudioLibraryTest):
         """
         self.assertFalse(self.browser.find_elements_by_css_selector('span.large-discussion-icon'))
 
-    @flaky  # TODO fix this, see TNL-2322
     def test_library_pagination(self):
         """
         Scenario: Ensure that adding several XBlocks to a library results in pagination.
@@ -186,13 +184,13 @@ class LibraryEditPageTest(StudioLibraryTest):
         self.assertIn("Checkboxes", problem_block.name)
 
 
-@attr('shard_2')
+@attr(shard=2)
 @ddt
 class LibraryNavigationTest(StudioLibraryTest):
     """
     Test common Navigation actions
     """
-    def setUp(self):  # pylint: disable=arguments-differ
+    def setUp(self):
         """
         Ensure a library exists and navigate to the library edit page.
         """
@@ -206,7 +204,6 @@ class LibraryNavigationTest(StudioLibraryTest):
         Create four pages worth of XBlocks, and offset by one so each is named
         after the number they should be in line by the user's perception.
         """
-        # pylint: disable=attribute-defined-outside-init
         self.blocks = [XBlockFixtureDesc('html', str(i)) for i in xrange(1, 41)]
         library_fixture.add_children(*self.blocks)
 
@@ -653,10 +650,10 @@ class StudioLibraryA11yTest(StudioLibraryTest):
         lib_page.visit()
         lib_page.wait_until_ready()
 
-        # There are several existing color contrast errors on this page,
-        # we will ignore this error in the test until we fix them.
         lib_page.a11y_audit.config.set_rules({
-            "ignore": ['color-contrast'],
+            "ignore": [
+                'link-href',  # TODO: AC-590
+            ],
         })
 
         lib_page.a11y_audit.check_for_accessibility_errors()

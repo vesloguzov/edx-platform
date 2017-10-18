@@ -7,10 +7,10 @@ from collections import defaultdict
 from unittest import skip
 
 from django.test import TestCase
-
 from edx_user_state_client.tests import UserStateClientTestBase
-from courseware.user_state_client import DjangoXBlockUserStateClient
+
 from courseware.tests.factories import UserFactory
+from courseware.user_state_client import DjangoXBlockUserStateClient
 
 
 class TestDjangoUserStateClient(UserStateClientTestBase, TestCase):
@@ -18,11 +18,13 @@ class TestDjangoUserStateClient(UserStateClientTestBase, TestCase):
     Tests of the DjangoUserStateClient backend.
     """
     __test__ = True
+    # Tell Django to clean out all databases, not just default
+    multi_db = True
 
     def _user(self, user_idx):
         return self.users[user_idx].username
 
-    def _block_type(self, block):  # pylint: disable=unused-argument
+    def _block_type(self, block):
         # We only record block state history in DjangoUserStateClient
         # when the block type is 'problem'
         return 'problem'

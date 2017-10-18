@@ -2,16 +2,16 @@
 Tests for the edx_proctoring integration into Studio
 """
 
-from mock import patch
-import ddt
 from datetime import datetime, timedelta
+
+import ddt
+from edx_proctoring.api import get_all_exams_for_course, get_review_policy_by_exam_id
+from mock import patch
 from pytz import UTC
+
+from contentstore.signals.handlers import listen_for_course_publish
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-
-from contentstore.signals import listen_for_course_publish
-
-from edx_proctoring.api import get_all_exams_for_course
 
 
 @ddt.ddt
@@ -44,21 +44,33 @@ class TestProctoredExams(ModuleStoreTestCase):
         self.assertEqual(len(exams), 1)
 
         exam = exams[0]
+
+        if exam['is_proctored'] and not exam['is_practice_exam']:
+            # get the review policy object
+            exam_review_policy = get_review_policy_by_exam_id(exam['id'])
+            self.assertEqual(exam_review_policy['review_policy'], sequence.exam_review_rules)
+
+        if not exam['is_proctored'] and not exam['is_practice_exam']:
+            # the hide after due value only applies to timed exams
+            self.assertEqual(exam['hide_after_due'], sequence.hide_after_due)
+
         self.assertEqual(exam['course_id'], unicode(self.course.id))
         self.assertEqual(exam['content_id'], unicode(sequence.location))
         self.assertEqual(exam['exam_name'], sequence.display_name)
         self.assertEqual(exam['time_limit_mins'], sequence.default_time_limit_minutes)
         self.assertEqual(exam['is_proctored'], sequence.is_proctored_exam)
+        self.assertEqual(exam['is_practice_exam'], sequence.is_practice_exam)
         self.assertEqual(exam['is_active'], expected_active)
 
     @ddt.data(
-        (True, 10, True, True, False),
-        (True, 10, False, True, False),
-        (True, 10, True, True, True),
+        (True, 10, True, False, True, False, False),
+        (True, 10, False, False, True, False, False),
+        (True, 10, False, False, True, False, True),
+        (True, 10, True, True, True, True, False),
     )
     @ddt.unpack
-    def test_publishing_exam(self, is_time_limited, default_time_limit_minutes,
-                             is_proctored_exam, expected_active, republish):
+    def test_publishing_exam(self, is_time_limited, default_time_limit_minutes, is_proctored_exam,
+                             is_practice_exam, expected_active, republish, hide_after_due):
         """
         Happy path testing to see that when a course is published which contains
         a proctored exam, it will also put an entry into the exam tables
@@ -73,7 +85,10 @@ class TestProctoredExams(ModuleStoreTestCase):
             is_time_limited=is_time_limited,
             default_time_limit_minutes=default_time_limit_minutes,
             is_proctored_exam=is_proctored_exam,
-            due=datetime.now(UTC) + timedelta(minutes=default_time_limit_minutes + 1)
+            is_practice_exam=is_practice_exam,
+            due=datetime.now(UTC) + timedelta(minutes=default_time_limit_minutes + 1),
+            exam_review_rules="allow_use_of_paper",
+            hide_after_due=hide_after_due,
         )
 
         listen_for_course_publish(self, self.course.id)
@@ -105,7 +120,8 @@ class TestProctoredExams(ModuleStoreTestCase):
             graded=True,
             is_time_limited=True,
             default_time_limit_minutes=10,
-            is_proctored_exam=True
+            is_proctored_exam=True,
+            hide_after_due=False,
         )
 
         listen_for_course_publish(self, self.course.id)
@@ -135,7 +151,8 @@ class TestProctoredExams(ModuleStoreTestCase):
             graded=True,
             is_time_limited=True,
             default_time_limit_minutes=10,
-            is_proctored_exam=True
+            is_proctored_exam=True,
+            hide_after_due=False,
         )
 
         listen_for_course_publish(self, self.course.id)
@@ -170,7 +187,8 @@ class TestProctoredExams(ModuleStoreTestCase):
             graded=True,
             is_time_limited=True,
             default_time_limit_minutes=10,
-            is_proctored_exam=True
+            is_proctored_exam=True,
+            hide_after_due=False,
         )
 
         listen_for_course_publish(self, self.course.id)
@@ -205,7 +223,9 @@ class TestProctoredExams(ModuleStoreTestCase):
             graded=True,
             is_time_limited=True,
             default_time_limit_minutes=10,
-            is_proctored_exam=True
+            is_proctored_exam=True,
+            exam_review_rules="allow_use_of_paper",
+            hide_after_due=False,
         )
 
         listen_for_course_publish(self, self.course.id)

@@ -1,23 +1,25 @@
 """ Code to allow module store to interface with courseware index """
 from __future__ import absolute_import
-from abc import ABCMeta, abstractmethod
-from datetime import timedelta
+
 import logging
 import re
-from six import add_metaclass
+from abc import ABCMeta, abstractmethod
+from datetime import timedelta
 
 from django.conf import settings
-from django.utils.translation import ugettext_lazy, ugettext as _
 from django.core.urlresolvers import resolve
+from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy
+from search.search_engine_base import SearchEngine
+from six import add_metaclass
 
-from contentstore.utils import course_image_url
 from contentstore.course_group_config import GroupConfiguration
 from course_modes.models import CourseMode
 from eventtracking import tracker
-from search.search_engine_base import SearchEngine
+from openedx.core.lib.courses import course_image_url
 from xmodule.annotator_mixin import html_to_text
-from xmodule.modulestore import ModuleStoreEnum
 from xmodule.library_tools import normalize_key_for_search
+from xmodule.modulestore import ModuleStoreEnum
 
 # REINDEX_AGE is the default amount of time that we look back for changes
 # that might have happened. If we are provided with a time at which the
@@ -377,7 +379,7 @@ class CoursewareSearchIndexer(SearchIndexerBase):
     @classmethod
     def fetch_group_usage(cls, modulestore, structure):
         groups_usage_dict = {}
-        groups_usage_info = GroupConfiguration.get_content_groups_usage_info(modulestore, structure).items()
+        groups_usage_info = GroupConfiguration.get_partitions_usage_info(modulestore, structure).items()
         groups_usage_info.extend(
             GroupConfiguration.get_content_groups_items_usage_info(
                 modulestore,
@@ -640,3 +642,22 @@ class CourseAboutSearchIndexer(object):
             "Successfully added %s course to the course discovery index",
             course_id
         )
+
+    @classmethod
+    def _get_location_info(cls, normalized_structure_key):
+        """ Builds location info dictionary """
+        return {"course": unicode(normalized_structure_key), "org": normalized_structure_key.org}
+
+    @classmethod
+    def remove_deleted_items(cls, structure_key):
+        """ Remove item from Course About Search_index """
+        searcher = SearchEngine.get_search_engine(cls.INDEX_NAME)
+        if not searcher:
+            return
+
+        response = searcher.search(
+            doc_type=cls.DISCOVERY_DOCUMENT_TYPE,
+            field_dictionary=cls._get_location_info(structure_key)
+        )
+        result_ids = [result["data"]["id"] for result in response["results"]]
+        searcher.remove(cls.DISCOVERY_DOCUMENT_TYPE, result_ids)

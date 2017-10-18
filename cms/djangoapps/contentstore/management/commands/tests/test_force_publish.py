@@ -2,9 +2,9 @@
 Tests for the force_publish management command
 """
 import mock
-from django.core.management.base import CommandError
+from django.core.management import call_command, CommandError
 from xmodule.modulestore import ModuleStoreEnum
-from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
+from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase, ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from contentstore.management.commands.force_publish import Command
 from contentstore.management.commands.utils import get_course_versions
@@ -25,9 +25,9 @@ class TestForcePublish(SharedModuleStoreTestCase):
         """
         Test 'force_publish' command with no arguments
         """
-        errstring = "force_publish requires 1 or more argument: <course_id> |commit"
+        errstring = "Error: too few arguments"
         with self.assertRaisesRegexp(CommandError, errstring):
-            self.command.handle()
+            call_command('force_publish')
 
     def test_invalid_course_key(self):
         """
@@ -35,15 +35,15 @@ class TestForcePublish(SharedModuleStoreTestCase):
         """
         errstring = "Invalid course key."
         with self.assertRaisesRegexp(CommandError, errstring):
-            self.command.handle('TestX/TS01')
+            call_command('force_publish', 'TestX/TS01')
 
     def test_too_many_arguments(self):
         """
         Test 'force_publish' command with more than 2 arguments
         """
-        errstring = "force_publish requires 1 or more argument: <course_id> |commit"
+        errstring = "Error: unrecognized arguments: invalid-arg"
         with self.assertRaisesRegexp(CommandError, errstring):
-            self.command.handle(unicode(self.course.id), 'commit', 'invalid-arg')
+            call_command('force_publish', unicode(self.course.id), '--commit', 'invalid-arg')
 
     def test_course_key_not_found(self):
         """
@@ -51,7 +51,7 @@ class TestForcePublish(SharedModuleStoreTestCase):
         """
         errstring = "Course not found."
         with self.assertRaisesRegexp(CommandError, errstring):
-            self.command.handle(unicode('course-v1:org+course+run'))
+            call_command('force_publish', unicode('course-v1:org+course+run'))
 
     def test_force_publish_non_split(self):
         """
@@ -60,9 +60,21 @@ class TestForcePublish(SharedModuleStoreTestCase):
         course = CourseFactory.create(default_store=ModuleStoreEnum.Type.mongo)
         errstring = 'The owning modulestore does not support this command.'
         with self.assertRaisesRegexp(CommandError, errstring):
-            self.command.handle(unicode(course.id))
+            call_command('force_publish', unicode(course.id))
 
-    @SharedModuleStoreTestCase.modifies_courseware
+
+class TestForcePublishModifications(ModuleStoreTestCase):
+    """
+    Tests for the force_publish management command that modify the courseware
+    during the test.
+    """
+
+    def setUp(self):
+        super(TestForcePublishModifications, self).setUp()
+        self.course = CourseFactory.create(default_store=ModuleStoreEnum.Type.split)
+        self.test_user_id = ModuleStoreEnum.UserID.test
+        self.command = Command()
+
     def test_force_publish(self):
         """
         Test 'force_publish' command
@@ -91,7 +103,7 @@ class TestForcePublish(SharedModuleStoreTestCase):
             patched_yes_no.return_value = True
 
             # force publish course
-            self.command.handle(unicode(self.course.id), 'commit')
+            call_command('force_publish', unicode(self.course.id), '--commit')
 
             # verify that course has no changes
             self.assertFalse(self.store.has_changes(self.store.get_item(self.course.location)))

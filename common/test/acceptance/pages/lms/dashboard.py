@@ -3,7 +3,8 @@
 Student dashboard page.
 """
 from bok_choy.page_object import PageObject
-from . import BASE_URL
+
+from common.test.acceptance.pages.lms import BASE_URL
 
 
 class DashboardPage(PageObject):
@@ -11,18 +12,10 @@ class DashboardPage(PageObject):
     Student dashboard, where the student can view
     courses she/he has registered for.
     """
-    def __init__(self, browser):
-        """Initialize the page.
-
-        Arguments:
-            browser (Browser): The browser instance.
-        """
-        super(DashboardPage, self).__init__(browser)
-
     url = "{base}/dashboard".format(base=BASE_URL)
 
     def is_browser_on_page(self):
-        return self.q(css='section.my-courses').present
+        return self.q(css='.my-courses').present
 
     @property
     def current_courses_text(self):
@@ -31,7 +24,7 @@ class DashboardPage(PageObject):
         shows all the courses that the student is enrolled in.
         The string displayed is defined in lms/templates/dashboard.html.
         """
-        text_items = self.q(css='section#my-courses').text
+        text_items = self.q(css='#my-courses').text
         if len(text_items) > 0:
             return text_items[0]
         else:
@@ -156,6 +149,10 @@ class DashboardPage(PageObject):
         """ Retrieves the specified social sharing widget by its classification """
         return self.q(css='a.action-{}'.format(widget_name))
 
+    def get_profile_img(self):
+        """ Retrieves the user's profile image """
+        return self.q(css='img.user-image-frame')
+
     def get_courses(self):
         """
         Get all courses shown in the dashboard
@@ -166,29 +163,40 @@ class DashboardPage(PageObject):
         """
         Get course date of the first course from dashboard
         """
-        return self.q(css='ul.listing-courses .course-item .info-date-block').first.text[0]
+        return self.q(css='ul.listing-courses .course-item:first-of-type .info-date-block').first.text[0]
 
     def click_username_dropdown(self):
         """
         Click username dropdown.
         """
-        self.q(css='.dropdown').first.click()
+        self.q(css='.user-dropdown').first.click()
 
     @property
     def username_dropdown_link_text(self):
         """
         Return list username dropdown links.
         """
-        return self.q(css='.dropdown-menu li a').text
+        return self.q(css='.user-dropdown-menu li a').text
 
     def click_my_profile_link(self):
         """
         Click on `Profile` link.
         """
-        self.q(css='.dropdown-menu li a').nth(1).click()
+        self.q(css='.user-dropdown-menu li a').nth(1).click()
 
     def click_account_settings_link(self):
         """
         Click on `Account` link.
         """
-        self.q(css='.dropdown-menu li a').nth(2).click()
+        self.q(css='.user-dropdown-menu li a').nth(2).click()
+
+    @property
+    def language_selector(self):
+        """
+        return language selector
+        """
+        self.wait_for_element_visibility(
+            '#settings-language-value',
+            'Language selector element is available'
+        )
+        return self.q(css='#settings-language-value')
