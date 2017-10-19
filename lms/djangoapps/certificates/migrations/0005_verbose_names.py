@@ -2,10 +2,12 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import certificates.models
 from django.conf import settings
-import xmodule_django.models
 import django_extensions.db.fields.json
+
+from openedx.core.djangoapps import xmodule_django
+import badges.models
+import certificates.models
 
 
 class Migration(migrations.Migration):
@@ -83,7 +85,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='badgeimageconfiguration',
             name='icon',
-            field=models.ImageField(help_text='Badge images must be square PNG files. The file size should be under 250KB.', upload_to=b'badges', verbose_name='icon', validators=[certificates.models.validate_badge_image]),
+            field=models.ImageField(help_text='Badge images must be square PNG files. The file size should be under 250KB.', upload_to=b'badges', verbose_name='icon', validators=[badges.models.validate_badge_image]),
         ),
         migrations.AlterField(
             model_name='badgeimageconfiguration',

@@ -188,15 +188,6 @@ class ReportStore(object):
         Return one of the ReportStore subclasses depending on django
         configuration. Look at subclasses for expected configuration.
         """
-<<<<<<< HEAD
-        storage_type = getattr(settings, config_name).get("STORAGE_TYPE")
-        if storage_type.lower() == "s3":
-            return S3ReportStore.from_config(config_name)
-        elif storage_type.lower() == "localfs":
-            return LocalFSReportStore.from_config(config_name)
-        elif storage_type.lower() == "protectedfs":
-            return ProtectedFSReportStore.from_config(config_name)
-=======
         # Convert old configuration parameters to those expected by
         # DjangoStorageReportStore for backward compatibility
         config = getattr(settings, config_name, {})
@@ -312,7 +303,7 @@ class DjangoStorageReportStore(ReportStore):
 
 
 # TODO (lektorium): move to openedx dir and rewrite as storage
-class ProtectedFSReportStore(LocalFSReportStore):
+class ProtectedFSReportStore(object): #LocalFSReportStore):
     """
     LocalFS implementation of a ReportStore. This is meant for production where
     reports are accessible for all course staff members permanently.
@@ -329,7 +320,7 @@ class ProtectedFSReportStore(LocalFSReportStore):
         self.root_path = root_path
         if not os.path.exists(root_path):
             os.makedirs(root_path)
-        self.protected_url = settings.ROOT_URL_PREFIX + protected_url
+        self.protected_url = protected_url
 
     @classmethod
     def from_config(cls, config_name):

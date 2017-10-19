@@ -11,7 +11,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from student.models import UserProfile, CourseEnrollment
-from courseware.courses import course_image_url
+from openedx.core.lib.courses import course_image_url
 from certificates.models import certificate_status_for_student, CertificateStatuses
 from certificates.api import get_certificate_url
 

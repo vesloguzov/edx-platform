@@ -125,10 +125,8 @@ if STATIC_ROOT_BASE:
     STATIC_ROOT = path(STATIC_ROOT_BASE)
     WEBPACK_LOADER['DEFAULT']['STATS_FILE'] = STATIC_ROOT / "webpack-stats.json"
 
-ROOT_URL_PREFIX = ENV_TOKENS.get('LMS_ROOT_URL_PREFIX', ROOT_URL_PREFIX)
-
-LOGIN_REDIRECT_URL = EDX_ROOT_URL + ROOT_URL_PREFIX + '/login'
-LOGIN_URL = EDX_ROOT_URL + ROOT_URL_PREFIX + '/login'
+LOGIN_REDIRECT_URL = EDX_ROOT_URL + '/login'
+LOGIN_URL = EDX_ROOT_URL + '/login'
 
 # STATIC_URL_BASE specifies the base url to use for static files
 STATIC_URL_BASE = ENV_TOKENS.get('STATIC_URL_BASE', None)
@@ -137,8 +135,6 @@ if STATIC_URL_BASE:
     STATIC_URL = STATIC_URL_BASE.encode('ascii')
     if not STATIC_URL.endswith("/"):
         STATIC_URL += "/"
-
-STATIC_URL = ROOT_URL_PREFIX + STATIC_URL
 
 # DEFAULT_COURSE_ABOUT_IMAGE_URL specifies the default image to show for courses that don't provide one
 DEFAULT_COURSE_ABOUT_IMAGE_URL = ENV_TOKENS.get('DEFAULT_COURSE_ABOUT_IMAGE_URL', DEFAULT_COURSE_ABOUT_IMAGE_URL)
@@ -212,11 +208,6 @@ ALLOWED_HOSTS = [
     FEATURES['PREVIEW_LMS_BASE'],
 ]
 USE_X_FORWARDED_HOST = ENV_TOKENS.get('USE_PROXY_HOST', False)
-
-if ROOT_URL_PREFIX:
-    LMS_BASE += ROOT_URL_PREFIX
-    if 'PREVIEW_LMS_BASE' in FEATURES:
-        FEATURES['PREVIEW_LMS_BASE'] += ROOT_URL_PREFIX
 
 # allow for environments to specify what cookie name our login subsystem should use
 # this is to fix a bug regarding simultaneous logins between edx.org and edge.edx.org which can
@@ -616,8 +607,6 @@ MAILCHIMP_NEW_USER_LIST_ID = ENV_TOKENS.get("MAILCHIMP_NEW_USER_LIST_ID")
 
 
 ############## Feedback submission ##################
-FEEDBACK_BACKEND = ENV_TOKENS.get('FEEDBACK_BACKEND', FEEDBACK_BACKEND)
-
 # Zendesk
 ZENDESK_USER = AUTH_TOKENS.get("ZENDESK_USER")
 ZENDESK_API_KEY = AUTH_TOKENS.get("ZENDESK_API_KEY")

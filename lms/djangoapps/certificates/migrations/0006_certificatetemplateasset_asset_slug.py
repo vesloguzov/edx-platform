@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('certificates', '0005_auto_20151208_0801'),
+        ('certificates', '0006_generatedcertificate_template_version'),
     ]
 
     operations = [

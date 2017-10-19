@@ -15,7 +15,7 @@ from capa.xqueue_interface import XQueueInterface, make_hashkey, make_xheader
 from certificates.models import CertificateStatuses as status
 from certificates.models import (
     CertificateStatuses,
-    CertificateHtmlViewConfiguration
+    CertificateHtmlViewConfiguration,
     CertificateWhitelist,
     ExampleCertificate,
     GeneratedCertificate,
@@ -430,6 +430,7 @@ class XQueueCertInterface(object):
                 student.id,
                 cert.status,
                 unicode(course_id)
+            )
 
         if unverified:
             cert.status = status.unverified
