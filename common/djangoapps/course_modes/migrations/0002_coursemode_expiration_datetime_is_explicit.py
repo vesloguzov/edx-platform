@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('course_modes', '0001_initial'),
+        ('course_modes', '0001_verbose_names'),
     ]
 
     operations = [

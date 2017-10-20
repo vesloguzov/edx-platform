@@ -81,7 +81,7 @@ class UserReadOnlySerializer(serializers.Serializer):
                 reverse('accounts_api', kwargs={'username': user.username})
             ),
             "email": user.email,
-            "nickname": profile.nickname,
+            # TODO: check if required "nickname": userprofile.nickname,
             # For backwards compatibility: Tables created after the upgrade to Django 1.8 will save microseconds.
             # However, mobile apps are not expecting microsecond in the serialized value. If we set it to zero the
             # DRF JSONEncoder will not include it in the serialized value.

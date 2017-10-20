@@ -12,8 +12,8 @@ from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
 from student.tests.factories import UserFactory
 from student.models import UserProfile, CourseEnrollment
-from external_auth.views import cas_create_user
 from instructor.enrollment import enroll_email
+from openedx.core.djangoapps.external_auth.views import cas_create_user
 
 
 class CASUserCreatorTest(ModuleStoreTestCase):

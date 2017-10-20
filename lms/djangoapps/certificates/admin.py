@@ -44,12 +44,15 @@ class CertificateTemplateAdmin(admin.ModelAdmin):
     list_display = ('name', 'description', 'organization', 'course_key', 'mode', 'is_active')
     form = CertificateTemplateForm
 
-    def __init__(self, *args, **kwargs):
-        super(CertificateTemplateAdmin, self).__init__(*args, **kwargs)
-        self.organizations_dict = {org['id']: org['name'] for org in get_organizations()}
-
     def organization(self, obj):
         return self.organizations_dict.get(obj.organization_id) or obj.organization_id
+
+    @property
+    def organizations_dict(self):
+        if not hasattr(self, '_organizations_dict'):
+            self._organizations_dict = {org['id']: org['name'] for org in get_organizations()}
+        return self._organizations_dict
+
     organization.short_description = _('Organization')
 
 

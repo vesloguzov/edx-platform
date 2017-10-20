@@ -1919,7 +1919,7 @@ def create_account_with_params(request, params):
         data=params,
         extra_fields=extra_fields,
         extended_profile_fields=extended_profile_fields,
-        enforce_nickname_neq_password=True,
+        enforce_username_neq_password=True,
         enforce_password_policy=enforce_password_policy,
         tos_required=tos_required,
     )
