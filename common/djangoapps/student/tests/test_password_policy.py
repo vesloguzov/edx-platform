@@ -28,7 +28,7 @@ class TestPasswordPolicy(TestCase):
         self.url = reverse('create_account')
         self.request_factory = RequestFactory()
         self.url_params = {
-            'nickname': 'nickname',
+            'username': 'username',
             'email': 'foo_bar@bar.com',
             'name': 'username',
             'terms_of_service': 'true',
@@ -274,33 +274,33 @@ class TestPasswordPolicy(TestCase):
 
 class TestUsernamePasswordNonmatch(TestCase):
     """
-    Test that registration nickname and password fields differ
+    Test that registration username and password fields differ
     """
     def setUp(self):
         super(TestUsernamePasswordNonmatch, self).setUp()
         self.url = reverse('create_account')
 
         self.url_params = {
-            'nickname': 'nickname',
+            'username': 'username',
             'email': 'foo_bar@bar.com',
             'name': 'username',
             'terms_of_service': 'true',
             'honor_code': 'true',
         }
 
-    def test_with_nickname_password_match(self):
-        self.url_params['nickname'] = "foobar"
+    def test_with_username_password_match(self):
+        self.url_params['username'] = "foobar"
         self.url_params['password'] = "foobar"
         response = self.client.post(self.url, self.url_params)
         self.assertEquals(response.status_code, 400)
         obj = json.loads(response.content)
         self.assertEqual(
             obj['value'],
-            "Nickname and password fields cannot match",
+            "Username and password fields cannot match",
         )
 
-    def test_with_nickname_password_nonmatch(self):
-        self.url_params['nickname'] = "foobar"
+    def test_with_username_password_nonmatch(self):
+        self.url_params['username'] = "foobar"
         self.url_params['password'] = "nonmatch"
         response = self.client.post(self.url, self.url_params)
         self.assertEquals(response.status_code, 200)

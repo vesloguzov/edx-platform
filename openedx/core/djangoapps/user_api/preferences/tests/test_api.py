@@ -10,9 +10,7 @@ from pytz import common_timezones, utc
 
 from django.contrib.auth.models import User
 from django.test.utils import override_settings
-from django.test.client import RequestFactory
 from dateutil.parser import parse as parse_datetime
-from django.core.urlresolvers import reverse
 
 from openedx.core.djangolib.testing.utils import CacheIsolationTestCase, skip_unless_lms
 from openedx.core.lib.time_zone_utils import get_display_time_zone
@@ -60,8 +58,6 @@ class TestPreferenceAPI(CacheIsolationTestCase):
         self.test_preference_key = "test_key"
         self.test_preference_value = "test_value"
         set_user_preference(self.user, self.test_preference_key, self.test_preference_value)
-
-        self.request_factory = RequestFactory()
 
     def test_get_user_preference(self):
         """

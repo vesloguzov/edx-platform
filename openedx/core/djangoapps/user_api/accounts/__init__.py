@@ -10,10 +10,6 @@ NAME_MAX_LENGTH = 255
 USERNAME_MIN_LENGTH = 2
 USERNAME_MAX_LENGTH = 30
 
-# The minimum and maximum length for the nickname account field
-NICKNAME_MIN_LENGTH = 2
-NICKNAME_MAX_LENGTH = 255
-
 # The minimum and maximum length for the email account field
 EMAIL_MIN_LENGTH = 3
 EMAIL_MAX_LENGTH = 254  # Limit per RFCs is 254

@@ -19,16 +19,16 @@ class UserStandingTest(TestCase):
         super(UserStandingTest, self).setUp()
         # create users
         self.bad_user = UserFactory.create(
-            email='bad_user@example.com',
+            username='bad_user',
         )
         self.good_user = UserFactory.create(
-            email='good_user@example.com',
+            username='good_user',
         )
         self.non_staff = UserFactory.create(
-            email='non_staff@example.com',
+            username='non_staff',
         )
         self.admin = UserFactory.create(
-            email='admin@example.com',
+            username='admin',
             is_staff=True,
         )
 
@@ -71,7 +71,7 @@ class UserStandingTest(TestCase):
             UserStanding.objects.filter(user=self.good_user).count(), 0
         )
         response = self.admin_client.post(reverse('disable_account_ajax'), {
-            'email': self.good_user.email,
+            'username': self.good_user.username,
             'account_action': 'disable',
         })
         self.assertEqual(
@@ -86,7 +86,7 @@ class UserStandingTest(TestCase):
     @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
     def test_reenable_account(self):
         response = self.admin_client.post(reverse('disable_account_ajax'), {
-            'email': self.bad_user.email,
+            'username': self.bad_user.username,
             'account_action': 'reenable'
         })
         self.assertEqual(
@@ -104,7 +104,7 @@ class UserStandingTest(TestCase):
     @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
     def test_non_staff_cant_disable_account(self):
         response = self.non_staff_client.post(reverse('disable_account_ajax'), {
-            'email': self.good_user.email,
+            'username': self.good_user.username,
             'user': self.non_staff,
             'account_action': 'disable'
         })

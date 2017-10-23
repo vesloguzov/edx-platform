@@ -357,7 +357,7 @@ def _has_access_course(user, action, courselike):
         # Special case found in invitation only courses: already enrolled users
         # should see the course if they were enrolled without CourseEnrollmentAllowed created
         if (user is not None and user.is_authenticated()
-                and CourseEnrollment.is_enrolled(user, course.id)):
+                and CourseEnrollment.is_enrolled(user, courselike.id)):
             return ACCESS_GRANTED
 
         return ACCESS_GRANTED if (can_load() or can_enroll()) else ACCESS_DENIED

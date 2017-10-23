@@ -2914,7 +2914,6 @@ ACCOUNT_VISIBILITY_CONFIGURATION = {
     # The list of all fields that can be shared with other users
     "shareable_fields": [
         'username',
-        'nickname',
         'profile_image',
         'country',
         'time_zone',
@@ -2928,7 +2927,6 @@ ACCOUNT_VISIBILITY_CONFIGURATION = {
     # The list of account fields that are always public
     "public_fields": [
         'username',
-        'nickname',
         'profile_image',
         'account_privacy',
     ],
@@ -2936,7 +2934,6 @@ ACCOUNT_VISIBILITY_CONFIGURATION = {
     # The list of account fields that are visible only to staff and users viewing their own profiles
     "admin_fields": [
         "username",
-        'nickname',
         "email",
         "date_joined",
         "is_active",

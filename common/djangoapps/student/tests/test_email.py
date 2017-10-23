@@ -103,7 +103,7 @@ class ActivationEmailTests(TestCase):
         """Create an account, triggering the activation email. """
         url = reverse('create_account')
         params = {
-            'nickname': 'test_user',
+            'username': 'test_user',
             'email': 'test_user@example.com',
             'password': 'edx',
             'name': 'Test User',

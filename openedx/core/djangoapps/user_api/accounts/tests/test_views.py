@@ -105,7 +105,6 @@ class UserAPITestCase(APITestCase):
         :return:
         """
         legacy_profile = UserProfile.objects.get(id=user.id)
-        legacy_profile.nickname = "nick"
         legacy_profile.country = "US"
         legacy_profile.level_of_education = "m"
         legacy_profile.year_of_birth = 2000
@@ -225,7 +224,6 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
         data = response.data
         self.assertEqual(8, len(data))
         self.assertEqual(self.user.username, data["username"])
-        self.assertEqual("nick", data["nickname"])
         self.assertEqual("US", data["country"])
         self._verify_profile_image_data(data, True)
         self.assertIsNone(data["time_zone"])
@@ -239,7 +237,7 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
         Verify that only the public fields are returned if a user does not want to share account fields
         """
         data = response.data
-        self.assertEqual(4, len(data))
+        self.assertEqual(3, len(data))
         self.assertEqual(self.user.username, data["username"])
         self._verify_profile_image_data(data, not requires_parental_consent)
         self.assertEqual(account_privacy, data["account_privacy"])
@@ -252,7 +250,6 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
         self.assertEqual(17, len(data))
         self.assertEqual(self.user.username, data["username"])
         self.assertEqual(self.user.first_name + " " + self.user.last_name, data["name"])
-        self.assertEqual("nick", data["nickname"])
         self.assertEqual("US", data["country"])
         self.assertEqual("f", data["gender"])
         self.assertEqual(2000, data["year_of_birth"])
@@ -385,7 +382,6 @@ class TestAccountsAPI(CacheIsolationTestCase, UserAPITestCase):
             for empty_field in ("year_of_birth", "level_of_education", "mailing_address", "bio"):
                 self.assertIsNone(data[empty_field])
             self.assertIsNone(data["country"])
-            self.assertEqual("", data["nickname"])
             self.assertEqual("m", data["gender"])
             self.assertEqual("Learn a lot", data["goals"])
             self.assertEqual(self.user.email, data["email"])

@@ -81,7 +81,6 @@ class UserReadOnlySerializer(serializers.Serializer):
                 reverse('accounts_api', kwargs={'username': user.username})
             ),
             "email": user.email,
-            # TODO: check if required "nickname": userprofile.nickname,
             # For backwards compatibility: Tables created after the upgrade to Django 1.8 will save microseconds.
             # However, mobile apps are not expecting microsecond in the serialized value. If we set it to zero the
             # DRF JSONEncoder will not include it in the serialized value.
@@ -173,7 +172,7 @@ class AccountLegacyProfileSerializer(serializers.HyperlinkedModelSerializer, Rea
     class Meta(object):
         model = UserProfile
         fields = (
-            "nickname", "name", "gender", "goals", "year_of_birth", "level_of_education", "country",
+            "name", "gender", "goals", "year_of_birth", "level_of_education", "country",
             "mailing_address", "bio", "profile_image", "requires_parental_consent", "language_proficiencies"
         )
         # Currently no read-only field, but keep this so view code doesn't need to know.

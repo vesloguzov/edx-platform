@@ -29,8 +29,7 @@ from ..helpers import intercept_errors
 
 from . import (
     EMAIL_MIN_LENGTH, EMAIL_MAX_LENGTH, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH,
-    USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH,
-    NICKNAME_MIN_LENGTH, NICKNAME_MAX_LENGTH
+    USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH
 )
 from .serializers import (
     AccountLegacyProfileSerializer, AccountUserSerializer,
