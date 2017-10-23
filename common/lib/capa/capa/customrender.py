@@ -116,12 +116,12 @@ class TargetedFeedbackRenderer(object):
         """
         Return the contents of this tag, rendered to html, as an etree element.
         """
-        html = u'<section class="targeted-feedback-span"><span>{}</span></section>'.format(etree.tostring(self.xml))
+        html = '<section class="targeted-feedback-span"><span>{}</span></section>'.format(etree.tostring(self.xml))
         try:
             xhtml = etree.XML(html)
         except Exception as err:  # pylint: disable=broad-except
             if self.system.DEBUG:
-                msg = u"""
+                msg = """
                     <html>
                       <div class="inline-error">
                         <p>Error {err}</p>
