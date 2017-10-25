@@ -1054,6 +1054,7 @@ WIKI_LINK_DEFAULT_LEVEL = 2
 
 ##### Feedback submission mechanism #####
 FEEDBACK_SUBMISSION_EMAIL = None
+CONTACT_FORM_SUBMISSION_BACKEND = 'zendesk_ticket'
 
 ##### Zendesk #####
 ZENDESK_URL = None

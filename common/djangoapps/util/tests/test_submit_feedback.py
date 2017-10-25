@@ -12,28 +12,13 @@ from django.test import TestCase
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
 from zendesk import ZendeskError
-<<<<<<< HEAD
-from util import helpdeskeddy
-import json
-import mock
-
-from student.tests.test_microsite import fake_microsite_get_value
-=======
->>>>>>> open-release/ginkgo.1
 
 from openedx.core.djangoapps.site_configuration.tests.factories import SiteFactory
 from openedx.features.enterprise_support.tests.mixins.enterprise import EnterpriseServiceMockMixin
 from student.tests.factories import CourseEnrollmentFactory, UserFactory
 from student.tests.test_configuration_overrides import fake_get_value
-from util import views
+from util import views, helpdeskeddy
 
-<<<<<<< HEAD
-class SubmitFeedbackTest(object):
-    """
-    Base class for feedback submission backends
-    """
-    def _setUp(self):
-=======
 TEST_SUPPORT_EMAIL = "support@example.com"
 TEST_ZENDESK_CUSTOM_FIELD_CONFIG = {
     "course_id": 1234,
@@ -59,24 +44,11 @@ def fake_support_backend_values(name, default=None):  # pylint: disable=unused-a
     return config_dict[name]
 
 
-@ddt
-@mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": True})
-@override_settings(
-    DEFAULT_FROM_EMAIL=TEST_SUPPORT_EMAIL,
-    ZENDESK_URL="dummy",
-    ZENDESK_USER="dummy",
-    ZENDESK_API_KEY="dummy",
-    ZENDESK_CUSTOM_FIELDS={},
-    ENABLE_ENTERPRISE_INTEGRATION=False
-)
-@mock.patch("util.views.dog_stats_api")
-@mock.patch("util.views._ZendeskApi", autospec=True)
-class SubmitFeedbackTest(EnterpriseServiceMockMixin, TestCase):
+class SubmitFeedbackTest(EnterpriseServiceMockMixin):
     """
     Class to test the submit_feedback function in views.
     """
-    def setUp(self):
->>>>>>> open-release/ginkgo.1
+    def _setUp(self):
         """Set up data for the test case"""
         self._request_factory = RequestFactory()
         self._anon_user = AnonymousUser()
@@ -95,17 +67,12 @@ class SubmitFeedbackTest(EnterpriseServiceMockMixin, TestCase):
         # This does not contain issue_type nor course_id to ensure that they are optional
         self._auth_fields = {"subject": "a subject", "details": "some details"}
 
-<<<<<<< HEAD
-    def _get_error(self, *args, **kwargs):
-        raise NotImplementedError
-=======
         # Create a service user, because the track selection page depends on it
         UserFactory.create(
             username='enterprise_worker',
             email="enterprise_worker@example.com",
             password="edx",
         )
->>>>>>> open-release/ginkgo.1
 
     def _build_and_run_request(self, user, fields):
         """
@@ -126,29 +93,60 @@ class SubmitFeedbackTest(EnterpriseServiceMockMixin, TestCase):
         req.user = user
         return views.submit_feedback(req)
 
-    def _assert_bad_request(self, response, field, feedback_backend_mock_class, datadog_mock):
+    def _test_success(self, user, fields):
+        """
+        Generate a request, invoke the view, and assert success.
+
+        The request will be a POST request from the given `user`, with the given
+        `fields` in the POST body. The response should have a 200 (success)
+        status code.
+        """
+        resp = self._build_and_run_request(user, fields)
+        self.assertEqual(resp.status_code, 200)
+
+    def _assert_datadog_called(self, datadog_mock, tags):
+        """Assert that datadog was called with the correct tags."""
+        expected_datadog_calls = [mock.call.increment(views.DATADOG_FEEDBACK_METRIC, tags=tags)]
+        self.assertEqual(datadog_mock.mock_calls, expected_datadog_calls)
+
+
+@ddt
+@mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": True})
+@override_settings(
+    CONTACT_FORM_SUBMISSION_BACKEND="zendesk_ticket",
+    DEFAULT_FROM_EMAIL=TEST_SUPPORT_EMAIL,
+    ZENDESK_URL="dummy",
+    ZENDESK_USER="dummy",
+    ZENDESK_API_KEY="dummy",
+    ZENDESK_CUSTOM_FIELDS={},
+    ENABLE_ENTERPRISE_INTEGRATION=False
+)
+@mock.patch("util.views.dog_stats_api")
+@mock.patch("util.views._ZendeskApi", autospec=True)
+class ZendeskFeedbackTest(SubmitFeedbackTest, TestCase):
+    """
+    Common and Zendesk-specific feedback tests
+    """
+    def setUp(self):
+        super(ZendeskFeedbackTest, self).setUp()
+        # call SubmitFeedbackTest mixin's _setUp explicitly
+        self._setUp()
+
+    def _assert_bad_request(self, response, field, zendesk_mock_class, datadog_mock):
         """
         Assert that the given `response` contains correct failure data.
 
         It should have a 400 status code, and its content should be a JSON
-        object containing list of items with `field` and an `error`.
+        object containing the specified `field` and an `error`.
         """
         self.assertEqual(response.status_code, 400)
         resp_json = json.loads(response.content)
-<<<<<<< HEAD
         self.assertIn(field, resp_json)
-        # There should be absolutely no interaction with feedback backend
-        self.assertFalse(feedback_backend_mock_class.return_value.mock_calls)
-=======
-        self.assertIn("field", resp_json)
-        self.assertEqual(resp_json["field"], field)
-        self.assertIn("error", resp_json)
         # There should be absolutely no interaction with Zendesk
         self.assertFalse(zendesk_mock_class.return_value.mock_calls)
->>>>>>> open-release/ginkgo.1
         self.assertFalse(datadog_mock.mock_calls)
 
-    def _test_bad_request_omit_field(self, user, fields, omit_field, feedback_backend_mock_class, datadog_mock):
+    def _test_bad_request_omit_field(self, user, fields, omit_field, zendesk_mock_class, datadog_mock):
         """
         Invoke the view with a request missing a field and assert correctness.
 
@@ -160,18 +158,9 @@ class SubmitFeedbackTest(EnterpriseServiceMockMixin, TestCase):
         """
         filtered_fields = {k: v for (k, v) in fields.items() if k != omit_field}
         resp = self._build_and_run_request(user, filtered_fields)
-        self._assert_bad_request(resp, omit_field, feedback_backend_mock_class, datadog_mock)
+        self._assert_bad_request(resp, omit_field, zendesk_mock_class, datadog_mock)
 
-    def _test_bad_request_omit_multiple_fields(self, user, fields, omit_fields, feedback_backend_mock_class, datadog_mock):
-        """
-        Just like _test_bad_request_omit_field, but omitting multiple fields.
-        """
-        filtered_fields = {k: v for (k, v) in fields.items() if k not in omit_fields}
-        resp = self._build_and_run_request(user, filtered_fields)
-        for field in omit_fields:
-            self._assert_bad_request(resp, field, feedback_backend_mock_class, datadog_mock)
-
-    def _test_bad_request_empty_field(self, user, fields, empty_field, feedback_backend_mock_class, datadog_mock):
+    def _test_bad_request_empty_field(self, user, fields, empty_field, zendesk_mock_class, datadog_mock):
         """
         Invoke the view with an empty field and assert correctness.
 
@@ -184,29 +173,7 @@ class SubmitFeedbackTest(EnterpriseServiceMockMixin, TestCase):
         altered_fields = fields.copy()
         altered_fields[empty_field] = ""
         resp = self._build_and_run_request(user, altered_fields)
-        self._assert_bad_request(resp, empty_field, feedback_backend_mock_class, datadog_mock)
-
-    def _test_bad_request_empty_fields(self, user, fields, empty_fields, feedback_backend_mock_class, datadog_mock):
-        """
-        Just like _test_bad_request_empty_field, but sending multiple empty fields.
-        """
-        altered_fields = fields.copy()
-        for field in empty_fields:
-            altered_fields[field] = ""
-        resp = self._build_and_run_request(user, altered_fields)
-        for field in empty_fields:
-            self._assert_bad_request(resp, field, feedback_backend_mock_class, datadog_mock)
-
-    def _test_success(self, user, fields):
-        """
-        Generate a request, invoke the view, and assert success.
-
-        The request will be a POST request from the given `user`, with the given
-        `fields` in the POST body. The response should have a 200 (success)
-        status code.
-        """
-        resp = self._build_and_run_request(user, fields)
-        self.assertEqual(resp.status_code, 200)
+        self._assert_bad_request(resp, empty_field, zendesk_mock_class, datadog_mock)
 
     def _build_zendesk_ticket(self, recipient, name, email, subject, details, tags, custom_fields=None):
         """
@@ -257,150 +224,40 @@ class SubmitFeedbackTest(EnterpriseServiceMockMixin, TestCase):
         expected_zendesk_calls = [mock.call.create_ticket(ticket), mock.call.update_ticket(ticket_id, ticket_update)]
         self.assertEqual(zendesk_mock.mock_calls, expected_zendesk_calls)
 
-    def _assert_datadog_called(self, datadog_mock, tags):
-        """Assert that datadog was called with the correct tags."""
-        expected_datadog_calls = [mock.call.increment(views.DATADOG_FEEDBACK_METRIC, tags=tags)]
-        self.assertEqual(datadog_mock.mock_calls, expected_datadog_calls)
-
-    def test_bad_request_anon_user_no_name(self, feedback_backend_mock_class, datadog_mock):
+    def test_bad_request_anon_user_no_name(self, zendesk_mock_class, datadog_mock):
         """Test a request from an anonymous user not specifying `name`."""
-        self._test_bad_request_omit_field(self._anon_user, self._anon_fields, "name", feedback_backend_mock_class, datadog_mock)
-        self._test_bad_request_empty_field(self._anon_user, self._anon_fields, "name", feedback_backend_mock_class, datadog_mock)
+        self._test_bad_request_omit_field(self._anon_user, self._anon_fields, "name", zendesk_mock_class, datadog_mock)
+        self._test_bad_request_empty_field(self._anon_user, self._anon_fields, "name", zendesk_mock_class, datadog_mock)
 
-    def test_bad_request_anon_user_no_email(self, feedback_backend_mock_class, datadog_mock):
+    def test_bad_request_anon_user_no_email(self, zendesk_mock_class, datadog_mock):
         """Test a request from an anonymous user not specifying `email`."""
-        self._test_bad_request_omit_field(self._anon_user, self._anon_fields, "email", feedback_backend_mock_class, datadog_mock)
-        self._test_bad_request_empty_field(self._anon_user, self._anon_fields, "email", feedback_backend_mock_class, datadog_mock)
+        self._test_bad_request_omit_field(self._anon_user, self._anon_fields, "email", zendesk_mock_class, datadog_mock)
+        self._test_bad_request_empty_field(self._anon_user, self._anon_fields, "email", zendesk_mock_class, datadog_mock)
 
-    def test_bad_request_anon_user_invalid_email(self, feedback_backend_mock_class, datadog_mock):
+    def test_bad_request_anon_user_invalid_email(self, zendesk_mock_class, datadog_mock):
         """Test a request from an anonymous user specifying an invalid `email`."""
         fields = self._anon_fields.copy()
         fields["email"] = "This is not a valid email address!"
         resp = self._build_and_run_request(self._anon_user, fields)
-        self._assert_bad_request(resp, "email", feedback_backend_mock_class, datadog_mock)
+        self._assert_bad_request(resp, "email", zendesk_mock_class, datadog_mock)
 
-    def test_bad_request_anon_user_no_subject(self, feedback_backend_mock_class, datadog_mock):
+    def test_bad_request_anon_user_no_subject(self, zendesk_mock_class, datadog_mock):
         """Test a request from an anonymous user not specifying `subject`."""
-        self._test_bad_request_omit_field(self._anon_user, self._anon_fields, "subject", feedback_backend_mock_class, datadog_mock)
-        self._test_bad_request_empty_field(self._anon_user, self._anon_fields, "subject", feedback_backend_mock_class, datadog_mock)
+        self._test_bad_request_omit_field(self._anon_user, self._anon_fields, "subject", zendesk_mock_class, datadog_mock)
+        self._test_bad_request_empty_field(self._anon_user, self._anon_fields, "subject", zendesk_mock_class, datadog_mock)
 
-    def test_bad_request_anon_user_no_details(self, feedback_backend_mock_class, datadog_mock):
+    def test_bad_request_anon_user_no_details(self, zendesk_mock_class, datadog_mock):
         """Test a request from an anonymous user not specifying `details`."""
-        self._test_bad_request_omit_field(self._anon_user, self._anon_fields, "details", feedback_backend_mock_class, datadog_mock)
-        self._test_bad_request_empty_field(self._anon_user, self._anon_fields, "details", feedback_backend_mock_class, datadog_mock)
+        self._test_bad_request_omit_field(self._anon_user, self._anon_fields, "details", zendesk_mock_class, datadog_mock)
+        self._test_bad_request_empty_field(self._anon_user, self._anon_fields, "details", zendesk_mock_class, datadog_mock)
 
-    def test_bad_request_auth_user_no_subject(self, feedback_backend_mock_class, datadog_mock):
-        """Test a request from an authenticated user not specifying `subject`."""
-        self._test_bad_request_omit_field(self._auth_user, self._auth_fields, "subject", feedback_backend_mock_class, datadog_mock)
-        self._test_bad_request_empty_field(self._auth_user, self._auth_fields, "subject", feedback_backend_mock_class, datadog_mock)
-
-    def test_bad_request_auth_user_no_details(self, feedback_backend_mock_class, datadog_mock):
-        """Test a request from an authenticated user not specifying `details`."""
-        self._test_bad_request_omit_field(self._auth_user, self._auth_fields, "details", feedback_backend_mock_class, datadog_mock)
-        self._test_bad_request_empty_field(self._auth_user, self._auth_fields, "details", feedback_backend_mock_class, datadog_mock)
-
-    def test_bad_request_anon_user_multiple_fields_missed(self, feedback_backend_mock_class, datadog_mock):
-        """Test a request from an anonymous user not specifying multiple fields."""
-        self._test_bad_request_omit_multiple_fields(self._anon_user, self._anon_fields, ['name', 'subject'], feedback_backend_mock_class, datadog_mock)
-        self._test_bad_request_empty_fields(self._anon_user, self._anon_fields, ['email', 'details'], feedback_backend_mock_class, datadog_mock)
-
-    def test_bad_request_auth_user_multiple_fields_missed(self, feedback_backend_mock_class, datadog_mock):
-        """Test a request from an anonymous user not specifying multiple fields."""
-        self._test_bad_request_omit_multiple_fields(self._auth_user, self._auth_fields, ['subject', 'details'], feedback_backend_mock_class, datadog_mock)
-        self._test_bad_request_empty_fields(self._auth_user, self._auth_fields, ['subject', 'details'], feedback_backend_mock_class, datadog_mock)
-
-    def test_get_request(self, feedback_backend_mock_class, datadog_mock):
-        """Test that a GET results in a 405 even with all required fields"""
-        req = self._request_factory.get("/submit_feedback", data=self._anon_fields)
-        req.user = self._anon_user
-        resp = views.submit_feedback(req)
-        self.assertEqual(resp.status_code, 405)
-        self.assertIn("Allow", resp)
-        self.assertEqual(resp["Allow"], "POST")
-        # There should be absolutely no interaction with Zendesk
-        self.assertFalse(feedback_backend_mock_class.mock_calls)
-        self.assertFalse(datadog_mock.mock_calls)
-
-    def test_feedback_backend_error_on_create(self, feedback_backend_mock_class, datadog_mock):
-        """
-        Test Zendesk returning an error on ticket creation.
-
-        We should return a 500 error with no body
-        """
-        err = self._get_error(msg="", error_code=404)
-        feedback_backend_mock_instance = feedback_backend_mock_class.return_value
-        feedback_backend_mock_instance.create_ticket.side_effect = err
-        resp = self._build_and_run_request(self._anon_user, self._anon_fields)
-        self.assertEqual(resp.status_code, 500)
-        self.assertFalse(resp.content)
-        self._assert_datadog_called(datadog_mock, with_tags=True)
-
-    @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": False})
-    def test_not_enabled(self, feedback_backend_mock_class, datadog_mock):
-        """
-        Test for feedback submission not enabled in `settings`.
-
-        We should raise Http404.
-        """
-        with self.assertRaises(Http404):
-            self._build_and_run_request(self._anon_user, self._anon_fields)
-
-
-@mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": True})
-@override_settings(ZENDESK_URL="dummy", ZENDESK_USER="dummy", ZENDESK_API_KEY="dummy")
-@mock.patch("util.views.dog_stats_api")
-@mock.patch("util.views._ZendeskApi", autospec=True)
-def ZendeskSubmitFeedbackTest(SubmitFeedbackTest, TestCase):
-    def setUp(self):
-        super(ZendeskSubmitFeedbackTest, self).setUp()
-        # run common SubmitFeedbackTest setup
-        self._setUp()
-
-    def _get_error(self, *args, **kwargs):
-        return ZendeskError(*args, **kwargs)
-
-    def test_valid_request_anon_user(self, feedback_backend_mock_class, datadog_mock):
+    def test_valid_request_anon_user(self, zendesk_mock_class, datadog_mock):
         """
         Test a valid request from an anonymous user.
 
         The response should have a 200 (success) status code, and a ticket with
         the given information should have been submitted via the Zendesk API.
         """
-<<<<<<< HEAD
-        zendesk_mock_instance = feedback_backend_mock_class.return_value
-        zendesk_mock_instance.create_ticket.return_value = 42
-        self._test_success(self._anon_user, self._anon_fields)
-        expected_zendesk_calls = [
-            mock.call.create_ticket(
-                {
-                    "ticket": {
-                        "requester": {"name": "Test User", "email": "test@edx.org"},
-                        "subject": "a subject",
-                        "comment": {"body": "some details"},
-                        "tags": ["test_course", "test_issue", "LMS"]
-                    }
-                }
-            ),
-            mock.call.update_ticket(
-                42,
-                {
-                    "ticket": {
-                        "comment": {
-                            "public": False,
-                            "body":
-                            "Additional information:\n\n"
-                            "Client IP: 1.2.3.4\n"
-                            "Host: test_server\n"
-                            "Page: test_referer\n"
-                            "Browser: test_user_agent"
-                        }
-                    }
-                }
-            )
-        ]
-        self.assertEqual(zendesk_mock_instance.mock_calls, expected_zendesk_calls)
-        self._assert_datadog_called(datadog_mock, with_tags=True)
-=======
         zendesk_mock_instance = zendesk_mock_class.return_value
         user = self._anon_user
         fields = self._anon_fields
@@ -422,7 +279,6 @@ def ZendeskSubmitFeedbackTest(SubmitFeedbackTest, TestCase):
         self._test_success(user, fields)
         self._assert_zendesk_called(zendesk_mock_instance, ticket_id, ticket, ticket_update)
         self._assert_datadog_called(datadog_mock, ["issue_type:{}".format(fields["issue_type"])])
->>>>>>> open-release/ginkgo.1
 
     @mock.patch("openedx.core.djangoapps.site_configuration.helpers.get_value", fake_get_value)
     def test_valid_request_anon_user_configuration_override(self, zendesk_mock_class, datadog_mock):
@@ -504,50 +360,23 @@ def ZendeskSubmitFeedbackTest(SubmitFeedbackTest, TestCase):
         self._assert_zendesk_called(zendesk_mock_instance, ticket_id, ticket, ticket_update)
         self._assert_datadog_called(datadog_mock, datadog_tags)
 
-    def test_valid_request_auth_user(self, feedback_backend_mock_class, datadog_mock):
+    def test_bad_request_auth_user_no_subject(self, zendesk_mock_class, datadog_mock):
+        """Test a request from an authenticated user not specifying `subject`."""
+        self._test_bad_request_omit_field(self._auth_user, self._auth_fields, "subject", zendesk_mock_class, datadog_mock)
+        self._test_bad_request_empty_field(self._auth_user, self._auth_fields, "subject", zendesk_mock_class, datadog_mock)
+
+    def test_bad_request_auth_user_no_details(self, zendesk_mock_class, datadog_mock):
+        """Test a request from an authenticated user not specifying `details`."""
+        self._test_bad_request_omit_field(self._auth_user, self._auth_fields, "details", zendesk_mock_class, datadog_mock)
+        self._test_bad_request_empty_field(self._auth_user, self._auth_fields, "details", zendesk_mock_class, datadog_mock)
+
+    def test_valid_request_auth_user(self, zendesk_mock_class, datadog_mock):
         """
         Test a valid request from an authenticated user.
 
         The response should have a 200 (success) status code, and a ticket with
         the given information should have been submitted via the Zendesk API.
         """
-<<<<<<< HEAD
-        zendesk_mock_instance = feedback_backend_mock_class.return_value
-        zendesk_mock_instance.create_ticket.return_value = 42
-        self._test_success(self._auth_user, self._auth_fields)
-        expected_zendesk_calls = [
-            mock.call.create_ticket(
-                {
-                    "ticket": {
-                        "requester": {"name": "Test User", "email": "test@edx.org"},
-                        "subject": "a subject",
-                        "comment": {"body": "some details"},
-                        "tags": ["LMS"]
-                    }
-                }
-            ),
-            mock.call.update_ticket(
-                42,
-                {
-                    "ticket": {
-                        "comment": {
-                            "public": False,
-                            "body":
-                            "Additional information:\n\n"
-                            "username: test\n"
-                            "Client IP: 1.2.3.4\n"
-                            "Host: test_server\n"
-                            "Page: test_referer\n"
-                            "Browser: test_user_agent"
-                        }
-                    }
-                }
-            )
-        ]
-        self.assertEqual(zendesk_mock_instance.mock_calls, expected_zendesk_calls)
-        self._assert_datadog_called(datadog_mock, with_tags=False)
-
-=======
         zendesk_mock_instance = zendesk_mock_class.return_value
         user = self._auth_user
         fields = self._auth_fields
@@ -767,7 +596,6 @@ def ZendeskSubmitFeedbackTest(SubmitFeedbackTest, TestCase):
         self.assertFalse(resp.content)
         self._assert_datadog_called(datadog_mock, ["issue_type:{}".format(self._anon_fields["issue_type"])])
 
->>>>>>> open-release/ginkgo.1
     def test_zendesk_error_on_update(self, zendesk_mock_class, datadog_mock):
         """
         Test for Zendesk returning an error on ticket update.
@@ -782,6 +610,16 @@ def ZendeskSubmitFeedbackTest(SubmitFeedbackTest, TestCase):
         resp = self._build_and_run_request(self._anon_user, self._anon_fields)
         self.assertEqual(resp.status_code, 200)
         self._assert_datadog_called(datadog_mock, ["issue_type:{}".format(self._anon_fields["issue_type"])])
+
+    @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": False})
+    def test_not_enabled(self, zendesk_mock_class, datadog_mock):
+        """
+        Test for Zendesk submission not enabled in `settings`.
+
+        We should raise Http404.
+        """
+        with self.assertRaises(Http404):
+            self._build_and_run_request(self._anon_user, self._anon_fields)
 
     def test_zendesk_not_configured(self, zendesk_mock_class, datadog_mock):
         """
@@ -799,90 +637,6 @@ def ZendeskSubmitFeedbackTest(SubmitFeedbackTest, TestCase):
         test_case("django.conf.settings.ZENDESK_USER")
         test_case("django.conf.settings.ZENDESK_API_KEY")
 
-<<<<<<< HEAD
-
-@mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": True})
-@override_settings(FEEDBACK_BACKEND='helpdeskeddy', HELPDESKEDDY_URL="http://dummy", HELPDESKEDDY_API_KEY="dummy", HELPDESKEDDY_DEPART=1)
-@mock.patch("util.views.dog_stats_api")
-@mock.patch("util.helpdeskeddy.HelpDeskEddyAPI", autospec=True)
-class HelpDeskEddySubmitFeedbackTest(SubmitFeedbackTest, TestCase):
-    def setUp(self):
-        super(HelpDeskEddySubmitFeedbackTest, self).setUp()
-        # run common SubmitFeedbackTest setup
-        self._setUp()
-
-    def _get_error(self, *args, **kwargs):
-        return helpdeskeddy.HelpDeskEddyError(*args, **kwargs)
-
-    def test_valid_request_anon_user(self, helpdeskeddy_mock_class, datadog_mock):
-        """
-        Test a valid request from an anonymous user.
-
-        The response should have a 200 (success) status code, and a ticket with
-        the given information should have been submitted via the Zendesk API.
-        """
-        helpdeskeddy_mock_instance = helpdeskeddy_mock_class.return_value
-        helpdeskeddy_mock_instance.get_or_create_user.return_value = 42
-        self._test_success(self._anon_user, self._anon_fields)
-        expected_calls = [
-            mock.call.get_or_create_user("test@edx.org", "Test User"),
-            mock.call.create_ticket(42, u"a subject", u"some details\n\n#test_course #test_issue #LMS")
-        ]
-        self.assertEqual(helpdeskeddy_mock_instance.mock_calls, expected_calls)
-        self._assert_datadog_called(datadog_mock, with_tags=True)
-
-    @mock.patch("microsite_configuration.microsite.get_value", fake_microsite_get_value)
-    def test_valid_request_anon_user_microsite(self, helpdeskeddy_mock_class, datadog_mock):
-        """
-        Test a valid request from an anonymous user to a mocked out microsite
-
-        The response should have a 200 (success) status code, and a ticket with
-        the given information should have been submitted via the HelpDeskEddy API with the additional
-        tag that will come from microsite configuration
-        """
-        helpdeskeddy_mock_instance = helpdeskeddy_mock_class.return_value
-        helpdeskeddy_mock_instance.get_or_create_user.return_value = 42
-        self._test_success(self._anon_user, self._anon_fields)
-        expected_helpdeskeddy_calls = [
-            mock.call.get_or_create_user(u"test@edx.org", u"Test User"),
-            mock.call.create_ticket(42, u"a subject", u"some details\n\n#test_course #test_issue #LMS #whitelabel_fakeorg")
-        ]
-        self.assertEqual(helpdeskeddy_mock_instance.mock_calls, expected_helpdeskeddy_calls)
-        self._assert_datadog_called(datadog_mock, with_tags=True)
-
-    def test_valid_request_auth_user(self, feedback_backend_mock_class, datadog_mock):
-        """
-        Test a valid request from an authenticated user.
-
-        The response should have a 200 (success) status code, and a ticket with
-        the given information should have been submitted via the HelpDeskEddy API.
-        """
-        helpdeskeddy_mock_instance = feedback_backend_mock_class.return_value
-        helpdeskeddy_mock_instance.get_or_create_user.return_value = 42
-        self._test_success(self._auth_user, self._auth_fields)
-        expected_helpdeskeddy_calls = [
-            mock.call.get_or_create_user("test@edx.org", "Test User"),
-            mock.call.create_ticket(42, u"a subject", u"some details\n\n#LMS")
-        ]
-        self.assertEqual(helpdeskeddy_mock_instance.mock_calls, expected_helpdeskeddy_calls)
-        self._assert_datadog_called(datadog_mock, with_tags=False)
-
-    def test_helpdeskeddy_not_configured(self, helpdeskeddy_mock_class, datadog_mock):
-        """
-        Test for HelpDeskEddy not fully configured in `settings`.
-
-        For each required configuration parameter, test that setting it to
-        `None` causes an otherwise valid request to return a 500 error.
-        """
-        def test_case(missing_config):
-            with override_settings(**{missing_config: None}):
-                reload(helpdeskeddy)
-                with self.assertRaises(Exception):
-                    self._build_and_run_request(self._anon_user, self._anon_fields)
-
-        test_case("HELPDESKEDDY_URL")
-        test_case("HELPDESKEDDY_API_KEY")
-=======
     @mock.patch("openedx.core.djangoapps.site_configuration.helpers.get_value", fake_support_backend_values)
     def test_valid_request_over_email(self, zendesk_mock_class, datadog_mock):  # pylint: disable=unused-argument
         with mock.patch("util.views.send_mail") as patched_send_email:
@@ -898,4 +652,142 @@ class HelpDeskEddySubmitFeedbackTest(SubmitFeedbackTest, TestCase):
             self.assertEqual(patched_send_email.call_count, 1)
             self.assertIn(self._anon_fields["email"], str(patched_send_email.call_args))
         self.assertEqual(resp.status_code, 500)
->>>>>>> open-release/ginkgo.1
+
+
+
+@mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": True})
+@override_settings(
+    CONTACT_FORM_SUBMISSION_BACKEND="helpdeskeddy_ticket",
+    HELPDESKEDDY_URL="dummy",
+    HELPDESKEDDY_API_KEY="dummy",
+    HELPDESKEDDY_DEPART=1,
+    ENABLE_ENTERPRISE_INTEGRATION=False
+)
+@mock.patch("util.views.dog_stats_api")
+@mock.patch("util.helpdeskeddy.HelpDeskEddyAPI", autospec=True)
+class HelpDeskEddyFeedbackTest(SubmitFeedbackTest, TestCase):
+    """
+    Class to test HelpDeskEddy-specific feedback
+    """
+    def setUp(self):
+        super(HelpDeskEddyFeedbackTest, self).setUp()
+        # call SubmitFeedbackTest mixin's _setUp explicitly
+        self._setUp()
+        self._anon_fields['course_id'] = 'test_course'
+
+    def test_valid_request_anon_user(self, helpdeskeddy_mock_class, datadog_mock):
+        """
+        Test a valid request from an anonymous user.
+
+        The response should have a 200 (success) status code, and a ticket with
+        the given information should have been submitted via the Zendesk API.
+        """
+        helpdeskeddy_mock_instance = helpdeskeddy_mock_class.return_value
+        helpdeskeddy_mock_instance.get_or_create_user.return_value = 42
+        expected_calls = [
+            mock.call.get_or_create_user("test@edx.org", "Test User"),
+            mock.call.create_ticket(42, u"a subject", u"some details\n\n#test_course #test_issue #LMS")
+        ]
+        datadog_tags = [
+            "course_id:{}".format(self._anon_fields['course_id']),
+            "issue_type:{}".format(self._anon_fields["issue_type"])
+        ]
+
+        self._test_success(self._anon_user, self._anon_fields)
+        self.assertEqual(helpdeskeddy_mock_instance.mock_calls, expected_calls)
+        self._assert_datadog_called(datadog_mock, tags=datadog_tags)
+
+    @mock.patch("openedx.core.djangoapps.site_configuration.helpers.get_value", fake_get_value)
+    def test_valid_request_anon_user_configuration_override(self, helpdeskeddy_mock_class, datadog_mock):
+        """
+        Test a valid request from an anonymous user to a mocked out site with configuration override.
+
+        The response should have a 200 (success) status code, and a ticket with
+        the given information should have been submitted via the HelpDeskEddy API with the additional
+        tag that will come from microsite configuration
+        """
+        helpdeskeddy_mock_instance = helpdeskeddy_mock_class.return_value
+        helpdeskeddy_mock_instance.get_or_create_user.return_value = 42
+        expected_helpdeskeddy_calls = [
+            mock.call.get_or_create_user(u"test@edx.org", u"Test User"),
+            mock.call.create_ticket(42, u"a subject", u"some details\n\n#test_course #test_issue #LMS #whitelabel_fakeorg")
+        ]
+        datadog_tags = [
+            "course_id:{}".format(self._anon_fields['course_id']),
+            "issue_type:{}".format(self._anon_fields["issue_type"])
+        ]
+
+        self._test_success(self._anon_user, self._anon_fields)
+        self.assertEqual(helpdeskeddy_mock_instance.mock_calls, expected_helpdeskeddy_calls)
+        self._assert_datadog_called(datadog_mock, tags=datadog_tags)
+
+    def test_valid_request_auth_user(self, helpdeskeddy_mock_class, datadog_mock):
+        """
+        Test a valid request from an authenticated user.
+
+        The response should have a 200 (success) status code, and a ticket with
+        the given information should have been submitted via the HelpDeskEddy API.
+        """
+        helpdeskeddy_mock_instance = helpdeskeddy_mock_class.return_value
+        helpdeskeddy_mock_instance.get_or_create_user.return_value = 42
+        expected_helpdeskeddy_calls = [
+            mock.call.get_or_create_user("test@edx.org", "Test User"),
+            mock.call.create_ticket(42, u"a subject", u"some details\n\n#LMS")
+        ]
+
+        self._test_success(self._auth_user, self._auth_fields)
+        self.assertEqual(helpdeskeddy_mock_instance.mock_calls, expected_helpdeskeddy_calls)
+        self._assert_datadog_called(datadog_mock, tags=[])
+
+    @httpretty.activate
+    @override_settings(ENABLE_ENTERPRISE_INTEGRATION=True)
+    def test_valid_request_auth_user_with_enterprise_info(self, helpdeskeddy_mock_class, datadog_mock):
+        """
+        Test HelpDeskEddy ignores enterprize settings.
+        """
+        self.mock_enterprise_learner_api()
+        helpdeskeddy_mock_instance = helpdeskeddy_mock_class.return_value
+        helpdeskeddy_mock_instance.get_or_create_user.return_value = 42
+        expected_helpdeskeddy_calls = [
+            mock.call.get_or_create_user("test@edx.org", "Test User"),
+            mock.call.create_ticket(42, u"a subject", u"some details\n\n#enterprise_learner #LMS")
+        ]
+
+        self._test_success(self._auth_user, self._auth_fields)
+        self.assertEqual(helpdeskeddy_mock_instance.mock_calls, expected_helpdeskeddy_calls)
+        self._assert_datadog_called(datadog_mock, tags=['learner_type:enterprise_learner'])
+
+    def test_helpdeskeddy_error_on_create(self, helpdeskeddy_mock_class, datadog_mock):
+        """
+        Test HelpDeskEddy returning an error on ticket creation.
+
+        We should return a 500 error with no body
+        """
+        err = helpdeskeddy.HelpDeskEddyError(msg="", error_code=404)
+        helpdeskeddy_mock_instance = helpdeskeddy_mock_class.return_value
+        helpdeskeddy_mock_instance.create_ticket.side_effect = err
+        datadog_tags = [
+            "course_id:{}".format(self._anon_fields['course_id']),
+            "issue_type:{}".format(self._anon_fields["issue_type"])
+        ]
+
+        resp = self._build_and_run_request(self._anon_user, self._anon_fields)
+        self.assertEqual(resp.status_code, 500)
+        self.assertFalse(resp.content)
+        self._assert_datadog_called(datadog_mock, datadog_tags)
+
+    @mock.patch.dict("django.conf.settings.FEATURES", {"ENABLE_FEEDBACK_SUBMISSION": False})
+    def test_helpdeskeddy_not_configured(self, helpdeskeddy_mock_class, datadog_mock):
+        """
+        Test for HelpDeskEddy not fully configured in `settings`.
+
+        For each required configuration parameter, test that setting it to
+        `None` causes an otherwise valid request to return a 500 error.
+        """
+        def test_case(missing_config):
+            with mock.patch(missing_config, None):
+                with self.assertRaises(Exception):
+                    self._build_and_run_request(self._anon_user, self._anon_fields)
+
+        test_case("django.conf.settings.HELPDESKEDDY_URL")
+        test_case("django.conf.settings.HELPDESKEDDY_API_KEY")

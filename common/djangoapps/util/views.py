@@ -173,6 +173,7 @@ def _get_feedback_form_errors(request):
     required_fields = ["subject", "details"]
     if not request.user.is_authenticated():
         required_fields += ["name", "email"]
+
     required_field_errs = {
         "subject": _("Please provide a subject."),
         "details": _("Please provide details."),
@@ -194,7 +195,10 @@ def _get_feedback_form_errors(request):
 
 
 def _get_support_backend():
-    support_backend = configuration_helpers.get_value('CONTACT_FORM_SUBMISSION_BACKEND', SUPPORT_BACKEND_ZENDESK)
+    support_backend = configuration_helpers.get_value(
+        'CONTACT_FORM_SUBMISSION_BACKEND',
+        settings.CONTACT_FORM_SUBMISSION_BACKEND
+    )
     if support_backend == SUPPORT_BACKEND_EMAIL:
         return EmailSupportBackend()
     elif support_backend == SUPPORT_BACKEND_ZENDESK:
@@ -209,7 +213,7 @@ class SupportBackend(object):
     required_settings = ()
 
     def __init__(self):
-        if not any(getattr(settings, name) for name in self.required_settings):
+        if self.required_settings and not all(getattr(settings, name) for name in self.required_settings):
             raise Exception('%s enabled but not configured.' % self.name)
 
     @staticmethod
@@ -218,6 +222,7 @@ class SupportBackend(object):
 
 
 class EmailSupportBackend(SupportBackend):
+    name = "Email Support"
     @staticmethod
     def record_feedback(context, **kwargs):
         try:
@@ -234,6 +239,7 @@ class EmailSupportBackend(SupportBackend):
             success = False
         return success
 
+
 class ZendeskSupportBackend(SupportBackend):
     name = 'Zendesk'
     required_settings = ('ZENDESK_URL', 'ZENDESK_USER', 'ZENDESK_API_KEY')
@@ -243,8 +249,9 @@ class ZendeskSupportBackend(SupportBackend):
         custom_fields = None
         if settings.ZENDESK_CUSTOM_FIELDS:
             custom_field_context = _get_zendesk_custom_field_context(
-                    kwargs.get('request'), learner_data=kwargs.get('enterprise_learner_data')
-                )
+                kwargs.get('request'),
+                learner_data=kwargs.get('enterprise_learner_data')
+            )
             custom_fields = _format_zendesk_custom_fields(custom_field_context)
 
         return _record_feedback_in_zendesk(

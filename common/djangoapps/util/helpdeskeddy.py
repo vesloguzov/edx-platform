@@ -8,7 +8,7 @@ import urlparse
 
 from django.conf import settings
 
-from microsite_configuration import microsite
+from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 
 
 log = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class HelpDeskEddyMixin(object):
         helpdeskeddy_tags = [v for v in context['tags'].values() if v] + ["LMS"]
 
         # via tagging
-        white_label_org = microsite.get_value('course_org_filter')
+        white_label_org = configuration_helpers.get_value('course_org_filter')
         if white_label_org:
             helpdeskeddy_tags = helpdeskeddy_tags + ["whitelabel_{org}".format(org=white_label_org)]
 
