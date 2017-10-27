@@ -84,21 +84,30 @@ class CourseTestCase(ProceduralCourseTestMixin, ModuleStoreTestCase):
         """
 
         super(CourseTestCase, self).setUp()
-        # create profile for user in ModuleStoreTestCase since it cannot create profile itself
-        UserProfile.objects.create(user=self.user)
+        if self.CREATE_USER and not hasattr(self.user, 'profile'):
+            # create profile for user in ModuleStoreTestCase since it cannot create profile itself
+            UserProfile.objects.create(user=self.user)
 
         self.client = AjaxEnabledTestClient()
         self.client.login(username=self.user.username, password=self.user_password)
 
         self.course = CourseFactory.create()
 
+    def create_non_staff_user(self):
+        """
+        Creates a non-staff test user with profile.
+        Returns the non-staff test user and its password.
+        """
+        user, password = super(CourseTestCase, self).create_non_staff_user()
+        # create profile for user in ModuleStoreTestCase since it cannot create profile itself
+        UserProfile.objects.create(user=user)
+        return user, password
+
     def create_non_staff_authed_user_client(self, authenticate=True):
         """
         Create a non-staff user, log them in (if authenticate=True), and return the client, user to use for testing.
         """
         nonstaff, password = self.create_non_staff_user()
-        # create profile for user in ModuleStoreTestCase since it cannot create profile itself
-        UserProfile.objects.create(user=nonstaff)
 
         client = AjaxEnabledTestClient()
         if authenticate:

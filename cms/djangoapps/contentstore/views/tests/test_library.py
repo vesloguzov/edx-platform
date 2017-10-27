@@ -15,7 +15,6 @@ from contentstore.views.component import get_component_templates
 from contentstore.views.library import get_library_creator_status
 from course_creators.views import add_user_with_status_granted as grant_course_creator_status
 from student.roles import LibraryUserRole
-from student.tests.factories import UserProfileFactory
 from xmodule.modulestore.tests.factories import LibraryFactory
 
 LIBRARY_REST_URL = '/library/'  # URL for GET/POST requests involving libraries
@@ -36,17 +35,9 @@ class UnitTestLibraries(CourseTestCase):
 
     def setUp(self):
         super(UnitTestLibraries, self).setUp()
-        self.user.profile = UserProfileFactory(user=self.user)
-        self.user.save()
 
         self.client = AjaxEnabledTestClient()
         self.client.login(username=self.user.username, password=self.user_password)
-
-    def create_non_staff_user(self):
-        user, password = super(UnitTestLibraries, self).create_non_staff_user()
-        user.profile = UserProfileFactory(user=user)
-        user.save()
-        return user, password
 
     ######################################################
     # Tests for /library/ - list and create libraries:
@@ -304,4 +295,4 @@ class UnitTestLibraries(CourseTestCase):
         # Now extra_user should apear in the list:
         response = self.client.get(manage_users_url)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(extra_user.email, response.content)
+        self.assertIn(extra_user.username, response.content)

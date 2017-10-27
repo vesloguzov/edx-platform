@@ -10,7 +10,6 @@ from django.utils import translation
 from django.utils.translation import get_language
 
 from contentstore.tests.utils import AjaxEnabledTestClient
-from student.models import UserProfile
 from contentstore.views.preview import _preview_module_system
 from xmodule.modulestore.django import ModuleI18nService
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
@@ -194,7 +193,6 @@ class InternationalizationTest(ModuleStoreTestCase):
         # Staff has access to view all courses
         self.user.is_staff = True
         self.user.save()
-        UserProfile.objects.create(user=self.user)
 
         self.course_data = {
             'org': 'MITx',

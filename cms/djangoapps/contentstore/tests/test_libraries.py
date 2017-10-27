@@ -31,8 +31,6 @@ from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from xmodule.x_module import STUDIO_VIEW
 
-from student.tests.factories import UserProfileFactory
-
 
 class LibraryTestCase(ModuleStoreTestCase):
     """
@@ -42,7 +40,6 @@ class LibraryTestCase(ModuleStoreTestCase):
         super(LibraryTestCase, self).setUp()
 
         self.user = UserFactory(password=self.user_password, is_staff=True)
-        self.user.profile = UserProfileFactory(user=self.user)
         self.client = AjaxEnabledTestClient()
         self._login_as_staff_user(logout_first=False)
 
@@ -488,7 +485,6 @@ class TestLibraryAccess(SignalDisconnectTestMixin, LibraryTestCase):
         super(TestLibraryAccess, self).setUp()
         self.non_staff_user_password = 'foo'
         self.non_staff_user = UserFactory(password=self.non_staff_user_password, is_staff=False)
-        self.non_staff_user.profile = UserProfileFactory(user=self.non_staff_user)
 
     def _login_as_non_staff_user(self, logout_first=True):
         """ Login as a user that starts out with no roles/permissions granted. """

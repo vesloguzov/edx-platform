@@ -60,6 +60,7 @@ def user_with_role(user, role):
     """ Build user representation with attached role """
     return {
         'id': user.id,
+        'username': user.username,
         'nickname': user.profile.nickname_or_default,
         'email': user.email,
         'role': role

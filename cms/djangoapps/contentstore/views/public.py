@@ -58,7 +58,7 @@ def login_page(request):
         'login.html',
         {
             'csrf': csrf_token,
-            'forgot_password_link': u"//{base}/login#forgot-password-modal".format(base=settings.LMS_BASE),
+            'forgot_password_link': "//{base}/login#forgot-password-modal".format(base=settings.LMS_BASE),
             'platform_name': configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME),
         }
     )
