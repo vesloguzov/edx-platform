@@ -10,6 +10,7 @@ from functools import wraps
 
 from django.db import transaction
 from django.db.models import Q
+from django.conf import settings
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseServerError
 from django.utils.translation import ugettext as _
 from django.views.decorators.http import require_GET, require_POST
@@ -91,17 +92,16 @@ def search_certificates(request):
     except User.DoesNotExist:
         return HttpResponseBadRequest(_("user '{user}' does not exist").format(user=user_filter))
 
-    cert_generation_enabled = (
-        api.has_html_certificates_enabled(cert["course_key"])
-        or settings.FEATURES["CERTIFICATES_USE_CERTS_SERVICE"]
-    )
     certificates = api.get_certificates_for_user(user.username)
     for cert in certificates:
         cert["course_key"] = unicode(cert["course_key"])
         cert["created"] = cert["created"].isoformat()
         cert["modified"] = cert["modified"].isoformat()
         cert["regenerate"] = True
-        cert["generation_enabled"] = cert_generation_enabled
+        cert["generation_enabled"] = (
+            api.has_html_certificates_enabled(cert["course_key"])
+            or settings.FEATURES["CERTIFICATES_USE_CERTS_SERVICE"]
+        )
 
     course_id = urllib.quote_plus(request.GET.get("course_id", ""), safe=':/')
     if course_id:
@@ -115,6 +115,8 @@ def search_certificates(request):
                     certificates = [certificate for certificate in certificates
                                     if certificate['course_key'] == course_id]
                     if not certificates:
+                        cert_generation_enabled = (api.has_html_certificates_enabled(cert["course_key"])
+                            or settings.FEATURES["CERTIFICATES_USE_CERTS_SERVICE"])
                         return JsonResponse([{
                             'username': user.username, 'course_key': course_id,
                             'regenerate': False, 'generation_enabled': cert_generation_enabled

@@ -431,6 +431,7 @@ class XQueueCertInterface(object):
                 cert.status,
                 unicode(course_id)
             )
+            return cert
 
         if unverified:
             cert.status = status.unverified

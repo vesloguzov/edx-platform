@@ -12,15 +12,17 @@ from xmodule.graders import ProblemScore
 
 
 @contextmanager
-def mock_passing_grade(grade_pass='Pass', percent=0.75, ):
+def mock_passing_grade(grade_pass='Pass', percent=0.75, distinction=False):
     """
     Mock the grading function to always return a passing grade.
     """
     with patch('lms.djangoapps.grades.new.course_grade.CourseGrade._compute_letter_grade') as mock_letter_grade:
         with patch('lms.djangoapps.grades.new.course_grade.CourseGrade._compute_percent') as mock_percent_grade:
-            mock_letter_grade.return_value = grade_pass
-            mock_percent_grade.return_value = percent
-            yield
+            with patch('lms.djangoapps.grades.new.course_grade.CourseGrade._compute_distinction') as mock_distinction:
+                mock_letter_grade.return_value = grade_pass
+                mock_percent_grade.return_value = percent
+                mock_distinction.return_value = distinction
+                yield
 
 
 @contextmanager

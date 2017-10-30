@@ -153,7 +153,7 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
         self.assertIsNotNone(certificate)
         self.assertEqual(certificate.mode, 'audit')
 
-    def add_cert_to_queue(self, mode):
+    def add_cert_to_queue(self, mode, distinction=False):
         """
         Dry method for course enrollment and adding request to
         queue. Returns a mock object containing information about the
@@ -166,7 +166,7 @@ class XQueueCertInterfaceAddCertificateTest(ModuleStoreTestCase):
             is_active=True,
             mode=mode,
         )
-        with mock_passing_grade():
+        with mock_passing_grade(distinction=distinction):
             with patch.object(XQueueInterface, 'send_to_queue') as mock_send:
                 mock_send.return_value = (0, None)
                 self.xqueue.add_cert(self.user_2, self.course.id)

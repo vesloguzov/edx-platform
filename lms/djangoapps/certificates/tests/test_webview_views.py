@@ -1087,6 +1087,11 @@ class CertificatesViewsTests(CommonCertificatesTestCase):
         self.cert.template_version = 'v1'
         self.cert.save()
 
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+
         with patch('edxmako.shortcuts.lookup_template') as mock_loader:
             mock_loader.return_value = Template('Test template')
 

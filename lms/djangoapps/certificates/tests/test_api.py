@@ -25,8 +25,7 @@ from certificates.models import (
     certificate_status_for_student
 )
 from certificates.queue import XQueueAddToQueueError, XQueueCertInterface
-from certificates.tests.factories import CertificateInvalidationFactory, GeneratedCertificateFactory
-from certificates.tests.factories import GeneratedCertificateFactory, CertificateHtmlViewConfigurationFactory
+from certificates.tests.factories import CertificateInvalidationFactory, GeneratedCertificateFactory, CertificateHtmlViewConfigurationFactory
 from course_modes.models import CourseMode
 from course_modes.tests.factories import CourseModeFactory
 from courseware.tests.factories import GlobalStaffFactory
@@ -566,7 +565,7 @@ class GenerateUserCertificatesTest(EventTestMixin, WebCertificateTestMixin, Modu
         CertificateHtmlViewConfigurationFactory.create(configuration=json.dumps(configuration))
 
         self._setup_course_certificate()
-        with self._mock_passing_grade():
+        with mock_passing_grade():
             certs_api.generate_user_certificates(self.student, self.course.id)
 
         # Verify that the certificate is downloadable and has configured template version
