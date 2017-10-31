@@ -412,7 +412,7 @@ class EntranceExamTestCases(LoginEnrollmentTestCase, ModuleStoreTestCase, Milest
         self.client.login(username=instructor.username, password='test')
         url = reverse('mark_student_can_skip_entrance_exam', kwargs={'course_id': unicode(self.course.id)})
         response = self.client.post(url, {
-            'student_identifier': self.request.user.email,
+            'unique_student_identifier': self.request.user.email,
         })
         self.assertEqual(response.status_code, 200)
 

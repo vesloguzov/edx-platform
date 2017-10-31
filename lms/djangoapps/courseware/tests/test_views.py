@@ -737,10 +737,9 @@ class ViewsTestCase(ModuleStoreTestCase):
                 )
                 url = reverse('submission_history', kwargs={
                     'course_id': unicode(course_key),
-                    'student_username': admin.username,
                     'location': unicode(usage_key),
                 })
-                response = client.get(url)
+                response = client.get(url, {'student_identifier': admin.username})
                 response_content = HTMLParser().unescape(response.content)
                 expected_time = datetime.now() + timedelta(hours=hour_diff)
                 expected_tz = expected_time.strftime('%Z')
@@ -1411,9 +1410,7 @@ class ProgressPageTests(ProgressPageBaseTests):
         resp = self._get_progress_page()
         self.assertContains(resp, u"View Certificate")
 
-
-        # TODO: revise - Removed as inconsistent
-        # self.assertContains(resp, u"You can keep working for a higher grade")
+        self.assertContains(resp, u"Your certificate is available")
         cert_url = certs_api.get_certificate_url(course_id=self.course.id, uuid=certificate.verify_uuid)
         self.assertContains(resp, cert_url)
 
@@ -1462,7 +1459,7 @@ class ProgressPageTests(ProgressPageBaseTests):
         """Test that query counts remain the same for self-paced and instructor-paced courses."""
         SelfPacedConfiguration(enabled=self_paced_enabled).save()
         self.setup_course(self_paced=self_paced)
-        with self.assertNumQueries(40, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST), check_mongo_calls(1):
+        with self.assertNumQueries(40+1, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST), check_mongo_calls(1):
             self._get_progress_page()
 
     @ddt.data(
@@ -1474,14 +1471,14 @@ class ProgressPageTests(ProgressPageBaseTests):
         self.setup_course()
         with grades_waffle().override(ASSUME_ZERO_GRADE_IF_ABSENT, active=enable_waffle):
             with self.assertNumQueries(
-                initial, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST
+                initial+1, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST
             ), check_mongo_calls(1):
                 self._get_progress_page()
 
             # subsequent accesses to the progress page require fewer queries.
             for _ in range(2):
                 with self.assertNumQueries(
-                    subsequent, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST
+                    subsequent+1, table_blacklist=QUERY_COUNT_TABLE_BLACKLIST
                 ), check_mongo_calls(1):
                     self._get_progress_page()
 
@@ -1538,15 +1535,14 @@ class ProgressPageTests(ProgressPageBaseTests):
         certs_api.set_cert_generation_enabled(self.course.id, True)
         CourseEnrollment.enroll(self.user, self.course.id, mode='honor')
 
-        resp = views.progress(self.request, course_id=unicode(self.course.id))
+        resp = self._get_progress_page()
 
         if name_filled:
             # assert button exists and enabled
             self.assertIn('Request Certificate', resp.content)
-            self.assertNotRegexpMatches(resp.content, '<button [^>]* disabled[^>]*>[^<]*Request Certificate')
         else:
             # assert button disabled
-            self.assertRegexpMatches(resp.content, '<button [^>]* disabled[^>]*>[^<]*Request Certificate')
+            self.assertNotIn('Request Certificate', resp.content)
             self.assertIn('as soon as you fill your full name', resp.content)
 
     @patch.dict('django.conf.settings.FEATURES', {'CERTIFICATES_HTML_VIEW': True})

@@ -776,7 +776,7 @@ urlpatterns += (
 if settings.FEATURES.get('ENABLE_STUDENT_HISTORY_VIEW'):
     urlpatterns += (
         url(
-            r'^courses/{}/submission_history/(?P<student_username>[^/]*)/(?P<location>.*?)$'.format(
+            r'^courses/{}/submission_history/(?P<location>.*?)$'.format(
                 settings.COURSE_ID_PATTERN
             ),
             'courseware.views.views.submission_history',
@@ -1004,8 +1004,6 @@ if settings.DEBUG:
         settings.PROFILE_IMAGE_BACKEND['options']['base_url'],
         document_root=settings.PROFILE_IMAGE_BACKEND['options']['location']
     )
-    # serve user uploads in debug mode
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns += url(r'^template/(?P<template>.+)$', 'openedx.core.djangoapps.debug.views.show_reference_template'),
 

@@ -1,6 +1,6 @@
 <%page expression_filter="h"/>
 <% import json, pytz  %>
-<h3>${nickname} > ${course_id} > ${location}</h3>
+<h3>${username} > ${course_id} > ${location}</h3>
 
 % for i, (entry, score) in enumerate(zip(history_entries, scores)):
 <hr/>

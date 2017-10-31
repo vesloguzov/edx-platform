@@ -16,7 +16,7 @@ from course_modes.models import CourseMode
 from lms.djangoapps.ccx.tests.factories import CcxFactory
 from shoppingcart.models import Order, PaidCourseRegistration
 from student.models import CourseEnrollment
-from student.tests.factories import AdminFactory, CourseEnrollmentFactory, CourseEnrollmentAllowedFactory, UserFactory
+from student.tests.factories import AdminFactory, CourseEnrollmentAllowedFactory, UserFactory
 from track.tests import EventTrackingTestCase
 from util.milestones_helpers import get_prerequisite_courses_display, set_prerequisite_courses
 from xmodule.course_module import CATALOG_VISIBILITY_ABOUT, CATALOG_VISIBILITY_NONE
@@ -330,50 +330,6 @@ class AboutWithInvitationOnly(SharedModuleStoreTestCase):
 
         # Check that registration button is present
         self.assertIn(REG_STR, resp.content)
-
-    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
-    def test_invitation_only_but_allowed_before_start(self):
-        """
-        Test for user logged in and allowed to enroll in invitation only course.
-        """
-        self._delay_course_start()
-
-        # Course is invitation only, student is allowed to enroll and logged in
-        user = UserFactory.create(username='allowed_student', password='test', email='allowed_student@test.com')
-        CourseEnrollmentAllowedFactory(email=user.email, course_id=self.course.id)
-        self.client.login(username=user.username, password='test')
-
-        url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
-        resp = self.client.get(url)
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn(u"Enroll in {}".format(self.course.id.course), resp.content.decode('utf-8'))
-
-        # Check that registration button is present
-        self.assertIn(REG_STR, resp.content)
-
-    @patch.dict('django.conf.settings.FEATURES', {'DISABLE_START_DATES': False})
-    def test_invitation_only_enrolled_before_start(self):
-        """
-        Test for user logged in and enrolled in invitation only course before the start date
-        """
-        self._delay_course_start()
-
-        # Course is invitation only, student is enrolled and logged in
-        user = UserFactory.create(username='enrolled_student', password='test', email='enrolled_student@test.com')
-        CourseEnrollmentFactory(user=user, course_id=self.course.id)
-        self.client.login(username=user.username, password='test')
-
-        url = reverse('about_course', args=[self.course.id.to_deprecated_string()])
-        resp = self.client.get(url)
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("You are enrolled in this course", resp.content)
-        self.assertNotIn("View Courseware", resp.content)
-
-    def _delay_course_start(self):
-        # Course is not yet started
-        tomorrow = datetime.datetime.now(pytz.UTC) + datetime.timedelta(days=1)
-        self.course.start = tomorrow
-        self.course = self.update_course(self.course, self.user.id)
 
 
 @attr(shard=1)

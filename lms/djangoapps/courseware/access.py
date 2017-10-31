@@ -37,7 +37,7 @@ from mobile_api.models import IgnoreMobileAvailableFlagConfig
 from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from openedx.core.djangoapps.external_auth.models import ExternalAuthMap
 from student import auth
-from student.models import CourseEnrollment, CourseEnrollmentAllowed
+from student.models import CourseEnrollmentAllowed
 from student.roles import (
     CourseBetaTesterRole,
     CourseCcxCoachRole,
@@ -349,17 +349,9 @@ def _has_access_course(user, action, courselike):
 
     def see_exists():
         """
-        Can see if can enroll or is enrolled, but also if can load it:
-        if user enrolled in a course and now it's past the enrollment period,
-        they should still see it.
+        Can see if can enroll, but also if can load it: if user enrolled in a course and now
+        it's past the enrollment period, they should still see it.
         """
-
-        # Special case found in invitation only courses: already enrolled users
-        # should see the course if they were enrolled without CourseEnrollmentAllowed created
-        if (user is not None and user.is_authenticated()
-                and CourseEnrollment.is_enrolled(user, courselike.id)):
-            return ACCESS_GRANTED
-
         return ACCESS_GRANTED if (can_load() or can_enroll()) else ACCESS_DENIED
 
     def can_see_in_catalog():

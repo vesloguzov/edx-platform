@@ -1002,7 +1002,7 @@ def _get_cert_data(student, course, course_key, is_active, enrollment_mode):
     if cert_downloadable_status['is_downloadable']:
         cert_status = CertificateStatuses.downloadable
         title = _('Your certificate is available')
-        msg = _('You can keep working for a higher grade, or request your certificate now.')
+        msg = _('View your certificate by clicking the button below.')
         if certs_api.has_html_certificates_enabled(course_key, course):
             if certs_api.get_active_web_certificate(course) is not None:
                 cert_web_view_url = certs_api.get_certificate_url(
@@ -1055,15 +1055,26 @@ def _get_cert_data(student, course, course_key, is_active, enrollment_mode):
             cert_web_view_url=None
         )
 
-    # if student hasn't filled his name in profile, disable generate cert button
-    # and show message asking for name
-    require_learner_name = show_generate_cert_btn and not student.profile.name.strip()
-    # TODO(lektorium): create CertData for the case of missing fullname
+    # if the learner hasn't filled his name in profile, show message asking for name
+    if show_generate_cert_btn and not student.profile.name.strip():
+        return CertData(
+            CertificateStatuses.unavailable,
+            _('Congratulations, you qualified for a certificate!'),
+            _(
+                'You will be able to request your certificate as soon as you fill your full name '
+                'on the {link_start}Account Settings Page.{link_end}'
+            ).format(
+                link_start='<a href="{}">'.format(reverse('account_settings')),
+                link_end='</a>'
+            ),
+            download_url=None,
+            cert_web_view_url=None
+        )
 
     return CertData(
         CertificateStatuses.requesting,
         _('Congratulations, you qualified for a certificate!'),
-        _('You can keep working for a higher grade, or request your certificate now.'),
+        _('You can keep working for a higher grade, or request your certificate now. Certificate could be issued only once.'),
         download_url=None,
         cert_web_view_url=None
     )

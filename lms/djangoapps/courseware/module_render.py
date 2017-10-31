@@ -339,7 +339,7 @@ def get_xqueue_callback_url_prefix(request):
     by the LMS before submitting background tasks to run.  The xqueue callbacks
     should go back to the LMS, not to the worker.
     """
-    prefix = u'{proto}://{host}'.format(
+    prefix = '{proto}://{host}'.format(
         proto=request.META.get('HTTP_X_FORWARDED_PROTO', 'https' if request.is_secure() else 'http'),
         host=request.get_host()
     )
@@ -783,7 +783,7 @@ def load_single_xblock(request, user_id, course_id, usage_key_string, course=Non
     )
     instance = get_module(user, request, usage_key, field_data_cache, grade_bucket_type='xqueue', course=course)
     if instance is None:
-        msg = u"No module {0} for user {1}--access denied?".format(usage_key_string, user)
+        msg = "No module {0} for user {1}--access denied?".format(usage_key_string, user)
         log.debug(msg)
         raise Http404
     return instance
@@ -896,7 +896,7 @@ def get_module_by_usage_id(request, course_id, usage_id, disable_staff_debug_inf
         descriptor_orig_usage_key, descriptor_orig_version = modulestore().get_block_original_usage(usage_key)
     except ItemNotFoundError:
         log.warn(
-            u"Invalid location for course id %s: %s",
+            "Invalid location for course id %s: %s",
             usage_key.course_key,
             usage_key
         )
