@@ -867,7 +867,7 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
         secret_key = settings.VERIFY_STUDENT["SOFTWARE_SECURE"]["API_SECRET_KEY"]
 
         scheme = "https" if settings.HTTPS == "on" else "http"
-        callback_url = u"{}://{}{}".format(
+        callback_url = "{}://{}{}".format(
             scheme, settings.SITE_NAME, reverse('verify_student_results_callback')
         )
 
@@ -953,20 +953,20 @@ class SoftwareSecurePhotoVerification(PhotoVerification):
             verify=False
         )
 
-        log.info(u"Sent request to Software Secure for receipt ID %s.", self.receipt_id)
+        log.info("Sent request to Software Secure for receipt ID %s.", self.receipt_id)
         if copy_id_photo_from is not None:
             log.info(
                 (
-                    u"Software Secure attempt with receipt ID %s used the same photo ID "
+                    "Software Secure attempt with receipt ID %s used the same photo ID "
                     "data as the receipt with ID %s"
                 ),
                 self.receipt_id, copy_id_photo_from.receipt_id
             )
 
-        log.debug(u"Headers:\n{}\n\n".format(headers))
-        log.debug(u"Body:\n{}\n\n".format(body))
-        log.debug(u"Return code: {}".format(response.status_code))
-        log.debug(u"Return message:\n\n{}\n\n".format(response.text))
+        log.debug("Headers:\n{}\n\n".format(headers))
+        log.debug("Body:\n{}\n\n".format(body))
+        log.debug("Return code: {}".format(response.status_code))
+        log.debug("Return message:\n\n{}\n\n".format(response.text))
 
         return response
 

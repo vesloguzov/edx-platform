@@ -6,7 +6,7 @@ import datetime
 import itertools
 
 import ddt
-from mock import patch
+from mock import patch, PropertyMock, MagicMock
 from nose.plugins.attrib import attr
 
 from capa.tests.response_xml_factory import MultipleChoiceResponseXMLFactory
@@ -341,16 +341,7 @@ class GradeDistinctionTest(SharedModuleStoreTestCase):
     """
     Test computing of final course grade
     """
-    GRADING_POLICY = {
-        "GRADER": [{
-            'type': 'Exam',
-            'min_count': 1,
-            'drop_count': 0,
-            'short_label': 'Exam',
-            'weight': 1
-        }],
-        "GRADE_CUTOFFS": {'A': 0.9, 'B': 0.6}
-    }
+    GRADE_CUTOFFS = {'A': 0.9, 'B': 0.6}
 
     def setUp(self):
         """
@@ -359,10 +350,11 @@ class GradeDistinctionTest(SharedModuleStoreTestCase):
         super(GradeDistinctionTest, self).setUp()
 
         self.course = CourseFactory.create(
-            grading_policy = self.GRADING_POLICY
+            grade_cutoffs = self.GRADE_CUTOFFS
         )
+        self.course = self.store.get_course(self.course.id)
         self.student = UserFactory.create()
-        CourseEnrollmentFactory.create(user=self.student, course_id=self.course.id)
+        CourseEnrollment.enroll(self.student, self.course.id)
 
     def test_grade_with_distinction(self):
         """
@@ -373,8 +365,8 @@ class GradeDistinctionTest(SharedModuleStoreTestCase):
             mock_grader.grade = MagicMock(return_value={'percent': 0.95})
 
             course_grade = CourseGradeFactory().create(self.student, self.course)
-            self.assertTrue(hasattr(result.distinction))
-            self.assertTrue(result.distinction, 'The distinction is not calculated correctly')
+            self.assertTrue(hasattr(course_grade, 'distinction'))
+            self.assertTrue(course_grade.distinction, 'The distinction is not calculated correctly')
 
     def test_grade_no_distinction(self):
         """
@@ -385,5 +377,5 @@ class GradeDistinctionTest(SharedModuleStoreTestCase):
             mock_grader.grade = MagicMock(return_value={'percent': 0.75})
 
             course_grade = CourseGradeFactory().create(self.student, self.course)
-            self.assertTrue(hasattr(result.distinction))
-            self.assertFalse(result.distinction, 'The distinction is not calculated correctly')
+            self.assertTrue(hasattr(course_grade, 'distinction'))
+            self.assertFalse(course_grade.distinction, 'The distinction is not calculated correctly')

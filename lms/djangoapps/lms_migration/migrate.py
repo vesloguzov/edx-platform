@@ -119,7 +119,7 @@ def manage_modulestores(request, reload_dir=None, commit_id=None):
     html += '<ol>'
     for cdir, course in def_ms.courses.items():
         html += '<li><a href="%s/migrate/reload/%s">%s</a> (%s)</li>' % (
-            settings.EDX_ROOT_URL
+            settings.EDX_ROOT_URL,
             escape(cdir),
             escape(cdir),
             course.location.to_deprecated_string()
