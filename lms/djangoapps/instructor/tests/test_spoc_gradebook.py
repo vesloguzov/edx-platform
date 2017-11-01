@@ -8,7 +8,6 @@ from nose.plugins.attrib import attr
 from capa.tests.response_xml_factory import StringResponseXMLFactory
 from courseware.tests.factories import StudentModuleFactory
 from student.tests.factories import AdminFactory, CourseEnrollmentFactory, UserFactory
-from student.models import UserProfile
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 
@@ -63,7 +62,6 @@ class TestGradebook(SharedModuleStoreTestCase):
         self.users = [UserFactory.create() for _ in xrange(USER_COUNT)]
 
         for user in self.users:
-            UserProfile.objects.filter(user=user).update(nickname='nick_' + user.username)
             CourseEnrollmentFactory.create(user=user, course_id=self.course.id)
 
         for i, item in enumerate(self.items):
@@ -92,7 +90,7 @@ class TestDefaultGradingPolicy(TestGradebook):
     """
     def test_all_users_listed(self):
         for user in self.users:
-            self.assertIn(user.profile.nickname, unicode(self.response.content, 'utf-8'))
+            self.assertIn(user.username, unicode(self.response.content, 'utf-8'))
 
     def test_default_policy(self):
         # Default >= 50% passes, so Users 5-10 should be passing for Homework 1 [6]

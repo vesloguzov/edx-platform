@@ -980,9 +980,9 @@ class TestInstructorAPIEnrollment(SharedModuleStoreTestCase, LoginEnrollmentTest
             'SITE_NAME',
             settings.SITE_NAME
         )
-        cls.mktg_site_name = microsite.get_value(
+        cls.mktg_site_name = configuration_helpers.get_value(
             'MKTG_SITE_NAME',
-            microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+            configuration_helpers.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
         )
         cls.about_path = '/courses/{}/about'.format(cls.course.id)
         cls.course_path = '/courses/{}/'.format(cls.course.id)
@@ -1738,9 +1738,9 @@ class TestInstructorAPIBulkBetaEnrollment(SharedModuleStoreTestCase, LoginEnroll
             'SITE_NAME',
             settings.SITE_NAME
         )
-        cls.mktg_site_name = microsite.get_value(
+        cls.mktg_site_name = configuration_helpers.get_value(
             'MKTG_SITE_NAME',
-            microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+            configuration_helpers.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
         )
         cls.about_path = '/courses/{}/about'.format(cls.course.id)
         cls.course_path = '/courses/{}/'.format(cls.course.id)
@@ -2176,7 +2176,7 @@ class TestInstructorAPILevelsAccess(SharedModuleStoreTestCase, LoginEnrollmentTe
         })
         self.assertEqual(response.status_code, 200)
         expected = {
-            'unique_student_identifier': self.other_user.email,
+            'unique_student_identifier': self.other_user.username,
             'inactiveUser': True,
         }
         res_json = json.loads(response.content)
@@ -2198,14 +2198,14 @@ class TestInstructorAPILevelsAccess(SharedModuleStoreTestCase, LoginEnrollmentTe
         """
         url = reverse('modify_access', kwargs={'course_id': self.course.id.to_deprecated_string()})
         response = self.client.post(url, {
-            'unique_student_identifier': self.instructor.email,
+            'unique_student_identifier': self.instructor.username,
             'rolename': 'instructor',
             'action': 'revoke',
         })
         self.assertEqual(response.status_code, 200)
         # check response content
         expected = {
-            'unique_student_identifier': self.instructor.email,
+            'unique_student_identifier': self.instructor.username,
             'rolename': 'instructor',
             'action': 'revoke',
             'removingSelfAsInstructor': True,
@@ -3786,7 +3786,7 @@ class TestInstructorAPITaskLists(SharedModuleStoreTestCase, LoginEnrollmentTestC
             attr_dict = {key: getattr(self, key) for key in self.FEATURES}
             attr_dict['created'] = attr_dict['created'].isoformat()
             attr_dict['requester'] = u'{} ({})'.format(
-                self.requester.username, self.requester.email
+                self.requester.profile.nickname_or_default, self.requester.email
             )
             return attr_dict
 

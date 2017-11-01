@@ -13,7 +13,7 @@ from django.core.urlresolvers import reverse
 from django.http import Http404, HttpResponseServerError
 from django.utils.html import escape
 from django.utils.translation import ugettext as _
-from django.utils.translation import pgettext, ugettext_noop
+from django.utils.translation import ugettext_noop
 from django.views.decorators.cache import cache_control
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
@@ -437,7 +437,7 @@ def _section_course_info(course, access):
 
     section_data = {
         'section_key': 'course_info',
-        'section_display_name': pgettext('Instructor dashboard title', 'Course Info'),
+        'section_display_name': _('Course Info'),
         'access': access,
         'course_id': course_key,
         'course_display_name': course.display_name,

@@ -357,7 +357,7 @@ def get_email_params(course, auto_enroll, secure=True, course_key=None, display_
 
     mktg_site_name = configuration_helpers.get_value(
         'MKTG_SITE_NAME',
-        microsite.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
+        configuration_helpers.get_value('SITE_NAME', settings.MKTG_SITE_NAME)
     )
     stripped_site_name = configuration_helpers.get_value(
         'SITE_NAME',

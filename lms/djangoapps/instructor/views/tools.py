@@ -85,40 +85,6 @@ def require_student_from_identifier(unique_student_identifier):
         )
 
 
-def get_student_from_email_or_nickname(identifier):
-    """
-    Get a student object using an email address or nickname
-
-    Return the user object associated with identifier, email is prior
-
-    Raise User.DoesNotExist if no user object can be found and
-    MultipleObjectsReturned if multiple users have specified nickname
-    """
-    identifier = strip_if_string(identifier)
-    try:
-        student = User.objects.get(email=identifier)
-    except User.DoesNotExist:
-        student = User.objects.get(profile__nickname=identifier)
-    return student
-
-
-def require_student_from_email_or_nickname(identifier):
-    """
-    Same as get_student_from_email_or_nickname() but will raise a DashboardError if
-    the student does not exist.
-    """
-    try:
-        return get_student_from_email_or_nickname(identifier)
-    except User.DoesNotExist:
-        raise DashboardError(
-            _("Could not find student matching identifier: {}").format(identifier)
-        )
-    except User.MultipleObjectsReturned:
-        raise DashboardError(
-            _("Multiple users match nickname: {}; use an email instead".format(identifier))
-        )
-
-
 def parse_datetime(datestr):
     """
     Convert user input date string into an instance of `datetime.datetime` in

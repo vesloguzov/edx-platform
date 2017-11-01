@@ -1221,7 +1221,7 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=red
 
     if not query_features:
         query_features = [
-            'id', 'nickname', 'name', 'email', 'language', 'location',
+            'id', 'username', 'name', 'email', 'language', 'location',
             'year_of_birth', 'gender', 'level_of_education', 'mailing_address',
             'goals', 'enrollment_mode', 'verification_status',
         ]
@@ -1231,7 +1231,7 @@ def get_students_features(request, course_id, csv=False):  # pylint: disable=red
     # used as the header row in the CSV, but could be in the future.
     query_features_names = {
         'id': _('User ID'),
-        'nickname': _('Nickname'),
+        'username': _('Username'),
         'name': _('Name'),
         'email': _('Email'),
         'language': _('Language'),
