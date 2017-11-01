@@ -1975,7 +1975,8 @@ class TestCertificateGeneration(InstructorTaskModuleTestCase):
             'failed': 3,
             'skipped': 2
         }
-        with self.assertNumQueries(171):
+        # lek-edx: additional query for certificate template version
+        with self.assertNumQueries(171 + 1):
             self.assertCertificatesGenerated(task_input, expected_results)
 
         expected_results = {

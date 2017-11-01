@@ -526,8 +526,8 @@ class TestCalculateGradesCSVInstructorTask(TestInstructorTasks):
         mock_instance = Mock()
         mock_instance.calculate_grades_csv = Mock(return_value={'success': 'correct'})
 
-        with patch('instructor_task.tasks_helper.get_module_for_descriptor_internal') as mock_get_module:
-            with patch('instructor_task.models.LocalFSReportStore.store') as mock_store:
+        with patch('lms.djangoapps.instructor_task.tasks_helper.module_state.get_module_for_descriptor_internal') as mock_get_module:
+            with patch('lms.djangoapps.instructor_task.models.DjangoStorageReportStore.store') as mock_store:
                 mock_get_module.return_value = mock_instance
                 self._run_task_with_mock_celery(calculate_grades_csv, task_entry.id, task_entry.task_id)
 

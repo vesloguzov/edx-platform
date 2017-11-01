@@ -62,7 +62,7 @@ def track_memory_usage(metric, course_id):
         dog_stats_api.increment(
             metric + "." + memory_type,
             memory_used,
-            tags=[u"course_id:{}".format(course_id)],
+            tags=["course_id:{}".format(course_id)],
         )
 
 

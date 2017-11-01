@@ -10,6 +10,7 @@ from time import time
 
 from lazy import lazy
 from pytz import UTC
+from django.utils.translation import ugettext as _
 
 from certificates.models import CertificateWhitelist, GeneratedCertificate, certificate_info_for_user
 from courseware.courses import get_course_by_id
@@ -446,7 +447,7 @@ class ProblemGradeReport(object):
 
         # Just generate the static fields for now.
         rows = [list(header_row.values()) + [_('Enrollment Status'), _('Grade')] + _flatten(graded_scorable_blocks.values())]
-        error_rows = [list(header_row.values()) + [_('Error message')]]
+        error_rows = [list(header_row.values()) + [_('Error Message')]]
         current_step = {'step': 'Calculating Grades'}
 
         # Bulk fetch and cache enrollment states so we can efficiently determine
