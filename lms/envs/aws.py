@@ -125,8 +125,6 @@ if STATIC_ROOT_BASE:
     STATIC_ROOT = path(STATIC_ROOT_BASE)
     WEBPACK_LOADER['DEFAULT']['STATS_FILE'] = STATIC_ROOT / "webpack-stats.json"
 
-LOGIN_REDIRECT_URL = EDX_ROOT_URL + '/login'
-LOGIN_URL = EDX_ROOT_URL + '/login'
 
 # STATIC_URL_BASE specifies the base url to use for static files
 STATIC_URL_BASE = ENV_TOKENS.get('STATIC_URL_BASE', None)
@@ -207,7 +205,6 @@ ALLOWED_HOSTS = [
     ENV_TOKENS.get('LMS_BASE'),
     FEATURES['PREVIEW_LMS_BASE'],
 ]
-USE_X_FORWARDED_HOST = ENV_TOKENS.get('USE_PROXY_HOST', False)
 
 # allow for environments to specify what cookie name our login subsystem should use
 # this is to fix a bug regarding simultaneous logins between edx.org and edge.edx.org which can
