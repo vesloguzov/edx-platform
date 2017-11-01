@@ -746,12 +746,6 @@ if settings.FEATURES.get('ENABLE_DISCUSSION_SERVICE'):
         ),
     )
 
-if settings.GRADES_DOWNLOAD['STORAGE_TYPE'] == 'protectedfs':
-    urlpatterns += (
-        url(r'^courses/{}/download_report/(?P<filename>[^/]*)/$'.format(settings.COURSE_ID_PATTERN),
-            'instructor.views.storage.serve_report', name='serve_report'),
-    )
-
 urlpatterns += (
     url(
         r'^courses/{}/tab/(?P<tab_type>[^/]+)/$'.format(

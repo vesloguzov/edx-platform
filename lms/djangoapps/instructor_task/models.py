@@ -12,7 +12,7 @@ file and check it in at the same time as your model changes. To do that,
 ASSUMPTIONS: modules have unique IDs, even across different module_types
 
 """
-import unicodecsv as csv
+import csv
 import hashlib
 import json
 import os.path
@@ -22,7 +22,6 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
 from django.db import models, transaction
-from django.core.urlresolvers import reverse
 
 from openedx.core.djangoapps.xmodule_django.models import CourseKeyField
 from openedx.core.storage import get_storage
@@ -94,7 +93,7 @@ class InstructorTask(models.Model):
 
         # check length of task_input, and return an exception if it's too long:
         if len(json_task_input) > 255:
-            fmt = u'Task input longer than 255: "{input}" for "{task}" of "{course}"'
+            fmt = 'Task input longer than 255: "{input}" for "{task}" of "{course}"'
             msg = fmt.format(input=json_task_input, task=task_type, course=course_id)
             raise ValueError(msg)
 
@@ -130,7 +129,7 @@ class InstructorTask(models.Model):
         # will fit in the column.  In the meantime, just return an exception.
         json_output = json.dumps(returned_result)
         if len(json_output) > 1023:
-            raise ValueError(u"Length of task output is too long: {0}".format(json_output))
+            raise ValueError("Length of task output is too long: {0}".format(json_output))
         return json_output
 
     @staticmethod
@@ -210,9 +209,6 @@ class ReportStore(object):
                     'location': config['ROOT_PATH'],
                 },
             )
-        elif storage_type == "protectedfs":
-            # TODO (lektorium): rewrite as additional storage
-            return ProtectedFSReportStore.from_config(config_name)
         return DjangoStorageReportStore.from_config(config_name)
 
     def _get_utf8_encoded_rows(self, rows):
@@ -300,63 +296,3 @@ class DjangoStorageReportStore(ReportStore):
         """
         hashed_course_id = hashlib.sha1(course_id.to_deprecated_string()).hexdigest()
         return os.path.join(hashed_course_id, filename)
-
-
-# TODO (lektorium): move to openedx dir and rewrite as storage
-class ProtectedFSReportStore(object): #LocalFSReportStore):
-    """
-    LocalFS implementation of a ReportStore. This is meant for production where
-    reports are accessible for all course staff members permanently.
-    The directory structure used to store things is::
-
-        `{settings.GRADES_DOWNLOAD[ROOT_PATH]}/{sha1 hash of course_id}/filename`
-    """
-    def __init__(self, root_path, protected_url):
-        """
-        Initialize with root_path where we're going to store our files and
-        nginx protected url that would be used to serve files. We will build
-        a directory structure under this for each course.
-        """
-        self.root_path = root_path
-        if not os.path.exists(root_path):
-            os.makedirs(root_path)
-        self.protected_url = protected_url
-
-    @classmethod
-    def from_config(cls, config_name):
-        """
-        Generate an instance of this object from Django settings. It assumes
-        that there is a dict in settings named GRADES_DOWNLOAD and that it has
-        a ROOT_PATH that maps to an absolute file path that the web app has
-        write permissions to; dict also should have 'PROTECTED_URL' that is used
-        in nginx congifuration file. `ProtectedFSReportStore` will create any
-        intermediate directories as needed. Example::
-
-            STORAGE_TYPE : "protectedfs"
-            ROOT_PATH : /edx/var/edxapp/report_store/
-            PROTECTED_URL : /reports_storage/
-
-        """
-        return cls(getattr(settings, config_name).get("ROOT_PATH"),
-                   getattr(settings, config_name).get("PROTECTED_URL"))
-
-    def protected_url_for(self, course_id, filename):
-        """Return nginx internal path to a given file for a given course."""
-        return os.path.join(self.protected_url, urllib.quote(unicode(course_id), safe=''), filename)
-
-    def links_for(self, course_id):
-        """
-        For a given `course_id`, return a list of `(filename, url)` tuples. `url`
-        can be plugged straight into an href. `ProtectedFSReportStore`
-        will generate URLs reversing name 'serve_report'
-        """
-        course_dir = self.path_to(course_id, '')
-        if not os.path.exists(course_dir):
-            return []
-        files = [(filename, os.path.join(course_dir, filename)) for filename in os.listdir(course_dir)]
-        files.sort(key=lambda (filename, full_path): os.path.getmtime(full_path), reverse=True)
-
-        return [
-            (filename, reverse('serve_report', args=[course_id, filename]))
-            for filename, _ in files
-        ]

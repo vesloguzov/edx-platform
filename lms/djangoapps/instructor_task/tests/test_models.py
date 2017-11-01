@@ -3,7 +3,6 @@ Tests for instructor_task/models.py.
 """
 import copy
 import time
-import urllib
 from cStringIO import StringIO
 
 import boto
@@ -11,10 +10,9 @@ from django.conf import settings
 from django.test import SimpleTestCase, TestCase, override_settings
 from mock import patch
 from opaque_keys.edx.locator import CourseLocator
-from util.testing import UrlResetMixin
 
 from common.test.utils import MockS3Mixin
-from lms.djangoapps.instructor_task.models import ReportStore, ProtectedFSReportStore
+from lms.djangoapps.instructor_task.models import ReportStore
 from lms.djangoapps.instructor_task.tests.test_base import TestReportMixin
 
 
@@ -135,33 +133,3 @@ class TestS3ReportStorage(MockS3Mixin, TestCase):
             report_store = ReportStore.from_config(config_name="FINANCIAL_REPORTS")
             # Make sure CUSTOM_DOMAIN from FINANCIAL_REPORTS is used to construct file url
             self.assertIn("edx-financial-reports.s3.amazonaws.com", report_store.storage.url(""))
-
-
-# TODO (lektorium): update
-@override_settings(
-    GRADES_DOWNLOAD={
-        'STORAGE_TYPE': 'protectedfs',
-        'ROOT_PATH': '/tmp/path-to-report-store/',
-        'PROTECTED_URL': '/reports_storage/'
-    }
-)
-class ProtectedFSReportStoreTestCase(UrlResetMixin, ReportStoreTestMixin, TestReportMixin, TestCase):
-    """
-    Test the ProtectedFSReportStore
-    """
-    def create_report_store(self):
-        """ Create and return a ProtectedFSReportStore. """
-        return ProtectedFSReportStore.from_config(config_name='GRADES_DOWNLOAD')
-
-    def test_protected_url(self):
-        """
-        Test that ReportStore.protected_url_for(*args) returns internal path for nginx
-        """
-        filename = 'report'
-        report_store = self.create_report_store()
-        report_store.store(self.course_id, filename, StringIO())
-
-        self.assertEqual(
-            report_store.protected_url_for(self.course_id, filename),
-            settings.GRADES_DOWNLOAD['PROTECTED_URL'] + urllib.quote(unicode(self.course_id)) + '/' + filename
-        )

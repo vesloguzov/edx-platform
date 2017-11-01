@@ -5,12 +5,8 @@ Tests for views/tools.py.
 import datetime
 import json
 import unittest
-from cStringIO import StringIO
 
 import mock
-import django.test
-from django.conf import settings
-from django.core.urlresolvers import reverse
 from django.test.utils import override_settings
 from django.utils.timezone import utc
 from nose.plugins.attrib import attr
@@ -18,16 +14,10 @@ from opaque_keys.edx.keys import CourseKey
 
 from courseware.field_overrides import OverrideFieldData
 from lms.djangoapps.ccx.tests.test_overrides import inject_field_overrides
-from lms.djangoapps.courseware.tests.factories import GlobalStaffFactory
 from student.tests.factories import UserFactory
 from xmodule.fields import Date
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase, SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
-
-from util.testing import UrlResetMixin
-from courseware.models import StudentModule
-from student.tests.factories import UserFactory, UserProfileFactory
-from lms.djangoapps.instructor_task.models import ReportStore
 
 from ..views import tools
 
@@ -341,39 +331,6 @@ class TestDataDumps(ModuleStoreTestCase):
              "Extended Due Date": "2013-12-25 00:00"},
             {"Unit": self.week2.display_name,
              "Extended Due Date": "2013-12-25 00:00"}])
-
-
-@attr('shard_1')
-@override_settings(
-    GRADES_DOWNLOAD={
-        'STORAGE_TYPE': 'protectedfs',
-        'ROOT_PATH': '/tmp/path-to-report-store/',
-        'PROTECTED_URL': '/reports_storage/'
-    }
-)
-class TestServeProtectedReport(UrlResetMixin, SharedModuleStoreTestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(TestServeProtectedReport, cls).setUpClass()
-        cls.course = CourseFactory.create()
-
-        report_store = ReportStore.from_config(config_name='GRADES_DOWNLOAD')
-        report_store.store(cls.course.id, 'report', StringIO())
-
-    def setUp(self):
-        super(TestServeProtectedReport, self).setUp()
-        self.user = GlobalStaffFactory.create(password='password')
-        self.client.login(username=self.user.username, password='password')
-
-    def test_existing_report(self):
-        response = self.client.get(reverse('serve_report', args=[self.course.id, 'report']))
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('X-Accel-Redirect', response)
-        self.assertTrue(response['X-Accel-Redirect'].startswith(settings.GRADES_DOWNLOAD['PROTECTED_URL']))
-
-    def test_missing_report(self):
-        response = self.client.get(reverse('serve_report', args=[self.course.id, 'missing_report']))
-        self.assertEqual(response.status_code, 404)
 
 
 def msk_from_problem_urlname(course_id, urlname, block_type='problem'):
