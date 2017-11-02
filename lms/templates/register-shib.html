@@ -95,7 +95,7 @@ import calendar
 <%block name="login_button"></%block>
 <section class="register container">
   <section role="main" class="content">
-      <form role="form" id="register-form" method="post" data-remote="true" action="${ reverse('create_account') }" novalidate>
+    <form role="form" id="register-form" method="post" data-remote="true" action="/create_account" novalidate>
 
       <!-- status messages -->
       <div role="alert" class="status message">
@@ -115,13 +115,13 @@ import calendar
         <legend class="sr">${_('Required Information')}</legend>
 
         <div class="message">
-          <p class="message-copy">${_("Enter a public nickname:")}</p>
+          <p class="message-copy">${_("Enter a public username:")}</p>
         </div>
 
         <ol class="list-input">
 
           <li class="field required text" id="field-username">
-            <label for="username">${_('Public Nickname')}</label>
+            <label for="username">${_('Public Username')}</label>
             <input id="username" type="text" name="username" value="${extauth_username}" placeholder="${_('example: JaneDoe')}" required aria-required="true" />
             <span class="tip tip-input">${_('Will be shown in any discussions or forums you participate in')}</span>
           </li>

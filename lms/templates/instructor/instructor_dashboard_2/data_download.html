@@ -98,7 +98,6 @@ from openedx.core.djangolib.markup import HTML, Text
     </p>
   %endif
 
-  %if settings.GRADES_DOWNLOAD['STORAGE_TYPE']=='s3':
     ## Translators: a table of URL links to report files appears after this sentence.
     <p>
         ${Text(_("{strong_start}Note{strong_end}: To keep student data secure, you cannot save or email these links for direct access. Copies of links expire within 5 minutes.")).format(
@@ -106,7 +105,6 @@ from openedx.core.djangolib.markup import HTML, Text
             strong_end=HTML("</strong>"),
         )}
     </p><br>
-  %endif
 
     <div class="report-downloads-table" id="report-downloads-table" data-endpoint="${ section_data['list_report_downloads_url'] }" ></div>
   </div>

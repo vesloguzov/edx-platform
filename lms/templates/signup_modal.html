@@ -28,7 +28,7 @@ import calendar
         <hr>
       </header>
 
-      <form id="register_form" class="register_form" method="post" data-remote="true" action="${ reverse('create_account') }">
+      <form id="register_form" class="register_form" method="post" data-remote="true" action="/create_account">
         <div class="notice"></div>
         <div id="register_error" class="modal-form-error" name="register_error"></div>
         <div id="register_error" name="register_error"></div>
@@ -41,8 +41,8 @@ import calendar
           <label data-field="password" for="signup_password">${_('Password')} + ' *'</label>
 	    <input id="signup_password" type="password" name="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required />
 
-	  <label data-field="nickname" for="signup_nickname">${_('Public Nickname')} + ' *'</label>
-	    <input id="signup_nickname" type="text" name="nickname" placeholder="${_('e.g. yourname (shown on forums)')}" required />
+	  <label data-field="username" for="signup_username">${_('Public Username')} + ' *'</label>
+	    <input id="signup_username" type="text" name="username" placeholder="${_('e.g. yourname (shown on forums)')}" required />
 
           <label data-field="name" for="signup_fullname">${_('Full Name')} + ' *'</label>
 	    <input id="signup_fullname" type="text" name="name" placeholder="${_('e.g. Your Name (for certificates)')}" required />
@@ -50,8 +50,8 @@ import calendar
 	  <p>${_('<i>Welcome</i> {name}').format(name=extauth_id)}</p><br/>
 	  <p><i>${_('Enter a public username:')}</i></p>
 
-          <label data-field="nickname" for="signup_nickname">${_('Public Username')} + ' *'</label>
-	      <input id="signup_nickname" type="text" name="nickname" value="${extauth_username}" placeholder="${_('e.g. yourname (shown on forums)')}" required />
+          <label data-field="username" for="signup_username">${_('Public Username')} + ' *'</label>
+	      <input id="signup_username" type="text" name="username" value="${extauth_username}" placeholder="${_('e.g. yourname (shown on forums)')}" required />
 
           % if ask_for_email:
             <label data-field="email" for="signup_email">${_('E-mail')} + ' *'</label>
