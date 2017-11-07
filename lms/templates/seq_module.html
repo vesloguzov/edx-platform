@@ -22,7 +22,7 @@
         <% show_titles = True if len(items) <= 4 else False %>
         % for idx, item in enumerate(items):
         <li>
-        <button class="seq_${item['type']} inactive nav-item tab"
+          <button class="seq_${item['type']} inactive nav-item tab${' has_title' if show_titles else ''}"
             role="tab"
             tabindex="-1"
             aria-selected="false"
