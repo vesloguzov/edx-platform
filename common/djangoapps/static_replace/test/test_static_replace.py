@@ -223,7 +223,7 @@ def test_static_url_in_problem(mock_modulestore):
 
     html = problem.get_problem_html(encapsulate=False)
     assert_true(filename in html
-                or urllib.quote(filename) in html)
+                or urllib.quote(filename.encode('utf-8')) in html)
 
 
 @patch('static_replace.staticfiles_storage', autospec=True)

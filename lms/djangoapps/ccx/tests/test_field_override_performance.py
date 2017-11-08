@@ -183,7 +183,8 @@ class FieldOverridePerformanceTestCase(FieldOverrideTestMixin, ProceduralCourseT
             # can actually take affect.
             OverrideFieldData.provider_classes = None
 
-            with self.assertNumQueries(sql_queries, using='default', table_blacklist=QUERY_COUNT_TABLE_BLACKLIST):
+            # extra query for profile lookup
+            with self.assertNumQueries(sql_queries+1, using='default', table_blacklist=QUERY_COUNT_TABLE_BLACKLIST):
                 with self.assertNumQueries(0, using='student_module_history'):
                     with self.assertMongoCallCount(mongo_reads):
                         with self.assertXBlockInstantiations(1):
