@@ -8,7 +8,7 @@ define([
     'js/views/list_item_editor',
     'js/certificates/models/signatory',
     'js/certificates/views/signatory_editor',
-    'js/certificates/views/organizations_editor'
+    'js/certificates/views/organizations_editor',
     'text!templates/certificate-editor.underscore'
 ],
 function($, _, Backbone, gettext,

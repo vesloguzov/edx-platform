@@ -14,7 +14,8 @@ define([
     'jquery.smoothScroll',
     'text!templates/certificate-details.underscore'
 ],
-function($, _, str, gettext, BaseView, SignatoryModel, SignatoryDetailsView, OrganizationModel, ViewUtils, smoothScroll,
+function($, _, str, gettext, BaseView, SignatoryModel, SignatoryDetailsView,
+         OrganizationModel, OrganizationDetailsView, ViewUtils, smoothScroll,
          certificateDetailsTemplate) {
     'use strict';
     var CertificateDetailsView = BaseView.extend({

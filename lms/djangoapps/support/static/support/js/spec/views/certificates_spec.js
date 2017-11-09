@@ -45,7 +45,8 @@ define([
                     'course_key': 'edx/test1/2016',
                     'download_url': null,
                     'modified': '',
-                    'regenerate': false
+                    'regenerate': false,
+                    'generation_enabled': true
                 }
             ],
 
@@ -228,7 +229,7 @@ define([
             var requests = AjaxHelpers.requests(this);
 
             // Trigger a search
-            searchFor('student@example.com', requests, SEARCH_RESULTS);
+            searchFor('student@example.com', '', requests, REGENERATE_SEARCH_RESULTS);
 
             // Expect regenerate button is not showed if certificate is not regeneratable
             expect($('.btn-cert-regenerate[data-course-key="edx/test/2015"]')).not.toExist();
