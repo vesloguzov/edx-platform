@@ -94,7 +94,7 @@ CREATE TABLE `assessment_aiclassifierset` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `created_at` datetime(6) NOT NULL,
   `algorithm_id` varchar(128) NOT NULL,
-  `course_id` varchar(40) NOT NULL,
+  `course_id` varchar(255) NOT NULL,
   `item_id` varchar(128) NOT NULL,
   `rubric_id` int(11) NOT NULL,
   PRIMARY KEY (`id`),
@@ -112,7 +112,7 @@ DROP TABLE IF EXISTS `assessment_aigradingworkflow`;
 CREATE TABLE `assessment_aigradingworkflow` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `uuid` varchar(36) NOT NULL,
-  `course_id` varchar(40) NOT NULL,
+  `course_id` varchar(255) NOT NULL,
   `item_id` varchar(128) NOT NULL,
   `scheduled_at` datetime(6) NOT NULL,
   `completed_at` datetime(6) DEFAULT NULL,
@@ -146,7 +146,7 @@ DROP TABLE IF EXISTS `assessment_aitrainingworkflow`;
 CREATE TABLE `assessment_aitrainingworkflow` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `uuid` varchar(36) NOT NULL,
-  `course_id` varchar(40) NOT NULL,
+  `course_id` varchar(255) NOT NULL,
   `item_id` varchar(128) NOT NULL,
   `scheduled_at` datetime(6) NOT NULL,
   `completed_at` datetime(6) DEFAULT NULL,
@@ -301,7 +301,7 @@ CREATE TABLE `assessment_peerworkflow` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `student_id` varchar(40) NOT NULL,
   `item_id` varchar(128) NOT NULL,
-  `course_id` varchar(40) NOT NULL,
+  `course_id` varchar(255) NOT NULL,
   `submission_uuid` varchar(128) NOT NULL,
   `created_at` datetime(6) NOT NULL,
   `completed_at` datetime(6) DEFAULT NULL,
@@ -358,7 +358,7 @@ DROP TABLE IF EXISTS `assessment_staffworkflow`;
 CREATE TABLE `assessment_staffworkflow` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `scorer_id` varchar(40) NOT NULL,
-  `course_id` varchar(40) NOT NULL,
+  `course_id` varchar(255) NOT NULL,
   `item_id` varchar(128) NOT NULL,
   `submission_uuid` varchar(128) NOT NULL,
   `created_at` datetime(6) NOT NULL,
@@ -386,7 +386,7 @@ CREATE TABLE `assessment_studenttrainingworkflow` (
   `submission_uuid` varchar(128) NOT NULL,
   `student_id` varchar(40) NOT NULL,
   `item_id` varchar(128) NOT NULL,
-  `course_id` varchar(40) NOT NULL,
+  `course_id` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `submission_uuid` (`submission_uuid`),
   KEY `assessment_studenttrainingworkflow_30a811f6` (`student_id`),
@@ -475,7 +475,7 @@ CREATE TABLE `auth_permission` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `content_type_id` (`content_type_id`,`codename`),
   CONSTRAINT `auth__content_type_id_508cf46651277a81_fk_django_content_type_id` FOREIGN KEY (`content_type_id`) REFERENCES `django_content_type` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=996 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1008 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `auth_registration`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -544,6 +544,10 @@ DROP TABLE IF EXISTS `auth_userprofile`;
 CREATE TABLE `auth_userprofile` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
+  `nickname` varchar(255) NOT NULL,
+  `first_name` varchar(255) NOT NULL,
+  `last_name` varchar(255) NOT NULL,
+  `birthdate` date DEFAULT NULL,
   `meta` longtext NOT NULL,
   `courseware` varchar(255) NOT NULL,
   `language` varchar(255) NOT NULL,
@@ -562,6 +566,7 @@ CREATE TABLE `auth_userprofile` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`),
   KEY `auth_userprofile_b068931c` (`name`),
+  KEY `auth_userprofile_e8067417` (`nickname`),
   KEY `auth_userprofile_8512ae7d` (`language`),
   KEY `auth_userprofile_d5189de0` (`location`),
   KEY `auth_userprofile_8939d49d` (`year_of_birth`),
@@ -1170,9 +1175,11 @@ CREATE TABLE `certificates_generatedcertificate` (
   `modified_date` datetime(6) NOT NULL,
   `error_reason` varchar(512) NOT NULL,
   `user_id` int(11) NOT NULL,
+  `template_version` varchar(50) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `certificates_generatedcertificate_user_id_552a0fa6f7d3f7e8_uniq` (`user_id`,`course_id`),
   KEY `certificates_generatedcertific_verify_uuid_1b5a14bb83c471ff_uniq` (`verify_uuid`),
+  KEY `certificates_generatedcertificate_a4674480` (`template_version`),
   CONSTRAINT `certificates_generatedc_user_id_77ed5f7a53121815_fk_auth_user_id` FOREIGN KEY (`user_id`) REFERENCES `auth_user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1396,6 +1403,21 @@ CREATE TABLE `course_groups_courseusergrouppartitiongroup` (
   CONSTRAINT `D1516b3811dd6dd500bfae054d6fdc92` FOREIGN KEY (`course_user_group_id`) REFERENCES `course_groups_courseusergroup` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `course_groups_unregisteredlearnercohortassignments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `course_groups_unregisteredlearnercohortassignments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) NOT NULL,
+  `course_id` varchar(255) NOT NULL,
+  `course_user_group_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `course_groups_unregisteredlearne_course_id_4daf84ead2de12db_uniq` (`course_id`,`email`),
+  KEY `D300117695bf1837ce09d8f95c6dc2da` (`course_user_group_id`),
+  KEY `course_groups_unregisteredlearnercohortassignments_0c83f57c` (`email`),
+  CONSTRAINT `D300117695bf1837ce09d8f95c6dc2da` FOREIGN KEY (`course_user_group_id`) REFERENCES `course_groups_courseusergroup` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `course_modes_coursemode`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -1492,6 +1514,7 @@ CREATE TABLE `course_overviews_courseoverview` (
   `self_paced` tinyint(1) NOT NULL,
   `marketing_url` longtext,
   `eligible_for_financial_aid` tinyint(1) NOT NULL,
+  `language` longtext,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1551,20 +1574,6 @@ CREATE TABLE `course_structures_coursestructure` (
   `discussion_id_map_json` longtext,
   PRIMARY KEY (`id`),
   UNIQUE KEY `course_id` (`course_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `coursetalk_coursetalkwidgetconfiguration`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `coursetalk_coursetalkwidgetconfiguration` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `change_date` datetime(6) NOT NULL,
-  `enabled` tinyint(1) NOT NULL,
-  `platform_key` varchar(50) NOT NULL,
-  `changed_by_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `coursetalk_course_changed_by_id_18bd24020c1b37d5_fk_auth_user_id` (`changed_by_id`),
-  CONSTRAINT `coursetalk_course_changed_by_id_18bd24020c1b37d5_fk_auth_user_id` FOREIGN KEY (`changed_by_id`) REFERENCES `auth_user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `courseware_offlinecomputedgrade`;
@@ -2004,6 +2013,19 @@ CREATE TABLE `django_comment_client_role_users` (
   CONSTRAINT `django_role_id_75cf4005dc1fb11d_fk_django_comment_client_role_id` FOREIGN KEY (`role_id`) REFERENCES `django_comment_client_role` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `django_comment_common_coursediscussionsettings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `django_comment_common_coursediscussionsettings` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `course_id` varchar(255) NOT NULL,
+  `always_divide_inline_discussions` tinyint(1) NOT NULL,
+  `divided_discussions` longtext,
+  `division_scheme` varchar(20) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `course_id` (`course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `django_comment_common_forumsconfig`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -2027,7 +2049,7 @@ CREATE TABLE `django_content_type` (
   `model` varchar(100) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `django_content_type_app_label_45f3b1d93ec8c61c_uniq` (`app_label`,`model`)
-) ENGINE=InnoDB AUTO_INCREMENT=331 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=335 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `django_migrations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -2038,7 +2060,7 @@ CREATE TABLE `django_migrations` (
   `name` varchar(255) NOT NULL,
   `applied` datetime(6) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=275 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=294 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `django_openid_auth_association`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -2457,6 +2479,7 @@ CREATE TABLE `enterprise_enterprisecustomer` (
   `enable_data_sharing_consent` tinyint(1) NOT NULL,
   `enforce_data_sharing_consent` varchar(25) NOT NULL,
   `enable_audit_enrollment` tinyint(1) NOT NULL,
+  `require_account_level_consent` tinyint(1) NOT NULL,
   PRIMARY KEY (`uuid`),
   KEY `enterprise_enterprisecustomer_9365d6e7` (`site_id`),
   CONSTRAINT `enterprise_enterprise_site_id_41ce54c2601930cd_fk_django_site_id` FOREIGN KEY (`site_id`) REFERENCES `django_site` (`id`)
@@ -2579,6 +2602,7 @@ CREATE TABLE `enterprise_historicalenterprisecustomer` (
   `enable_data_sharing_consent` tinyint(1) NOT NULL,
   `enforce_data_sharing_consent` varchar(25) NOT NULL,
   `enable_audit_enrollment` tinyint(1) NOT NULL,
+  `require_account_level_consent` tinyint(1) NOT NULL,
   PRIMARY KEY (`history_id`),
   KEY `enterprise_hist_history_user_id_2938dabbace21ece_fk_auth_user_id` (`history_user_id`),
   KEY `enterprise_historicalenterprisecustomer_ef7c876f` (`uuid`),
@@ -2667,6 +2691,39 @@ CREATE TABLE `enterprise_userdatasharingconsentaudit` (
   PRIMARY KEY (`id`),
   KEY `D7bcf2c6862faec34623e29b1c5e5b5a` (`user_id`),
   CONSTRAINT `D7bcf2c6862faec34623e29b1c5e5b5a` FOREIGN KEY (`user_id`) REFERENCES `enterprise_enterprisecustomeruser` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `experiments_experimentdata`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `experiments_experimentdata` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `created` datetime(6) NOT NULL,
+  `modified` datetime(6) NOT NULL,
+  `experiment_id` smallint(5) unsigned NOT NULL,
+  `key` varchar(255) NOT NULL,
+  `value` longtext NOT NULL,
+  `user_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `experiments_experimentdata_user_id_766ad715d1cc0535_uniq` (`user_id`,`experiment_id`,`key`),
+  KEY `experiments_experimentdata_user_id_17db4fa696359194_idx` (`user_id`,`experiment_id`),
+  KEY `experiments_experimentdata_abd1812d` (`experiment_id`),
+  CONSTRAINT `experiments_experimentd_user_id_438ab1d21d4ecc3d_fk_auth_user_id` FOREIGN KEY (`user_id`) REFERENCES `auth_user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `experiments_experimentkeyvalue`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `experiments_experimentkeyvalue` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `created` datetime(6) NOT NULL,
+  `modified` datetime(6) NOT NULL,
+  `experiment_id` smallint(5) unsigned NOT NULL,
+  `key` varchar(255) NOT NULL,
+  `value` longtext NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `experiments_experimentkeyval_experiment_id_7e8b0ae772b01da6_uniq` (`experiment_id`,`key`),
+  KEY `experiments_experimentkeyvalue_abd1812d` (`experiment_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `external_auth_externalauthmap`;
@@ -4215,6 +4272,19 @@ CREATE TABLE `social_auth_nonce` (
   UNIQUE KEY `social_auth_nonce_server_url_36601f978463b4_uniq` (`server_url`,`timestamp`,`salt`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `social_auth_partial`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `social_auth_partial` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `token` varchar(32) NOT NULL,
+  `next_step` smallint(5) unsigned NOT NULL,
+  `backend` varchar(32) NOT NULL,
+  `data` longtext NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `social_auth_partial_94a08da1` (`token`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `social_auth_usersocialauth`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -4873,6 +4943,7 @@ CREATE TABLE `third_party_auth_ltiproviderconfig` (
   `drop_existing_session` tinyint(1) NOT NULL,
   `max_session_length` int(10) unsigned DEFAULT NULL,
   `skip_hinted_login_dialog` tinyint(1) NOT NULL,
+  `send_to_registration_first` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `third_party_auth__changed_by_id_7749e09fd5f71ab0_fk_auth_user_id` (`changed_by_id`),
   KEY `third_party_auth_ltiproviderconfig_fe8da584` (`lti_hostname`),
@@ -4905,6 +4976,7 @@ CREATE TABLE `third_party_auth_oauth2providerconfig` (
   `drop_existing_session` tinyint(1) NOT NULL,
   `max_session_length` int(10) unsigned DEFAULT NULL,
   `skip_hinted_login_dialog` tinyint(1) NOT NULL,
+  `send_to_registration_first` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `third_party_auth__changed_by_id_17044d1cd96e8d57_fk_auth_user_id` (`changed_by_id`),
   KEY `third_party_auth_oauth2providerconfig_abcd61c0` (`backend_name`),
@@ -4980,6 +5052,7 @@ CREATE TABLE `third_party_auth_samlproviderconfig` (
   `drop_existing_session` tinyint(1) NOT NULL,
   `max_session_length` int(10) unsigned DEFAULT NULL,
   `skip_hinted_login_dialog` tinyint(1) NOT NULL,
+  `send_to_registration_first` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `third_party_auth__changed_by_id_508190ecd0b0e845_fk_auth_user_id` (`changed_by_id`),
   KEY `third_party_auth_samlproviderconfig_098674f1` (`idp_slug`),
@@ -5359,7 +5432,7 @@ CREATE TABLE `waffle_flag` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`),
   KEY `waffle_flag_e2fa5388` (`created`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `waffle_flag_groups`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
