@@ -1085,7 +1085,7 @@ class CertificateInvalidationTest(BaseInstructorDashboardTest):
             'description': 'Certificate description',
             'course_title': 'Course title override',
             'signatories': [],
-            'version': 1,
+            'version': 'lek-1',
             'is_active': True
         }
 
