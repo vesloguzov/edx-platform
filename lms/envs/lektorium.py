@@ -29,3 +29,6 @@ FORMAT_MODULE_PATH = [
     'conf.locale',
 ]
 CERTIFICATE_DATE_FORMAT = 'F j, Y'
+
+# disable broken feature explicitly
+ENABLE_ENTERPRISE_INTEGRATION = False
