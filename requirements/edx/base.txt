@@ -212,4 +212,5 @@ web-fragments==0.2.2
 xblock==1.0.0
 
 # Third Party XBlocks
-edx-sga==0.6.2
+# Custom version used in github.txt
+# edx-sga==0.6.2
