@@ -3,6 +3,7 @@ from dj_lms import *
 
 import os
 import sys
+import glob
 import datetime
 
 from django.utils.timezone import UTC
@@ -10,6 +11,7 @@ from django.db.models import Count
 
 from xmodule.modulestore.django import modulestore
 
+from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from student.models import CourseEnrollment
 
 
@@ -17,8 +19,12 @@ OVERALL_SUMMARY_DAY_LIMIT = 10
 
 
 def main(dirname):
+    # remove old per-course stats
+    for filename in glob.glob(os.path.join(dirname, 'enrollment-*.xml.xls')):
+        os.remove(filename)
+
     courses = [
-        c for c in modulestore().get_courses()
+        c for c in CourseOverview.objects.all()
         if not c.has_ended()
         and c.enrollment_start and c.enrollment_start < datetime.datetime.now(UTC())
         and not is_utility_course(c)
@@ -31,11 +37,15 @@ def main(dirname):
         enrollments = enrollments.values_list('created', flat=True)
         all_enrollments[course.id] = enrollments
 
-    with open(os.path.join(dirname, 'short-enrollment-summary.html'), 'w') as short_summary:
-        write_summary(short_summary, all_enrollments, courses)
+    reports = {}
+    for course in courses:
+        report_filename = 'enrollment-{}.xml.xls'.format(unicode(course.id).replace('/', '-').replace(':', '-'))
+        with open(os.path.join(dirname, report_filename), 'w') as course_summary:
+            write_report(course_summary, all_enrollments, course)
+        reports[course.id] = report_filename
 
-    with open(os.path.join(dirname, 'full-enrollment-summary.xml.xls'), 'w') as full_summary:
-        write_report(full_summary, all_enrollments, courses)
+    with open(os.path.join(dirname, 'short-enrollment-summary.html'), 'w') as short_summary:
+        write_summary(short_summary, all_enrollments, courses, reports)
 
 
 def is_utility_course(course):
@@ -43,53 +53,56 @@ def is_utility_course(course):
     return 'demo' in run or 'preview' in run
 
 
-def write_summary(f, all_enrollments, courses):
+def write_summary(f, all_enrollments, courses, reports):
     items = []
     for course in courses:
         enrollments = list(all_enrollments[course.id])
         total = len(enrollments)
         today = len([enrollment for enrollment in enrollments
                     if enrollment.date() == datetime.date.today()])
-        items.append(u'<p><strong>{}</strong>:<br>Сегодня: {}<br>Всего: {}</p>'.format(
-            u'{} ({})'.format(course.display_name, course.id), today, total))
+        items.append(COURSE_HTML.format(
+            course=u'{} ({})'.format(course.display_name, course.id),
+            today=today,
+            total=total,
+            filename=reports[course.id]
+        ))
 
     summary = u'</tr><tr>'.join(
         u'<td>{}</td><td style="text-align: right">{}</td>'.format(date.strftime('%d-%m-%y'), count)
         for date, count in overall_summary(all_enrollments)
     )
-    f.write(HTML.format(summary, u''.join(items)).encode('utf-8'))
+    content = HTML.format(summary, u''.join(items)).encode('utf-8')
+    f.write(content)
 
 
-def write_report(f, all_enrollments, courses):
-    items = []
-    for course in courses:
-        enrollments = all_enrollments[course.id]
-        aggregated_enrollements = stats_per_day(enrollments)
-        per_day_items = []
-        prev_count = 0
+def write_report(f, all_enrollments, course):
+    enrollments = all_enrollments[course.id]
+    aggregated_enrollements = stats_per_day(enrollments)
+    per_day_items = []
+    prev_count = 0
 
-        for date, count in aggregated_enrollements:
-            diff = count - prev_count
-            item = XML_XLS_ROW.format(
-                date=date.strftime('%d-%m-%y'),
-                count=count,
-                diff='%+d' % diff if diff != 0 else '='
-            )
-            prev_count = count
-            per_day_items.append(item)
+    for date, count in aggregated_enrollements:
+        diff = count - prev_count
+        item = XML_XLS_ROW.format(
+            date=date.strftime('%d-%m-%y'),
+            count=count,
+            diff='%+d' % diff if diff != 0 else '='
+        )
+        prev_count = count
+        per_day_items.append(item)
 
-        per_day_items.append(XML_XLS_ROW.format(
-            date=u'ВСЕГО',
-            count=len(enrollments),
-            diff=''
-        ))
-        items.append(XML_XLS_SHEET.format(
-            sheet_name=course.id.to_deprecated_string().replace('/', '-').replace(':', '-'),
-            course_name=u'{} ({})'.format(course.display_name, course.id),
-            rows=u''.join(per_day_items)
-        ))
+    per_day_items.append(XML_XLS_ROW.format(
+        date=u'ВСЕГО',
+        count=len(enrollments),
+        diff=''
+    ))
+    sheet = XML_XLS_SHEET.format(
+        sheet_name='Enrollment summary',
+        course_name=u'{} ({})'.format(course.display_name, course.id),
+        rows=u''.join(per_day_items)
+    )
 
-    result = XML_XLS.format(courses_length=len(courses), sheets=u''.join(items))
+    result = XML_XLS.format(sheet=sheet)
     f.write(result.encode('utf-8'))
 
 
@@ -113,7 +126,8 @@ def overall_summary(all_enrollments):
     return reversed(stats_per_day(enrollments, start))
 
 
-HTML = u'<!DOCTYPE html><html><head><title>Enrollment statistics</title><meta charset="UTF-8"></head><body><table><tr><th>Дата</th><th>Количество<br>записавшихся</th></tr><tr>{}</tr></table>{}<p><a href="full-enrollment-summary.xml.xls">Full summary</a></p></body></html>'
+HTML = u'<!DOCTYPE html><html><head><title>Enrollment statistics</title><meta charset="UTF-8"></head><body><table><tr><th>Дата</th><th>Количество<br>записавшихся</th></tr><tr>{}</tr></table>{}<p></p></body></html>'
+COURSE_HTML = u'<p><strong>{course}</strong>:<br>Сегодня: {today}<br>Всего: {total}<br><a href="{filename}">Подробнее...</a></p>'
 
 XML_XLS = u'''\
 <?xml version="1.0"?>
@@ -128,7 +142,7 @@ XML_XLS = u'''\
   <Version>1.0</Version>
  </DocumentProperties>
  <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
-  <ActiveSheet>{courses_length}</ActiveSheet>
+  <ActiveSheet>1</ActiveSheet>
  </ExcelWorkbook>
  <Styles>
   <Style ss:ID="Default">
@@ -152,7 +166,7 @@ XML_XLS = u'''\
    </ss:Borders>
   </Style>
  </Styles>
- {sheets}
+ {sheet}
 </Workbook>'''
 
 XML_XLS_SHEET = u'''
