@@ -26,7 +26,13 @@ $(function() {
             /* see if it is a required field and - if so - make sure user presented all information */
             if (typeof $(this).attr('required') !== typeof undefined) {
                 var val = $(this).val();
-                if (typeof(val) === 'string') {
+
+                if ($(this).is(':checkbox') && $(this).is(':not(:checked)')) {
+                    var field_label = $(this).parent().find("label");
+                    $(this).parent().addClass('field-error');
+                    $('.status.message.submission-error .message-copy').append("<li class='error-item'>"+field_label.text()+"</li>");
+                    cancel_submit = true;
+                } else if (typeof(val) === "string") {
                     if (val.trim().length === 0) {
                         var field_label = $(this).parent().find('label');
                         $(this).parent().addClass('field-error');
