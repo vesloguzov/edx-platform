@@ -11,7 +11,6 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from student.models import UserProfile, CourseEnrollment
-from openedx.core.lib.courses import course_image_url
 from certificates.models import certificate_status_for_student, CertificateStatuses
 from certificates.api import get_certificate_url
 
@@ -104,7 +103,7 @@ class CourseSerializer(serializers.Serializer):
     image = serializers.SerializerMethodField()
     about_url = serializers.SerializerMethodField()
     root_url = serializers.SerializerMethodField()
-    last_modification = serializers.DateTimeField(source='edited_on')
+    last_modification = serializers.DateTimeField(source='modified')
 
     def get_description(self, course):
         key = course.id.make_usage_key('about', 'short_description')
@@ -115,7 +114,7 @@ class CourseSerializer(serializers.Serializer):
         return description
 
     def get_image(self, course):
-        url = course_image_url(course)
+        url = course.course_image_url
         return self._get_absolute_url(url)
 
     def get_about_url(self, course):

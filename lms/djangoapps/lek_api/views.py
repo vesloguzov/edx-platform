@@ -13,7 +13,8 @@ from opaque_keys.edx.keys import CourseKey
 from xmodule.error_module import ErrorDescriptor
 from xmodule.modulestore.django import modulestore
 
-from courseware.courses import get_course, get_courses
+from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
+from courseware.courses import get_courses
 from course_modes.models import CourseMode
 from student.models import CourseEnrollment, CourseEnrollmentException, AlreadyEnrolledError, NonExistentCourseError
 from student.views import send_enrollment_email
@@ -92,7 +93,7 @@ class CourseViewSet(mixins.RetrieveModelMixin, ServerAPIViewSet):
     @list_route()
     def last_modification(self, request, *args, **kwargs):
         courses = self._get_available_courses()
-        return RESTResponse(max(course.edited_on for course in courses) if courses else None)
+        return RESTResponse(max(course.modified for course in courses) if courses else None)
 
     @detail_route()
     def enrollments(self, request, *args, **kwargs):
@@ -108,8 +109,8 @@ class CourseViewSet(mixins.RetrieveModelMixin, ServerAPIViewSet):
     def get_object(self):
         try:
             course_key = self._get_course_id(**self.kwargs)
-            course = get_course(course_key)
-        except (InvalidKeyError, ValueError):
+            course = CourseOverview.get_from_id(course_key)
+        except (InvalidKeyError, CourseOverview.DoesNotExist):
             raise NotFound(detail="No course '{}' found".format(self.kwargs.get('course_id')))
         else:
             return course
@@ -170,7 +171,8 @@ class EnrollmentViewSet(ServerAPIViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         else:
             if settings.FEATURES.get('SEND_ENROLLMENT_EMAIL') and not skip_enrollment_email:
-                course = get_course(course_id)  # course is already checked for existence
+                # course is already checked for existence
+                course = CourseOverview.get_from_id(course_id)
                 send_enrollment_email(user, course, use_https_for_links=request.is_secure())
         serializer = CourseEnrollmentSerializer(enrollment)
         return RESTResponse(serializer.data)
@@ -186,8 +188,8 @@ class EnrollmentViewSet(ServerAPIViewSet):
 
         if not CourseEnrollment.is_enrolled(user, course_key):
             try:
-                get_course(course_key)
-            except ValueError:
+                course = CourseOverview.get_from_id(course_key)
+            except CourseOverview.DoesNotExist:
                 raise NotFound(detail=u"No course '{}' found".format(course_id))
             else:
                 return RESTResponse({'detail': u"User is not enrolled in this course"},
