@@ -18,11 +18,11 @@ from certificates.models import certificate_status_for_student
 from certificates.models import CertificateStatuses
 from certificates.models import CertificateWhitelist
 
-from courseware import grades
 from django.test.client import RequestFactory
 from student.models import UserProfile, CourseEnrollment
 from course_modes.models import CourseMode
 from lms.djangoapps.verify_student.models import SoftwareSecurePhotoVerification
+from lms.djangoapps.grades.new.course_grade_factory import CourseGradeFactory
 
 # JSON_KEYS
 USERNAME_KEY = 'uid'
@@ -71,7 +71,7 @@ class Command(BaseCommand):
             raise CommandError("You must specify a course")
 
         print "Fetching course data for {0}".format(course_id)
-        course = modulestore().get_course(course_id, depth=2)
+        course = modulestore().get_course(course_id, depth=0)
 
         if options['input_file']:
             print 'Generating stubs from json...'
@@ -140,10 +140,19 @@ def _generate_cert_stub_for_student(student, course, whitelist, restricted, requ
     # Needed
     request.user = student
     request.session = {}
-    grade = grades.grade(student, request, course)
+
+    grade = CourseGradeFactory().create(student, course)
+    cert_data = {
+        'mode': _get_certificate_mode(student, course),
+        'grade': grade.percent,
+        'name': student.profile.name,
+    }
+
+
     if forced_grade:
-        grade['grade'] = forced_grade
-    grade_contents = grade.get('grade', None)
+        cert_data['grade'] = forced_grade
+
+    grade_contents = forced_grade or grade.letter_grade
     try:
         grade_contents = lxml.html.fromstring(grade_contents).text_content()
     except (TypeError, XMLSyntaxError, ParserError) as e:
@@ -153,11 +162,6 @@ def _generate_cert_stub_for_student(student, course, whitelist, restricted, requ
     # course_name = course.display_name or course.id.to_deprecated_string()
     is_whitelisted = whitelist.filter(user=student, course_id=course.id, whitelist=True).exists()
 
-    cert_data = {
-        'mode': _get_certificate_mode(student, course),
-        'grade': grade['percent'],
-        'name': student.profile.name,
-    }
     if create_uuids:
         cert_data['download_uuid'] = uuid.uuid4().hex
 

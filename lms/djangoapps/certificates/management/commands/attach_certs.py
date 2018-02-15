@@ -18,6 +18,7 @@ from xmodule.modulestore.django import modulestore
 from django.core.urlresolvers import reverse
 from django.conf import settings
 
+from openedx.core.djangoapps.content.course_overviews.models import CourseOverview
 from certificates.models import GeneratedCertificate
 from certificates.models import CertificateStatuses
 
@@ -56,7 +57,7 @@ class Command(BaseCommand):
             raise CommandError('You must specify an existing directory')
 
         print "Fetching course data for {0}".format(course_id)
-        course = modulestore().get_course(course_id, depth=2)
+        course = CourseOverview.objects.get(id=course_id)
 
         result = _attach_certificates(course, options['src_dir'])
         for status, values in result.items():
