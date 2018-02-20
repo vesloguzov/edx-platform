@@ -1,9 +1,10 @@
+<%namespace name='static' file='../static_content.html'/>
 <%! from django.utils.translation import ugettext as _ %>
 <div class="recent-updates">
   % for index, update in enumerate(visible_updates):
     <article class="updates-article">
       % if not update.get("is_error"):
-        <h5 class="date" id="msg-date-${index}">${update.get("date")}</h5>
+        <h5 class="date localized_datetime" id="msg-date-${index}" data-format="shortDate" data-datetime="${update.get("date")}" data-language="${user_language}"></h5>
         <button
             class="toggle-visibility-button"
             data-hide="${_('Hide')}"
@@ -33,7 +34,7 @@
 <div class="old-updates hidden toggle-visibility-element" id="old-updates">
   % for index, update in enumerate(hidden_updates):
     <article class="updates-article">
-      <h5 class="date" id="msg-date-${index + len(visible_updates)}">${update.get("date")}</h5>
+      <h5 class="date localized_datetime" id="msg-date-${index + len(visible_updates)}" data-format="shortDate" data-datetime="${update.get("date")}" data-language="${user_language}"></h5>
       <button
           class="toggle-visibility-button"
           data-hide="${_('Hide')}"
@@ -46,3 +47,7 @@
     </article>
   % endfor
 </div>
+
+<%static:require_module_async module_name="js/dateutil_factory" class_name="DateUtilFactory">
+    DateUtilFactory.transform(iterationKey=".localized_datetime");
+</%static:require_module_async>

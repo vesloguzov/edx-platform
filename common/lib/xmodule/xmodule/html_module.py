@@ -474,7 +474,7 @@ class CourseInfoModule(CourseInfoFields, HtmlModuleMixin):
         Since this is used solely for ordering purposes, use today's date as a default
         """
         try:
-            return datetime.strptime(date, '%B %d, %Y')
+            return datetime.strptime(date, '%Y-%m-%d')  # ISO-8601 date format
         except ValueError:  # occurs for ill-formatted date values
             return datetime.today()
 
