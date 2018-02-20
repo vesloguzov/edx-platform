@@ -9,11 +9,14 @@ import datetime
 from mock import Mock, patch
 
 from django.test import TestCase
+from django.conf import settings
 from django.contrib.auth.models import User
 
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 from certificates.models import CertificateStatuses, GeneratedCertificate
 from certificates.tests.factories import GeneratedCertificateFactory
+from openedx.core.djangoapps.lang_pref import LANGUAGE_KEY
+from openedx.core.djangoapps.user_api.preferences.api import get_user_preference
 
 from lek_api.serializers import UserSerializer, UserEnrollmentSerializer
 
@@ -74,8 +77,11 @@ class UserSerializerTest(TestCase):
         new_user = serializer.save()
         self.assertEquals(new_user.username, serializer.data['uid'])
         self.assertEquals(new_user.email, serializer.data['email'])
+
         for field_name in self.profile_fields:
             self.assertEquals(getattr(new_user.profile, field_name), data[field_name])
+
+        self.assertEqual(get_user_preference(new_user, LANGUAGE_KEY), settings.LANGUAGE_CODE)
 
     def test_update(self):
         data = {

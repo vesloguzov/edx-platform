@@ -13,6 +13,8 @@ from rest_framework.validators import UniqueValidator
 from student.models import UserProfile, CourseEnrollment
 from certificates.models import certificate_status_for_student, CertificateStatuses
 from certificates.api import get_certificate_url
+from openedx.core.djangoapps.lang_pref import LANGUAGE_KEY
+from openedx.core.djangoapps.user_api.preferences import api as preferences_api
 
 
 UID_PATTERN = r'[\w.-]+'
@@ -63,9 +65,12 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         data = validated_data.copy()
         profile_data = data.pop('profile')
+
         user = User.objects.create(**data)
         # bind updated profile to user for correct patch response
         user.profile = UserProfile.objects.create(user=user, **profile_data)
+        preferences_api.set_user_preference(user, LANGUAGE_KEY, settings.LANGUAGE_CODE)
+
         CourseEnrollment.enroll_pending(user)
         return user
 
