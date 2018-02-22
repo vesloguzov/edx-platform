@@ -32,3 +32,6 @@ CERTIFICATE_DATE_FORMAT = 'F j, Y'
 
 # disable broken feature explicitly
 ENABLE_ENTERPRISE_INTEGRATION = False
+
+# enable saving files to s3 as private and create expiring links
+AWS_DEFAULT_ACL = 'private'
