@@ -595,6 +595,7 @@ def sanitize_filename(filename):
     Utility function
     """
     filename = filename.replace(" ", "_")
+    filename = filename[0:25]  # cut before encoding to utf-8
     filename = filename.encode('utf-8')
-    filename = filename[0:25] + '.csv'
+    filename = filename + '.csv'
     return filename
