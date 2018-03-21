@@ -2509,6 +2509,7 @@ def list_forum_members(request, course_id):
         """ Convert user to dict for json rendering. """
         return {
             'username': user.username,
+            'nickname': user.profile.nickname_or_default,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,

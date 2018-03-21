@@ -98,7 +98,7 @@ such that the value can be defined later than this assignment (file load order).
             AuthListWidget.__super__.constructor.call(this, $container, {  // eslint-disable-line no-underscore-dangle
                 title: $container.data('display-name'),
                 info: $container.data('info-text'),
-                labels: [gettext('Username'), gettext('Email'), gettext('Revoke access')],
+                labels: [gettext('Username'), gettext('Nickname'), gettext('Email'), gettext('Revoke access')],
                 add_placeholder: gettext('Enter username or email'),
                 add_btn_label: $container.data('add-button-label'),
                 add_handler: function(input) {
@@ -161,7 +161,7 @@ such that the value can be defined later than this assignment (file load order).
                             return authlistwidgetreloadlist.reload_list();
                         });
                     });
-                    return authlistwidgetreloadlist.add_row([member.username, member.email, $revokeBtn]);
+                    return authlistwidgetreloadlist.add_row([member.username, member.nickname, member.email, $revokeBtn]);
                 });
             });
         };
@@ -834,12 +834,16 @@ such that the value can be defined later than this assignment (file load order).
                     enableColumnReorder: false,
                     forceFitColumns: true
                 };
-                WHICH_CELL_IS_REVOKE = 3;
+                WHICH_CELL_IS_REVOKE = 4;
                 columns = [
                     {
                         id: 'username',
                         field: 'username',
                         name: 'Username'
+                    }, {
+                        id: 'nickname',
+                        field: 'nickname',
+                        name: 'Nickname'
                     }, {
                         id: 'email',
                         field: 'email',
