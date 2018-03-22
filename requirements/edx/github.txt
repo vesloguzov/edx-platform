@@ -92,4 +92,4 @@ git+https://github.com/edx/edx-proctoring.git@0.18.1#egg=edx-proctoring==0.18.1
 # Third Party XBlocks
 -e git+https://github.com/lektorium-llc/edx-sga.git@d19d33f00b9275b46f96002724581551d990dcab#egg=edx-sga
 git+https://github.com/open-craft/xblock-poll@v1.2.7#egg=xblock-poll==1.2.7
-git+https://github.com/edx-solutions/xblock-drag-and-drop-v2@v2.0.18#egg=xblock-drag-and-drop-v2==2.0.18
+git+https://github.com/lektorium-llc/xblock-drag-and-drop-v2@v2.0.18-lektorium#egg=xblock-drag-and-drop-v2==2.0.18
