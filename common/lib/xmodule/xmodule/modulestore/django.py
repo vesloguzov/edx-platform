@@ -390,6 +390,7 @@ class ModuleI18nService(object):
                     xblock_locale_path,
                     [to_locale(selected_language if selected_language else settings.LANGUAGE_CODE)]
                 )
+                self.translator.add_fallback(django.utils.translation)
             except IOError:
                 # Fall back to the default Django translator if the XBlock translator is not found.
                 pass
