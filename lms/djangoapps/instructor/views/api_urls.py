@@ -3,6 +3,7 @@ Instructor API endpoint urls.
 """
 
 from django.conf.urls import patterns, url
+from django.conf import settings
 
 urlpatterns = patterns(
     '',
@@ -171,4 +172,8 @@ urlpatterns = patterns(
     url(r'^certificate_invalidation_view/$',
         'lms.djangoapps.instructor.views.api.certificate_invalidation_view',
         name='certificate_invalidation_view'),
+
 )
+
+if settings.FEATURES.get("ALLOW_PSY_REPORT_DOWNLOADS"):
+    urlpatterns += url(r'get_psychometrics_data',  'edx_psychometrics.api.get_psychometrics_data', name='get_psychometrics_data')
